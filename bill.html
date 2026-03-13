@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MONICO PHARMA LTD Bill System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #C0C0C0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; }
+        
+        /* container */
+        .login-container{
+            max-width:350px;
+            margin:120px auto;
+        }
+
+        /* card = VB6 form */
+        .card{
+            background:#C0C0C0;
+            border:2px solid #808080;
+            box-shadow: inset 2px 2px #ffffff, inset -2px -2px #404040;
+        }
+
+        /* title bar */
+        .card-header{
+            background:#000080 !important;
+            color:white !important;
+            font-weight:bold;
+        }
+
+        /* textbox */
+        .form-control{
+            border:2px inset #808080;
+            border-radius:0;
+        }
+
+        /* button */
+        .btn-primary{
+            background:#C0C0C0;
+            color:black;
+            border:2px outset #808080;
+        }
+
+        .btn-primary:active{
+            border:2px inset #808080;
+        }
+        
+        .status-red { background-color: #ffebee; border-left: 5px solid #ef5350; }
+        .status-green { background-color: #e8f5e9; border-left: 5px solid #66bb6a; }
+        .status-orange { background-color: #fff3e0; border-left: 5px solid #ffa726; } 
+        .status-draft { background-color: #eceff1; border-left: 5px solid #90a4ae; }
+        .hidden { display: none; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        /* Quick Entry & Auto Save Style */
+        .quick-entry-card { 
+            background-color: #C0C0C0; 
+            border: 1px solid #90caf9; 
+            border-radius: 5px; 
+            padding: 10px; 
+            margin-bottom: 10px;
+        }
+        .quick-entry-card label { font-size: 11px; font-weight: bold; color: #0d47a1; }
+        #auto_save_status { font-size: 11px; margin-left: 10px; }
+
+        /* Dashboard UI Styles */
+        .dash-card {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .dash-card:hover { transform: translateY(-2px); }
+        .dash-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 24px;
+            color: #fff;
+        }
+        .bg-dash-total { background: linear-gradient(45deg, #17a2b8, #138496); }
+        .bg-dash-pending { background: linear-gradient(45deg, #ffc107, #e0a800); }
+        .bg-dash-approved { background: linear-gradient(45deg, #28a745, #218838); }
+        
+        /* Online User Dot */
+        .online-dot { width: 8px; height: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* Scrollable List Styles */
+        .scroll-box-sm { max-height: 200px; overflow-y: auto; }
+        .scroll-box-md { max-height: 250px; overflow-y: auto; }
+        .scroll-box-lg { max-height: 400px; overflow-y: auto; }
+        
+        /* Profile Image Styles */
+        .profile-img-thumb { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; }
+        .profile-img-lg { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #0d6efd; }
+
+        /* Print Style */
+        .print-container { display: none; position: relative; }
+        .print-summary-container { display: none; position: relative; } 
+        
+        @media print {
+            body * { visibility: hidden; }
+            .no-print { display: none !important; }
+            .print-container, .print-summary-container {
+                display: none !important;
+                visibility: hidden;
+            }
+            .active-print {
+                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                visibility: visible !important;
+            }
+            .active-print * {
+                visibility: visible !important;
+            }
+            #pageFooter, #pageFooterSummary {
+                position: fixed; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 12px;
+            }
+            #pageFooter:after, #pageFooterSummary:after { content: "PAGE : " counter(page); }
+            thead { display: table-header-group; } tfoot { display: table-footer-group; }
+            table, th, td { border: 1px solid #000 !important; border-collapse: collapse; }
+            th, td { padding: 2px 4px; font-size: 11px; line-height: 1.2; }
+            .sign-row td { height: 80px; vertical-align: bottom; }
+            .cut-text { text-decoration: line-through; color: red; }
+        }
+        
+        .cut-amount { color: red; text-decoration: line-through; margin-right: 8px; font-weight: bold; }
+        .payable-amount { color: green; font-weight: bold; }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background-color: #e0f7fa; }
+
+        input:disabled, select:disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+            border-color: #ced4da;
+            opacity: 0.7;
+        }
+
+        /* Mobile Optimization */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
+    #entryTab table {
+        min-width: 650px;
+        width: 100%;
+        font-size: 11px;
+        table-layout: fixed;
+    }
+    #entryTab th:nth-child(1), #entryTab td:nth-child(1) { width: 14%; }
+    #entryTab th:nth-child(2), #entryTab td:nth-child(2) { width: 18%; }
+    #entryTab th:nth-child(3), #entryTab td:nth-child(3) { width: 18%; }
+    #entryTab th:nth-child(4), #entryTab td:nth-child(4) { width: 18%; }
+    #entryTab th:nth-child(5), #entryTab td:nth-child(5) { width: 10%; }
+    #entryTab th:nth-child(6), #entryTab td:nth-child(6) { width: 10%; }
+    #entryTab th:nth-child(7), #entryTab td:nth-child(7) { width: 10%; }
+    #entryTab th:nth-child(8), #entryTab td:nth-child(8) { width: 2%;  }
+    #entryTab input, #entryTab select {
+        width: 100% !important;
+        padding: 2px 4px !important;
+        font-size: 11px !important;
+        min-width: 35px;
+        border: 1px solid #ced4da;
+    }
+    #entryTab th, #entryTab td { padding: 4px 2px !important; }
+}
+        
+        .summary-table th { background-color: #e9ecef; font-size: 12px; text-align: center; }
+        .summary-table td { font-size: 13px; text-align: center; font-weight: bold; }
+        .summary-table .value-highlight { color: #0d6efd; font-size: 14px; }
+        tfoot td { font-weight: bold; background-color: #e9ecef; }
+    </style>
+</head>
+<body>
+
+    <!-- Login Section -->
+    <div id="login_section" class="container login-container">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white text-center"><h4>Bill Management Login</h4></div>
+            <div class="card-body">
+                <div class="mb-3"><label>Username</label><input type="text" id="username" class="form-control" placeholder="Enter Username"></div>
+                <div class="mb-3"><label>Password</label><input type="password" id="password" class="form-control" placeholder="Enter Password"></div>
+                <button onclick="handleLogin()" class="btn btn-primary w-100">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div id="dashboard_section" class="container-fluid mt-2 hidden">
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white shadow-sm rounded no-print">
+            <h5 class="mb-0" id="welcome_msg">Welcome</h5>
+            
+            <!-- My Account Dropdown -->
+            <div class="dropdown">
+                <button class="btn btn-light border dropdown-toggle d-flex align-items-center" type="button" id="accountDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <img id="header_profile_pic" src="https://via.placeholder.com/30" class="profile-img-thumb me-2">
+                    <span id="header_user_name">User</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdownBtn">
+                    <li><h6 class="dropdown-header">My Account</h6></li>
+                    <li><a class="dropdown-item" href="#" onclick="openProfileModal()"><i class="bi bi-person-circle me-2"></i>Edit Profile</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="openChangePassModal()"><i class="bi bi-key me-2"></i>Change Password</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Nav Tabs -->
+        <ul class="nav nav-tabs no-print" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashTab" type="button">Dashboard</button>
+            </li>
+            <li class="nav-item user-only" role="presentation">
+                <button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill Entry</button>
+            </li>
+            <li class="nav-item" id="history_tab_li" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#billTab" type="button">History</button>
+            </li>
+            <li class="nav-item admin-superadmin-only" role="presentation">
+                <button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summaryTab" type="button">Bill Summary</button>
+            </li>
+            <li class="nav-item admin-superadmin-only" role="presentation">
+                <button class="nav-link" id="approved-history-tab" data-bs-toggle="tab" data-bs-target="#approvedHistoryTab" type="button">Approved History</button>
+            </li>
+            <li class="nav-item admin-only" role="presentation">
+                <button class="nav-link" id="iou-tab" data-bs-toggle="tab" data-bs-target="#iouTab" type="button">IOU List</button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-2">
+            
+            <!-- DASHBOARD TAB -->
+            <div class="tab-pane fade" id="dashTab" role="tabpanel">
+                <!-- Admin Dashboard Content -->
+                <div class="admin-only">
+                    
+                    <!-- Dashboard Month Filter -->
+                    <div class="row mb-2 no-print">
+                        <div class="col-md-4 offset-md-8">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">View Month</span>
+                                <input type="month" id="dash_filter_month" class="form-control" onchange="loadAdminDashboardData()">
+                                <button class="btn btn-outline-secondary" onclick="document.getElementById('dash_filter_month').value=''; loadAdminDashboardData();">All</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STATS ROW -->
+                    <div class="row mb-3">
+                        <div class="col-4">
+                            <div class="card dash-card text-white bg-dash-total h-100">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">Total Bills</h6>
+                                            <h3 class="mb-0" id="dash_total_count">0</h3>
+                                        </div>
+                                        <div class="dash-icon bg-white text-primary opacity-25"><i class="bi bi-file-earmark-text"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card dash-card text-white bg-dash-pending h-100">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">Pending</h6>
+                                            <h3 class="mb-0" id="dash_pending_count">0</h3>
+                                        </div>
+                                        <div class="dash-icon bg-white text-warning opacity-25"><i class="bi bi-hourglass-split"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="card dash-card text-white bg-dash-approved h-100">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-0">Approved</h6>
+                                            <h3 class="mb-0" id="dash_approved_count">0</h3>
+                                        </div>
+                                        <div class="dash-icon bg-white text-success opacity-25"><i class="bi bi-check-circle"></i></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UPDATED LAYOUT: LEFT/RIGHT ALIGNMENT -->
+                    <div class="row">
+                        <!-- LEFT COLUMN: DA Wise Bill Status -->
+                        <div class="col-md-6 mb-3">
+                             <!-- DA Wise Bill Status -->
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-people"></i> DA Wise Bill Status</h6>
+                                </div>
+                                <div class="card-body p-2 scroll-box-md">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>DA Name</th>
+                                                    <th class="text-center">IOU QTY</th>
+                                                    <th class="text-center">Total Bill</th>
+                                                    <th class="text-center text-warning">Pending</th>
+                                                    <th class="text-center text-success">Approved</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="dash_da_table_body">
+                                                <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- IOU Entry Form -->
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-info text-white py-2">IOU Entry</div>
+                                <div class="card-body">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-6 col-md-3"><label>Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div>
+                                        <div class="col-6 col-md-3"><label>DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div>
+                                        <div class="col-6 col-md-3"><label>Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div>
+                                        <div class="col-6 col-md-3"><label>MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div>
+                                        
+                                        <div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div>
+                                        <div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                                        <div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div>
+                                        <div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div>
+                                        <div class="col-4 col-md-2"><label>Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div>
+                                        <div class="col-4 col-md-2"><label>Bund</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div>
+                                        
+                                        <div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                                        <div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div>
+                                        
+                                        <!-- IOU Type -->
+                                        <div class="col-12 col-md-3">
+                                            <label class="fw-bold text-primary">IOU Type</label>
+                                            <select id="iou_type" class="form-select form-select-sm">
+                                                <option value="Delivery">Delivery (Bill Req)</option>
+                                                <option value="Collection">Collection (Bill Req)</option>
+                                                <option value="Return">Return (Bill Req)</option>
+                                                <option value="General">General (No Bill)</option>
+                                                <option value="Bill Payment">Bill Payment (No Bill)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm w-100">Save IOU Entry</button>
+                                    <button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm w-100 hidden">Cancel Edit</button>
+                                </div>
+                            </div>
+
+                            <!-- New User Record -->
+                            <div class="card dash-card no-print">
+                                <div class="card-header bg-primary text-white py-2">New User Record</div>
+                                <div class="card-body">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">ID (Manual)</label>
+                                            <input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="e.g. DA-001">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Name</label>
+                                            <input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Photo</label>
+                                            <input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)">
+                                            <img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%; object-fit:cover;">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Phone</label>
+                                            <input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Depot</label>
+                                            <select id="new_user_depot" class="form-select form-select-sm">
+                                                <option value="Kushtia">Kushtia</option>
+                                                <option value="Other Depot">Other Depot</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12"><hr class="my-1"></div>
+                                        <h6 class="text-muted col-12 mb-1">Login Information</h6>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Username</label>
+                                            <input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Password</label>
+                                            <input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="fw-bold text-muted">Role Type</label>
+                                            <select id="new_user_role" class="form-select form-select-sm">
+                                                <option value="user">User (Depot Based)</option>
+                                                <option value="admin">Admin (DIC)</option>
+                                                <option value="superadmin">Super Admin (RSM)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12"><button onclick="saveNewUser()" class="btn btn-primary w-100 btn-sm mt-2">Save Record</button></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT COLUMN: Online Users -->
+                        <div class="col-md-6 mb-3">
+                            <!-- Realtime Online Users -->
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="bi bi-broadcast"></i> Realtime Online Users</h6>
+                                    <span class="badge bg-light text-success" id="online_count_badge">0</span>
+                                </div>
+                                <div class="card-body p-2 scroll-box-sm" id="online_users_list">
+                                    <div class="text-center text-muted p-2">Checking...</div>
+                                </div>
+                            </div>
+
+                            <!-- Unbilled IOU List -->
+                            <div class="card dash-card no-print mb-3 border border-danger">
+                                <div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="bi bi-exclamation-octagon-fill me-1"></i> IOU Bill Pending</h6>
+                                    <span class="badge bg-light text-danger" id="unbilled_iou_count">0</span>
+                                </div>
+                                <div class="card-body p-2 scroll-box-md" id="unbilled_iou_container">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>DA Name</th>
+                                                    <th>Type</th>
+                                                    <th>Route</th>
+                                                    <th class="text-end">Amount</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="unbilled_iou_list">
+                                                <tr><td colspan="5" class="text-center text-muted p-2">Checking...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Approved Bill vs IOU Summary -->
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-info text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU Summary</h6>
+                                </div>
+                                <div class="card-body p-2 scroll-box-md">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th>DA Name</th>
+                                                    <th class="text-end">Total IOU</th>
+                                                    <th class="text-end">Appr. Bill</th>
+                                                    <th class="text-end">Balance</th>
+                                                    <th class="text-center">Bund Qty</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="approved_summary_body">
+                                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- USER DASHBOARD VIEW -->
+                <div class="user-only">
+                    <div class="row">
+                        <!-- LEFT COLUMN: My Active IOU -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-primary text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-cash-stack"></i> My Active IOU</h6>
+                                </div>
+                                <div class="card-body p-0 scroll-box-sm">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Route</th><th>Taka</th><th>Action</th></tr></thead>
+                                            <tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center p-2">No Active IOU</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- RIGHT COLUMN: Used IOU -->
+                        <div class="col-md-6 mb-3">
+                            <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-secondary text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-check-circle"></i> Used IOU</h6>
+                                </div>
+                                <div class="card-body p-0 scroll-box-sm">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Route</th><th>Taka</th><th>Status</th></tr></thead>
+                                            <tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center p-2">No Used IOU</td></tr></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Online Users (User View) -->
+                             <div class="card dash-card no-print mb-3">
+                                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6>
+                                    <span class="badge bg-light text-success" id="user_online_count_badge">0</span>
+                                </div>
+                                <div class="card-body p-2 scroll-box-sm" id="user_online_list_view">
+                                    <div class="text-center text-muted p-2">Checking...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: USER BILL ENTRY FORM -->
+            <div class="tab-pane fade" id="entryTab" role="tabpanel">
+                <div class="bill-form-container no-print">
+                    <div class="text-center mb-2">
+                        <h3>MONICO PHARMA LTD</h3>
+                        <h5>Delivery Expense Bill</h5>
+                    </div>
+                    
+                    <input type="hidden" id="form_iou_amount" value="0">
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label class="fw-bold">Name Of DA:</label><input type="text" id="form_da_name" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4"><label class="fw-bold">Designation:</label><input type="text" value="Delivery Assistant" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4"><label class="fw-bold">Depot:</label><input type="text" id="form_depot" class="form-control form-control-sm" readonly></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label class="fw-bold">Departure Date:</label><input type="date" id="form_dep_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label class="fw-bold">Return Date:</label><input type="date" id="form_ret_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label class="fw-bold">Bill Date:</label><input type="date" id="form_submit_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-12"><label class="fw-bold">Route:</label><input type="text" id="form_route" class="form-control form-control-sm" placeholder="Route Name" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-6"><label class="fw-bold">Name of MPO:</label><input type="text" id="form_mpo" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-6"><label class="fw-bold">Summary No:</label><input type="text" id="form_summary" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label>Invoice Value:</label><input type="number" id="form_invoice_val" class="form-control form-control-sm" oninput="calculateSoldValue(); triggerAutoSave()"></div>
+                        <div class="col-4"><label>Return Value:</label><input type="number" id="form_return_val" class="form-control form-control-sm" value="0" oninput="calculateSoldValue(); triggerAutoSave()"></div>
+                        <div class="col-4"><label>Sold Value:</label><input type="number" id="form_sold_val" class="form-control form-control-sm" readonly></div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-4"><label>Invoice Qty:</label><input type="number" id="form_invoice_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label>Bundle Qty:</label><input type="number" id="form_bundle_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                         <div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Any specific notes..." oninput="triggerAutoSave()"></div>
+                    </div>
+                    
+                    <div class="quick-entry-card no-print">
+                        <h6 class="text-primary mb-2"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6>
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <label>From</label>
+                                <input type="text" id="q_from" class="form-control form-control-sm q-from-input" placeholder="From">
+                            </div>
+                            <div class="col-4">
+                                <label>To</label>
+                                <input type="text" id="q_to" class="form-control form-control-sm q-to-input" placeholder="To">
+                            </div>
+                            <div class="col-4">
+                                <label>Mode</label>
+                                <select id="q_mode" class="form-select form-select-sm q-mode-select">
+                                    <option>Rickshaw</option>
+                                    <option>Auto</option>
+                                    <option>Bus</option>
+                                    <option>CNG</option>
+                                    <option>Van</option>
+                                    <option>Motorcycle</option>
+                                    <option>Tempo</option>
+                                    <option>Pickup</option>
+                                    <option>Daily Allowance</option>
+                                    <option>Labour Bill</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label>Amount</label>
+                                <input type="number" id="q_amount" class="form-control form-control-sm q-amount-input" placeholder="0">
+                            </div>
+                            <div class="col-4">
+                                <label>DA Exp</label>
+                                <input type="number" id="q_da_expense" class="form-control form-control-sm q-da-input" placeholder="0">
+                            </div>
+                            <div class="col-4 d-flex align-items-end">
+                                <button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Total</th><th>X</th></tr>
+                            </thead>
+                            <tbody id="expense_table_body"></tbody>
+                            <tfoot>
+                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td colspan="3"><input type="text" id="grand_total" class="form-control form-control-sm fw-bold text-center" value="0" readonly></td></tr>
+                                <tr class="table-info"><td colspan="4" class="text-end fw-bold">Cost (%):</td><td colspan="3"><span id="form_cost_percent" class="fw-bold">0%</span></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+                        <span id="auto_save_status" class="text-muted align-self-center me-auto"></span>
+                        
+                        <button onclick="addExpenseRow()" class="btn btn-secondary btn-sm">+ Row</button>
+                        <button onclick="clearBillForm()" class="btn btn-danger btn-sm">Clear Data</button>
+                        
+                        <button id="draft_btn" onclick="submitOrUpdateBill('draft')" class="btn btn-secondary btn-sm">Save Draft</button>
+                        <button id="main_submit_btn" onclick="submitOrUpdateBill('red')" class="btn btn-success btn-sm">Submit Bill</button>
+                        <button id="cancel_edit_btn" onclick="cancelEdit()" class="btn btn-warning btn-sm hidden">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Bill History -->
+            <div class="tab-pane fade" id="billTab" role="tabpanel">
+                
+                <div class="card dash-card no-print mb-2 admin-only">
+                    <div class="card-body p-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="fw-bold text-muted">Filter by DA</label>
+                                <select id="filter_history_da" class="form-select form-select-sm" onchange="loadBills()">
+                                    <option value="">All DAs</option>
+                                </select>
+                            </div>
+                             <div class="col-md-4">
+                                <label class="fw-bold text-muted">Month</label>
+                                <input type="month" id="filter_history_month" class="form-control form-control-sm" onchange="loadBills()">
+                            </div>
+                            <div class="col-md-2">
+                                <button onclick="resetHistoryFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card dash-card no-print"><div class="card-body p-1">
+                    <div class="table-responsive"><table class="table table-bordered table-hover table-sm">
+                        <thead id="bill_table_head" class="table-dark"></thead>
+                        <tbody id="bill_table_body"><tr><td colspan="12" class="text-center">Loading...</td></tr></tbody>
+                        <!-- Footer will be populated by JS -->
+                        <tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot>
+                    </table></div>
+                </div></div>
+            </div>
+
+            <!-- NEW Tab: Bill Summary (ADMIN/SUPERADMIN) -->
+            <div class="tab-pane fade" id="summaryTab" role="tabpanel">
+                <div class="card dash-card no-print mb-2">
+                    <div class="card-header bg-primary text-white py-2">
+                        <h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Travels Allowance Bill Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end mb-3">
+                            <div class="col-md-3">
+                                <label class="fw-bold text-muted">Select Month</label>
+                                <input type="month" id="summary_month" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold text-muted">Select DA</label>
+                                <select id="summary_da" class="form-select form-select-sm" onchange="generateSummary()">
+                                    <option value="">-- Select DA to Auto-Fill --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="fw-bold text-muted">Depot</label>
+                                <input type="text" id="summary_depot" class="form-control form-control-sm" readonly value="Kushtia">
+                            </div>
+                            <div class="col-md-2">
+                                <button onclick="printBillSummary()" class="btn btn-success btn-sm w-100"><i class="bi bi-printer"></i> Print Summary</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border">
+                            <table class="table table-bordered table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Sl No</th>
+                                        <th>Date</th>
+                                        <th>Territory</th>
+                                        <th>Type</th>
+                                        <th class="text-end">Net Sales</th>
+                                        <th class="text-end">Taka</th>
+                                        <th class="text-end">DA</th>
+                                        <th class="text-end">Net Amount</th>
+                                        <th class="text-end">Cost (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="summary_table_body">
+                                    <tr><td colspan="9" class="text-center text-muted">Please select a DA and Month to view summary.</td></tr>
+                                </tbody>
+                                <tfoot class="table-secondary fw-bold" id="summary_table_foot">
+                                    <tr>
+                                        <td colspan="4" class="text-end">Grand Total:</td>
+                                        <td class="text-end" id="sum_foot_sales">0</td>
+                                        <td class="text-end" id="sum_foot_taka">0</td>
+                                        <td class="text-end" id="sum_foot_da">0</td>
+                                        <td class="text-end" id="sum_foot_net">0</td>
+                                        <td class="text-end" id="sum_foot_cost">0%</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NEW Tab: Approved History (Checked & Approved) -->
+            <div class="tab-pane fade" id="approvedHistoryTab" role="tabpanel">
+                
+                <!-- Approved History Filters -->
+                <div class="card dash-card no-print mb-2 admin-superadmin-only">
+                    <div class="card-body p-2">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                                <label class="fw-bold text-muted">Filter by DA</label>
+                                <select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()">
+                                    <option value="">All DAs</option>
+                                </select>
+                            </div>
+                             <div class="col-md-4">
+                                <label class="fw-bold text-muted">Month</label>
+                                <input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="loadBills()">
+                            </div>
+                            <div class="col-md-2">
+                                <button onclick="resetApprovedFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card dash-card no-print"><div class="card-body p-1">
+                    <h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6>
+                    <div class="table-responsive"><table class="table table-bordered table-hover table-sm">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th>
+                                <th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th>
+                                <th>Status</th><th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody>
+                        <!-- Added Footer for Total -->
+                        <tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot>
+                    </table></div>
+                </div></div>
+            </div>
+
+            <!-- Admin Tab: IOU List -->
+            <div class="tab-pane fade admin-only" id="iouTab" role="tabpanel">
+                <div class="card dash-card no-print">
+                    <div class="card-header bg-primary text-white py-2">IOU List & Management</div>
+                    <div class="card-body">
+                        <div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end">
+                             <div class="col-6 col-md-4">
+                                <label class="fw-bold text-muted">Filter by Month</label>
+                                <input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="loadAdminIOU()">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="fw-bold text-muted">Filter by DA</label>
+                                <select id="filter_iou_da" class="form-select form-select-sm" onchange="loadAdminIOU()">
+                                    <option value="">All DA</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-2">
+                                <button onclick="resetIOUFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive"><table class="table table-bordered table-sm">
+                            <thead class="table-secondary">
+                                <tr><th>#</th><th>Date</th><th>DA Name</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Qty</th><th>Bund Qty</th><th>Taka</th><th>%</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="iou_admin_table_body"></tbody>
+                            <tfoot><tr class="fw-bold table-warning"><td colspan="7">Filtered Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr></tfoot>
+                        </table></div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade no-print" id="profileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white py-2">
+                    <h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2">
+                        <div class="mt-2">
+                            <label class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-camera"></i> Upload Photo
+                                <input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold">Name</label>
+                        <input type="text" id="prof_name" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">Phone</label>
+                        <input type="text" id="prof_phone" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">Depot</label>
+                        <select id="prof_depot" class="form-select form-select-sm">
+                            <option value="Kushtia">Kushtia</option>
+                            <option value="Other Depot">Other Depot</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">Username</label>
+                        <input type="text" id="prof_username" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade no-print" id="changePassModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning py-2">
+                    <h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="fw-bold">Current Password</label>
+                        <input type="password" id="cp_current" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">New Password</label>
+                        <input type="password" id="cp_new" class="form-control form-control-sm">
+                    </div>
+                    <div class="mb-3">
+                        <label class="fw-bold">Confirm Password</label>
+                        <input type="password" id="cp_confirm" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade no-print" id="cutBillModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning py-1">
+                    <h5 class="modal-title">Bill Checking & Deduction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-2">
+                    <input type="hidden" id="edit_bill_id"><input type="hidden" id="edit_depot">
+                    
+                    <!-- Deduction Table -->
+                    <div class="table-responsive"><table class="table table-sm modal-table table-bordered">
+                        <thead class="table-secondary text-center"><tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Deduction</th><th>Total</th></tr></thead>
+                        <tbody id="modal_expense_body"></tbody>
+                        <tfoot><tr class="table-light fw-bold"><td colspan="7" class="text-end">Total Payable:</td><td class="text-center text-success" id="modal_grand_total">0</td></tr></tfoot>
+                    </table></div>
+
+                    <!-- Summary Section -->
+                    <div class="mt-3 p-2 border rounded bg-light">
+                        <h6 class="text-center mb-2">Bill Checking Summary</h6>
+                        <table class="table table-sm table-bordered summary-table">
+                            <thead>
+                                <tr>
+                                    <th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Total Payable</th><th>Payable %</th><th>Final Approved</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td id="sum_iou">0</td>
+                                    <td id="sum_sales">0</td>
+                                    <td id="sum_user_bill">0</td>
+                                    <td id="sum_user_per">0%</td>
+                                    <td id="sum_payable">0</td>
+                                    <td id="sum_payable_per">0%</td>
+                                    <td id="sum_final" class="text-success">0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        
+                        <div class="mt-2">
+                            <label class="fw-bold">Remarks (Will be printed):</label>
+                            <input type="text" id="modal_remarks" class="form-control form-control-sm" placeholder="Enter checking remarks here...">
+                        </div>
+                    </div>
+                
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                    <button onclick="saveDeduction()" type="button" class="btn btn-success btn-sm">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRINT CONTAINER (INDIVIDUAL BILL) -->
+    <div class="print-container" id="print_area">
+        <div style="text-align: center; border-bottom: 2px solid #000; margin-bottom: 10px;">
+            <h2 style="margin:0; letter-spacing: 2px;">MONICO PHARMA LTD</h2>
+            <h4 style="margin:0; text-decoration:">Delivery Expense Bill</h4>
+            <h5 style="margin:0; text-decoration: ">Kushtia Depot</h5>
+            <h6 style="margin:0; text-decoration:">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+            <tr>
+                <td style="width:33.33%; text-align: left; padding: 3px;"><strong>Name Of DA:</strong> <span id="p_da_name"></span></td>
+                <td style="width:33.33%; text-align: center; padding: 3px;"><strong>Designation:</strong> Delivery Assistant</td>
+                <td style="width:33.33%; text-align: right; padding: 3px;"><strong>Depot:</strong> <span id="p_depot"></span></td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 3px;"><strong>Departure Date:</strong> <span id="p_dep_date"></span></td>
+                <td style="text-align: center; padding: 3px;"><strong>Return Date:</strong> <span id="p_ret_date"></span></td>
+                <td style="text-align: right; padding: 3px;"><strong>Bill Submit Date:</strong> <span id="p_submit_date"></span></td>
+            </tr>
+            <tr><td colspan="3" style="text-align: left; padding: 3px;"><strong>Route:</strong> <span id="p_route"></span></td></tr>
+            <tr><td colspan="3" style="text-align: left; padding: 3px;"><strong>Name of MPO:</strong> <span id="p_mpo"></span></td></tr>
+            <tr>
+                <td style="text-align: left; padding: 3px;"><strong>Summary No:</strong> <span id="p_summary"></span></td>
+                <td style="text-align: center; padding: 3px;"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td>
+                <td style="text-align: right; padding: 3px;"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td>
+            </tr>
+            <tr>
+                <td style="text-align: left; padding: 3px;"><strong>Return Value:</strong> <span id="p_ret_val"></span></td>
+                <td style="text-align: center; padding: 3px;"><strong>Sold Value:</strong> <span id="p_sold_val"></span></td>
+                <td style="text-align: right; padding: 3px;"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td>
+            </tr>
+        </table>
+        
+        <!-- PRINT TABLE -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+            <thead><tr style="background-color: #f0f0f0;">
+                <th style="padding: 2px; text-align: left;">Date</th>
+                <th style="padding: 2px; text-align: left;">From</th>
+                <th style="padding: 2px; text-align: left;">To</th>
+                <th style="padding: 2px; text-align: left;">Mode</th>
+                <th style="padding: 2px; text-align: right;">Amount</th>
+                <th style="padding: 2px; text-align: right;">DA</th>
+                <th style="padding: 2px; text-align: right;">Total</th>
+                <th style="padding: 2px; text-align: right;">Deduction</th>
+                <th style="padding: 2px; text-align: right;">Net Amount</th>
+            </tr></thead>
+            <tbody id="p_expense_body"></tbody>
+            <tfoot>
+                <tr style="font-weight: bold;">
+                    <td colspan="4" style="text-align:left; padding: 2px;">Grand Total</td>
+                    <td style="text-align:right; padding: 2px;" id="p_foot_amt">0</td>
+                    <td style="text-align:right; padding: 2px;" id="p_foot_da">0</td>
+                    <td style="text-align:right; padding: 2px;" id="p_foot_total">0</td>
+                    <td style="text-align:right; padding: 2px;" id="p_foot_ded">0</td>
+                    <td style="text-align:right; padding: 2px;" id="p_total_amount">0</td>
+                </tr>
+            </tfoot>
+        </table>
+        
+        <div style="margin-top: 5px; border: 1px solid #000; padding: 3px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between;">
+                <div style="width: 60%;"><strong>Total In Words:</strong> <span id="p_total_words"></span></div>
+                <div style="width: 35%; text-align: right;"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div>
+            </div>
+            <div style="margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 2px;">
+                <strong>Remarks:</strong> <span id="p_remarks"></span>
+            </div>
+        </div>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <tr class="sign-row">
+                <td style="width: 25%; text-align: center; vertical-align: bottom; font-weight: bold;"><span id="p_prepared_by"></span></td>
+                <td style="width: 25%; text-align: center; vertical-align: bottom; font-weight: bold;"><span id="p_checked_by"></span></td>
+                <td style="width: 25%; text-align: center; vertical-align: bottom; font-weight: bold;"><span id="p_rechecked_by"></span></td>
+                <td style="width: 25%; text-align: center; vertical-align: bottom;"></td>
+            </tr>
+            <tr>
+                <td style="width: 25%; text-align: center;">Prepared By</td>
+                <td style="width: 25%; text-align: center;">Checked By DIC</td>
+                <td style="width: 25%; text-align: center;">Rechecked By RSM</td>
+                <td style="width: 25%; text-align: center;">Approved By</td>
+            </tr>
+        </table>
+        <div id="pageFooter"></div>
+    </div>
+
+    <!-- PRINT SUMMARY CONTAINER (BILL SUMMARY) -->
+    <div class="print-summary-container" id="print_summary_area">
+        <div style="text-align: center; border-bottom: 2px solid #000; margin-bottom: 10px;">
+            <h2 style="margin:0; letter-spacing: 2px;">MONICO PHARMA LTD</h2>
+            <h4 style="margin:0; text-decoration:">Travels Allowance Bill Summary (Delivery Assistant)</h4>
+            <h5 style="margin:0; text-decoration: " id="print_sum_depot">Kushtia Depot</h5>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold;">
+            <div>DA Name: <span id="print_sum_da_name"></span></div>
+            <div>Designation: Delivery Assistant</div>
+            <div>Month: <span id="print_sum_month"></span></div>
+        </div>
+        
+        <!-- SUMMARY PRINT TABLE -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 11px;">
+            <thead><tr style="background-color: #f0f0f0;">
+                <th style="padding: 2px; text-align: center;">Sl No</th>
+                <th style="padding: 2px; text-align: left;">Date</th>
+                <th style="padding: 2px; text-align: left;">Territory</th>
+                <th style="padding: 2px; text-align: left;">Type</th>
+                <th style="padding: 2px; text-align: right;">Net Sales</th>
+                <th style="padding: 2px; text-align: right;">Taka</th>
+                <th style="padding: 2px; text-align: right;">DA</th>
+                <th style="padding: 2px; text-align: right;">Net Amount</th>
+                <th style="padding: 2px; text-align: right;">Cost (%)</th>
+            </tr></thead>
+            <tbody id="print_sum_tbody"></tbody>
+            <tfoot>
+                <tr style="font-weight: bold; background-color: #e9ecef;">
+                    <td colspan="4" style="text-align:right; padding: 2px;">Grand Total</td>
+                    <td style="text-align:right; padding: 2px;" id="print_sum_foot_sales">0</td>
+                    <td style="text-align:right; padding: 2px;" id="print_sum_foot_taka">0</td>
+                    <td style="text-align:right; padding: 2px;" id="print_sum_foot_da">0</td>
+                    <td style="text-align:right; padding: 2px;" id="print_sum_foot_net">0</td>
+                    <td style="text-align:right; padding: 2px;" id="print_sum_foot_cost">0%</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; border: 1px solid #000; padding: 5px;">
+            <div style="width: 70%;">In Words: <span id="print_sum_words"></span></div>
+            <div style="width: 28%;">Delivery Cost (%): <span id="print_sum_cost_pct"></span></div>
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
+            <tr style="height: 60px; vertical-align: bottom;">
+                <td style="width: 25%; text-align: center; border-top: 1px solid #000;">Prepared by DIC</td>
+                <td style="width: 25%; text-align: center; border-top: 1px solid #000;">Delivery Assistant</td>
+                <td style="width: 25%; text-align: center; border-top: 1px solid #000;">RSM</td>
+                <td style="width: 25%; text-align: center; border-top: 1px solid #000;">Approved by</td>
+            </tr>
+        </table>
+        <div id="pageFooterSummary" style="position: fixed; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 12px;"></div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // ================= FIREBASE CONFIGURATION =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEaGG_UsXGf6RGHQ_ckalf33fLla-P2J8",
+            authDomain: "whatapp-8d8ed.firebaseapp.com",
+            databaseURL: "https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "whatapp-8d8ed",
+            storageBucket: "whatapp-8d8ed.firebasestorage.app",
+            messagingSenderId: "618833956157",
+            appId: "1:618833956157:web:2c3835d5c03668afa7c954",
+            measurementId: "G-JLG1K25Z7N"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentUser = null;
+        let editingBillId = null;
+        let editingBillDaId = null; 
+        let editingIouId = null; 
+        let daListCache = {}; 
+        let currentIouId = null;
+        let originalIouId = null; 
+        let iouListGlobal = {}; 
+        let userPhotoBase64 = null; 
+        let profilePhotoBase64 = null;
+        let currentSummaryData = [];
+        
+        let modalSales = 0;
+        let modalUserBill = 0;
+        let modalIou = 0;
+
+        // ================= HELPER FUNCTIONS =================
+        
+        function isDateInMonth(dateStr, monthVal) {
+            if (!monthVal) return true;
+            if (!dateStr) return false;
+            return dateStr.startsWith(monthVal);
+        }
+
+        // ================= INPUT TOGGLE LOGIC =================
+        function toggleRowInputs(selectElement) {
+            const row = selectElement.closest('tr');
+            const mode = selectElement.value;
+            const isDaily = (mode === 'Daily Allowance');
+
+            const fromInput = row.querySelector('.exp-from');
+            const toInput = row.querySelector('.exp-to');
+            const amtInput = row.querySelector('.exp-amount');
+            const daInput = row.querySelector('.exp-da');
+
+            fromInput.disabled = isDaily;
+            toInput.disabled = isDaily;
+            amtInput.disabled = isDaily;
+            
+            if(isDaily) { 
+                fromInput.value = ''; 
+                toInput.value = ''; 
+                amtInput.value = ''; 
+            }
+
+            daInput.disabled = !isDaily;
+            if(!isDaily) { 
+                daInput.value = ''; 
+            }
+
+            calculateRowTotal(amtInput);
+        }
+        
+        // Toggle for Quick Entry Inputs
+        document.getElementById('q_mode').addEventListener('change', function() {
+            const isDaily = (this.value === 'Daily Allowance');
+            document.getElementById('q_from').disabled = isDaily;
+            document.getElementById('q_to').disabled = isDaily;
+            document.getElementById('q_amount').disabled = isDaily;
+            document.getElementById('q_da_expense').disabled = !isDaily;
+            
+            if(isDaily) {
+                document.getElementById('q_from').value = '';
+                document.getElementById('q_to').value = '';
+                document.getElementById('q_amount').value = '';
+            } else {
+                document.getElementById('q_da_expense').value = '';
+            }
+        });
+
+        // ================= AUTO SAVE LOGIC =================
+        let autoSaveTimeout;
+        const AUTO_SAVE_KEY = 'bill_draft_data';
+
+        function triggerAutoSave() {
+            if(editingBillId) return;
+            clearTimeout(autoSaveTimeout);
+            const statusSpan = document.getElementById('auto_save_status');
+            statusSpan.innerText = "Typing...";
+            statusSpan.classList.remove('text-success');
+            statusSpan.classList.add('text-muted');
+
+            autoSaveTimeout = setTimeout(() => {
+                saveLocalDraft();
+                statusSpan.innerText = "Draft Saved Locally";
+                statusSpan.classList.remove('text-muted');
+                statusSpan.classList.add('text-success');
+            }, 800);
+        }
+
+        function saveLocalDraft() {
+            const data = {
+                depDate: document.getElementById('form_dep_date').value,
+                retDate: document.getElementById('form_ret_date').value,
+                submitDate: document.getElementById('form_submit_date').value,
+                route: document.getElementById('form_route').value,
+                mpo: document.getElementById('form_mpo').value,
+                summary: document.getElementById('form_summary').value,
+                invoiceVal: document.getElementById('form_invoice_val').value,
+                returnVal: document.getElementById('form_return_val').value,
+                invoiceQty: document.getElementById('form_invoice_qty').value,
+                bundleQty: document.getElementById('form_bundle_qty').value,
+                iouId: currentIouId,
+                iouAmount: document.getElementById('form_iou_amount').value,
+                remarks: document.getElementById('form_remarks').value,
+                expenses: []
+            };
+
+            const rows = document.querySelectorAll('#expense_table_body tr');
+            rows.forEach(r => {
+                data.expenses.push({
+                    date: r.querySelector('.exp-date').value,
+                    from: r.querySelector('.exp-from').value,
+                    to: r.querySelector('.exp-to').value,
+                    mode: r.querySelector('.exp-mode').value,
+                    amount: r.querySelector('.exp-amount').value,
+                    da: r.querySelector('.exp-da').value
+                });
+            });
+
+            localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
+        }
+
+        function loadLocalDraft() {
+            const savedData = localStorage.getItem(AUTO_SAVE_KEY);
+            if (!savedData) return;
+
+            try {
+                const data = JSON.parse(savedData);
+                
+                document.getElementById('form_dep_date').value = data.depDate || '';
+                document.getElementById('form_ret_date').value = data.retDate || '';
+                document.getElementById('form_submit_date').value = data.submitDate || '';
+                document.getElementById('form_route').value = data.route || '';
+                document.getElementById('form_mpo').value = data.mpo || '';
+                document.getElementById('form_summary').value = data.summary || '';
+                document.getElementById('form_invoice_val').value = data.invoiceVal || '';
+                document.getElementById('form_return_val').value = data.returnVal || 0;
+                document.getElementById('form_invoice_qty').value = data.invoiceQty || '';
+                document.getElementById('form_bundle_qty').value = data.bundleQty || '';
+                document.getElementById('form_iou_amount').value = data.iouAmount || 0;
+                document.getElementById('form_remarks').value = data.remarks || '';
+                
+                currentIouId = data.iouId || null;
+                
+                calculateSoldValue();
+
+                const tbody = document.getElementById('expense_table_body');
+                tbody.innerHTML = '';
+                
+                if(data.expenses && data.expenses.length > 0) {
+                    data.expenses.forEach(exp => {
+                        const today = exp.date || document.getElementById('form_dep_date').value;
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td>
+                            <td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()">
+                                <option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option>
+                                <option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option>
+                                <option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option>
+                                <option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option>
+                                <option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option>
+                                <option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option>
+                                <option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option>
+                                <option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option>
+                                <option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option>
+                                <option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option>
+                            </select></td>
+                            <td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td>
+                            <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>
+                        `;
+                        const selectObj = row.querySelector('.exp-mode');
+                        toggleRowInputs(selectObj);
+                    });
+                } else {
+                    // If no expenses in draft, leave table empty
+                }
+                
+                calculateGrandTotal();
+                document.getElementById('auto_save_status').innerText = "Draft Restored";
+                document.getElementById('auto_save_status').classList.add('text-success');
+
+            } catch (e) { console.error("Error loading draft", e); }
+        }
+
+        function clearLocalDraft() {
+            localStorage.removeItem(AUTO_SAVE_KEY);
+            document.getElementById('auto_save_status').innerText = "";
+        }
+
+        function clearBillForm() {
+            if(confirm("Are you sure you want to clear all data?")) {
+                editingBillId = null; editingBillDaId = null; originalIouId = null; currentIouId = null;
+                
+                document.getElementById('main_submit_btn').innerText = "Submit Bill";
+                document.getElementById('main_submit_btn').classList.add('btn-success'); 
+                document.getElementById('main_submit_btn').classList.remove('btn-warning');
+                document.getElementById('cancel_edit_btn').classList.add('hidden');
+                
+                document.getElementById('form_route').value = ''; 
+                document.getElementById('form_mpo').value = ''; 
+                document.getElementById('form_summary').value = '';
+                document.getElementById('form_invoice_val').value = ''; 
+                document.getElementById('form_return_val').value = 0; 
+                document.getElementById('form_invoice_qty').value = '';
+                document.getElementById('form_bundle_qty').value = '';
+                document.getElementById('form_iou_amount').value = 0;
+                document.getElementById('form_remarks').value = '';
+                
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('form_dep_date').value = today;
+                document.getElementById('form_ret_date').value = today;
+                document.getElementById('form_submit_date').value = today;
+                
+                // Clear Table completely
+                document.getElementById('expense_table_body').innerHTML = '';
+                
+                document.getElementById('grand_total').value = '0'; 
+                document.getElementById('form_cost_percent').innerText = '0%';
+                
+                calculateSoldValue(); 
+                clearLocalDraft();
+                
+                if(currentUser && currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
+                     document.getElementById('form_da_name').value = currentUser.name;
+                     document.getElementById('form_depot').value = currentUser.depot;
+                }
+                
+                document.getElementById('auto_save_status').innerText = "Form Cleared";
+            }
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            if (dateStr.indexOf('-') !== 4) return dateStr; 
+            const parts = dateStr.split('-');
+            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+
+        // ================= LOGIN LOGIC =================
+        function handleLogin() {
+            const userVal = document.getElementById('username').value;
+            const passVal = document.getElementById('password').value;
+
+            if (userVal === 'KS' && passVal === 'Monico@Ku007') {
+                currentUser = { name: 'Md Sajjad Ahmed', role: 'superadmin', depot: 'Kushtia', designation: 'RSM', id: 'admin_001' };
+                showDashboard();
+                return;
+            }
+
+            const userRef = database.ref('Users');
+            userRef.orderByChild('username').equalTo(userVal).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const userData = childSnapshot.val();
+                        if (userData.password === passVal) {
+                            currentUser = {
+                                name: userData.name,
+                                role: userData.role || 'user', 
+                                depot: userData.depot,
+                                id: childSnapshot.key,
+                                photoUrl: userData.photoUrl || null
+                            };
+                            showDashboard();
+                        } else { alert("Password Incorrect!"); }
+                    });
+                } else { alert("User not found!"); }
+            }, (error) => {
+                console.error("Login Error:", error);
+                alert("Database Connection Failed!");
+            });
+        }
+
+        function logout() { 
+            if(currentUser) {
+                database.ref('OnlineUsers/' + currentUser.id).remove();
+            }
+            currentUser = null; 
+            location.reload(); 
+        }
+        
+        function resetAllTabs() {
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('show', 'active'));
+        }
+        
+        // ================= PROFILE MODAL LOGIC =================
+        function openProfileModal() {
+            if(!currentUser || currentUser.id === 'admin_001') {
+                alert("Admin profile cannot be edited here.");
+                return;
+            }
+            profilePhotoBase64 = null; 
+            database.ref('Users/' + currentUser.id).once('value', snap => {
+                const u = snap.val();
+                if(u) {
+                    document.getElementById('prof_name').value = u.name || '';
+                    document.getElementById('prof_phone').value = u.phone || '';
+                    document.getElementById('prof_depot').value = u.depot || 'Kushtia';
+                    document.getElementById('prof_username').value = u.username || '';
+                    
+                    const img = document.getElementById('prof_prev_img');
+                    img.src = u.photoUrl || 'https://via.placeholder.com/100';
+                }
+                new bootstrap.Modal(document.getElementById('profileModal')).show();
+            });
+        }
+
+        function previewProfilePhoto(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('prof_prev_img').src = e.target.result;
+                    profilePhotoBase64 = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('prof_name').value;
+            const phone = document.getElementById('prof_phone').value;
+            const depot = document.getElementById('prof_depot').value;
+            const username = document.getElementById('prof_username').value;
+
+            if(!name || !username) { alert("Name and Username required"); return; }
+
+            const updates = {
+                name: name,
+                phone: phone,
+                depot: depot,
+                username: username
+            };
+
+            if(profilePhotoBase64) {
+                updates.photoUrl = profilePhotoBase64;
+            }
+
+            database.ref('Users/' + currentUser.id).update(updates).then(() => {
+                alert("Profile Updated!");
+                currentUser.name = name;
+                currentUser.depot = depot;
+                currentUser.photoUrl = profilePhotoBase64 || currentUser.photoUrl;
+                
+                document.getElementById('header_user_name').innerText = name;
+                if(currentUser.photoUrl) document.getElementById('header_profile_pic').src = currentUser.photoUrl;
+                
+                bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+            }).catch(e => alert(e.message));
+        }
+
+        function openChangePassModal() {
+            if(!currentUser || currentUser.id === 'admin_001') {
+                alert("Admin password cannot be changed here.");
+                return;
+            }
+            document.getElementById('cp_current').value = '';
+            document.getElementById('cp_new').value = '';
+            document.getElementById('cp_confirm').value = '';
+            new bootstrap.Modal(document.getElementById('changePassModal')).show();
+        }
+
+        function changePassword() {
+            const curr = document.getElementById('cp_current').value;
+            const newP = document.getElementById('cp_new').value;
+            const conf = document.getElementById('cp_confirm').value;
+
+            if(!curr || !newP || !conf) { alert("Fill all fields"); return; }
+            if(newP !== conf) { alert("New passwords do not match"); return; }
+
+            database.ref('Users/' + currentUser.id).once('value', snap => {
+                const u = snap.val();
+                if(u.password !== curr) {
+                    alert("Current password is incorrect");
+                    return;
+                }
+
+                database.ref('Users/' + currentUser.id).update({ password: newP })
+                .then(() => { alert("Password changed successfully!"); bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide(); })
+                .catch(e => alert(e.message));
+            });
+        }
+
+        // ================= PRESENCE SYSTEM =================
+        function setupPresence() {
+            if (!currentUser) return;
+            const presenceRef = database.ref('OnlineUsers/' + currentUser.id);
+            presenceRef.set({
+                name: currentUser.name,
+                role: currentUser.role,
+                lastOnline: firebase.database.ServerValue.TIMESTAMP
+            });
+            presenceRef.onDisconnect().remove();
+        }
+
+        // ================= DASHBOARD VIEW =================
+        function showDashboard() {
+            document.getElementById('login_section').classList.add('hidden');
+            document.getElementById('dashboard_section').classList.remove('hidden');
+            
+            document.getElementById('header_user_name').innerText = currentUser.name;
+            const headerPic = document.getElementById('header_profile_pic');
+            if(currentUser.photoUrl) {
+                headerPic.src = currentUser.photoUrl;
+            } else {
+                headerPic.src = "https://via.placeholder.com/30"; 
+            }
+
+            document.querySelectorAll('.admin-only').forEach(item => item.style.display = 'none');
+            document.querySelectorAll('.user-only').forEach(item => item.style.display = 'none');
+            document.querySelectorAll('.superadmin-only').forEach(item => item.style.display = 'none');
+            document.querySelectorAll('.admin-superadmin-only').forEach(item => item.style.display = 'none'); 
+            
+            resetAllTabs();
+
+            document.getElementById('dash-tab').classList.add('active');
+            document.getElementById('dashTab').classList.add('show', 'active');
+
+            setupPresence(); 
+            listenForOnlineUsers(); 
+
+            if(currentUser.role === 'user') {
+                document.querySelectorAll('.user-only').forEach(item => item.style.display = 'block');
+                document.getElementById('history_tab_li').style.display = 'block';
+                loadUserDashboardData(); 
+            } else {
+                document.querySelectorAll('.admin-only').forEach(item => item.style.display = 'block');
+                document.querySelectorAll('.admin-superadmin-only').forEach(item => item.style.display = 'block'); 
+                document.getElementById('history_tab_li').style.display = 'block';
+
+                loadDAListForIOU(); 
+                loadAdminDashboardData(); 
+                loadIOUListGlobal(); 
+                loadAdminIOU(); 
+                loadDAListForSummary();
+            }
+
+            prepareBillEntryForm();
+            loadBills(); 
+        }
+
+        // ================= USER DASHBOARD DATA =================
+        function loadUserDashboardData() {
+            database.ref('IOU_List').orderByChild('daId').equalTo(currentUser.id).on('value', snap => {
+                const activeBody = document.getElementById('user_active_iou_list');
+                const usedBody = document.getElementById('user_used_iou_list');
+                activeBody.innerHTML = ''; usedBody.innerHTML = '';
+                
+                let hasActive = false, hasUsed = false;
+                
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const d = child.val();
+                        const type = d.type || 'Delivery'; 
+                        
+                        // FILTER: Skip General and Bill Payment types from User Dashboard
+                        if(type === 'General' || type === 'Bill Payment') {
+                            return;
+                        }
+
+                        if(d.status === 'used') {
+                            hasUsed = true;
+                            usedBody.innerHTML += `<tr><td>${formatDate(d.date)}</td><td><small>${type}</small></td><td>${d.territory}</td><td>${d.taka}</td><td><span class="badge bg-secondary">Used</span></td></tr>`;
+                        } else {
+                            hasActive = true;
+                            activeBody.innerHTML += `<tr class="clickable-row" onclick="fillBillFromIOU('${child.key}')"><td>${formatDate(d.date)}</td><td><small>${type}</small></td><td>${d.territory}</td><td>${d.taka}</td><td><i class="bi bi-check-circle-fill text-success"></i></td></tr>`;
+                        }
+                    });
+                }
+                if(!hasActive) activeBody.innerHTML = '<tr><td colspan="5" class="text-center p-2">No Active IOU</td></tr>';
+                if(!hasUsed) usedBody.innerHTML = '<tr><td colspan="5" class="text-center p-2">No Used IOU</td></tr>';
+            });
+
+            loadUserIOU(); 
+        }
+
+        // ================= ADMIN DASHBOARD DATA =================
+        function loadAdminDashboardData() {
+            loadDashboardStats(); 
+            loadApprovedBillSummary();
+            loadUnbilledIOUList(); 
+        }
+
+        function loadUnbilledIOUList() {
+            const tbody = document.getElementById('unbilled_iou_list');
+            const countBadge = document.getElementById('unbilled_iou_count');
+            
+            database.ref('IOU_List').orderByChild('status').equalTo('active').on('value', snap => {
+                tbody.innerHTML = '';
+                let count = 0;
+                
+                if(!snap.exists()) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success p-2">No Pending IOUs</td></tr>';
+                    countBadge.innerText = "0";
+                    return;
+                }
+
+                let iouArray = [];
+                snap.forEach(child => {
+                    iouArray.push({ key: child.key, ...child.val() });
+                });
+
+                iouArray.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+                iouArray.forEach(d => {
+                    const type = d.type || 'Delivery';
+                    
+                    // FILTER: Skip General and Bill Payment from Pending Bill List
+                    if(type === 'General' || type === 'Bill Payment') {
+                        return; 
+                    }
+
+                    count++;
+                    let daysPassed = "";
+                    if(d.date) {
+                        const iouDate = new Date(d.date);
+                        const today = new Date();
+                        const diffTime = Math.abs(today - iouDate);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                        daysPassed = `<span class="badge bg-light text-dark ms-1">${diffDays}d</span>`;
+                    }
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${formatDate(d.date)} ${daysPassed}</td>
+                        <td>${d.daName}</td>
+                        <td><small class="badge bg-secondary">${type}</small></td>
+                        <td>${d.territory}</td>
+                        <td class="text-end fw-bold text-danger">${d.taka}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                countBadge.innerText = count;
+                
+                if(count === 0) {
+                     tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success p-2">All Operational IOUs utilized</td></tr>';
+                }
+            });
+        }
+
+        function listenForOnlineUsers() {
+            const adminListContainer = document.getElementById('online_users_list');
+            const adminCountBadge = document.getElementById('online_count_badge');
+            
+            const userListContainer = document.getElementById('user_online_list_view');
+            const userCountBadge = document.getElementById('user_online_count_badge');
+
+            database.ref('OnlineUsers').on('value', snap => {
+                let adminHtml = '';
+                let userHtml = '';
+                let count = 0;
+                
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const u = child.val();
+                        count++;
+                        let itemHtml = `<div class="p-1 d-flex align-items-center">
+                            <span class="online-dot"></span> ${u.name} 
+                            <small class="text-muted ms-auto">${u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'DA'}</small>
+                        </div>`;
+                        
+                        adminHtml += itemHtml;
+                        userHtml += itemHtml;
+                    });
+                }
+
+                if(adminListContainer) {
+                    adminListContainer.innerHTML = adminHtml || '<div class="text-center text-muted p-2">No users online</div>';
+                    adminCountBadge.innerText = count;
+                }
+                
+                if(userListContainer) {
+                    userListContainer.innerHTML = userHtml || '<div class="text-center text-muted p-2">No users online</div>';
+                    userCountBadge.innerText = count;
+                }
+            });
+        }
+
+        function loadDashboardStats() {
+            const monthFilter = document.getElementById('dash_filter_month')?.value || '';
+
+            let iouCountsPerDA = {};
+            if(iouListGlobal) {
+                Object.keys(iouListGlobal).forEach(key => {
+                    const iou = iouListGlobal[key];
+                    if(!iouCountsPerDA[iou.daId]) iouCountsPerDA[iou.daId] = 0;
+                    iouCountsPerDA[iou.daId]++;
+                });
+            }
+
+            database.ref('Bills').on('value', (snapshot) => {
+                let totalBills = 0;
+                let pendingBills = 0; 
+                let approvedBills = 0; 
+                const daStats = {}; 
+
+                if(snapshot.exists()) {
+                    snapshot.forEach((depotSnapshot) => {
+                        depotSnapshot.forEach((daSnapshot) => {
+                            const daId = daSnapshot.key;
+                            if(!daStats[daId]) daStats[daId] = { name: 'Unknown', total: 0, pending: 0, approved: 0 };
+                            
+                            daSnapshot.forEach((billSnapshot) => {
+                                const bill = billSnapshot.val();
+                                
+                                if (!isDateInMonth(bill.submitDate || bill.depDate, monthFilter)) return;
+
+                                if(bill.daName) daStats[daId].name = bill.daName;
+                                totalBills++;
+                                daStats[daId].total++;
+                                
+                                if(bill.status === 'green') {
+                                    approvedBills++; 
+                                    daStats[daId].approved++;
+                                } else {
+                                    pendingBills++; 
+                                    daStats[daId].pending++;
+                                }
+                            });
+                        });
+                    });
+                }
+
+                document.getElementById('dash_total_count').innerText = totalBills;
+                document.getElementById('dash_pending_count').innerText = pendingBills; 
+                document.getElementById('dash_approved_count').innerText = approvedBills;
+
+                const tbody = document.getElementById('dash_da_table_body');
+                tbody.innerHTML = '';
+                
+                Object.keys(daStats).forEach(daId => {
+                     const da = daStats[daId];
+                     const iouCount = iouCountsPerDA[daId] || 0;
+                     
+                     if(da.total > 0 || iouCount > 0){
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><i class="bi bi-person-badge me-1"></i>${da.name}</td>
+                        <td class="text-center"><span class="badge bg-primary">${iouCount}</span></td>
+                        <td class="text-center"><span class="badge bg-info">${da.total}</span></td>
+                        <td class="text-center"><span class="badge bg-warning text-dark">${da.pending}</span></td>
+                        <td class="text-center"><span class="badge bg-success">${da.approved}</span></td>`;
+                        tbody.appendChild(tr);
+                    }
+                });
+            });
+        }
+
+        function loadApprovedBillSummary() {
+            database.ref('IOU_List').on('value', (iouSnap) => {
+                const iouData = {};
+                if(iouSnap.exists()) {
+                    iouSnap.forEach(child => {
+                        const iou = child.val();
+                        if(!iouData[iou.daId]) iouData[iou.daId] = { name: iou.daName, totalIou: 0 };
+                        iouData[iou.daId].totalIou += iou.taka || 0;
+                    });
+                }
+
+                database.ref('Bills').on('value', (billSnap) => {
+                    const billData = {};
+                    
+                    if(billSnap.exists()) {
+                        billSnap.forEach(depotSnap => {
+                            depotSnap.forEach(daSnap => {
+                                const daId = daSnap.key;
+                                if(!billData[daId]) {
+                                    let dName = (iouData[daId]) ? iouData[daId].name : 'Unknown';
+                                    billData[daId] = { name: dName, totalApproved: 0, totalBundleQty: 0 };
+                                }
+                                daSnap.forEach(billChild => {
+                                    const bill = billChild.val();
+                                    if(bill.status === 'green') {
+                                        billData[daId].totalApproved += bill.totalAmount || 0;
+                                        billData[daId].totalBundleQty += (bill.bundleQty || 0);
+                                    }
+                                    if(billData[daId].name === 'Unknown' && bill.daName) billData[daId].name = bill.daName;
+                                });
+                            });
+                        });
+                    }
+
+                    const tbody = document.getElementById('approved_summary_body');
+                    tbody.innerHTML = '';
+                    const allDaIds = new Set([...Object.keys(iouData), ...Object.keys(billData)]);
+                    if(allDaIds.size === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">No Data</td></tr>'; return; }
+
+                    allDaIds.forEach(id => {
+                        const iouInfo = iouData[id] || { name: 'Unknown', totalIou: 0 };
+                        const billInfo = billData[id] || { name: iouInfo.name, totalApproved: 0, totalBundleQty: 0 };
+                        
+                        const totalIou = iouInfo.totalIou || 0;
+                        const totalApp = billInfo.totalApproved || 0;
+                        const totalBund = billInfo.totalBundleQty || 0;
+                        const balance = totalApp - totalIou;
+                        const name = billInfo.name || iouInfo.name || id;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${name}</td>
+                        <td class="text-end fw-bold">${totalIou.toFixed(2)}</td>
+                        <td class="text-end fw-bold">${totalApp.toFixed(2)}</td>
+                        <td class="text-end fw-bold">${balance.toFixed(2)}</td>
+                        <td class="text-center fw-bold">${totalBund}</td>
+                        <td class="text-center">${balance < 0 ? '<span class="badge bg-danger">Due Bill</span>' : '<span class="badge bg-success">Clear</span>'}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                });
+            });
+        }
+
+        // ================= IMAGE HANDLING =================
+        function previewUserPhoto(input) {
+            if (input.files && input.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    document.getElementById('photo_preview').src = e.target.result;
+                    document.getElementById('photo_preview').classList.remove('hidden');
+                    userPhotoBase64 = e.target.result; 
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // ================= BILL ENTRY LOGIC =================
+        function prepareBillEntryForm() {
+            if(currentUser.role !== 'user') return;
+            document.getElementById('form_da_name').value = currentUser.name;
+            document.getElementById('form_depot').value = currentUser.depot;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('form_dep_date').value = today;
+            document.getElementById('form_ret_date').value = today;
+            document.getElementById('form_submit_date').value = today;
+            document.getElementById('expense_table_body').innerHTML = '';
+            if(!editingBillId) loadLocalDraft();
+        }
+
+        function calculateSoldValue() {
+            const inv = parseFloat(document.getElementById('form_invoice_val').value) || 0;
+            const ret = parseFloat(document.getElementById('form_return_val').value) || 0;
+            document.getElementById('form_sold_val').value = inv - ret;
+            updateEntryFormCostPercent();
+        }
+
+        function addQuickEntryRow() {
+            const from = document.getElementById('q_from').value;
+            const to = document.getElementById('q_to').value;
+            const mode = document.getElementById('q_mode').value;
+            const amount = document.getElementById('q_amount').value;
+            const da = document.getElementById('q_da_expense').value;
+            const date = document.getElementById('form_dep_date').value; 
+            
+            const modesWithoutRoute = ['Daily Allowance', 'Labour Bill'];
+            if (!modesWithoutRoute.includes(mode)) {
+                if(!from && !to) { alert("Enter From/To"); return; }
+            }
+            
+            const tbody = document.getElementById('expense_table_body');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${mode == 'Van' ? 'selected' : ''}>Van</option><option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(amount)||0) + (parseFloat(da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            
+            const selectObj = row.querySelector('.exp-mode');
+            toggleRowInputs(selectObj);
+            
+            calculateGrandTotal(); triggerAutoSave();
+            document.getElementById('q_from').value = ''; document.getElementById('q_to').value = ''; document.getElementById('q_amount').value = ''; document.getElementById('q_da_expense').value = ''; document.getElementById('q_from').focus();
+        }
+
+        function addExpenseRow() {
+            const tbody = document.getElementById('expense_table_body');
+            const today = document.getElementById('form_dep_date').value || new Date().toISOString().split('T')[0];
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${today}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            triggerAutoSave();
+        }
+
+        function removeRow(btn) { 
+            const tbody = document.getElementById('expense_table_body');
+            if (tbody.rows.length > 1) {
+                btn.parentNode.parentNode.remove(); 
+            } else {
+                const row = tbody.rows[0];
+                row.querySelectorAll('input').forEach(i => {
+                    if(i.type !== 'date') i.value = '';
+                    else i.value = document.getElementById('form_dep_date').value;
+                });
+                const select = row.querySelector('select');
+                select.selectedIndex = 0;
+                toggleRowInputs(select);
+            }
+            calculateGrandTotal(); triggerAutoSave(); 
+        }
+
+        function calculateRowTotal(input) {
+            const row = input.parentNode.parentNode;
+            const amount = parseFloat(row.querySelector('.exp-amount').value) || 0;
+            const da = parseFloat(row.querySelector('.exp-da').value) || 0;
+            row.querySelector('.exp-total').value = amount + da;
+            calculateGrandTotal();
+        }
+
+        function calculateGrandTotal() {
+            let total = 0;
+            document.querySelectorAll('.exp-total').forEach(t => total += (parseFloat(t.value) || 0));
+            document.getElementById('grand_total').value = total;
+            updateEntryFormCostPercent();
+        }
+
+        function updateEntryFormCostPercent() {
+            const inv = parseFloat(document.getElementById('form_invoice_val').value) || 0;
+            const total = parseFloat(document.getElementById('grand_total').value) || 0;
+            document.getElementById('form_cost_percent').innerText = inv > 0 ? ((total / inv) * 100).toFixed(2) + "%" : "0%";
+        }
+
+        // ================= SUBMIT, UPDATE, DRAFT LOGIC =================
+        function submitOrUpdateBill(statusType) {
+            let targetDaId = currentUser.id;
+            let targetDaName = currentUser.name;
+            let targetDepot = currentUser.depot;
+            if (editingBillId && editingBillDaId) {
+                targetDaId = editingBillDaId;
+                targetDaName = document.getElementById('form_da_name').value;
+                targetDepot = document.getElementById('form_depot').value;
+            }
+            
+            const grandTotal = parseFloat(document.getElementById('grand_total').value) || 0;
+            const iouAmount = parseFloat(document.getElementById('form_iou_amount').value) || 0;
+            const remarks = document.getElementById('form_remarks').value;
+
+            const billData = {
+                daName: targetDaName, daId: targetDaId, depot: targetDepot,
+                depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value,
+                route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summaryNo: document.getElementById('form_summary').value,
+                invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0, returnVal: parseFloat(document.getElementById('form_return_val').value) || 0,
+                soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0, invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0,
+                bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0,
+                totalAmount: grandTotal, 
+                originalAmount: grandTotal, 
+                status: statusType, timestamp: Date.now(), 
+                iouId: currentIouId,
+                iouAmount: iouAmount,
+                remarks: remarks,
+                deduction: 0
+            };
+            
+            let expenses = [];
+            document.querySelectorAll('#expense_table_body tr').forEach(r => {
+                expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value });
+            });
+            billData.expenses = expenses;
+            if (!billData.route) { alert("Please fill Route"); return; }
+            const basePath = 'Bills/' + billData.depot + '/' + targetDaId;
+            const processIOU = () => {
+                if (editingBillId && originalIouId && originalIouId !== currentIouId) database.ref('IOU_List/' + originalIouId).update({ status: 'active' });
+                if (currentIouId) database.ref('IOU_List/' + currentIouId).update({ status: statusType === 'draft' ? 'active' : 'used' });
+            };
+            if (editingBillId) {
+                database.ref(basePath + '/' + editingBillId).update(billData, (error) => {
+                    if (error) alert("Error"); else { processIOU(); alert("Updated!"); cancelEdit(); document.getElementById('history-tab').click(); }
+                });
+            } else {
+                const newBillRef = database.ref(basePath).push();
+                newBillRef.set(billData, (error) => {
+                    if (error) alert("Error"); else {
+                        processIOU(); clearLocalDraft(); alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!");
+                        document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = '';
+                        document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = '';
+                        document.getElementById('form_bundle_qty').value = '';
+                        document.getElementById('form_remarks').value = '';
+                        document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%'; document.getElementById('expense_table_body').innerHTML = '';
+                        document.getElementById('form_iou_amount').value = 0; 
+                        calculateSoldValue(); currentIouId = null; originalIouId = null; prepareBillEntryForm(); document.getElementById('history-tab').click();
+                    }
+                });
+            }
+        }
+
+        function editBill(billId, depot, daId) {
+            database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', (snapshot) => {
+                const bill = snapshot.val();
+                if(!bill) return;
+                clearLocalDraft(); editingBillDaId = bill.daId; originalIouId = bill.iouId || null; currentIouId = bill.iouId || null;
+                document.getElementById('form_da_name').value = bill.daName; document.getElementById('form_depot').value = bill.depot;
+                document.getElementById('form_dep_date').value = bill.depDate; document.getElementById('form_ret_date').value = bill.retDate;
+                document.getElementById('form_submit_date').value = bill.submitDate || bill.depDate; document.getElementById('form_route').value = bill.route;
+                document.getElementById('form_mpo').value = bill.mpo; document.getElementById('form_summary').value = bill.summaryNo;
+                document.getElementById('form_invoice_val').value = bill.invoiceVal; document.getElementById('form_return_val').value = bill.returnVal;
+                document.getElementById('form_invoice_qty').value = bill.invoiceQty;
+                document.getElementById('form_bundle_qty').value = bill.bundleQty || 0;
+                document.getElementById('form_iou_amount').value = bill.iouAmount || 0; 
+                document.getElementById('form_remarks').value = bill.remarks || '';
+                
+                const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
+                if(bill.expenses) {
+                    bill.expenses.forEach(exp => {
+                        const row = tbody.insertRow();
+                        row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+                        const selectObj = row.querySelector('.exp-mode');
+                        toggleRowInputs(selectObj);
+                    });
+                }
+                calculateGrandTotal(); calculateSoldValue(); editingBillId = billId;
+                document.getElementById('main_submit_btn').innerText = "Update Bill";
+                document.getElementById('main_submit_btn').classList.remove('btn-success'); document.getElementById('main_submit_btn').classList.add('btn-warning');
+                document.getElementById('cancel_edit_btn').classList.remove('hidden');
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); document.getElementById('entryTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById('entry-tab').classList.add('active');
+            });
+        }
+
+        function deleteBill(billId, depot, daId) {
+            if(confirm("Delete?")) {
+                const billRef = database.ref('Bills/' + depot + '/' + daId + '/' + billId);
+                billRef.once('value', (snapshot) => {
+                    const billData = snapshot.val();
+                    billRef.remove().then(() => { alert("Deleted!"); if (billData.iouId) database.ref('IOU_List/' + billData.iouId).update({ status: 'active' }); }).catch(e => alert(e.message));
+                });
+            }
+        }
+
+        function cancelEdit() {
+            editingBillId = null; editingBillDaId = null; originalIouId = null;
+            document.getElementById('main_submit_btn').innerText = "Submit Bill";
+            document.getElementById('main_submit_btn').classList.add('btn-success'); document.getElementById('main_submit_btn').classList.remove('btn-warning');
+            document.getElementById('cancel_edit_btn').classList.add('hidden'); clearLocalDraft(); prepareBillEntryForm();
+            if(currentUser.role !== 'user') document.getElementById('history-tab').click();
+        }
+
+        // ================= IOU LOGIC =================
+        function loadIOUListGlobal() {
+            database.ref('IOU_List').on('value', snap => {
+                iouListGlobal = {};
+                if(snap.exists()) {
+                    snap.forEach(child => { iouListGlobal[child.key] = child.val(); });
+                }
+                if(currentUser && (currentUser.role === 'admin' || currentUser.role === 'superadmin')) {
+                    loadDashboardStats();
+                }
+            });
+        }
+
+        function calcIouPercent() {
+            const sales = parseFloat(document.getElementById('iou_sales').value) || 0;
+            const returnVal = parseFloat(document.getElementById('iou_return').value) || 0;
+            const sold = sales - returnVal;
+            const taka = parseFloat(document.getElementById('iou_taka').value) || 0;
+            
+            document.getElementById('iou_sold').value = sold;
+            
+            if (sold > 0) {
+                document.getElementById('iou_percent').value = ((taka / sold) * 100).toFixed(2);
+            } else {
+                document.getElementById('iou_percent').value = "0";
+            }
+        }
+
+        function loadDAListForIOU() {
+            database.ref('Users').once('value', snap => {
+                const selectAdd = document.getElementById('iou_da_name');
+                const selectFilter = document.getElementById('filter_iou_da');
+                const selectHistory = document.getElementById('filter_history_da');
+                const selectApproved = document.getElementById('filter_approved_da');
+                
+                daListCache = {}; 
+
+                if(selectAdd) selectAdd.innerHTML = '<option value="">Select DA</option>'; 
+                if(selectFilter) selectFilter.innerHTML = '<option value="">All DA</option>';
+                if(selectHistory) selectHistory.innerHTML = '<option value="">All DAs</option>';
+                if(selectApproved) selectApproved.innerHTML = '<option value="">All DAs</option>';
+                
+                if(snap.exists()){
+                    snap.forEach(child => {
+                        const u = child.val();
+                        if(u.role !== 'admin' && u.role !== 'superadmin') {
+                            daListCache[child.key] = u.name;
+                            const opt = `<option value="${child.key}">${u.name}</option>`;
+                            if(selectAdd) selectAdd.innerHTML += opt; 
+                            if(selectFilter) selectFilter.innerHTML += opt;
+                            if(selectHistory) selectHistory.innerHTML += opt;
+                            if(selectApproved) selectApproved.innerHTML += opt;
+                        }
+                    });
+                }
+            });
+        }
+        
+        function loadDAListForSummary() {
+            const selectSummary = document.getElementById('summary_da');
+            if(!selectSummary) return;
+            selectSummary.innerHTML = '<option value="">-- Select DA to Auto-Fill --</option>';
+            if(Object.keys(daListCache).length > 0) {
+                Object.keys(daListCache).forEach(key => {
+                    selectSummary.innerHTML += `<option value="${key}">${daListCache[key]}</option>`;
+                });
+            } else {
+                database.ref('Users').once('value', snap => {
+                    if(snap.exists()){
+                        snap.forEach(child => {
+                            const u = child.val();
+                            if(u.role !== 'admin' && u.role !== 'superadmin') {
+                                selectSummary.innerHTML += `<option value="${child.key}">${u.name}</option>`;
+                            }
+                        });
+                    }
+                });
+            }
+        }
+
+        function saveIOU() {
+            const daId = document.getElementById('iou_da_name').value;
+            if(!daId) { alert("Select DA"); return; }
+            const salesVal = parseFloat(document.getElementById('iou_sales').value) || 0;
+            const returnVal = parseFloat(document.getElementById('iou_return').value) || 0;
+            const soldVal = salesVal - returnVal;
+
+            const iouType = document.getElementById('iou_type').value;
+
+            const data = {
+                date: document.getElementById('iou_date').value, daId: daId, daName: document.getElementById('iou_da_name').selectedOptions[0].text,
+                territory: document.getElementById('iou_territory').value, mpo: document.getElementById('iou_mpo').value, summary: document.getElementById('iou_summary').value,
+                sales: salesVal, 
+                returnVal: returnVal, 
+                soldVal: soldVal, 
+                qty: parseInt(document.getElementById('iou_qty').value) || 0,
+                bundleQty: parseInt(document.getElementById('iou_bundle_qty').value) || 0,
+                taka: parseFloat(document.getElementById('iou_taka').value) || 0, 
+                percent: document.getElementById('iou_percent').value, status: 'active',
+                type: iouType 
+            };
+            const op = editingIouId ? database.ref('IOU_List/' + editingIouId).update(data) : database.ref('IOU_List').push(data);
+            op.then(() => { alert(editingIouId ? "Updated!" : "Saved!"); clearIOUForm(); }).catch(e => alert(e.message));
+        }
+
+        function clearIOUForm() {
+            document.getElementById('iou_date').value = ''; document.getElementById('iou_da_name').value = ''; document.getElementById('iou_territory').value = '';
+            document.getElementById('iou_mpo').value = ''; document.getElementById('iou_summary').value = ''; document.getElementById('iou_sales').value = '';
+            document.getElementById('iou_return').value = ''; document.getElementById('iou_sold').value = '';
+            document.getElementById('iou_qty').value = ''; 
+            document.getElementById('iou_bundle_qty').value = ''; 
+            document.getElementById('iou_taka').value = ''; document.getElementById('iou_percent').value = '0';
+            document.getElementById('iou_type').value = 'Delivery'; 
+            editingIouId = null; document.getElementById('iou_save_btn').innerText = "Save IOU Entry"; document.getElementById('iou_cancel_btn').classList.add('hidden');
+        }
+
+        function editIOU(id) {
+            database.ref('IOU_List/' + id).once('value', snap => {
+                const d = snap.val(); if(!d) return;
+                document.getElementById('iou_date').value = d.date; document.getElementById('iou_da_name').value = d.daId; document.getElementById('iou_territory').value = d.territory;
+                document.getElementById('iou_mpo').value = d.mpo; document.getElementById('iou_summary').value = d.summary; 
+                document.getElementById('iou_sales').value = d.sales || 0;
+                document.getElementById('iou_return').value = d.returnVal || 0;
+                document.getElementById('iou_sold').value = d.soldVal || 0;
+                document.getElementById('iou_qty').value = d.qty; 
+                document.getElementById('iou_bundle_qty').value = d.bundleQty || 0; 
+                document.getElementById('iou_taka').value = d.taka; document.getElementById('iou_percent').value = d.percent;
+                document.getElementById('iou_type').value = d.type || 'Delivery';
+                editingIouId = id; document.getElementById('iou_save_btn').innerText = "Update"; document.getElementById('iou_cancel_btn').classList.remove('hidden');
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); 
+                document.getElementById('dashTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+                document.getElementById('dash-tab').classList.add('active');
+            });
+        }
+
+        function cancelIOUEdit() { clearIOUForm(); }
+        function resetIOUFilter() { 
+            document.getElementById('filter_iou_month').value = ''; 
+            document.getElementById('filter_iou_da').value = ''; 
+            loadAdminIOU(); 
+        }
+
+        function loadAdminIOU() {
+            const fMonth = document.getElementById('filter_iou_month').value;
+            const fDa = document.getElementById('filter_iou_da').value;
+            
+            database.ref('IOU_List').on('value', snap => {
+                const tbody = document.getElementById('iou_admin_table_body'); tbody.innerHTML = '';
+                let tSales=0, tRet=0, tSold=0, tQty=0, tBQty=0, tTaka=0, count=1;
+                if(!snap.exists()) tbody.innerHTML = '<tr><td colspan="15" class="text-center">No Data</td></tr>';
+                snap.forEach(child => {
+                    const d = child.val();
+                    let show = true;
+                    if(fMonth && !isDateInMonth(d.date, fMonth)) show = false; 
+                    if(fDa && d.daId !== fDa) show = false;
+                    
+                    if(show) {
+                        const iSold = d.soldVal || ((d.sales || 0) - (d.returnVal || 0));
+                        tSales += (d.sales || 0); tRet += (d.returnVal || 0); tSold += iSold; tQty += d.qty || 0; tBQty += d.bundleQty || 0; tTaka += d.taka || 0;
+                        const badge = d.status === 'used' ? '<span class="badge bg-secondary">Used</span>' : '<span class="badge bg-success">Active</span>';
+                        const typeBadge = d.type ? `<span class="badge bg-info">${d.type}</span>` : '';
+                        
+                        tbody.innerHTML += `<tr class="${d.status === 'used' ? 'table-secondary' : ''}"><td>${count++}</td><td>${formatDate(d.date)}</td><td>${d.daName}</td><td>${typeBadge}</td><td>${d.territory}</td><td>${d.mpo}</td><td>${d.summary}</td><td>${d.sales || 0}</td><td>${d.returnVal || 0}</td><td>${iSold}</td><td>${d.qty}</td><td>${d.bundleQty || 0}</td><td>${d.taka}</td><td>${d.percent}%</td><td>${badge} <button class="btn btn-sm btn-warning" onclick="editIOU('${child.key}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU('${child.key}')">X</button></td></tr>`;
+                    }
+                });
+                document.getElementById('iou_tot_sales').innerText = tSales; 
+                document.getElementById('iou_tot_ret').innerText = tRet;
+                document.getElementById('iou_tot_sold').innerText = tSold;
+                document.getElementById('iou_tot_qty').innerText = tQty; 
+                document.getElementById('iou_tot_bqty').innerText = tBQty;
+                document.getElementById('iou_tot_taka').innerText = tTaka;
+            });
+        }
+
+        function deleteIOU(id) { if(confirm("Delete?")) { database.ref('IOU_List/' + id).remove(); if(editingIouId === id) clearIOUForm(); } }
+
+        function loadUserIOU() {
+            database.ref('IOU_List').orderByChild('daId').equalTo(currentUser.id).on('value', snap => {
+                // UI handled by Dashboard
+            });
+        }
+
+        function fillBillFromIOU(iouId) {
+            database.ref('IOU_List/' + iouId).once('value', snap => {
+                const iou = snap.val();
+                if(!iou) return;
+
+                if(iou.type === 'General' || iou.type === 'Bill Payment') {
+                    alert("This is a " + iou.type + " IOU. A bill is not required for this type.");
+                    return;
+                }
+                
+                currentIouId = iouId;
+                document.getElementById('form_iou_amount').value = iou.taka; 
+                document.getElementById('form_dep_date').value = iou.date; 
+                document.getElementById('form_ret_date').value = iou.date; 
+                document.getElementById('form_submit_date').value = iou.date;
+                document.getElementById('form_route').value = iou.territory; 
+                document.getElementById('form_mpo').value = iou.mpo; 
+                document.getElementById('form_summary').value = iou.summary;
+                document.getElementById('form_invoice_val').value = iou.soldVal || iou.sales; 
+                document.getElementById('form_return_val').value = iou.returnVal || 0; 
+                document.getElementById('form_invoice_qty').value = iou.qty; 
+                
+                // FIX: Fill Bundle Qty
+                document.getElementById('form_bundle_qty').value = iou.bundleQty || 0;
+                
+                calculateSoldValue();
+                
+                // FIX: Do NOT automatically add a row. Leave table empty or strictly empty.
+                const tbody = document.getElementById('expense_table_body');
+                tbody.innerHTML = ''; // Ensure strictly empty
+                
+                // FIX: Do NOT auto-fill a row with amount.
+                // User must use Quick Entry (+Add)
+                
+                triggerAutoSave(); 
+                
+                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); 
+                document.getElementById('entryTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
+                document.getElementById('entry-tab').classList.add('active');
+                
+                alert("Form Auto-filled! Please add expense rows manually using Quick Entry.");
+            });
+        }
+
+        // ================= BILL HISTORY LOGIC =================
+        
+        function resetHistoryFilter() {
+            document.getElementById('filter_history_da').value = '';
+            document.getElementById('filter_history_month').value = '';
+            loadBills();
+        }
+
+        function resetApprovedFilter() {
+            document.getElementById('filter_approved_da').value = '';
+            document.getElementById('filter_approved_month').value = '';
+            loadBills();
+        }
+
+        function loadBills() {
+            const tableHead = document.getElementById('bill_table_head');
+            const tableBody = document.getElementById('bill_table_body');
+            const tableFoot = document.getElementById('bill_table_foot');
+            const approvedTableBody = document.getElementById('approved_bill_table_body');
+            const approvedTableFoot = document.getElementById('approved_bill_table_foot');
+            
+            const historyDA = document.getElementById('filter_history_da')?.value || '';
+            const historyMonth = document.getElementById('filter_history_month')?.value || '';
+            const approvedDA = document.getElementById('filter_approved_da')?.value || '';
+            const approvedMonth = document.getElementById('filter_approved_month')?.value || '';
+
+            tableBody.innerHTML = '<tr><td colspan="12" class="text-center">Loading...</td></tr>';
+            approvedTableBody.innerHTML = '<tr><td colspan="11" class="text-center">Loading...</td></tr>';
+            
+            let historyTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
+            let approvedTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
+
+            if (currentUser.role === 'user') {
+                tableHead.innerHTML = `<tr><th>Date</th><th>DA Name</th><th>Depot</th><th>Route</th><th>Amount</th><th>Status</th></tr>`;
+            } else if (currentUser.role === 'admin') {
+                tableHead.innerHTML = `<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Status</th><th>Action</th></tr>`;
+            } else { 
+                tableHead.innerHTML = `<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Status</th><th>Action</th></tr>`;
+            }
+
+            const billsRef = database.ref('Bills');
+            
+            billsRef.on('value', (snapshot) => {
+                tableBody.innerHTML = '';
+                approvedTableBody.innerHTML = '';
+                historyTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
+                approvedTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
+                
+                if (!snapshot.exists()) { 
+                    const colSpan = currentUser.role === 'user' ? '6' : '12';
+                    tableBody.innerHTML = `<tr><td colspan="${colSpan}" class="text-center text-danger">No Bills Found</td></tr>`; 
+                    approvedTableBody.innerHTML = `<tr><td colspan="11" class="text-center text-danger">No Bills Found</td></tr>`;
+                    tableFoot.innerHTML = '';
+                    approvedTableFoot.innerHTML = '';
+                    return; 
+                }
+
+                let approvedBillsArray = [];
+
+                snapshot.forEach((depotSnapshot) => {
+                    depotSnapshot.forEach((daSnapshot) => {
+                        daSnapshot.forEach((billSnapshot) => {
+                            const bill = billSnapshot.val();
+                            const billId = billSnapshot.key;
+                            const daId = bill.daId;
+
+                            const sales = bill.invoiceVal || 0;
+                            let iou = bill.iouAmount || 0;
+                            if (!iou && bill.iouId && iouListGlobal[bill.iouId]) {
+                                iou = iouListGlobal[bill.iouId].taka || 0;
+                            }
+                            const deduction = bill.deduction || 0;
+                            const originalAmount = bill.originalAmount || (bill.totalAmount + deduction); 
+                            const approvedAmount = bill.totalAmount || 0;
+                            const userBillPer = sales > 0 ? ((originalAmount/sales)*100).toFixed(1) : '0';
+                            const payPer = sales > 0 ? ((approvedAmount/sales)*100).toFixed(1) : '0';
+
+                            if (currentUser.role === 'user') {
+                                if (bill.daId !== currentUser.id) return;
+                                const tr = document.createElement('tr');
+                                if(bill.status === 'draft') tr.classList.add('status-draft');
+                                else if (bill.status === 'red') tr.classList.add('status-red');
+                                else if (bill.status === 'orange') tr.classList.add('status-orange');
+                                else tr.classList.add('status-green');
+
+                                let statusText = bill.status.toUpperCase();
+                                if(bill.status === 'red') statusText = "PENDING";
+                                if(bill.status === 'orange') statusText = "CHECKED";
+                                if(bill.status === 'green') statusText = "APPROVED";
+
+                                let actions = '';
+                                if (bill.status === 'red' && deduction === 0) {
+                                    actions += `<button class="btn btn-warning btn-sm" onclick="editBill('${billId}', '${bill.depot}', '${daId}')">Edit</button> `;
+                                    actions += `<button class="btn btn-danger btn-sm" onclick="deleteBill('${billId}', '${bill.depot}', '${daId}')">Delete</button>`;
+                                }
+                                
+                                tr.innerHTML = `
+                                    <td>${formatDate(bill.submitDate || bill.depDate)}</td>
+                                    <td>${bill.daName}</td>
+                                    <td>${bill.depot}</td>
+                                    <td>${bill.route || 'N/A'}</td>
+                                    <td class="fw-bold">${originalAmount.toFixed(2)}</td>
+                                    <td><b>${statusText}</b></td>`;
+                                tableBody.appendChild(tr);
+
+                            } 
+                            else if (currentUser.role === 'admin') {
+                                if(bill.status === 'red') {
+                                    if (historyDA && bill.daId !== historyDA) return;
+                                    if (historyMonth && !isDateInMonth(bill.submitDate || bill.depDate, historyMonth)) return;
+
+                                    historyTotals.iou += iou;
+                                    historyTotals.sales += sales;
+                                    historyTotals.userBill += originalAmount;
+                                    historyTotals.payable += originalAmount; 
+
+                                    const tr = document.createElement('tr');
+                                    tr.classList.add('status-red');
+                                    let statusText = "PENDING";
+                                    
+                                    let actionBtns = '';
+                                    actionBtns += `<button class="btn btn-warning btn-sm" onclick="editBill('${billId}', '${bill.depot}', '${daId}')">Edit</button> `;
+                                    actionBtns += `<button class="btn btn-secondary btn-sm" onclick="openCutModal('${billId}', '${bill.depot}', '${daId}')">Check/Deduct</button> `;
+                                    actionBtns += `<button class="btn btn-danger btn-sm" onclick="deleteBill('${billId}', '${bill.depot}', '${daId}')">Del</button>`;
+
+                                    tr.innerHTML = `
+                                        <td>${formatDate(bill.submitDate || bill.depDate)}</td>
+                                        <td>${bill.daName}</td>
+                                        <td>${bill.route || 'N/A'}</td>
+                                        <td class="text-end">${iou.toFixed(2)}</td>
+                                        <td class="text-end">${sales.toFixed(2)}</td>
+                                        <td class="text-end">${originalAmount.toFixed(2)}</td>
+                                        <td class="text-end">${userBillPer}%</td>
+                                        <td><b>${statusText}</b></td>
+                                        <td>${actionBtns}</td>`;
+                                    tableBody.appendChild(tr);
+                                }
+                                
+                                if(bill.status === 'orange' || bill.status === 'green') {
+                                    approvedBillsArray.push({
+                                        bill, billId, daId, iou, sales, originalAmount, approvedAmount, userBillPer, payPer, deduction
+                                    });
+                                }
+
+                            } 
+                            else {
+                                if(bill.status === 'orange') {
+                                    if (historyDA && bill.daId !== historyDA) return;
+                                    if (historyMonth && !isDateInMonth(bill.submitDate || bill.depDate, historyMonth)) return;
+
+                                    historyTotals.iou += iou;
+                                    historyTotals.sales += sales;
+                                    historyTotals.userBill += originalAmount;
+                                    historyTotals.payable += approvedAmount;
+
+                                    const tr = document.createElement('tr');
+                                    tr.classList.add('status-orange');
+                                    
+                                    let actionBtns = '';
+                                    actionBtns += `<button class="btn btn-warning btn-sm" onclick="openCutModal('${billId}', '${bill.depot}', '${daId}')">Recheck</button> `;
+                                    actionBtns += `<button class="btn btn-success btn-sm" onclick="approveBill('${billId}', '${bill.depot}', '${daId}')">Approve</button>`;
+                                    
+                                    let payDisplay = deduction > 0 ? `<span class="cut-amount">${originalAmount.toFixed(2)}</span> <span class="payable-amount">${approvedAmount.toFixed(2)}</span>` : approvedAmount.toFixed(2);
+
+                                    tr.innerHTML = `
+                                        <td>${formatDate(bill.submitDate || bill.depDate)}</td>
+                                        <td>${bill.daName}</td>
+                                        <td>${bill.route || 'N/A'}</td>
+                                        <td class="text-end">${iou.toFixed(2)}</td>
+                                        <td class="text-end">${sales.toFixed(2)}</td>
+                                        <td class="text-end">${originalAmount.toFixed(2)}</td>
+                                        <td class="text-end">${userBillPer}%</td>
+                                        <td class="text-end fw-bold">${payDisplay}</td>
+                                        <td class="text-end">${payPer}%</td>
+                                        <td><b>CHECKED</b></td>
+                                        <td>${actionBtns}</td>`;
+                                    tableBody.appendChild(tr);
+                                }
+                                
+                                if(bill.status === 'green') {
+                                    approvedBillsArray.push({
+                                        bill, billId, daId, iou, sales, originalAmount, approvedAmount, userBillPer, payPer, deduction
+                                    });
+                                }
+                            }
+                        });
+                    });
+                });
+
+                approvedBillsArray.sort((a, b) => {
+                    const dateA = new Date(a.bill.submitDate || a.bill.depDate || 0);
+                    const dateB = new Date(b.bill.submitDate || b.bill.depDate || 0);
+                    return dateA - dateB;
+                });
+
+                approvedBillsArray.forEach(item => {
+                    const { bill, billId, daId, iou, sales, originalAmount, approvedAmount, userBillPer, payPer, deduction } = item;
+                    
+                    if (approvedDA && bill.daId !== approvedDA) return;
+                    if (approvedMonth && !isDateInMonth(bill.submitDate || bill.depDate, approvedMonth)) return;
+
+                    approvedTotals.iou += iou;
+                    approvedTotals.sales += sales;
+                    approvedTotals.userBill += originalAmount;
+                    approvedTotals.payable += approvedAmount;
+
+                    const trApp = document.createElement('tr');
+                    let statusText = bill.status === 'orange' ? "CHECKED" : "APPROVED";
+                    if(bill.status === 'orange') trApp.classList.add('status-orange');
+                    else trApp.classList.add('status-green');
+
+                    let payDisplay = deduction > 0 ? `<span class="cut-amount">${originalAmount.toFixed(2)}</span> <span class="payable-amount">${approvedAmount.toFixed(2)}</span>` : approvedAmount.toFixed(2);
+                    let actionBtns = `<button class="btn btn-info btn-sm text-white" onclick="printBill('${billId}', '${bill.depot}', '${daId}')">Print</button>`;
+                    
+                    trApp.innerHTML = `
+                        <td>${formatDate(bill.submitDate || bill.depDate)}</td>
+                        <td>${bill.daName}</td>
+                        <td>${bill.route || 'N/A'}</td>
+                        <td class="text-end">${iou.toFixed(2)}</td>
+                        <td class="text-end">${sales.toFixed(2)}</td>
+                        <td class="text-end">${originalAmount.toFixed(2)}</td>
+                        <td class="text-end">${userBillPer}%</td>
+                        <td class="text-end fw-bold">${payDisplay}</td>
+                        <td class="text-end">${payPer}%</td>
+                        <td><b>${statusText}</b></td>
+                        <td>${actionBtns}</td>`;
+                    approvedTableBody.appendChild(trApp);
+                });
+
+                if(currentUser.role === 'admin') {
+                    tableFoot.innerHTML = `<tr>
+                        <td colspan="3" class="text-end">TOTAL</td>
+                        <td class="text-end">${historyTotals.iou.toFixed(2)}</td>
+                        <td class="text-end">${historyTotals.sales.toFixed(2)}</td>
+                        <td class="text-end">${historyTotals.userBill.toFixed(2)}</td>
+                        <td colspan="3"></td>
+                    </tr>`;
+                } else if(currentUser.role === 'superadmin') {
+                    tableFoot.innerHTML = `<tr>
+                        <td colspan="3" class="text-end">TOTAL</td>
+                        <td class="text-end">${historyTotals.iou.toFixed(2)}</td>
+                        <td class="text-end">${historyTotals.sales.toFixed(2)}</td>
+                        <td class="text-end">${historyTotals.userBill.toFixed(2)}</td>
+                        <td></td>
+                        <td class="text-end">${historyTotals.payable.toFixed(2)}</td>
+                        <td colspan="3"></td>
+                    </tr>`;
+                }
+
+                if(currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                    approvedTableFoot.innerHTML = `<tr>
+                        <td colspan="3" class="text-end">TOTAL</td>
+                        <td class="text-end">${approvedTotals.iou.toFixed(2)}</td>
+                        <td class="text-end">${approvedTotals.sales.toFixed(2)}</td>
+                        <td class="text-end">${approvedTotals.userBill.toFixed(2)}</td>
+                        <td></td>
+                        <td class="text-end">${approvedTotals.payable.toFixed(2)}</td>
+                        <td colspan="3"></td>
+                    </tr>`;
+                }
+
+            }, (error) => {
+                console.error("Firebase Read Failed: ", error);
+            });
+        }
+
+        // ================= BILL SUMMARY LOGIC =================
+        function generateSummary() {
+            const daId = document.getElementById('summary_da').value;
+            const monthVal = document.getElementById('summary_month').value;
+            const tbody = document.getElementById('summary_table_body');
+            const depot = document.getElementById('summary_depot').value;
+            
+            tbody.innerHTML = '';
+            currentSummaryData = [];
+
+            if(!daId) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Please select a DA.</td></tr>';
+                return;
+            }
+
+            const daName = document.getElementById('summary_da').selectedOptions[0].text;
+            let tSales = 0, tTaka = 0, tDA = 0, tNet = 0;
+
+            database.ref('Bills/' + depot + '/' + daId).once('value', snap => {
+                if(!snap.exists()) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center">No approved bills found for this DA.</td></tr>';
+                    return;
+                }
+
+                let billsArray = [];
+                snap.forEach(child => {
+                    const bill = child.val();
+                    if(bill.status === 'green') billsArray.push(bill);
+                });
+
+                if(billsArray.length === 0) {
+                     tbody.innerHTML = '<tr><td colspan="9" class="text-center text-warning">No Approved (Green) bills found.</td></tr>';
+                     return;
+                }
+
+                billsArray.sort((a,b) => (a.submitDate || a.depDate || '').localeCompare(b.submitDate || b.depDate || ''));
+
+                let sl = 1;
+                billsArray.forEach(bill => {
+                    if(monthVal && !isDateInMonth(bill.submitDate || bill.depDate, monthVal)) return;
+
+                    const netSales = bill.soldVal || (bill.invoiceVal - bill.returnVal);
+                    
+                    let sumTaka = 0;
+                    let sumDA = 0;
+                    
+                    if(bill.expenses && Array.isArray(bill.expenses)) {
+                        bill.expenses.forEach(exp => {
+                            const amt = parseFloat(exp.amount) || 0;
+                            if(exp.mode && exp.mode.trim() === 'Daily Allowance') {
+                                sumDA += amt;
+                            } else {
+                                sumTaka += amt;
+                            }
+                        });
+                    }
+                    
+                    const netAmount = bill.totalAmount || (sumTaka + sumDA);
+                    const costPct = netSales > 0 ? ((netAmount / netSales) * 100).toFixed(2) : "0.00";
+
+                    tSales += netSales;
+                    tTaka += sumTaka;
+                    tDA += sumDA;
+                    tNet += netAmount;
+
+                    currentSummaryData.push({
+                        sl: sl++,
+                        date: formatDate(bill.submitDate || bill.depDate),
+                        territory: bill.route || 'N/A',
+                        type: 'Delivery',
+                        sales: netSales,
+                        taka: sumTaka,
+                        da: sumDA,
+                        net: netAmount,
+                        cost: costPct
+                    });
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${sl-1}</td>
+                        <td>${formatDate(bill.submitDate || bill.depDate)}</td>
+                        <td>${bill.route || ''}</td>
+                        <td>Delivery</td>
+                        <td class="text-end">${netSales.toFixed(2)}</td>
+                        <td class="text-end">${sumTaka.toFixed(2)}</td>
+                        <td class="text-end">${sumDA.toFixed(2)}</td>
+                        <td class="text-end fw-bold">${netAmount.toFixed(2)}</td>
+                        <td class="text-end">${costPct}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                document.getElementById('sum_foot_sales').innerText = tSales.toFixed(2);
+                document.getElementById('sum_foot_taka').innerText = tTaka.toFixed(2);
+                document.getElementById('sum_foot_da').innerText = tDA.toFixed(2);
+                document.getElementById('sum_foot_net').innerText = tNet.toFixed(2);
+                
+                const totalCostPct = tSales > 0 ? ((tNet / tSales) * 100).toFixed(2) : "0.00";
+                document.getElementById('sum_foot_cost').innerText = totalCostPct + "%";
+
+                if(currentSummaryData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center">No bills found for selected month.</td></tr>';
+                }
+            });
+        }
+
+        function printBillSummary() {
+            if(currentSummaryData.length === 0) {
+                alert("No data to print. Generate summary first.");
+                return;
+            }
+
+            const daId = document.getElementById('summary_da').value;
+            const daName = document.getElementById('summary_da').selectedOptions[0].text;
+            const monthVal = document.getElementById('summary_month').value;
+            
+            document.getElementById('print_sum_da_name').innerText = daName;
+            document.getElementById('print_sum_depot').innerText = "Kushtia Depot";
+            document.getElementById('print_sum_month').innerText = monthVal ? monthVal : "All Time";
+
+            const tbody = document.getElementById('print_sum_tbody');
+            tbody.innerHTML = '';
+            
+            let tSales = 0, tTaka = 0, tDA = 0, tNet = 0;
+
+            currentSummaryData.forEach(row => {
+                tSales += row.sales;
+                tTaka += row.taka;
+                tDA += row.da;
+                tNet += row.net;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="padding:2px; text-align:center;">${row.sl}</td>
+                    <td style="padding:2px; text-align:left;">${row.date}</td>
+                    <td style="padding:2px; text-align:left;">${row.territory}</td>
+                    <td style="padding:2px; text-align:left;">${row.type}</td>
+                    <td style="padding:2px; text-align:right;">${row.sales.toFixed(2)}</td>
+                    <td style="padding:2px; text-align:right;">${row.taka.toFixed(2)}</td>
+                    <td style="padding:2px; text-align:right;">${row.da.toFixed(2)}</td>
+                    <td style="padding:2px; text-align:right;">${row.net.toFixed(2)}</td>
+                    <td style="padding:2px; text-align:right;">${row.cost}%</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('print_sum_foot_sales').innerText = tSales.toFixed(2);
+            document.getElementById('print_sum_foot_taka').innerText = tTaka.toFixed(2);
+            document.getElementById('print_sum_foot_da').innerText = tDA.toFixed(2);
+            document.getElementById('print_sum_foot_net').innerText = tNet.toFixed(2);
+            
+            const totalCostPct = tSales > 0 ? ((tNet / tSales) * 100).toFixed(2) : "0.00";
+            document.getElementById('print_sum_foot_cost').innerText = totalCostPct + "%";
+            document.getElementById('print_sum_cost_pct').innerText = totalCostPct + "%";
+
+            document.getElementById('print_sum_words').innerText = numberToEnglish(tNet) + " Taka Only";
+
+            document.getElementById('print_summary_area').classList.add('active-print');
+            document.getElementById('print_area').classList.remove('active-print');
+
+            window.print();
+        }
+
+        // ================= ADMIN DEDUCTION & APPROVAL LOGIC =================
+        
+        function openCutModal(billId, depot, daId) {
+            document.getElementById('edit_bill_id').value = billId; document.getElementById('edit_depot').value = depot;
+            document.getElementById('edit_depot').dataset.daId = daId;
+            database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', (snapshot) => {
+                const bill = snapshot.val(); if(!bill) return;
+                
+                modalSales = bill.invoiceVal || 0;
+                modalUserBill = bill.originalAmount || bill.totalAmount || 0;
+                modalIou = bill.iouAmount || 0;
+
+                const tbody = document.getElementById('modal_expense_body'); tbody.innerHTML = '';
+                if(bill.expenses) {
+                    bill.expenses.forEach(exp => {
+                        const amt = parseFloat(exp.amount) || 0; const da = parseFloat(exp.da) || 0;
+                        const origTotal = amt + da; const currentDed = parseFloat(exp.deduction) || 0; const currentTot = origTotal - currentDed;
+                        const row = tbody.insertRow();
+                        row.innerHTML = `<td><input type="text" class="form-control form-control-sm" value="${formatDate(exp.date)}" disabled></td><td><input type="text" class="form-control form-control-sm" value="${exp.from}" disabled></td><td><input type="text" class="form-control form-control-sm" value="${exp.to}" disabled></td><td><input type="text" class="form-control form-control-sm" value="${exp.mode}" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-amt" value="${amt}" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-da" value="${da}" disabled></td><td><input type="number" class="form-control form-control-sm text-danger row-deduction" value="${currentDed}" placeholder="0" oninput="calculateModalTotals()"></td><td><span class="fw-bold row-total">${currentTot}</span></td>`;
+                    });
+                }
+                
+                document.getElementById('modal_remarks').value = bill.remarks || '';
+                
+                calculateModalTotals();
+            });
+            new bootstrap.Modal(document.getElementById('cutBillModal')).show();
+        }
+
+        function calculateModalTotals() {
+            let grandTotal = 0;
+            document.querySelectorAll('#modal_expense_body tr').forEach(row => {
+                const amt = parseFloat(row.querySelector('.row-amt').value) || 0;
+                const da = parseFloat(row.querySelector('.row-da').value) || 0;
+                const deduct = parseFloat(row.querySelector('.row-deduction').value) || 0;
+                const origTotal = amt + da; const rowTotal = origTotal - deduct;
+                const totalSpan = row.querySelector('.row-total');
+                if(deduct > 0) totalSpan.innerHTML = `<span style="text-decoration: line-through; color:red;">${origTotal}</span> <span style="color:green;">${rowTotal}</span>`;
+                else totalSpan.innerText = rowTotal;
+                grandTotal += rowTotal;
+            });
+            document.getElementById('modal_grand_total').innerText = grandTotal.toFixed(2);
+
+            document.getElementById('sum_iou').innerText = modalIou.toFixed(2);
+            document.getElementById('sum_sales').innerText = modalSales.toFixed(2);
+            document.getElementById('sum_user_bill').innerText = modalUserBill.toFixed(2);
+            
+            let userPer = modalSales > 0 ? ((modalUserBill / modalSales)*100).toFixed(1) : 0;
+            document.getElementById('sum_user_per').innerText = userPer + '%';
+            
+            document.getElementById('sum_payable').innerText = grandTotal.toFixed(2);
+            
+            let payPer = modalSales > 0 ? ((grandTotal / modalSales)*100).toFixed(1) : 0;
+            document.getElementById('sum_payable_per').innerText = payPer + '%';
+            
+            document.getElementById('sum_final').innerText = grandTotal.toFixed(2);
+        }
+
+        function saveDeduction() {
+            const billId = document.getElementById('edit_bill_id').value; const depot = document.getElementById('edit_depot').value; const daId = document.getElementById('edit_depot').dataset.daId;
+            let newExpenses = []; let newTotalAmount = 0; let totalDeduction = 0;
+            let remarks = document.getElementById('modal_remarks').value;
+            
+            let originalAmt = 0;
+
+            document.querySelectorAll('#modal_expense_body tr').forEach(row => {
+                const amt = parseFloat(row.querySelector('.row-amt').value) || 0;
+                const da = parseFloat(row.querySelector('.row-da').value) || 0;
+                const ded = parseFloat(row.querySelector('.row-deduction').value) || 0;
+                
+                originalAmt += (amt + da);
+
+                newExpenses.push({
+                    date: row.cells[0].querySelector('input').value, from: row.cells[1].querySelector('input').value, to: row.cells[2].querySelector('input').value, mode: row.cells[3].querySelector('input').value,
+                    amount: amt, da: da, deduction: ded
+                });
+                
+                newTotalAmount += (amt + da - ded); 
+                totalDeduction += ded;
+            });
+            
+            let updateData = { 
+                expenses: newExpenses, 
+                totalAmount: newTotalAmount, 
+                deduction: totalDeduction, 
+                originalAmount: originalAmt, 
+                status: 'orange',
+                remarks: remarks
+            };
+
+            if(currentUser.role === 'superadmin') {
+                updateData.recheckedBy = currentUser.name;
+            } else {
+                updateData.checkedBy = currentUser.name;
+            }
+
+            database.ref('Bills/' + depot + '/' + daId + '/' + billId).update(updateData, (error) => {
+                if (error) alert("Failed"); else { alert("Changes Saved!"); bootstrap.Modal.getInstance(document.getElementById('cutBillModal')).hide(); }
+            });
+        }
+
+        function approveBill(billId, depot, daId) {
+            if(confirm("Approve this bill?")) {
+                database.ref('Bills/' + depot + '/' + daId + '/' + billId).update({
+                    status: 'green',
+                    approvedBy: currentUser.name
+                }, (error) => {
+                    if(error) alert("Error"); else alert("Bill Approved!");
+                });
+            }
+        }
+
+        // ================= PRINT LOGIC =================
+        function printBill(billId, depot, daId) {
+            database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', (snapshot) => {
+                const bill = snapshot.val();
+                if(!bill) return;
+
+                let costPercent = "0%";
+                if (bill.invoiceVal > 0) costPercent = ((bill.totalAmount / bill.invoiceVal) * 100).toFixed(2) + "%";
+
+                document.getElementById('p_da_name').innerText = bill.daName; document.getElementById('p_depot').innerText = bill.depot;
+                document.getElementById('p_dep_date').innerText = formatDate(bill.depDate); document.getElementById('p_ret_date').innerText = formatDate(bill.retDate);
+                document.getElementById('p_submit_date').innerText = formatDate(bill.submitDate); document.getElementById('p_route').innerText = bill.route;
+                document.getElementById('p_mpo').innerText = bill.mpo; document.getElementById('p_summary').innerText = bill.summaryNo;
+                document.getElementById('p_inv_val').innerText = bill.invoiceVal; document.getElementById('p_ret_val').innerText = bill.returnVal;
+                document.getElementById('p_sold_val').innerText = bill.soldVal; document.getElementById('p_inv_qty').innerText = bill.invoiceQty;
+                document.getElementById('p_bundle_qty').innerText = bill.bundleQty || 0;
+                
+                document.getElementById('p_total_words').innerText = numberToEnglish(bill.totalAmount) + " Taka Only";
+                document.getElementById('p_cost_percent').innerText = costPercent; 
+                document.getElementById('p_prepared_by').innerText = bill.daName;
+                
+                document.getElementById('p_remarks').innerText = bill.remarks || '';
+                
+                document.getElementById('p_checked_by').innerText = bill.checkedBy || ''; 
+                document.getElementById('p_rechecked_by').innerText = bill.recheckedBy || bill.approvedBy || ''; 
+
+                const tbody = document.getElementById('p_expense_body'); tbody.innerHTML = '';
+                
+                let totAmt = 0, totDa = 0, totDed = 0, totNet = 0, totTotal = 0;
+
+                if(bill.expenses) {
+                    bill.expenses.forEach(exp => {
+                        if(!exp.date) return;
+                        const amt = parseFloat(exp.amount) || 0; 
+                        const da = parseFloat(exp.da) || 0; 
+                        const ded = parseFloat(exp.deduction) || 0;
+
+                        const total = amt + da;
+                        const netAmount = total - ded;
+                        
+                        totAmt += amt;
+                        totDa += da;
+                        totTotal += total; 
+                        totDed += ded;
+                        totNet += netAmount;
+
+                        let totalDisplay = total;
+                        if(ded > 0) {
+                            totalDisplay = `<span class="cut-text">${total}</span>`;
+                        }
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="padding: 2px; text-align: left;">${formatDate(exp.date)}</td>
+                                <td style="padding: 2px; text-align: left;">${exp.from}</td>
+                                <td style="padding: 2px; text-align: left;">${exp.to}</td>
+                                <td style="padding: 2px; text-align: left;">${exp.mode}</td>
+                                <td style="padding: 2px; text-align: right;">${amt}</td>
+                                <td style="padding: 2px; text-align: right;">${da}</td>
+                                <td style="padding: 2px; text-align: right;">${totalDisplay}</td>
+                                <td style="padding: 2px; text-align: right; color:red;">${ded > 0 ? ded : ''}</td>
+                                <td style="padding: 2px; text-align: right; font-weight: bold;">${netAmount}</td>
+                            </tr>`;
+                    });
+                }
+                
+                document.getElementById('p_foot_amt').innerText = totAmt;
+                document.getElementById('p_foot_da').innerText = totDa;
+                document.getElementById('p_foot_total').innerText = totTotal; 
+                document.getElementById('p_foot_ded').innerText = totDed;
+                document.getElementById('p_total_amount').innerText = totNet;
+
+                document.getElementById('print_area').classList.add('active-print');
+                document.getElementById('print_summary_area').classList.remove('active-print');
+
+                window.print();
+            });
+        }
+
+        function numberToEnglish(num) {
+            if(num === 0) return "Zero";
+            let a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+            let b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+            if ((num = num.toString()).length > 9) return 'Overflow';
+            let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+            if (!n) return; 
+            let str = '';
+            str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+            str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+            str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+            str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+            str += (n[5] !=0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+            return str;
+        }
+
+        function saveNewUser() {
+            const userIdManual = document.getElementById('new_user_id').value.trim();
+            const name = document.getElementById('new_user_name').value.trim();
+            const phone = document.getElementById('new_user_phone').value.trim();
+            const depot = document.getElementById('new_user_depot').value;
+            const username = document.getElementById('new_user_username').value.trim();
+            const password = document.getElementById('new_user_pass').value.trim();
+            const role = document.getElementById('new_user_role').value;
+
+            if (!name || !username || !password || !userIdManual) { alert("Fill required fields (ID, Name, Username, Password)"); return; }
+            
+            const newUserRef = database.ref('Users').push();
+            const userData = { 
+                userId: userIdManual,
+                                name: name, 
+                phone: phone, 
+                depot: depot, 
+                username: username, 
+                password: password, 
+                role: role 
+            };
+
+            if(userPhotoBase64) {
+                userData.photoUrl = userPhotoBase64;
+            }
+
+            newUserRef.set(userData, (error) => {
+                if(error) {
+                    alert("Error creating user"); 
+                } else { 
+                    alert("User Created Successfully!"); 
+                    document.getElementById('new_user_id').value = ''; 
+                    document.getElementById('new_user_name').value = ''; 
+                    document.getElementById('new_user_phone').value = '';
+                    document.getElementById('new_user_username').value = ''; 
+                    document.getElementById('new_user_pass').value = ''; 
+                    document.getElementById('new_user_depot').value = 'Kushtia';
+                    document.getElementById('new_user_role').value = 'user';
+                    document.getElementById('new_user_photo').value = '';
+                    document.getElementById('photo_preview').classList.add('hidden');
+                    userPhotoBase64 = null;
+                    
+                    loadDAListForIOU(); 
+                    loadDAListForSummary();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
