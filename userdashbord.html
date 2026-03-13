@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MONICO PHARMA - User Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #C0C0C0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; }
+        
+        /* Login Container */
+        .login-container{
+            max-width:350px;
+            margin: 120px auto;
+        }
+
+        /* Main Container */
+        .user-portal-container {
+            padding: 10px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        /* card = VB6 form style */
+        .card{
+            background:#C0C0C0;
+            border:2px solid #808080;
+            box-shadow: inset 2px 2px #ffffff, inset -2px -2px #404040;
+        }
+
+        /* title bar */
+        .card-header{
+            background:#000080 !important;
+            color:white !important;
+            font-weight:bold;
+        }
+
+        /* textbox */
+        .form-control{
+            border:2px inset #808080;
+            border-radius:0;
+        }
+
+        /* button */
+        .btn-primary{
+            background:#C0C0C0;
+            color:black;
+            border:2px outset #808080;
+        }
+        .btn-primary:active{
+            border:2px inset #808080;
+        }
+
+        /* Status Colors */
+        .status-red { background-color: #ffebee; border-left: 5px solid #ef5350; }
+        .status-green { background-color: #e8f5e9; border-left: 5px solid #66bb6a; }
+        .status-orange { background-color: #fff3e0; border-left: 5px solid #ffa726; } 
+        .status-draft { background-color: #eceff1; border-left: 5px solid #90a4ae; }
+        
+        .hidden { display: none !important; }
+        .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        
+        /* Quick Entry Style */
+        .quick-entry-card { 
+            background-color: #C0C0C0; 
+            border: 1px solid #90caf9; 
+            border-radius: 5px; 
+            padding: 10px; 
+            margin-bottom: 10px;
+        }
+        .quick-entry-card label { font-size: 11px; font-weight: bold; color: #0d47a1; }
+
+        /* Dashboard Styles */
+        .dash-card {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .online-dot { width: 8px; height: 8px; background-color: #28a745; border-radius: 50%; display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* Mobile Optimization */
+        @media (max-width: 768px) {
+            .table-responsive { overflow-x: auto !important; border: 1px solid #dee2e6; border-radius: 5px; }
+            #entryTab table { min-width: 650px; width: 100%; font-size: 11px; table-layout: fixed; }
+            #entryTab th:nth-child(1), #entryTab td:nth-child(1) { width: 14%; }
+            #entryTab th:nth-child(2), #entryTab td:nth-child(2) { width: 18%; }
+            #entryTab th:nth-child(3), #entryTab td:nth-child(3) { width: 18%; }
+            #entryTab th:nth-child(4), #entryTab td:nth-child(4) { width: 18%; }
+            #entryTab th:nth-child(5), #entryTab td:nth-child(5) { width: 10%; }
+            #entryTab th:nth-child(6), #entryTab td:nth-child(6) { width: 10%; }
+            #entryTab th:nth-child(7), #entryTab td:nth-child(7) { width: 10%; }
+            #entryTab th:nth-child(8), #entryTab td:nth-child(8) { width: 2%;  }
+            #entryTab input, #entryTab select { width: 100% !important; padding: 2px 4px !important; font-size: 11px !important; min-width: 35px; border: 1px solid #ced4da; }
+            #entryTab th, #entryTab td { padding: 4px 2px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LOGIN SECTION -->
+    <div id="login_section" class="container login-container">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white text-center"><h4>Bill System Login</h4></div>
+            <div class="card-body">
+                <div class="mb-3"><label>Username</label><input type="text" id="username" class="form-control" placeholder="Enter Username"></div>
+                <div class="mb-3"><label>Password</label><input type="password" id="password" class="form-control" placeholder="Enter Password"></div>
+                <button onclick="handleLogin()" class="btn btn-primary w-100">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- USER PORTAL SECTION -->
+    <div id="portal_section" class="container-fluid user-portal-container hidden">
+        
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white shadow-sm rounded">
+            <h5 class="mb-0" id="welcome_msg">Welcome</h5>
+            <button onclick="logout()" class="btn btn-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Logout</button>
+        </div>
+
+        <!-- Nav Tabs -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashTab" type="button">Dashboard</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill Entry</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#historyTab" type="button">History</button>
+            </li>
+        </ul>
+
+        <div class="tab-content pt-2">
+            
+            <!-- 1. DASHBOARD TAB -->
+            <div class="tab-pane fade show active" id="dashTab" role="tabpanel">
+                <div class="row">
+                    <!-- My Active IOU -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card dash-card mb-3">
+                            <div class="card-header bg-primary text-white py-2">
+                                <h6 class="mb-0"><i class="bi bi-cash-stack"></i> My Active IOU</h6>
+                            </div>
+                            <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Route</th><th>Taka</th><th>Action</th></tr></thead>
+                                        <tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center p-2">Loading...</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Used IOU & Online Users -->
+                    <div class="col-md-6 mb-3">
+                        <!-- Used IOU -->
+                        <div class="card dash-card mb-3">
+                            <div class="card-header bg-secondary text-white py-2">
+                                <h6 class="mb-0"><i class="bi bi-check-circle"></i> Used IOU</h6>
+                            </div>
+                            <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="table-light"><tr><th>Date</th><th>Type</th><th>Route</th><th>Taka</th><th>Status</th></tr></thead>
+                                        <tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center p-2">No Used IOU</td></tr></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Online Users -->
+                         <div class="card dash-card mb-3">
+                            <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6>
+                                <span class="badge bg-light text-success" id="online_count_badge">0</span>
+                            </div>
+                            <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;" id="online_users_list">
+                                <div class="text-center text-muted p-2">Checking...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. BILL ENTRY TAB -->
+            <div class="tab-pane fade" id="entryTab" role="tabpanel">
+                <div class="bill-form-container">
+                    <div class="text-center mb-2">
+                        <h3>MONICO PHARMA LTD</h3>
+                        <h5>Delivery Expense Bill</h5>
+                    </div>
+                    
+                    <input type="hidden" id="form_iou_amount" value="0">
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label class="fw-bold">Name Of DA:</label><input type="text" id="form_da_name" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4"><label class="fw-bold">Designation:</label><input type="text" value="Delivery Assistant" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4"><label class="fw-bold">Depot:</label><input type="text" id="form_depot" class="form-control form-control-sm" readonly></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label class="fw-bold">Departure Date:</label><input type="date" id="form_dep_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label class="fw-bold">Return Date:</label><input type="date" id="form_ret_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label class="fw-bold">Bill Date:</label><input type="date" id="form_submit_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-12"><label class="fw-bold">Route:</label><input type="text" id="form_route" class="form-control form-control-sm" placeholder="Route Name" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-6"><label class="fw-bold">Name of MPO:</label><input type="text" id="form_mpo" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-6"><label class="fw-bold">Summary No:</label><input type="text" id="form_summary" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-4"><label>Invoice Value:</label><input type="number" id="form_invoice_val" class="form-control form-control-sm" oninput="calculateSoldValue(); triggerAutoSave()"></div>
+                        <div class="col-4"><label>Return Value:</label><input type="number" id="form_return_val" class="form-control form-control-sm" value="0" oninput="calculateSoldValue(); triggerAutoSave()"></div>
+                        <div class="col-4"><label>Sold Value:</label><input type="number" id="form_sold_val" class="form-control form-control-sm" readonly></div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-4"><label>Invoice Qty:</label><input type="number" id="form_invoice_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                        <div class="col-4"><label>Bundle Qty:</label><input type="number" id="form_bundle_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                         <div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Any specific notes..." oninput="triggerAutoSave()"></div>
+                    </div>
+                    
+                    <div class="quick-entry-card">
+                        <h6 class="text-primary mb-2"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6>
+                        <div class="row g-1">
+                            <div class="col-4">
+                                <label>From</label>
+                                <input type="text" id="q_from" class="form-control form-control-sm q-from-input" placeholder="From">
+                            </div>
+                            <div class="col-4">
+                                <label>To</label>
+                                <input type="text" id="q_to" class="form-control form-control-sm q-to-input" placeholder="To">
+                            </div>
+                            <div class="col-4">
+                                <label>Mode</label>
+                                <select id="q_mode" class="form-select form-select-sm q-mode-select">
+                                    <option>Rickshaw</option>
+                                    <option>Auto</option>
+                                    <option>Bus</option>
+                                    <option>CNG</option>
+                                    <option>Van</option>
+                                    <option>Motorcycle</option>
+                                    <option>Tempo</option>
+                                    <option>Pickup</option>
+                                    <option>Daily Allowance</option>
+                                    <option>Labour Bill</option>
+                                </select>
+                            </div>
+                            <div class="col-4">
+                                <label>Amount</label>
+                                <input type="number" id="q_amount" class="form-control form-control-sm q-amount-input" placeholder="0">
+                            </div>
+                            <div class="col-4">
+                                <label>DA Exp</label>
+                                <input type="number" id="q_da_expense" class="form-control form-control-sm q-da-input" placeholder="0">
+                            </div>
+                            <div class="col-4 d-flex align-items-end">
+                                <button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-light">
+                                <tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Total</th><th>X</th></tr>
+                            </thead>
+                            <tbody id="expense_table_body"></tbody>
+                            <tfoot>
+                                <tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td colspan="3"><input type="text" id="grand_total" class="form-control form-control-sm fw-bold text-center" value="0" readonly></td></tr>
+                                <tr class="table-info"><td colspan="4" class="text-end fw-bold">Cost (%):</td><td colspan="3"><span id="form_cost_percent" class="fw-bold">0%</span></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2">
+                        <span id="auto_save_status" class="text-muted align-self-center me-auto"></span>
+                        <button onclick="addExpenseRow()" class="btn btn-secondary btn-sm">+ Row</button>
+                        <button onclick="clearBillForm()" class="btn btn-danger btn-sm">Clear Data</button>
+                        <button id="draft_btn" onclick="submitOrUpdateBill('draft')" class="btn btn-secondary btn-sm">Save Draft</button>
+                        <button id="main_submit_btn" onclick="submitOrUpdateBill('red')" class="btn btn-success btn-sm">Submit Bill</button>
+                        <button id="cancel_edit_btn" onclick="cancelEdit()" class="btn btn-warning btn-sm hidden">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. HISTORY TAB -->
+            <div class="tab-pane fade" id="historyTab" role="tabpanel">
+                <div class="card dash-card"><div class="card-body p-1">
+                    <div class="table-responsive"><table class="table table-bordered table-hover table-sm">
+                        <thead id="bill_table_head" class="table-dark"></thead>
+                        <tbody id="bill_table_body"><tr><td colspan="12" class="text-center">Loading...</td></tr></tbody>
+                    </table></div>
+                </div></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // ================= FIREBASE CONFIGURATION =================
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEaGG_UsXGf6RGHQ_ckalf33fLla-P2J8",
+            authDomain: "whatapp-8d8ed.firebaseapp.com",
+            databaseURL: "https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "whatapp-8d8ed",
+            storageBucket: "whatapp-8d8ed.firebasestorage.app",
+            messagingSenderId: "618833956157",
+            appId: "1:618833956157:web:2c3835d5c03668afa7c954",
+            measurementId: "G-JLG1K25Z7N"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let currentUser = null;
+        let editingBillId = null;
+        let editingBillDaId = null; 
+        let currentIouId = null;
+        let originalIouId = null; 
+        let autoSaveTimeout;
+        const AUTO_SAVE_KEY = 'bill_draft_data';
+
+        // ================= LOGIN LOGIC =================
+        function handleLogin() {
+            const userVal = document.getElementById('username').value;
+            const passVal = document.getElementById('password').value;
+
+            const userRef = database.ref('Users');
+            userRef.orderByChild('username').equalTo(userVal).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const userData = childSnapshot.val();
+                        if (userData.password === passVal) {
+                            // Check if User Role
+                            if(userData.role === 'admin' || userData.role === 'superadmin') {
+                                alert("This portal is for Field Users (DA) only. Please use the Admin Panel.");
+                                return;
+                            }
+                            
+                            currentUser = {
+                                name: userData.name,
+                                role: 'user', 
+                                depot: userData.depot,
+                                id: childSnapshot.key
+                            };
+                            showPortal();
+                        } else { alert("Password Incorrect!"); }
+                    });
+                } else { alert("User not found!"); }
+            }, (error) => {
+                console.error("Login Error:", error);
+                alert("Database Connection Failed!");
+            });
+        }
+
+        function logout() { 
+            if(currentUser) database.ref('OnlineUsers/' + currentUser.id).remove();
+            currentUser = null; 
+            location.reload(); 
+        }
+
+        function showPortal() {
+            document.getElementById('login_section').classList.add('hidden');
+            document.getElementById('portal_section').classList.remove('hidden');
+            document.getElementById('welcome_msg').innerText = "Welcome, " + currentUser.name;
+            
+            // Setup Presence
+            const presenceRef = database.ref('OnlineUsers/' + currentUser.id);
+            presenceRef.set({ name: currentUser.name, role: 'User', lastOnline: firebase.database.ServerValue.TIMESTAMP });
+            presenceRef.onDisconnect().remove();
+            listenForOnlineUsers();
+
+            loadUserDashboardData();
+            prepareBillEntryForm();
+            loadBills();
+        }
+
+        // ================= DASHBOARD LOGIC =================
+        function loadUserDashboardData() {
+            database.ref('IOU_List').orderByChild('daId').equalTo(currentUser.id).on('value', snap => {
+                const activeBody = document.getElementById('user_active_iou_list');
+                const usedBody = document.getElementById('user_used_iou_list');
+                activeBody.innerHTML = ''; usedBody.innerHTML = '';
+                
+                let hasActive = false, hasUsed = false;
+                
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const d = child.val();
+                        const type = d.type || 'Delivery'; 
+                        
+                        // FILTER: Skip General and Bill Payment
+                        if(type === 'General' || type === 'Bill Payment') {
+                            return;
+                        }
+
+                        if(d.status === 'used') {
+                            hasUsed = true;
+                            usedBody.innerHTML += `<tr><td>${formatDate(d.date)}</td><td><small>${type}</small></td><td>${d.territory}</td><td>${d.taka}</td><td><span class="badge bg-secondary">Used</span></td></tr>`;
+                        } else {
+                            hasActive = true;
+                            activeBody.innerHTML += `<tr class="clickable-row" onclick="fillBillFromIOU('${child.key}')" style="cursor:pointer"><td>${formatDate(d.date)}</td><td><small>${type}</small></td><td>${d.territory}</td><td>${d.taka}</td><td><i class="bi bi-check-circle-fill text-success"></i></td></tr>`;
+                        }
+                    });
+                }
+                if(!hasActive) activeBody.innerHTML = '<tr><td colspan="5" class="text-center p-2">No Active IOU</td></tr>';
+                if(!hasUsed) usedBody.innerHTML = '<tr><td colspan="5" class="text-center p-2">No Used IOU</td></tr>';
+            });
+        }
+
+        function listenForOnlineUsers() {
+            const listContainer = document.getElementById('online_users_list');
+            const countBadge = document.getElementById('online_count_badge');
+            database.ref('OnlineUsers').on('value', snap => {
+                let html = ''; let count = 0;
+                if(snap.exists()) {
+                    snap.forEach(child => {
+                        const u = child.val(); count++;
+                        html += `<div class="p-1 d-flex align-items-center border-bottom">
+                            <span class="online-dot"></span> ${u.name} <small class="text-muted ms-auto">(${u.role})</small>
+                        </div>`;
+                    });
+                }
+                listContainer.innerHTML = html || '<div class="text-center text-muted p-2">No users online</div>';
+                countBadge.innerText = count;
+            });
+        }
+
+        // ================= BILL ENTRY LOGIC =================
+        function prepareBillEntryForm() {
+            document.getElementById('form_da_name').value = currentUser.name;
+            document.getElementById('form_depot').value = currentUser.depot;
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('form_dep_date').value = today;
+            document.getElementById('form_ret_date').value = today;
+            document.getElementById('form_submit_date').value = today;
+            document.getElementById('expense_table_body').innerHTML = '';
+            if(!editingBillId) loadLocalDraft();
+        }
+
+        function calculateSoldValue() {
+            const inv = parseFloat(document.getElementById('form_invoice_val').value) || 0;
+            const ret = parseFloat(document.getElementById('form_return_val').value) || 0;
+            document.getElementById('form_sold_val').value = inv - ret;
+            updateEntryFormCostPercent();
+        }
+
+        function toggleRowInputs(selectElement) {
+            const row = selectElement.closest('tr');
+            const mode = selectElement.value;
+            const isDaily = (mode === 'Daily Allowance');
+            const fromInput = row.querySelector('.exp-from');
+            const toInput = row.querySelector('.exp-to');
+            const amtInput = row.querySelector('.exp-amount');
+            const daInput = row.querySelector('.exp-da');
+
+            fromInput.disabled = isDaily; toInput.disabled = isDaily; amtInput.disabled = isDaily;
+            if(isDaily) { fromInput.value = ''; toInput.value = ''; amtInput.value = ''; }
+            daInput.disabled = !isDaily; if(!isDaily) { daInput.value = ''; }
+            calculateRowTotal(amtInput);
+        }
+
+        // Quick Entry Toggle
+        document.getElementById('q_mode').addEventListener('change', function() {
+            const isDaily = (this.value === 'Daily Allowance');
+            document.getElementById('q_from').disabled = isDaily;
+            document.getElementById('q_to').disabled = isDaily;
+            document.getElementById('q_amount').disabled = isDaily;
+            document.getElementById('q_da_expense').disabled = !isDaily;
+            if(isDaily) { document.getElementById('q_from').value = ''; document.getElementById('q_to').value = ''; document.getElementById('q_amount').value = ''; } 
+            else { document.getElementById('q_da_expense').value = ''; }
+        });
+
+        function addQuickEntryRow() {
+            const from = document.getElementById('q_from').value;
+            const to = document.getElementById('q_to').value;
+            const mode = document.getElementById('q_mode').value;
+            const amount = document.getElementById('q_amount').value;
+            const da = document.getElementById('q_da_expense').value;
+            const date = document.getElementById('form_dep_date').value; 
+            
+            const modesWithoutRoute = ['Daily Allowance', 'Labour Bill'];
+            if (!modesWithoutRoute.includes(mode)) { if(!from && !to) { alert("Enter From/To"); return; } }
+            
+            const tbody = document.getElementById('expense_table_body');
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${mode == 'Van' ? 'selected' : ''}>Van</option><option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(amount)||0) + (parseFloat(da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            
+            const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj);
+            calculateGrandTotal(); triggerAutoSave();
+            document.getElementById('q_from').value = ''; document.getElementById('q_to').value = ''; document.getElementById('q_amount').value = ''; document.getElementById('q_da_expense').value = ''; document.getElementById('q_from').focus();
+        }
+
+        function addExpenseRow() {
+            const tbody = document.getElementById('expense_table_body');
+            const today = document.getElementById('form_dep_date').value || new Date().toISOString().split('T')[0];
+            const row = tbody.insertRow();
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${today}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            triggerAutoSave();
+        }
+
+        function removeRow(btn) { 
+            const tbody = document.getElementById('expense_table_body');
+            if (tbody.rows.length > 1) { btn.parentNode.parentNode.remove(); } else {
+                const row = tbody.rows[0];
+                row.querySelectorAll('input').forEach(i => { if(i.type !== 'date') i.value = ''; else i.value = document.getElementById('form_dep_date').value; });
+                const select = row.querySelector('select'); select.selectedIndex = 0; toggleRowInputs(select);
+            }
+            calculateGrandTotal(); triggerAutoSave(); 
+        }
+
+        function calculateRowTotal(input) {
+            const row = input.parentNode.parentNode;
+            const amount = parseFloat(row.querySelector('.exp-amount').value) || 0;
+            const da = parseFloat(row.querySelector('.exp-da').value) || 0;
+            row.querySelector('.exp-total').value = amount + da; calculateGrandTotal();
+        }
+
+        function calculateGrandTotal() {
+            let total = 0; document.querySelectorAll('.exp-total').forEach(t => total += (parseFloat(t.value) || 0)); document.getElementById('grand_total').value = total; updateEntryFormCostPercent();
+        }
+
+        function updateEntryFormCostPercent() {
+            const inv = parseFloat(document.getElementById('form_invoice_val').value) || 0;
+            const total = parseFloat(document.getElementById('grand_total').value) || 0;
+            document.getElementById('form_cost_percent').innerText = inv > 0 ? ((total / inv) * 100).toFixed(2) + "%" : "0%";
+        }
+
+        // AUTO SAVE
+        function triggerAutoSave() {
+            if(editingBillId) return; clearTimeout(autoSaveTimeout);
+            const statusSpan = document.getElementById('auto_save_status'); statusSpan.innerText = "Typing..."; statusSpan.classList.remove('text-success'); statusSpan.classList.add('text-muted');
+            autoSaveTimeout = setTimeout(() => { saveLocalDraft(); statusSpan.innerText = "Draft Saved Locally"; statusSpan.classList.remove('text-muted'); statusSpan.classList.add('text-success'); }, 800);
+        }
+
+        function saveLocalDraft() {
+            const data = { depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summary: document.getElementById('form_summary').value, invoiceVal: document.getElementById('form_invoice_val').value, returnVal: document.getElementById('form_return_val').value, invoiceQty: document.getElementById('form_invoice_qty').value, bundleQty: document.getElementById('form_bundle_qty').value, iouId: currentIouId, iouAmount: document.getElementById('form_iou_amount').value, remarks: document.getElementById('form_remarks').value, expenses: [] };
+            document.querySelectorAll('#expense_table_body tr').forEach(r => { data.expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value }); });
+            localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
+        }
+
+        function loadLocalDraft() {
+            const savedData = localStorage.getItem(AUTO_SAVE_KEY); if (!savedData) return;
+            try {
+                const data = JSON.parse(savedData);
+                document.getElementById('form_dep_date').value = data.depDate || ''; document.getElementById('form_ret_date').value = data.retDate || ''; document.getElementById('form_submit_date').value = data.submitDate || ''; document.getElementById('form_route').value = data.route || ''; document.getElementById('form_mpo').value = data.mpo || ''; document.getElementById('form_summary').value = data.summary || ''; document.getElementById('form_invoice_val').value = data.invoiceVal || ''; document.getElementById('form_return_val').value = data.returnVal || 0; document.getElementById('form_invoice_qty').value = data.invoiceQty || ''; document.getElementById('form_bundle_qty').value = data.bundleQty || ''; document.getElementById('form_iou_amount').value = data.iouAmount || 0; document.getElementById('form_remarks').value = data.remarks || ''; currentIouId = data.iouId || null; calculateSoldValue();
+                const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
+                if(data.expenses && data.expenses.length > 0) { data.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
+                calculateGrandTotal(); document.getElementById('auto_save_status').innerText = "Draft Restored"; document.getElementById('auto_save_status').classList.add('text-success');
+            } catch (e) { console.error("Error loading draft", e); }
+        }
+
+        function clearLocalDraft() { localStorage.removeItem(AUTO_SAVE_KEY); document.getElementById('auto_save_status').innerText = ""; }
+
+        function clearBillForm() {
+            if(confirm("Are you sure you want to clear all data?")) {
+                editingBillId = null; editingBillDaId = null; originalIouId = null; currentIouId = null;
+                document.getElementById('main_submit_btn').innerText = "Submit Bill"; document.getElementById('main_submit_btn').classList.add('btn-success'); document.getElementById('main_submit_btn').classList.remove('btn-warning'); document.getElementById('cancel_edit_btn').classList.add('hidden');
+                document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = ''; document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = ''; document.getElementById('form_bundle_qty').value = ''; document.getElementById('form_iou_amount').value = 0; document.getElementById('form_remarks').value = '';
+                const today = new Date().toISOString().split('T')[0]; document.getElementById('form_dep_date').value = today; document.getElementById('form_ret_date').value = today; document.getElementById('form_submit_date').value = today; document.getElementById('expense_table_body').innerHTML = ''; document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%'; calculateSoldValue(); clearLocalDraft(); document.getElementById('form_da_name').value = currentUser.name; document.getElementById('form_depot').value = currentUser.depot; document.getElementById('auto_save_status').innerText = "Form Cleared";
+            }
+        }
+
+        function submitOrUpdateBill(statusType) {
+            const grandTotal = parseFloat(document.getElementById('grand_total').value) || 0; const iouAmount = parseFloat(document.getElementById('form_iou_amount').value) || 0; const remarks = document.getElementById('form_remarks').value;
+            const billData = { daName: currentUser.name, daId: currentUser.id, depot: currentUser.depot, depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summaryNo: document.getElementById('form_summary').value, invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0, returnVal: parseFloat(document.getElementById('form_return_val').value) || 0, soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0, invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0, bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0, totalAmount: grandTotal, originalAmount: grandTotal, status: statusType, timestamp: Date.now(), iouId: currentIouId, iouAmount: iouAmount, remarks: remarks, deduction: 0 };
+            let expenses = []; document.querySelectorAll('#expense_table_body tr').forEach(r => { expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value }); }); billData.expenses = expenses;
+            if (!billData.route) { alert("Please fill Route"); return; }
+            const basePath = 'Bills/' + billData.depot + '/' + currentUser.id;
+            const processIOU = () => { if (editingBillId && originalIouId && originalIouId !== currentIouId) database.ref('IOU_List/' + originalIouId).update({ status: 'active' }); if (currentIouId) database.ref('IOU_List/' + currentIouId).update({ status: statusType === 'draft' ? 'active' : 'used' }); };
+            if (editingBillId) {
+                database.ref(basePath + '/' + editingBillId).update(billData, (error) => { if (error) alert("Error"); else { processIOU(); alert("Updated!"); cancelEdit(); document.getElementById('history-tab').click(); } });
+            } else {
+                const newBillRef = database.ref(basePath).push();
+                newBillRef.set(billData, (error) => {
+                    if (error) alert("Error"); else { processIOU(); clearLocalDraft(); alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!"); document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = ''; document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = ''; document.getElementById('form_bundle_qty').value = ''; document.getElementById('form_remarks').value = ''; document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%'; document.getElementById('expense_table_body').innerHTML = ''; document.getElementById('form_iou_amount').value = 0; calculateSoldValue(); currentIouId = null; originalIouId = null; prepareBillEntryForm(); document.getElementById('history-tab').click(); }
+                });
+            }
+        }
+
+        function editBill(billId, depot, daId) {
+            database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', (snapshot) => {
+                const bill = snapshot.val(); if(!bill) return;
+                clearLocalDraft(); editingBillDaId = bill.daId; originalIouId = bill.iouId || null; currentIouId = bill.iouId || null;
+                document.getElementById('form_da_name').value = bill.daName; document.getElementById('form_depot').value = bill.depot; document.getElementById('form_dep_date').value = bill.depDate; document.getElementById('form_ret_date').value = bill.retDate; document.getElementById('form_submit_date').value = bill.submitDate || bill.depDate; document.getElementById('form_route').value = bill.route; document.getElementById('form_mpo').value = bill.mpo; document.getElementById('form_summary').value = bill.summaryNo; document.getElementById('form_invoice_val').value = bill.invoiceVal; document.getElementById('form_return_val').value = bill.returnVal; document.getElementById('form_invoice_qty').value = bill.invoiceQty; document.getElementById('form_bundle_qty').value = bill.bundleQty || 0; document.getElementById('form_iou_amount').value = bill.iouAmount || 0; document.getElementById('form_remarks').value = bill.remarks || '';
+                const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
+                if(bill.expenses) { bill.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
+                calculateGrandTotal(); calculateSoldValue(); editingBillId = billId; document.getElementById('main_submit_btn').innerText = "Update Bill"; document.getElementById('main_submit_btn').classList.remove('btn-success'); document.getElementById('main_submit_btn').classList.add('btn-warning'); document.getElementById('cancel_edit_btn').classList.remove('hidden'); document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); document.getElementById('entryTab').classList.add('show', 'active'); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById('entry-tab').classList.add('active');
+            });
+        }
+
+        function deleteBill(billId, depot, daId) {
+            if(confirm("Delete?")) {
+                const billRef = database.ref('Bills/' + depot + '/' + daId + '/' + billId);
+                billRef.once('value', (snapshot) => {
+                    const billData = snapshot.val();
+                    billRef.remove().then(() => { alert("Deleted!"); if (billData.iouId) database.ref('IOU_List/' + billData.iouId).update({ status: 'active' }); }).catch(e => alert(e.message));
+                });
+            }
+        }
+
+        function cancelEdit() { editingBillId = null; editingBillDaId = null; originalIouId = null; document.getElementById('main_submit_btn').innerText = "Submit Bill"; document.getElementById('main_submit_btn').classList.add('btn-success'); document.getElementById('main_submit_btn').classList.remove('btn-warning'); document.getElementById('cancel_edit_btn').classList.add('hidden'); clearLocalDraft(); prepareBillEntryForm(); document.getElementById('history-tab').click(); }
+
+        function fillBillFromIOU(iouId) {
+            database.ref('IOU_List/' + iouId).once('value', snap => {
+                const iou = snap.val(); if(!iou) return;
+                if(iou.type === 'General' || iou.type === 'Bill Payment') { alert("This is a " + iou.type + " IOU. A bill is not required for this type."); return; }
+                currentIouId = iouId; document.getElementById('form_iou_amount').value = iou.taka; document.getElementById('form_dep_date').value = iou.date; document.getElementById('form_ret_date').value = iou.date; document.getElementById('form_submit_date').value = iou.date; document.getElementById('form_route').value = iou.territory; document.getElementById('form_mpo').value = iou.mpo; document.getElementById('form_summary').value = iou.summary; document.getElementById('form_invoice_val').value = iou.soldVal || iou.sales; document.getElementById('form_return_val').value = iou.returnVal || 0; document.getElementById('form_invoice_qty').value = iou.qty; document.getElementById('form_bundle_qty').value = iou.bundleQty || 0; calculateSoldValue(); const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = ''; triggerAutoSave(); document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); document.getElementById('entryTab').classList.add('show', 'active'); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById('entry-tab').classList.add('active'); alert("Form Auto-filled! Please add expense rows manually using Quick Entry.");
+            });
+        }
+
+        // ================= HISTORY LOGIC =================
+        function loadBills() {
+            const tableHead = document.getElementById('bill_table_head'); const tableBody = document.getElementById('bill_table_body');
+            tableBody.innerHTML = '<tr><td colspan="12" class="text-center">Loading...</td></tr>';
+            tableHead.innerHTML = `<tr><th>Date</th><th>Route</th><th>Amount</th><th>Status</th><th>Action</th></tr>`;
+            
+            const billsRef = database.ref('Bills').child(currentUser.depot).child(currentUser.id);
+            
+            billsRef.on('value', (snapshot) => {
+                tableBody.innerHTML = '';
+                if (!snapshot.exists()) { tableBody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">No Bills Found</td></tr>`; return; }
+                
+                let billsArray = [];
+                snapshot.forEach(child => { billsArray.push({ key: child.key, ...child.val() }); });
+                // Sort by date descending
+                billsArray.sort((a, b) => new Date(b.submitDate || b.depDate || 0) - new Date(a.submitDate || a.depDate || 0));
+
+                billsArray.forEach(bill => {
+                    const tr = document.createElement('tr');
+                    if(bill.status === 'draft') tr.classList.add('status-draft');
+                    else if (bill.status === 'red') tr.classList.add('status-red');
+                    else if (bill.status === 'orange') tr.classList.add('status-orange');
+                    else tr.classList.add('status-green');
+
+                    let statusText = bill.status.toUpperCase(); if(bill.status === 'red') statusText = "PENDING"; if(bill.status === 'orange') statusText = "CHECKED"; if(bill.status === 'green') statusText = "APPROVED";
+                    let actions = '';
+                    if (bill.status === 'red' && (!bill.deduction || bill.deduction === 0)) { actions += `<button class="btn btn-warning btn-sm" onclick="editBill('${bill.key}', '${bill.depot}', '${bill.daId}')">Edit</button> `; actions += `<button class="btn btn-danger btn-sm" onclick="deleteBill('${bill.key}', '${bill.depot}', '${bill.daId}')">Delete</button>`; }
+                    
+                    tr.innerHTML = `<td>${formatDate(bill.submitDate || bill.depDate)}</td><td>${bill.route || 'N/A'}</td><td class="fw-bold">${bill.totalAmount.toFixed(2)}</td><td><b>${statusText}</b></td><td>${actions}</td>`;
+                    tableBody.appendChild(tr);
+                });
+            });
+        }
+
+        function formatDate(dateStr) { if (!dateStr) return ''; if (dateStr.indexOf('-') !== 4) return dateStr; const parts = dateStr.split('-'); return `${parts[2]}-${parts[1]}-${parts[0]}`; }
+    </script>
+</body>
+</html>
