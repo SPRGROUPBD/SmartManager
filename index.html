@@ -175,6 +175,28 @@
         }
         .device-info-widget h4 { margin: 0 0 5px 0; color: #000080; border-bottom: 1px solid #000080; }
 
+        /* Notification Box for PC Dashboard */
+        .notification-box {
+            background-color: #ffffe0; /* Light yellow like classic alerts */
+            border: 2px solid;
+            border-color: #ffffff #808080 #808080 #ffffff;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+        .notification-title {
+            color: #d66b00;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .notification-text { font-size: 13px; color: #000; }
+        .blink { animation: blinker 1.5s linear infinite; color: red; font-weight: bold; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
         /* --- FOOTER --- */
         .footer {
             background-color: #000080;
@@ -312,6 +334,12 @@
         <!-- 2. DASHBOARD SCREEN (Approved Mobile & PC) -->
         <div id="dashboard-screen" class="screen">
             <div class="win-card">
+                
+                <!-- NOTIFICATION BOX (Shows Pending Requests on PC) -->
+                <div id="pc-notifications">
+                    <!-- JS will inject alerts here -->
+                </div>
+
                 <!-- Device Info Widget (Only for Mobile Approved Users) -->
                 <div id="mobile-device-info" class="device-info-widget hidden">
                     <h4>Device Info</h4>
@@ -322,7 +350,7 @@
                 </div>
 
                 <h2>Welcome, <span id="welcome-user-name">User</span>!</h2>
-                <p>Select an option from the menu to begin.</p>
+                <p id="dashboard-subtext">Select an option from the menu to begin.</p>
 
                 <button class="win-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">
                     Start New Bill Entry
@@ -433,9 +461,10 @@
             const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                // PC CASE: Direct Access
+                // PC CASE: Direct Access + Monitor Requests
                 console.log("PC Detected - Direct Access");
                 showPCDashboard();
+                monitorPendingRequests(); // NEW: Check for pending users
             } else {
                 // MOBILE CASE: Check IMEI
                 const deviceData = getDeviceInfo();
@@ -456,6 +485,46 @@
             
             // PC gets Admin Menu
             renderNavbar('Admin');
+        }
+
+        // --- NEW FUNCTION: MONITOR PENDING REQUESTS (For PC Dashboard) ---
+        function monitorPendingRequests() {
+            const dbRef = ref(db, 'devices');
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                const notifyBox = document.getElementById('pc-notifications');
+                notifyBox.innerHTML = ''; // Clear previous
+
+                if (data) {
+                    let pendingUsers = [];
+                    Object.values(data).forEach(device => {
+                        if (device.status === 'Pending') {
+                            pendingUsers.push(device.user);
+                        }
+                    });
+
+                    if (pendingUsers.length > 0) {
+                        // Create Alert Box
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'notification-box';
+                        
+                        // Format user names list
+                        const userList = pendingUsers.join(', ');
+                        
+                        alertDiv.innerHTML = `
+                            <div class="notification-title">
+                                <span class="blink">⚠</span> New Device Requests (${pendingUsers.length})
+                            </div>
+                            <div class="notification-text">
+                                The following users are waiting for approval:<br>
+                                <b>${userList}</b><br><br>
+                                <i>Please click "Admin Login" below to Approve.</i>
+                            </div>
+                        `;
+                        notifyBox.appendChild(alertDiv);
+                    }
+                }
+            });
         }
 
         // --- MOBILE LOGIC ---
