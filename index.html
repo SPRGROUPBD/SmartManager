@@ -28,10 +28,16 @@
             font-size: 13px;
             cursor: pointer;
             color: black;
+            display: inline-block;
+            text-align: center;
         }
         .win-btn:active {
             border-color: #808080 #ffffff #ffffff #808080;
             transform: translate(1px, 1px);
+        }
+        .win-btn:disabled {
+            color: #808080;
+            cursor: not-allowed;
         }
 
         .win-input {
@@ -67,28 +73,46 @@
             position: relative;
             z-index: 101;
         }
+        
+        .header-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 15px;
+            background: #000080;
+        }
+        .header-profile-img {
+            width: 40px;
+            height: 40px;
+            border: 2px solid #fff;
+            background-color: #d4d0c8;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .header-profile-info {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+            text-align: right;
+        }
+        .header-profile-name { font-weight: bold; font-size: 14px; }
+        .header-profile-role { font-size: 10px; color: #ccc; text-transform: uppercase; }
+
         .logo-area {
             display: flex;
             align-items: center;
             padding: 0 15px;
             gap: 12px;
         }
-        .header-logo {
-            height: 40px;
-            width: auto;
-        }
-        .logo-text {
-            font-weight: bold;
-            font-size: 18px;
-            text-transform: uppercase;
-        }
+        .header-logo { height: 40px; width: auto; }
+        .logo-text { font-weight: bold; font-size: 18px; text-transform: uppercase; }
 
         /* --- NAVIGATION --- */
         .navbar {
             background-color: #d4d0c8;
             padding: 5px;
             border-bottom: 2px solid #808080;
-            display: none; /* Hidden by default */
+            display: none;
             justify-content: center;
             flex-wrap: wrap;
             gap: 5px;
@@ -152,7 +176,6 @@
         .screen { display: none; width: 100%; max-width: 600px; text-align: center; }
         .screen.active { display: block; }
 
-        /* Registration Screen Info */
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -164,7 +187,22 @@
         }
         .info-label { font-weight: bold; color: #000080; }
 
-        /* Dashboard Widget */
+        .image-upload-area {
+            border: 2px dashed #808080;
+            padding: 15px;
+            margin: 10px 0;
+            background: #fff;
+            text-align: center;
+        }
+        .preview-img {
+            max-width: 100px;
+            max-height: 100px;
+            border: 2px solid #000;
+            margin-top: 10px;
+            display: none;
+            object-fit: cover;
+        }
+
         .device-info-widget {
             background: #fff;
             border: 2px inset #fff;
@@ -175,9 +213,8 @@
         }
         .device-info-widget h4 { margin: 0 0 5px 0; color: #000080; border-bottom: 1px solid #000080; }
 
-        /* Notification Box for PC Dashboard */
         .notification-box {
-            background-color: #ffffe0; /* Light yellow like classic alerts */
+            background-color: #ffffe0;
             border: 2px solid;
             border-color: #ffffff #808080 #808080 #ffffff;
             padding: 15px;
@@ -237,7 +274,7 @@
             border: 2px solid;
             border-color: #ffffff #808080 #808080 #ffffff;
             width: 90%;
-            max-width: 850px;
+            max-width: 900px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
@@ -264,7 +301,6 @@
         }
         .modal-body { padding: 15px; overflow-y: auto; }
         
-        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -276,13 +312,28 @@
             border: 1px solid #808080;
             padding: 5px;
             text-align: left;
+            vertical-align: middle;
         }
         th { background: #d4d0c8; }
         .status-pending { color: #d66b00; font-weight: bold; }
         .status-approved { color: green; font-weight: bold; }
         .status-blocked { color: red; font-weight: bold; }
 
+        .table-user-img {
+            width: 40px;
+            height: 40px;
+            border: 1px solid #808080;
+            object-fit: cover;
+            background: #eee;
+        }
+
         .hidden { display: none !important; }
+        
+        /* File input styling */
+        input[type="file"] {
+            font-size: 11px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -293,54 +344,53 @@
             <img src="https://i.ibb.co/jv71B2wK/Smart-Manager-removebg-preview.png" alt="Logo" class="header-logo">
             <span class="logo-text">SmartManager</span>
         </div>
+        
+        <!-- User Profile Header -->
+        <div class="header-profile hidden" id="header-profile-section">
+            <div class="header-profile-info">
+                <span class="header-profile-name" id="header-name">User</span>
+                <span class="header-profile-role" id="header-role">Role</span>
+            </div>
+            <img src="" id="header-img" class="header-profile-img" alt="User">
+        </div>
     </div>
 
     <!-- NAVIGATION -->
     <nav class="navbar" id="main-navbar">
-        <!-- JS will populate this -->
+        <!-- JS Populated -->
     </nav>
 
     <!-- MAIN CONTENT -->
     <div class="main-wrapper">
 
-        <!-- 1. REGISTRATION SCREEN (Mobile Only) -->
+        <!-- 1. REGISTRATION SCREEN (Mobile) -->
         <div id="gate-screen" class="screen">
             <div class="win-card">
                 <img src="https://i.ibb.co/jv71B2wK/Smart-Manager-removebg-preview.png" width="80" style="margin-bottom:15px;">
-                
                 <h3>Device Registration</h3>
-                <p style="font-size:12px; color:#444;">Please verify your device details and submit a request.</p>
+                <p style="font-size:12px; color:#444;">Verify details & upload photo.</p>
                 
-                <div class="info-row">
-                    <span class="info-label">IMEI Number:</span>
-                    <span id="display-imei">Generating...</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Phone Name:</span>
-                    <span id="display-phone">...</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Model Name:</span>
-                    <span id="display-model">...</span>
-                </div>
+                <div class="info-row"><span class="info-label">IMEI:</span><span id="display-imei">Generating...</span></div>
+                <div class="info-row"><span class="info-label">Phone:</span><span id="display-phone">...</span></div>
                 
-                <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin-top:10px;">User Name / ID:</label>
+                <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin-top:10px;">User Name:</label>
                 <input type="text" id="user-name-input" class="win-input" placeholder="Enter your name">
+
+                <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin-top:5px;">Profile Photo:</label>
+                <div class="image-upload-area">
+                    <input type="file" id="user-photo-input" accept="image/*" onchange="previewImage(this, 'photo-preview')">
+                    <img id="photo-preview" class="preview-img" src="" alt="Preview">
+                    <p id="upload-status" style="font-size:10px; margin:5px 0; color:#000080;"></p>
+                </div>
                 
-                <button class="win-btn" onclick="registerDevice()" style="width:100%; margin-top:5px;">SUBMIT REQUEST</button>
+                <button id="submit-btn" class="win-btn" onclick="registerDevice()" style="width:100%; margin-top:10px;">SUBMIT REQUEST</button>
             </div>
         </div>
 
-        <!-- 2. DASHBOARD SCREEN (Approved Mobile & PC) -->
+        <!-- 2. DASHBOARD SCREEN -->
         <div id="dashboard-screen" class="screen">
             <div class="win-card">
-                
-                <!-- NOTIFICATION BOX (Shows Pending Requests on PC) -->
-                <div id="pc-notifications">
-                    <!-- JS will inject alerts here -->
-                </div>
-
-                <!-- Device Info Widget (Only for Mobile Approved Users) -->
+                <div id="pc-notifications"></div>
                 <div id="mobile-device-info" class="device-info-widget hidden">
                     <h4>Device Info</h4>
                     <div class="info-row"><span>Status:</span> <b style="color:green">Active</b></div>
@@ -350,7 +400,7 @@
                 </div>
 
                 <h2>Welcome, <span id="welcome-user-name">User</span>!</h2>
-                <p id="dashboard-subtext">Select an option from the menu to begin.</p>
+                <p id="dashboard-subtext">Select an option from the menu.</p>
 
                 <button class="win-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">
                     Start New Bill Entry
@@ -377,11 +427,15 @@
                 
                 <!-- Admin Add Device Section -->
                 <div style="background:#e0e0e0; padding:10px; border:1px solid #808080; margin-bottom:15px;">
-                    <h4 style="margin:0 0 10px 0;">Add New Device (Manual)</h4>
+                    <h4 style="margin:0 0 10px 0;">Add New Device (Admin Upload)</h4>
                     <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                        <input type="text" id="adm-imei" class="win-input" placeholder="IMEI (Auto if empty)" style="width:30%; margin:0;">
-                        <input type="text" id="adm-user" class="win-input" placeholder="User Name" style="width:30%; margin:0;">
-                        <input type="text" id="adm-model" class="win-input" placeholder="Model Name" style="width:30%; margin:0;">
+                        <input type="text" id="adm-imei" class="win-input" placeholder="IMEI (Auto if empty)" style="width:24%; margin:0;">
+                        <input type="text" id="adm-user" class="win-input" placeholder="User Name" style="width:24%; margin:0;">
+                        <input type="text" id="adm-model" class="win-input" placeholder="Model Name" style="width:24%; margin:0;">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label style="font-size:12px; font-weight:bold;">Upload User Photo:</label>
+                        <input type="file" id="adm-photo-input" accept="image/*">
                     </div>
                     <div style="margin-top:10px;">
                         <button class="win-btn" onclick="adminAddDevice()">Add Device</button>
@@ -397,6 +451,7 @@
                     <table id="device-table">
                         <thead>
                             <tr>
+                                <th>Image</th>
                                 <th>IMEI</th>
                                 <th>User</th>
                                 <th>Model</th>
@@ -406,7 +461,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
+                            <tr><td colspan="7" style="text-align:center;">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -414,8 +469,12 @@
         </div>
     </div>
 
+    <!-- Hidden Input for Admin Image Update in Table -->
+    <input type="file" id="hidden-admin-file-input" style="display:none" accept="image/*">
+
     <!-- FIREBASE LOGIC -->
     <script type="module">
+        // Removed Firebase Storage. Only Database needed.
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
@@ -433,6 +492,20 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
+        // --- HELPER: CONVERT IMAGE TO BASE64 TEXT ---
+        // This allows us to save images directly in Realtime Database as strings
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // --- GLOBAL VARIABLES ---
+        let currentUpdateImei = null; // To track which user admin is updating image for
+
         // --- DEVICE IDENTITY HELPER ---
         function getDeviceId() {
             let did = localStorage.getItem('smart_manager_imei');
@@ -448,78 +521,76 @@
             let model = "Unknown Mobile";
             if(ua.indexOf("Chrome") > -1) model = "Chrome Mobile";
             else if(ua.indexOf("Safari") > -1) model = "Safari Mobile";
-            
-            return {
-                imei: getDeviceId(),
-                model: model,
-                phoneName: navigator.platform
-            };
+            return { imei: getDeviceId(), model: model, phoneName: navigator.platform };
         }
+
+        // --- IMAGE PREVIEW HELPER ---
+        window.previewImage = function(input, imgId) {
+            if(input.files && input.files[0]){
+                const reader = new FileReader();
+                reader.onload = function(e){
+                    document.getElementById(imgId).src = e.target.result;
+                    document.getElementById(imgId).style.display = 'block';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
 
         // --- CORE FLOW ON LOAD ---
         window.onload = function() {
             const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
             if (!isMobile) {
-                // PC CASE: Direct Access + Monitor Requests
-                console.log("PC Detected - Direct Access");
                 showPCDashboard();
-                monitorPendingRequests(); // NEW: Check for pending users
+                monitorPendingRequests(); 
             } else {
-                // MOBILE CASE: Check IMEI
                 const deviceData = getDeviceInfo();
                 document.getElementById('display-imei').innerText = deviceData.imei;
                 document.getElementById('display-phone').innerText = deviceData.phoneName;
                 document.getElementById('display-model').innerText = deviceData.model;
-                
                 checkMobileDeviceStatus(deviceData.imei);
             }
         };
+
+        // --- HEADER PROFILE UPDATE ---
+        function updateHeaderProfile(name, role, imageUrl) {
+            const profileSection = document.getElementById('header-profile-section');
+            document.getElementById('header-name').innerText = name;
+            document.getElementById('header-role').innerText = role;
+            // Default placeholder if no image
+            document.getElementById('header-img').src = imageUrl || 'https://picsum.photos/seed/admin/40/40.jpg';
+            profileSection.classList.remove('hidden');
+        }
 
         // --- PC DASHBOARD ---
         function showPCDashboard() {
             document.getElementById('dashboard-screen').classList.add('active');
             document.getElementById('main-navbar').style.display = 'flex';
-            document.getElementById('mobile-device-info').classList.add('hidden'); // Hide mobile specific widget
+            document.getElementById('mobile-device-info').classList.add('hidden');
+            updateHeaderProfile('Administrator', 'SuperAdmin', 'https://i.ibb.co.com/jv71B2wK/Smart-Manager-removebg-preview.png');
             document.getElementById('welcome-user-name').innerText = "Administrator";
-            
-            // PC gets Admin Menu
-            renderNavbar('Admin');
+            renderNavbar('SuperAdmin');
         }
 
-        // --- NEW FUNCTION: MONITOR PENDING REQUESTS (For PC Dashboard) ---
         function monitorPendingRequests() {
             const dbRef = ref(db, 'devices');
             onValue(dbRef, (snapshot) => {
                 const data = snapshot.val();
                 const notifyBox = document.getElementById('pc-notifications');
-                notifyBox.innerHTML = ''; // Clear previous
+                notifyBox.innerHTML = ''; 
 
                 if (data) {
                     let pendingUsers = [];
                     Object.values(data).forEach(device => {
-                        if (device.status === 'Pending') {
-                            pendingUsers.push(device.user);
-                        }
+                        if (device.status === 'Pending') pendingUsers.push(device.user);
                     });
 
                     if (pendingUsers.length > 0) {
-                        // Create Alert Box
                         const alertDiv = document.createElement('div');
                         alertDiv.className = 'notification-box';
-                        
-                        // Format user names list
-                        const userList = pendingUsers.join(', ');
-                        
                         alertDiv.innerHTML = `
-                            <div class="notification-title">
-                                <span class="blink">⚠</span> New Device Requests (${pendingUsers.length})
-                            </div>
-                            <div class="notification-text">
-                                The following users are waiting for approval:<br>
-                                <b>${userList}</b><br><br>
-                                <i>Please click "Admin Login" below to Approve.</i>
-                            </div>
+                            <div class="notification-title"><span class="blink">⚠</span> New Requests (${pendingUsers.length})</div>
+                            <div class="notification-text">Users: <b>${pendingUsers.join(', ')}</b><br><i>Open Admin Panel to Approve.</i></div>
                         `;
                         notifyBox.appendChild(alertDiv);
                     }
@@ -530,80 +601,92 @@
         // --- MOBILE LOGIC ---
         function checkMobileDeviceStatus(imei) {
             const deviceRef = ref(db, 'devices/' + imei);
-            
             onValue(deviceRef, (snapshot) => {
                 const data = snapshot.val();
-                
                 if (!data) {
-                    // Not Registered: Show Form
                     document.getElementById('gate-screen').classList.add('active');
                 } else {
-                    // Registered
                     if (data.status === 'Pending') {
-                        alert("Registration Pending. Please wait for Admin Approval.");
-                        // Keep showing form or specific pending screen
+                        alert("Registration Pending. Wait for Approval.");
                         document.getElementById('gate-screen').classList.add('active');
-                        // Disable inputs to prevent re-submit spam
                         document.getElementById('user-name-input').value = data.user;
                         document.getElementById('user-name-input').disabled = true;
-                        document.querySelector('#gate-screen button').disabled = true;
-                        document.querySelector('#gate-screen button').innerText = "Request Sent";
+                        const btn = document.querySelector('#gate-screen button');
+                        btn.disabled = true; btn.innerText = "Request Sent";
+                        if(data.imageUrl) previewImage({files:[{name:'img'}]}, 'photo-preview'); // Mock preview trigger
+                        if(data.imageUrl) document.getElementById('photo-preview').src = data.imageUrl;
                     } 
                     else if (data.status === 'Blocked') {
-                        alert("This device is BLOCKED by Admin.");
+                        alert("Device BLOCKED.");
                         document.getElementById('gate-screen').classList.add('active');
                     } 
                     else if (data.status === 'Approved') {
-                        // Approved: Direct to Dashboard
                         document.getElementById('dashboard-screen').classList.add('active');
                         document.getElementById('main-navbar').style.display = 'flex';
                         document.getElementById('mobile-device-info').classList.remove('hidden');
                         
-                        // Fill Info
                         document.getElementById('dash-user').innerText = data.user;
                         document.getElementById('dash-role').innerText = data.role;
                         document.getElementById('dash-imei').innerText = data.imei;
                         document.getElementById('welcome-user-name').innerText = data.user;
 
+                        updateHeaderProfile(data.user, data.role, data.imageUrl);
                         renderNavbar(data.role);
                     }
                 }
             });
         }
 
-        window.registerDevice = function() {
+        // --- REGISTER DEVICE (UPLOADS IMAGE AS BASE64) ---
+        window.registerDevice = async function() {
             const username = document.getElementById('user-name-input').value;
+            const fileInput = document.getElementById('user-photo-input');
+            const file = fileInput.files[0];
+
             if (!username) { alert("Enter Name"); return; }
+            if (!file) { alert("Please upload a profile photo"); return; }
 
             const deviceData = getDeviceInfo();
-            const deviceRef = ref(db, 'devices/' + deviceData.imei);
+            const imei = deviceData.imei;
             
-            const newDevice = {
-                imei: deviceData.imei,
-                phoneName: deviceData.phoneName,
-                model: deviceData.model,
-                user: username,
-                status: 'Pending',
-                role: 'User',
-                date: new Date().toISOString()
-            };
+            // Convert to Base64
+            try {
+                const base64Image = await fileToBase64(file);
+                
+                const statusText = document.getElementById('upload-status');
+                const submitBtn = document.getElementById('submit-btn');
+                
+                statusText.innerText = "Processing Image...";
+                submitBtn.disabled = true;
 
-            set(deviceRef, newDevice).then(() => {
-                alert("Request Sent! Wait for Admin Approval.");
+                const newDevice = {
+                    imei: imei,
+                    phoneName: deviceData.phoneName,
+                    model: deviceData.model,
+                    user: username,
+                    imageUrl: base64Image, // Saving Base64 string
+                    status: 'Pending',
+                    role: 'User',
+                    date: new Date().toISOString()
+                };
+
+                await set(ref(db, 'devices/' + imei), newDevice);
+                alert("Request Sent with Photo! Wait for Approval.");
                 window.location.reload();
-            });
+
+            } catch (error) {
+                console.error(error);
+                alert("Error processing image: " + error.message);
+                document.getElementById('submit-btn').disabled = false;
+            }
         };
 
         // --- NAVIGATION RENDERER ---
         function renderNavbar(role) {
             const nav = document.getElementById('main-navbar');
-            nav.innerHTML = '';
+            nav.innerHTML = `<div class="nav-item"><a href="#" class="nav-btn">Home</a></div>`;
 
-            nav.innerHTML += `<div class="nav-item"><a href="#" class="nav-btn">Home</a></div>`;
-
-            // Entry
             let entryHtml = `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">Bill Entry</button>`;
-            // Allow access for Admin or SuperAdmin
             if(role === 'Admin' || role === 'SuperAdmin') {
                 entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/IOU')">IOU Entry</button>`;
             }
@@ -616,7 +699,6 @@
                 </div>
             `;
 
-            // Admin Links (Allow SuperAdmin too)
             if (role === 'Admin' || role === 'SuperAdmin') {
                 nav.innerHTML += `
                     <div class="nav-item">
@@ -627,7 +709,6 @@
                     </div>
                 `;
             }
-            
             nav.innerHTML += `<div class="nav-item"><a href="settings.html" class="nav-btn">Settings</a></div>`;
         }
 
@@ -658,24 +739,30 @@
             get(dbRef).then((snapshot) => {
                 const tbody = document.querySelector('#device-table tbody');
                 tbody.innerHTML = '';
-                if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="6">No data</td></tr>'; return; }
+                if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="7">No data</td></tr>'; return; }
 
                 Object.values(snapshot.val()).forEach(device => {
                     const tr = document.createElement('tr');
                     let statusClass = device.status === 'Approved' ? 'status-approved' : (device.status === 'Blocked' ? 'status-blocked' : 'status-pending');
                     
+                    // Display Image (Base64 or Placeholder)
+                    const imgDisplay = device.imageUrl 
+                        ? `<img src="${device.imageUrl}" class="table-user-img">` 
+                        : `<div style="width:40px;height:40px;background:#ccc;border:1px solid #999;"></div>`;
+
                     let actions = '';
                     if (device.status === 'Pending') {
-                        // Updated: Call approveWithRole instead of direct updateStatus
                         actions = `<button class="win-btn" onclick="approveWithRole('${device.imei}')">Approve</button> 
                                    <button class="win-btn" onclick="updateStatus('${device.imei}', 'Blocked')">Reject</button>`;
                     } else {
-                        actions = `<button class="win-btn" onclick="updateStatus('${device.imei}', 'Approved')">Unblock</button> 
+                        actions = `<button class="win-btn" onclick="triggerImageUpdate('${device.imei}')">Update Image</button>
+                                   <button class="win-btn" onclick="updateStatus('${device.imei}', 'Approved')">Unblock</button> 
                                    <button class="win-btn" onclick="updateRole('${device.imei}')">Edit Role</button>
                                    <button class="win-btn" style="color:red;" onclick="deleteDevice('${device.imei}')">Delete</button>`;
                     }
 
                     tr.innerHTML = `
+                        <td style="text-align:center;">${imgDisplay}</td>
                         <td>${device.imei}</td><td>${device.user}</td><td>${device.model}</td>
                         <td>${device.role}</td><td class="${statusClass}">${device.status}</td><td>${actions}</td>
                     `;
@@ -684,56 +771,82 @@
             });
         };
 
-        // NEW FUNCTION: Approve with Role Selection
-        window.approveWithRole = function(imei) {
-            const role = prompt("Assign Role for this Device:\n\n- User\n- Admin\n- SuperAdmin\n\nEnter Role Name:");
-            
-            if (role) {
-                const validRoles = ['User', 'Admin', 'SuperAdmin'];
-                
-                // Check if entered role is valid
-                if (validRoles.includes(role)) {
-                    const updates = {};
-                    updates['/devices/' + imei + '/status'] = 'Approved';
-                    updates['/devices/' + imei + '/role'] = role;
-
-                    update(ref(db), updates).then(() => {
-                        loadDevices(); // Refresh table
-                        alert("Device Approved as " + role);
-                    }).catch((error) => {
-                        alert("Error: " + error.message);
-                    });
-                } else {
-                    alert("Invalid Role! Please type exactly:\nUser\nAdmin\nor\nSuperAdmin");
-                }
-            }
-        };
-
-        window.adminAddDevice = function() {
+        // --- ADMIN ADD DEVICE (WITH IMAGE) ---
+        window.adminAddDevice = async function() {
             let imei = document.getElementById('adm-imei').value;
             const user = document.getElementById('adm-user').value;
             const model = document.getElementById('adm-model').value;
+            const fileInput = document.getElementById('adm-photo-input');
+            const file = fileInput.files[0];
 
             if(!user || !model) { alert("User Name and Model required"); return; }
             if(!imei) imei = 'ADM-' + Math.random().toString(36).substr(2, 9).toUpperCase();
 
-            const newDevice = {
-                imei: imei,
-                phoneName: "Admin Added",
-                model: model,
-                user: user,
-                status: 'Approved',
-                role: 'User',
-                date: new Date().toISOString()
-            };
+            try {
+                let base64Img = "";
+                if (file) {
+                    base64Img = await fileToBase64(file);
+                }
 
-            set(ref(db, 'devices/' + imei), newDevice).then(() => {
+                const newDevice = {
+                    imei: imei,
+                    phoneName: "Admin Added",
+                    model: model,
+                    user: user,
+                    imageUrl: base64Img, // Admin uploaded image
+                    status: 'Approved',
+                    role: 'User',
+                    date: new Date().toISOString()
+                };
+
+                await set(ref(db, 'devices/' + imei), newDevice);
                 alert("Device Added Successfully");
+                // Clear inputs
                 document.getElementById('adm-imei').value = '';
                 document.getElementById('adm-user').value = '';
                 document.getElementById('adm-model').value = '';
+                fileInput.value = '';
                 loadDevices();
-            });
+            } catch (error) {
+                alert("Error: " + error.message);
+            }
+        };
+
+        // --- ADMIN UPDATE IMAGE FOR EXISTING USER ---
+        window.triggerImageUpdate = function(imei) {
+            currentUpdateImei = imei;
+            document.getElementById('hidden-admin-file-input').click();
+        };
+
+        // Listen for file selection on hidden input
+        document.getElementById('hidden-admin-file-input').addEventListener('change', async function(e) {
+            if (this.files && this.files[0] && currentUpdateImei) {
+                try {
+                    const base64Img = await fileToBase64(this.files[0]);
+                    await update(ref(db, 'devices/' + currentUpdateImei), { imageUrl: base64Img });
+                    alert("Image Updated!");
+                    loadDevices(); // Refresh table
+                } catch (error) {
+                    alert("Failed to update image: " + error.message);
+                }
+                this.value = ''; // Reset input
+                currentUpdateImei = null;
+            }
+        });
+
+        window.approveWithRole = function(imei) {
+            const role = prompt("Assign Role:\n\n- User\n- Admin\n- SuperAdmin\n\nEnter Role Name:");
+            if (role) {
+                const validRoles = ['User', 'Admin', 'SuperAdmin'];
+                if (validRoles.includes(role)) {
+                    const updates = {};
+                    updates['/devices/' + imei + '/status'] = 'Approved';
+                    updates['/devices/' + imei + '/role'] = role;
+                    update(ref(db), updates).then(() => {
+                        loadDevices(); alert("Approved as " + role);
+                    });
+                } else { alert("Invalid Role!"); }
+            }
         };
 
         window.updateStatus = function(imei, status) {
