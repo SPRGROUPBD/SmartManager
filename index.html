@@ -17,7 +17,7 @@
             overflow-x: hidden;
         }
 
-        /* --- UI COMPONENTS (Retro Windows Style) --- */
+        /* --- UI COMPONENTS --- */
         .win-btn {
             background: #c0c0c0;
             border: 2px solid;
@@ -33,11 +33,6 @@
             border-color: #808080 #ffffff #ffffff #808080;
             transform: translate(1px, 1px);
         }
-        .win-btn:disabled {
-            color: #808080;
-            text-shadow: 1px 1px #fff;
-            cursor: not-allowed;
-        }
 
         .win-input {
             border: 2px solid;
@@ -47,6 +42,7 @@
             width: 100%;
             box-sizing: border-box;
             margin-bottom: 10px;
+            background: #fff;
         }
 
         .win-card {
@@ -86,30 +82,18 @@
             font-size: 18px;
             text-transform: uppercase;
         }
-        .device-status-badge {
-            font-size: 12px;
-            background: #fff;
-            color: #000;
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-right: 15px;
-            display: none; /* Hidden by default */
-        }
 
         /* --- NAVIGATION --- */
         .navbar {
             background-color: #d4d0c8;
             padding: 5px;
             border-bottom: 2px solid #808080;
-            display: none; /* Hidden until approved */
+            display: none; /* Hidden by default */
             justify-content: center;
             flex-wrap: wrap;
             gap: 5px;
         }
-        .nav-item {
-            position: relative;
-            display: inline-block;
-        }
+        .nav-item { position: relative; display: inline-block; }
         .nav-btn {
             background-color: #d4d0c8;
             border: 2px solid;
@@ -129,10 +113,8 @@
         }
         .nav-btn:hover { background-color: #e0e0e0; }
         .nav-btn:active { border-color: #808080 #ffffff #ffffff #808080; transform: translate(1px, 1px); }
-        
         .arrow { font-size: 10px; }
         
-        /* Submenu */
         .submenu {
             display: none;
             position: absolute;
@@ -170,8 +152,7 @@
         .screen { display: none; width: 100%; max-width: 600px; text-align: center; }
         .screen.active { display: block; }
 
-        /* Registration Screen */
-        #gate-screen { max-width: 450px; }
+        /* Registration Screen Info */
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -179,9 +160,11 @@
             font-size: 13px;
             border-bottom: 1px dotted #ccc;
             padding-bottom: 2px;
+            text-align: left;
         }
+        .info-label { font-weight: bold; color: #000080; }
 
-        /* Dashboard Screen */
+        /* Dashboard Widget */
         .device-info-widget {
             background: #fff;
             border: 2px inset #fff;
@@ -197,15 +180,14 @@
             background-color: #000080;
             color: white;
             text-align: center;
-            padding: 10px;
-            font-size: 12px;
+            padding: 0 20px;
+            height: 40px;
             border-top: 2px solid #ffffff;
             margin-top: auto;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 20px;
-            height: 40px;
+            font-size: 12px;
         }
         .admin-trigger {
             background: none;
@@ -217,7 +199,7 @@
         }
         .admin-trigger:hover { color: #fff; }
 
-        /* --- MODAL (Admin Panel) --- */
+        /* --- MODAL --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -233,7 +215,7 @@
             border: 2px solid;
             border-color: #ffffff #808080 #808080 #ffffff;
             width: 90%;
-            max-width: 800px;
+            max-width: 850px;
             max-height: 90vh;
             display: flex;
             flex-direction: column;
@@ -258,17 +240,15 @@
             line-height: 18px;
             text-align: center;
         }
-        .modal-body {
-            padding: 15px;
-            overflow-y: auto;
-        }
+        .modal-body { padding: 15px; overflow-y: auto; }
         
-        /* Table Styling */
+        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
             background: #fff;
+            margin-top: 10px;
         }
         th, td {
             border: 1px solid #808080;
@@ -280,7 +260,6 @@
         .status-approved { color: green; font-weight: bold; }
         .status-blocked { color: red; font-weight: bold; }
 
-        /* Helpers */
         .hidden { display: none !important; }
     </style>
 </head>
@@ -292,75 +271,53 @@
             <img src="https://i.ibb.co/jv71B2wK/Smart-Manager-removebg-preview.png" alt="Logo" class="header-logo">
             <span class="logo-text">SmartManager</span>
         </div>
-        <div style="display: flex; align-items: center;">
-            <span id="header-status" class="device-status-badge">Approved</span>
-        </div>
     </div>
 
-    <!-- NAVIGATION (Dynamic) -->
+    <!-- NAVIGATION -->
     <nav class="navbar" id="main-navbar">
-        <!-- Items injected by JS based on Role -->
+        <!-- JS will populate this -->
     </nav>
 
     <!-- MAIN CONTENT -->
     <div class="main-wrapper">
 
-        <!-- 1. LOADING SCREEN -->
-        <div id="loading-screen" class="screen active">
-            <div class="win-card">
-                <h3>Checking Device Security...</h3>
-                <p>Please wait while we verify your device IMEI.</p>
-            </div>
-        </div>
-
-        <!-- 2. GATE SCREEN (Registration / Pending / Blocked) -->
+        <!-- 1. REGISTRATION SCREEN (Mobile Only) -->
         <div id="gate-screen" class="screen">
             <div class="win-card">
                 <img src="https://i.ibb.co/jv71B2wK/Smart-Manager-removebg-preview.png" width="80" style="margin-bottom:15px;">
                 
-                <!-- Step A: User Input Name for Registration -->
-                <div id="register-form">
-                    <h3>Device Registration</h3>
-                    <p style="font-size:12px; color:#444;">New device detected. Please register to continue.</p>
-                    
-                    <div class="info-row"><span>IMEI (Simulated):</span> <span id="display-imei">...</span></div>
-                    <div class="info-row"><span>Model:</span> <span id="display-model">...</span></div>
-                    
-                    <label style="display:block; text-align:left; font-size:12px; font-weight:bold;">Your Name / ID:</label>
-                    <input type="text" id="user-name-input" class="win-input" placeholder="e.g. Arman Khan">
-                    
-                    <button class="win-btn" onclick="registerDevice()" style="width:100%; margin-top:5px;">Send Registration Request</button>
+                <h3>Device Registration</h3>
+                <p style="font-size:12px; color:#444;">Please verify your device details and submit a request.</p>
+                
+                <div class="info-row">
+                    <span class="info-label">IMEI Number:</span>
+                    <span id="display-imei">Generating...</span>
                 </div>
-
-                <!-- Step B: Pending Approval -->
-                <div id="pending-view" class="hidden">
-                    <h3 style="color:#d66b00;">Registration Pending</h3>
-                    <p>This device is not registered. Registration request sent to Admin.</p>
-                    <div class="info-row"><span>Status:</span> <span>Pending Approval</span></div>
-                    <div class="info-row"><span>IMEI:</span> <span id="pending-imei"></span></div>
-                    <br>
-                    <small>Please contact the administrator.</small>
+                <div class="info-row">
+                    <span class="info-label">Phone Name:</span>
+                    <span id="display-phone">...</span>
                 </div>
-
-                <!-- Step C: Blocked -->
-                <div id="blocked-view" class="hidden">
-                    <h3 style="color:red;">Access Denied</h3>
-                    <p>This device has been <b>Blocked</b> by the Administrator.</p>
-                    <p>Device ID: <span id="blocked-imei"></span></p>
-                    <button class="win-btn" onclick="window.location.reload()">Retry</button>
+                <div class="info-row">
+                    <span class="info-label">Model Name:</span>
+                    <span id="display-model">...</span>
                 </div>
+                
+                <label style="display:block; text-align:left; font-size:12px; font-weight:bold; margin-top:10px;">User Name / ID:</label>
+                <input type="text" id="user-name-input" class="win-input" placeholder="Enter your name">
+                
+                <button class="win-btn" onclick="registerDevice()" style="width:100%; margin-top:5px;">SUBMIT REQUEST</button>
             </div>
         </div>
 
-        <!-- 3. DASHBOARD SCREEN (Approved Users) -->
+        <!-- 2. DASHBOARD SCREEN (Approved Mobile & PC) -->
         <div id="dashboard-screen" class="screen">
             <div class="win-card">
-                <div class="device-info-widget">
+                <!-- Device Info Widget (Only for Mobile Approved Users) -->
+                <div id="mobile-device-info" class="device-info-widget hidden">
                     <h4>Device Info</h4>
                     <div class="info-row"><span>Status:</span> <b style="color:green">Active</b></div>
                     <div class="info-row"><span>User:</span> <span id="dash-user">...</span></div>
                     <div class="info-row"><span>Role:</span> <span id="dash-role" style="font-weight:bold;">...</span></div>
-                    <div class="info-row"><span>Phone:</span> <span id="dash-phone">...</span></div>
                     <div class="info-row"><span>IMEI:</span> <span id="dash-imei" style="font-family:monospace">...</span></div>
                 </div>
 
@@ -378,21 +335,36 @@
     <!-- FOOTER -->
     <div class="footer">
         <span>Developed By: <b>Md Sajjad Ahmed</b></span>
-        <!-- Secret Admin Login Trigger -->
         <button class="admin-trigger" onclick="openAdminLogin()">Admin Login</button>
     </div>
 
-    <!-- ADMIN PANEL MODAL -->
+    <!-- ADMIN MODAL -->
     <div class="modal-overlay" id="admin-modal">
         <div class="modal-window">
             <div class="modal-header">
-                <span>Device Management & Approvals</span>
+                <span>Admin Control Panel</span>
                 <button class="close-modal" onclick="closeAdminPanel()">X</button>
             </div>
             <div class="modal-body">
-                <div style="margin-bottom:10px;">
-                    <button class="win-btn" onclick="loadDevices()">Refresh List</button>
+                
+                <!-- Admin Add Device Section -->
+                <div style="background:#e0e0e0; padding:10px; border:1px solid #808080; margin-bottom:15px;">
+                    <h4 style="margin:0 0 10px 0;">Add New Device (Manual)</h4>
+                    <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                        <input type="text" id="adm-imei" class="win-input" placeholder="IMEI (Auto if empty)" style="width:30%; margin:0;">
+                        <input type="text" id="adm-user" class="win-input" placeholder="User Name" style="width:30%; margin:0;">
+                        <input type="text" id="adm-model" class="win-input" placeholder="Model Name" style="width:30%; margin:0;">
+                    </div>
+                    <div style="margin-top:10px;">
+                        <button class="win-btn" onclick="adminAddDevice()">Add Device</button>
+                    </div>
                 </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3 style="margin:0;">Registered Devices</h3>
+                    <button class="win-btn" onclick="loadDevices()">Refresh</button>
+                </div>
+
                 <div style="overflow-x:auto;">
                     <table id="device-table">
                         <thead>
@@ -406,8 +378,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <!-- Data injected via JS -->
-                            <tr><td colspan="6" style="text-align:center;">Loading data...</td></tr>
+                            <tr><td colspan="6" style="text-align:center;">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -415,12 +386,11 @@
         </div>
     </div>
 
-    <!-- FIREBASE & APP LOGIC -->
+    <!-- FIREBASE LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
 
-        // 1. Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyBEaGG_UsXGf6RGHQ_ckalf33fLla-P2J8",
             authDomain: "whatapp-8d8ed.firebaseapp.com",
@@ -432,16 +402,14 @@
             measurementId: "G-JLG1K25Z7N"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // 2. Device Identity Logic (Simulated IMEI)
+        // --- DEVICE IDENTITY HELPER ---
         function getDeviceId() {
             let did = localStorage.getItem('smart_manager_imei');
             if (!did) {
-                // Generate a random ID if not exists
-                did = 'WEB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                did = 'MOB-' + Math.random().toString(36).substr(2, 9).toUpperCase();
                 localStorage.setItem('smart_manager_imei', did);
             }
             return did;
@@ -449,74 +417,96 @@
 
         function getDeviceInfo() {
             const ua = navigator.userAgent;
-            let model = "Unknown Web Browser";
-            if(ua.indexOf("Chrome") > -1) model = "Chrome / Web";
-            else if(ua.indexOf("Firefox") > -1) model = "Firefox / Web";
-            else if(ua.indexOf("Safari") > -1) model = "Safari / Web";
+            let model = "Unknown Mobile";
+            if(ua.indexOf("Chrome") > -1) model = "Chrome Mobile";
+            else if(ua.indexOf("Safari") > -1) model = "Safari Mobile";
             
-            // Simple check for mobile
-            if (/Mobi|Android/i.test(ua)) model += " (Mobile)";
-
             return {
                 imei: getDeviceId(),
                 model: model,
-                phoneName: navigator.platform, // e.g. Win32, iPhone
-                userAgent: ua
+                phoneName: navigator.platform
             };
         }
 
-        // Global State
-        const deviceData = getDeviceInfo();
-        let currentUserData = null;
-        let isAdminMode = false;
-
-        // --- CORE FLOW ---
-
+        // --- CORE FLOW ON LOAD ---
         window.onload = function() {
-            document.getElementById('display-imei').innerText = deviceData.imei;
-            document.getElementById('display-model').innerText = deviceData.model;
-            checkDeviceStatus();
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+            if (!isMobile) {
+                // PC CASE: Direct Access
+                console.log("PC Detected - Direct Access");
+                showPCDashboard();
+            } else {
+                // MOBILE CASE: Check IMEI
+                const deviceData = getDeviceInfo();
+                document.getElementById('display-imei').innerText = deviceData.imei;
+                document.getElementById('display-phone').innerText = deviceData.phoneName;
+                document.getElementById('display-model').innerText = deviceData.model;
+                
+                checkMobileDeviceStatus(deviceData.imei);
+            }
         };
 
-        function checkDeviceStatus() {
-            const deviceRef = ref(db, 'devices/' + deviceData.imei);
+        // --- PC DASHBOARD ---
+        function showPCDashboard() {
+            document.getElementById('dashboard-screen').classList.add('active');
+            document.getElementById('main-navbar').style.display = 'flex';
+            document.getElementById('mobile-device-info').classList.add('hidden'); // Hide mobile specific widget
+            document.getElementById('welcome-user-name').innerText = "Administrator";
             
-            // Listen for real-time updates
+            // PC gets Admin Menu
+            renderNavbar('Admin');
+        }
+
+        // --- MOBILE LOGIC ---
+        function checkMobileDeviceStatus(imei) {
+            const deviceRef = ref(db, 'devices/' + imei);
+            
             onValue(deviceRef, (snapshot) => {
                 const data = snapshot.val();
                 
                 if (!data) {
-                    // Case 1: Not Registered
-                    showScreen('register-form');
+                    // Not Registered: Show Form
+                    document.getElementById('gate-screen').classList.add('active');
                 } else {
-                    currentUserData = data;
-                    
+                    // Registered
                     if (data.status === 'Pending') {
-                        // Case 2: Pending
-                        document.getElementById('pending-imei').innerText = deviceData.imei;
-                        showScreen('pending-view');
-                    } else if (data.status === 'Blocked') {
-                        // Case 3: Blocked
-                        document.getElementById('blocked-imei').innerText = deviceData.imei;
-                        showScreen('blocked-view');
-                    } else if (data.status === 'Approved') {
-                        // Case 4: Approved - Load Dashboard
-                        loadDashboard(data);
+                        alert("Registration Pending. Please wait for Admin Approval.");
+                        // Keep showing form or specific pending screen
+                        document.getElementById('gate-screen').classList.add('active');
+                        // Disable inputs to prevent re-submit spam
+                        document.getElementById('user-name-input').value = data.user;
+                        document.getElementById('user-name-input').disabled = true;
+                        document.querySelector('#gate-screen button').disabled = true;
+                        document.querySelector('#gate-screen button').innerText = "Request Sent";
+                    } 
+                    else if (data.status === 'Blocked') {
+                        alert("This device is BLOCKED by Admin.");
+                        document.getElementById('gate-screen').classList.add('active');
+                    } 
+                    else if (data.status === 'Approved') {
+                        // Approved: Direct to Dashboard
+                        document.getElementById('dashboard-screen').classList.add('active');
+                        document.getElementById('main-navbar').style.display = 'flex';
+                        document.getElementById('mobile-device-info').classList.remove('hidden');
+                        
+                        // Fill Info
+                        document.getElementById('dash-user').innerText = data.user;
+                        document.getElementById('dash-role').innerText = data.role;
+                        document.getElementById('dash-imei').innerText = data.imei;
+                        document.getElementById('welcome-user-name').innerText = data.user;
+
+                        renderNavbar(data.role);
                     }
                 }
-                hideLoading();
             });
         }
 
-        // --- ACTIONS ---
-
         window.registerDevice = function() {
             const username = document.getElementById('user-name-input').value;
-            if (!username) {
-                alert("Please enter your Name or ID.");
-                return;
-            }
+            if (!username) { alert("Enter Name"); return; }
 
+            const deviceData = getDeviceInfo();
             const deviceRef = ref(db, 'devices/' + deviceData.imei);
             
             const newDevice = {
@@ -525,145 +515,70 @@
                 model: deviceData.model,
                 user: username,
                 status: 'Pending',
-                role: 'User', // Default role
+                role: 'User',
                 date: new Date().toISOString()
             };
 
             set(deviceRef, newDevice).then(() => {
-                console.log("Registration request sent.");
-            }).catch((error) => {
-                alert("Error: " + error.message);
+                alert("Request Sent! Wait for Admin Approval.");
+                window.location.reload();
             });
         };
 
-        function loadDashboard(data) {
-            showScreen('dashboard-screen');
-            document.getElementById('main-navbar').style.display = 'flex';
-            document.getElementById('header-status').style.display = 'block';
-            document.getElementById('header-status').innerText = "Device Active";
-            document.getElementById('header-status').style.color = "green";
-            document.getElementById('header-status').style.backgroundColor = "#e0ffe0";
-
-            // Populate Widget
-            document.getElementById('dash-user').innerText = data.user;
-            document.getElementById('dash-role').innerText = data.role;
-            document.getElementById('dash-phone').innerText = data.phoneName;
-            document.getElementById('dash-imei').innerText = data.imei;
-            document.getElementById('welcome-user-name').innerText = data.user;
-
-            // Render Menu based on Role
-            renderNavbar(data.role);
-        }
-
+        // --- NAVIGATION RENDERER ---
         function renderNavbar(role) {
             const nav = document.getElementById('main-navbar');
-            nav.innerHTML = ''; // Clear existing
+            nav.innerHTML = '';
 
-            // Common Links
-            nav.innerHTML += `
-                <div class="nav-item">
-                    <a href="#" class="nav-btn" onclick="window.location.reload()">Home</a>
-                </div>
-            `;
+            nav.innerHTML += `<div class="nav-item"><a href="#" class="nav-btn">Home</a></div>`;
 
-            // ENTRY MENU
-            let entryLinks = `
-                <button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">Bill Entry</button>
-            `;
+            // Entry
+            let entryHtml = `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">Bill Entry</button>`;
+            if(role === 'Admin') entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/IOU')">IOU Entry</button>`;
+            entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/monico/')">Sample Entry</button>`;
             
-            // Admin gets IOU
-            if (role === 'Admin') {
-                entryLinks += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/IOU')">IOU Entry</button>`;
-            }
-            // Sample Entry (from previous code)
-            entryLinks += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/monico/')">Sample Entry</button>`;
-
             nav.innerHTML += `
                 <div class="nav-item">
                     <button class="nav-btn">Entry <span class="arrow">▼</span></button>
-                    <div class="submenu">${entryLinks}</div>
+                    <div class="submenu">${entryHtml}</div>
                 </div>
             `;
 
-            // HISTORY (Admin Only)
+            // Admin Links
             if (role === 'Admin') {
                 nav.innerHTML += `
-                <div class="nav-item">
-                    <button class="nav-btn">History <span class="arrow">▼</span></button>
-                    <div class="submenu">
-                        <button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/user')">All History</button>
-                        <button class="nav-btn" onclick="openPage('report.html')">Approved History</button>
+                    <div class="nav-item">
+                        <button class="nav-btn">History <span class="arrow">▼</span></button>
+                        <div class="submenu">
+                            <button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/user')">All History</button>
+                        </div>
                     </div>
-                </div>
                 `;
             }
-
-            // DEVICE MANAGEMENT (Admin Only)
-            if (role === 'Admin') {
-                nav.innerHTML += `
-                <div class="nav-item">
-                    <button class="nav-btn" onclick="window.openAdminPanelDirectly()">Device Mgmt</button>
-                </div>
-                `;
-            }
-
-            // SETTINGS
-            nav.innerHTML += `
-                <div class="nav-item">
-                    <a href="settings.html" class="nav-btn">Settings</a>
-                </div>
-            `;
-        }
-
-        // --- UI HELPERS ---
-        function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('#gate-screen > div').forEach(el => el.classList.add('hidden'));
             
-            if(screenId === 'register-form' || screenId === 'pending-view' || screenId === 'blocked-view') {
-                document.getElementById('gate-screen').classList.add('active');
-                document.getElementById(screenId).classList.remove('hidden');
-            } else {
-                document.getElementById(screenId).classList.add('active');
-            }
+            nav.innerHTML += `<div class="nav-item"><a href="settings.html" class="nav-btn">Settings</a></div>`;
         }
 
-        function hideLoading() {
-            document.getElementById('loading-screen').classList.remove('active');
-        }
+        window.openPage = function(url) { if(url) window.location.href = url; };
 
-        window.openPage = function(url) {
-            if(url) window.location.href = url;
-        };
-
-        // --- ADMIN PANEL LOGIC ---
-
+        // --- ADMIN PANEL FUNCTIONS ---
+        
         window.openAdminLogin = function() {
-            // UPDATED PASSWORD: KUS-11182401
             const pass = prompt("Enter Admin Password:");
-            if (pass === "KUS-11182401") { 
-                isAdminMode = true;
+            if (pass === "KUS-11182401") {
                 openAdminPanel();
             } else if (pass !== null) {
                 alert("Wrong Password");
             }
         };
-        
-        // Allow direct opening if user is Admin role
-        window.openAdminPanelDirectly = function() {
-             if(currentUserData && currentUserData.role === 'Admin') {
-                 isAdminMode = true;
-                 openAdminPanel();
-             }
-        }
+
+        window.closeAdminPanel = function() {
+            document.getElementById('admin-modal').classList.remove('open');
+        };
 
         function openAdminPanel() {
             document.getElementById('admin-modal').classList.add('open');
             loadDevices();
-        }
-
-        window.closeAdminPanel = function() {
-            document.getElementById('admin-modal').classList.remove('open');
         }
 
         window.loadDevices = function() {
@@ -671,82 +586,71 @@
             get(dbRef).then((snapshot) => {
                 const tbody = document.querySelector('#device-table tbody');
                 tbody.innerHTML = '';
+                if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="6">No data</td></tr>'; return; }
 
-                if (!snapshot.exists()) {
-                    tbody.innerHTML = '<tr><td colspan="6">No devices found.</td></tr>';
-                    return;
-                }
-
-                const data = snapshot.val();
-                Object.values(data).forEach(device => {
+                Object.values(snapshot.val()).forEach(device => {
                     const tr = document.createElement('tr');
+                    let statusClass = device.status === 'Approved' ? 'status-approved' : (device.status === 'Blocked' ? 'status-blocked' : 'status-pending');
                     
-                    let statusClass = '';
-                    if(device.status === 'Pending') statusClass = 'status-pending';
-                    if(device.status === 'Approved') statusClass = 'status-approved';
-                    if(device.status === 'Blocked') statusClass = 'status-blocked';
-
-                    // Action Buttons Logic
                     let actions = '';
                     if (device.status === 'Pending') {
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px; color:green;" onclick="updateStatus('${device.imei}', 'Approved')">Approve</button> `;
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px; color:red;" onclick="updateStatus('${device.imei}', 'Blocked')">Reject</button>`;
-                    } else if (device.status === 'Approved') {
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px;" onclick="updateRole('${device.imei}')">Role</button> `;
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px; color:red;" onclick="updateStatus('${device.imei}', 'Blocked')">Block</button>`;
+                        actions = `<button class="win-btn" onclick="updateStatus('${device.imei}', 'Approved')">Approve</button> 
+                                   <button class="win-btn" onclick="updateStatus('${device.imei}', 'Blocked')">Reject</button>`;
                     } else {
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px; color:green;" onclick="updateStatus('${device.imei}', 'Approved')">Unblock</button> `;
-                        actions += `<button class="win-btn" style="font-size:10px; padding:2px 5px;" onclick="deleteDevice('${device.imei}')">Del</button>`;
+                        actions = `<button class="win-btn" onclick="updateStatus('${device.imei}', 'Approved')">Unblock</button> 
+                                   <button class="win-btn" onclick="updateRole('${device.imei}')">Edit Role</button>
+                                   <button class="win-btn" style="color:red;" onclick="deleteDevice('${device.imei}')">Delete</button>`;
                     }
 
                     tr.innerHTML = `
-                        <td style="font-family:monospace">${device.imei}</td>
-                        <td>${device.user}</td>
-                        <td>${device.model}</td>
-                        <td>${device.role}</td>
-                        <td class="${statusClass}">${device.status}</td>
-                        <td>${actions}</td>
+                        <td>${device.imei}</td><td>${device.user}</td><td>${device.model}</td>
+                        <td>${device.role}</td><td class="${statusClass}">${device.status}</td><td>${actions}</td>
                     `;
                     tbody.appendChild(tr);
                 });
             });
         };
 
-        window.updateStatus = function(imei, newStatus) {
-            const updates = {};
-            updates['/devices/' + imei + '/status'] = newStatus;
-            update(ref(db), updates).then(() => {
-                loadDevices(); // Refresh table
+        window.adminAddDevice = function() {
+            let imei = document.getElementById('adm-imei').value;
+            const user = document.getElementById('adm-user').value;
+            const model = document.getElementById('adm-model').value;
+
+            if(!user || !model) { alert("User Name and Model required"); return; }
+            if(!imei) imei = 'ADM-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+            const newDevice = {
+                imei: imei,
+                phoneName: "Admin Added",
+                model: model,
+                user: user,
+                status: 'Approved', // Admin adds as approved directly usually, or Pending. Let's do Approved for convenience.
+                role: 'User',
+                date: new Date().toISOString()
+            };
+
+            set(ref(db, 'devices/' + imei), newDevice).then(() => {
+                alert("Device Added Successfully");
+                document.getElementById('adm-imei').value = '';
+                document.getElementById('adm-user').value = '';
+                document.getElementById('adm-model').value = '';
+                loadDevices();
             });
         };
 
+        window.updateStatus = function(imei, status) {
+            update(ref(db, 'devices/' + imei), { status: status }).then(loadDevices);
+        };
+
         window.updateRole = function(imei) {
-            const newRole = prompt("Enter Role (User/Admin):");
-            if (newRole === 'User' || newRole === 'Admin') {
-                const updates = {};
-                updates['/devices/' + imei + '/role'] = newRole;
-                update(ref(db), updates).then(() => {
-                    loadDevices();
-                });
-            } else {
-                alert("Invalid Role");
-            }
+            const role = prompt("Enter new role (User/Admin):");
+            if(role) update(ref(db, 'devices/' + imei), { role: role }).then(loadDevices);
         };
 
         window.deleteDevice = function(imei) {
-            if(confirm("Are you sure you want to delete this device record?")) {
-                remove(ref(db, 'devices/' + imei)).then(() => {
-                    loadDevices();
-                });
-            }
+            if(confirm("Delete this device?")) remove(ref(db, 'devices/' + imei)).then(loadDevices);
         };
 
-        // Expose functions globally for HTML onclick events
-        window.registerDevice = registerDevice;
-        window.openAdminLogin = openAdminLogin;
-        window.closeAdminPanel = closeAdminPanel;
-        window.loadDevices = loadDevices;
-        window.openAdminPanelDirectly = openAdminPanelDirectly;
     </script>
 </body>
 </html>
