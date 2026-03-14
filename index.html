@@ -54,7 +54,7 @@
             padding: 20px;
         }
 
-        /* --- HEADER (UPDATED) --- */
+        /* --- HEADER --- */
         .header {
             background-color: #000080;
             color: white;
@@ -84,7 +84,7 @@
             text-transform: uppercase;
         }
 
-        /* User Profile in Header (NEW) */
+        /* User Profile in Header */
         .user-profile {
             display: flex;
             align-items: center;
@@ -120,7 +120,7 @@
             background-color: #d4d0c8;
             padding: 5px;
             border-bottom: 2px solid #808080;
-            display: none; /* Hidden by default */
+            display: none;
             justify-content: center;
             flex-wrap: wrap;
             gap: 5px;
@@ -174,7 +174,7 @@
         .main-wrapper {
             flex: 1;
             display: flex;
-            flex-direction: column; /* Changed to column to stack lists */
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             padding: 20px;
@@ -185,7 +185,6 @@
         .screen { display: none; width: 100%; max-width: 800px; text-align: center; }
         .screen.active { display: block; }
 
-        /* Registration Screen Info */
         .info-row {
             display: flex;
             justify-content: space-between;
@@ -197,7 +196,7 @@
         }
         .info-label { font-weight: bold; color: #000080; }
 
-        /* Image Upload (NEW) */
+        /* Image Upload */
         .image-upload-area {
             margin: 15px 0;
             border: 2px dashed #808080;
@@ -217,12 +216,9 @@
             overflow: hidden;
         }
         .image-preview img { width: 100%; height: 100%; object-fit: cover; }
-        .file-input {
-            font-size: 12px;
-            width: 100%;
-        }
+        .file-input { font-size: 12px; width: 100%; }
 
-        /* PC Device List Widget (NEW) */
+        /* PC Device List Widget */
         .device-list-widget {
             background: #fff;
             border: 2px inset #fff;
@@ -351,7 +347,7 @@
             <span class="logo-text">SmartManager</span>
         </div>
         
-        <!-- User Profile Section (Updated) -->
+        <!-- User Profile Section -->
         <div class="user-profile hidden" id="header-profile">
             <div class="user-info-text">
                 <div class="user-name-display" id="header-name">User</div>
@@ -386,7 +382,7 @@
                     <span id="display-phone">...</span>
                 </div>
                 
-                <!-- Image Upload (NEW) -->
+                <!-- Image Upload -->
                 <div class="image-upload-area">
                     <div class="image-preview">
                         <img id="reg-preview-img" src="" style="display:none;">
@@ -412,7 +408,7 @@
                     <!-- JS Injected -->
                 </div>
 
-                <!-- PC DEVICE LIST (NEW) - Shows all registered devices -->
+                <!-- PC DEVICE LIST - Shows all registered devices -->
                 <div id="pc-device-list" class="device-list-widget hidden">
                     <h4>
                         Registered Devices 
@@ -464,7 +460,7 @@
                 
                 <!-- Admin Add Device -->
                 <div style="background:#e0e0e0; padding:10px; border:1px solid #808080; margin-bottom:15px;">
-                    <h4 style="margin:0 0 10px 0;">Add New Device (Manual)</h4>
+                    <h4 style="margin:0 0 10px 0;">Add New Device (Admin Upload)</h4>
                     <div style="display:flex; gap:5px; flex-wrap:wrap;">
                         <input type="text" id="adm-imei" class="win-input" placeholder="IMEI (Auto if empty)" style="width:25%; margin:0;">
                         <input type="text" id="adm-user" class="win-input" placeholder="User Name" style="width:25%; margin:0;">
@@ -505,17 +501,16 @@
 
     <!-- FIREBASE & APP LOGIC -->
     <script type="module">
+        // REMOVED: Storage SDK Imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
         import { getDatabase, ref, set, get, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
-        // Import Storage SDK
-        import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBEaGG_UsXGf6RGHQ_ckalf33fLla-P2J8",
             authDomain: "whatapp-8d8ed.firebaseapp.com",
             databaseURL: "https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",
             projectId: "whatapp-8d8ed",
-            storageBucket: "whatapp-8d8ed.firebasestorage.app", // Important for Storage
+            // storageBucket removed as we are not using Storage anymore
             messagingSenderId: "618833956157",
             appId: "1:618833956157:web:2c3835d5c03668afa7c954",
             measurementId: "G-JLG1K25Z7N"
@@ -523,10 +518,20 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const storage = getStorage(app);
+
+        // --- HELPER: CONVERT IMAGE TO BASE64 TEXT ---
+        // This solves the Storage problem by saving image strings in Realtime DB
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
 
         // --- GLOBAL STATE ---
-        let currentUserData = null; // Store current user data for header updates
+        let currentUserData = null;
 
         // --- DEVICE IDENTITY HELPER ---
         function getDeviceId() {
@@ -553,6 +558,12 @@
         // --- IMAGE PREVIEW (FRONTEND) ---
         window.previewImage = function(input) {
             if (input.files && input.files[0]) {
+                // Simple size check to prevent DB overload
+                if (input.files[0].size > 500000) { // 500KB limit
+                    alert("Image too large! Please select an image under 500KB.");
+                    input.value = ""; // Clear input
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     const img = document.getElementById('reg-preview-img');
@@ -561,20 +572,6 @@
                     document.getElementById('reg-placeholder').style.display = 'none';
                 }
                 reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        // --- IMAGE UPLOAD LOGIC ---
-        async function uploadUserImage(file, imei) {
-            if (!file) return null;
-            try {
-                const storageRef = sRef(storage, 'user_photos/' + imei + '.jpg');
-                const snapshot = await uploadBytes(storageRef, file);
-                const url = await getDownloadURL(snapshot.ref);
-                return url;
-            } catch (error) {
-                console.error("Image Upload Failed:", error);
-                return null;
             }
         }
 
@@ -587,13 +584,12 @@
                 console.log("PC Detected - Direct Access");
                 showPCDashboard();
                 monitorPendingRequests();
-                monitorAllDevices(); // NEW: Listen to all devices for the list
+                monitorAllDevices(); 
             } else {
                 // MOBILE CASE
                 const deviceData = getDeviceInfo();
                 document.getElementById('display-imei').innerText = deviceData.imei;
                 document.getElementById('display-phone').innerText = deviceData.phoneName;
-                
                 checkMobileDeviceStatus(deviceData.imei);
             }
         };
@@ -609,7 +605,6 @@
             nameEl.innerText = name || "User";
             roleEl.innerText = role || "Guest";
             
-            // Default placeholder if no image
             if (imgUrl) {
                 imgEl.src = imgUrl;
             } else {
@@ -621,17 +616,12 @@
         function showPCDashboard() {
             document.getElementById('dashboard-screen').classList.add('active');
             document.getElementById('main-navbar').style.display = 'flex';
-            
-            // Show PC Device List
             document.getElementById('pc-device-list').classList.remove('hidden');
-            
-            // Default Admin Data for Header on PC
             updateHeaderUI("Administrator", "SuperAdmin", null);
-            
             renderNavbar('Admin');
         }
 
-        // --- NEW: LISTEN TO ALL DEVICES (For PC List) ---
+        // --- LISTEN TO ALL DEVICES (For PC List) ---
         function monitorAllDevices() {
             const dbRef = ref(db, 'devices');
             onValue(dbRef, (snapshot) => {
@@ -642,11 +632,9 @@
                 if (data) {
                     Object.values(data).forEach(device => {
                         const tr = document.createElement('tr');
-                        
-                        // Status Color
                         let statusClass = device.status === 'Approved' ? 'status-approved' : (device.status === 'Blocked' ? 'status-blocked' : 'status-pending');
                         
-                        // Image (Fallback if missing)
+                        // Image from Base64 or Placeholder
                         const imgSrc = device.photoUrl ? device.photoUrl : `https://ui-avatars.com/api/?name=${device.user}&background=random&size=30`;
                         const shortImei = device.imei ? device.imei.substr(-4) : '...';
 
@@ -676,24 +664,16 @@
                 if (data) {
                     let pendingUsers = [];
                     Object.values(data).forEach(device => {
-                        if (device.status === 'Pending') {
-                            pendingUsers.push(device.user);
-                        }
+                        if (device.status === 'Pending') pendingUsers.push(device.user);
                     });
 
                     if (pendingUsers.length > 0) {
                         const alertDiv = document.createElement('div');
                         alertDiv.className = 'notification-box';
                         const userList = pendingUsers.join(', ');
-                        
                         alertDiv.innerHTML = `
-                            <div class="notification-title">
-                                <span class="blink">⚠</span> New Device Requests (${pendingUsers.length})
-                            </div>
-                            <div class="notification-text">
-                                Users waiting: <b>${userList}</b><br><br>
-                                <i>Click "Admin Login" to approve & view photos.</i>
-                            </div>
+                            <div class="notification-title"><span class="blink">⚠</span> New Requests (${pendingUsers.length})</div>
+                            <div class="notification-text">Users: <b>${userList}</b><br><i>Click Admin Login to approve.</i></div>
                         `;
                         notifyBox.appendChild(alertDiv);
                     }
@@ -704,38 +684,29 @@
         // --- MOBILE LOGIC ---
         function checkMobileDeviceStatus(imei) {
             const deviceRef = ref(db, 'devices/' + imei);
-            
             onValue(deviceRef, (snapshot) => {
                 const data = snapshot.val();
-                
                 if (!data) {
                     document.getElementById('gate-screen').classList.add('active');
                 } else {
                     if (data.status === 'Pending') {
-                        alert("Registration Pending. Please wait for Admin Approval.");
+                        alert("Registration Pending. Wait for Approval.");
                         document.getElementById('gate-screen').classList.add('active');
                         document.getElementById('user-name-input').value = data.user;
                         document.getElementById('user-name-input').disabled = true;
                         const btn = document.querySelector('#gate-screen button');
-                        btn.disabled = true;
-                        btn.innerText = "Request Sent";
+                        btn.disabled = true; btn.innerText = "Request Sent";
                     } 
                     else if (data.status === 'Blocked') {
                         alert("This device is BLOCKED.");
                         document.getElementById('gate-screen').classList.add('active');
                     } 
                     else if (data.status === 'Approved') {
-                        // Approved
                         document.getElementById('gate-screen').classList.remove('active');
                         document.getElementById('dashboard-screen').classList.add('active');
                         document.getElementById('main-navbar').style.display = 'flex';
-                        // Hide PC list on mobile
                         document.getElementById('pc-device-list').classList.add('hidden');
-                        
-                        // Update Header
                         updateHeaderUI(data.user, data.role, data.photoUrl);
-                        
-                        // Fill Welcome Text
                         document.getElementById('welcome-user-name').innerText = data.user;
                         renderNavbar(data.role);
                     }
@@ -743,7 +714,7 @@
             });
         }
 
-        // --- REGISTER DEVICE (With Image Upload) ---
+        // --- REGISTER DEVICE (WITH BASE64 IMAGE) ---
         window.registerDevice = async function() {
             const username = document.getElementById('user-name-input').value;
             const photoInput = document.getElementById('user-photo-input');
@@ -753,20 +724,18 @@
             const deviceData = getDeviceInfo();
             const deviceRef = ref(db, 'devices/' + deviceData.imei);
             
-            // 1. Show Loading State
             const submitBtn = document.querySelector('#gate-screen button');
             const originalText = submitBtn.innerText;
-            submitBtn.innerText = "Uploading Image...";
+            submitBtn.innerText = "Processing...";
             submitBtn.disabled = true;
 
             try {
-                // 2. Upload Image if exists
+                // Convert to Base64 instead of Uploading to Storage
                 let photoUrl = null;
                 if (photoInput.files && photoInput.files[0]) {
-                    photoUrl = await uploadUserImage(photoInput.files[0], deviceData.imei);
+                    photoUrl = await fileToBase64(photoInput.files[0]);
                 }
 
-                // 3. Save Data
                 const newDevice = {
                     imei: deviceData.imei,
                     phoneName: deviceData.phoneName,
@@ -774,7 +743,7 @@
                     user: username,
                     status: 'Pending',
                     role: 'User',
-                    photoUrl: photoUrl, // Save URL
+                    photoUrl: photoUrl, // Save Base64 string
                     date: new Date().toISOString()
                 };
 
@@ -792,13 +761,9 @@
         // --- NAVIGATION RENDERER ---
         function renderNavbar(role) {
             const nav = document.getElementById('main-navbar');
-            nav.innerHTML = '';
-            nav.innerHTML += `<div class="nav-item"><a href="#" class="nav-btn">Home</a></div>`;
-
+            nav.innerHTML = `<div class="nav-item"><a href="#" class="nav-btn">Home</a></div>`;
             let entryHtml = `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/bill')">Bill Entry</button>`;
-            if(role === 'Admin' || role === 'SuperAdmin') {
-                entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/IOU')">IOU Entry</button>`;
-            }
+            if(role === 'Admin' || role === 'SuperAdmin') entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/SmartManager/IOU')">IOU Entry</button>`;
             entryHtml += `<button class="nav-btn" onclick="openPage('https://sprgroupbd.github.io/monico/')">Sample Entry</button>`;
             
             nav.innerHTML += `
@@ -807,7 +772,6 @@
                     <div class="submenu">${entryHtml}</div>
                 </div>
             `;
-
             if (role === 'Admin' || role === 'SuperAdmin') {
                 nav.innerHTML += `
                     <div class="nav-item">
@@ -826,21 +790,12 @@
         // --- ADMIN FUNCTIONS ---
         window.openAdminLogin = function() {
             const pass = prompt("Enter Admin Password:");
-            if (pass === "KUS-11182401") {
-                openAdminPanel();
-            } else if (pass !== null) {
-                alert("Wrong Password");
-            }
+            if (pass === "KUS-11182401") openAdminPanel();
+            else if (pass !== null) alert("Wrong Password");
         };
 
-        window.closeAdminPanel = function() {
-            document.getElementById('admin-modal').classList.remove('open');
-        };
-
-        function openAdminPanel() {
-            document.getElementById('admin-modal').classList.add('open');
-            loadDevices();
-        }
+        window.closeAdminPanel = function() { document.getElementById('admin-modal').classList.remove('open'); };
+        function openAdminPanel() { document.getElementById('admin-modal').classList.add('open'); loadDevices(); }
 
         window.loadDevices = function() {
             const dbRef = ref(db, 'devices');
@@ -862,7 +817,7 @@
                         actions = `<button class="win-btn" onclick="approveWithRole('${device.imei}')">Approve</button> 
                                    <button class="win-btn" onclick="updateStatus('${device.imei}', 'Blocked')">Reject</button>`;
                     } else {
-                        // Admin can upload image for existing users if missing
+                        // Admin can upload image for existing users
                         let uploadBtn = device.photoUrl ? '' : `<button class="win-btn" onclick="document.getElementById('file-${device.imei}').click()">Add Photo</button><input type="file" id="file-${device.imei}" style="display:none" onchange="adminUploadPhotoForUser('${device.imei}', this)">`;
                         
                         actions = `<button class="win-btn" onclick="updateStatus('${device.imei}', 'Approved')">Unblock</button> 
@@ -881,13 +836,14 @@
             });
         };
 
-        // Admin Upload Photo for User
+        // ADMIN UPLOAD PHOTO FOR USER (BASE64)
         window.adminUploadPhotoForUser = async function(imei, input) {
             if (input.files && input.files[0]) {
+                if(input.files[0].size > 500000) { alert("File too large (Max 500KB)"); return; }
                 try {
-                    const url = await uploadUserImage(input.files[0], imei);
-                    await update(ref(db, 'devices/' + imei), { photoUrl: url });
-                    alert("Photo uploaded!");
+                    const base64Img = await fileToBase64(input.files[0]);
+                    await update(ref(db, 'devices/' + imei), { photoUrl: base64Img });
+                    alert("Photo uploaded to Database!");
                     loadDevices();
                 } catch (e) {
                     alert("Upload failed: " + e.message);
@@ -904,12 +860,9 @@
                     updates['/devices/' + imei + '/status'] = 'Approved';
                     updates['/devices/' + imei + '/role'] = role;
                     update(ref(db), updates).then(() => {
-                        loadDevices(); 
-                        alert("Device Approved as " + role);
+                        loadDevices(); alert("Device Approved as " + role);
                     });
-                } else {
-                    alert("Invalid Role!");
-                }
+                } else { alert("Invalid Role!"); }
             }
         };
 
@@ -924,7 +877,8 @@
 
             let photoUrl = null;
             if (photoInput.files && photoInput.files[0]) {
-                photoUrl = await uploadUserImage(photoInput.files[0], imei);
+                if(photoInput.files[0].size > 500000) { alert("File too large"); return; }
+                photoUrl = await fileToBase64(photoInput.files[0]);
             }
 
             const newDevice = {
@@ -934,7 +888,7 @@
                 user: user,
                 status: 'Approved',
                 role: 'User',
-                photoUrl: photoUrl,
+                photoUrl: photoUrl, // Base64
                 date: new Date().toISOString()
             };
 
@@ -948,22 +902,15 @@
             });
         };
 
-        window.updateStatus = function(imei, status) {
-            update(ref(db, 'devices/' + imei), { status: status }).then(loadDevices);
-        };
+        window.updateStatus = function(imei, status) { update(ref(db, 'devices/' + imei), { status: status }).then(loadDevices); };
 
         window.updateRole = function(imei) {
-            const role = prompt("Enter new role (User/Admin/SuperAdmin):");
-            if(role && ['User', 'Admin', 'SuperAdmin'].includes(role)) {
-                update(ref(db, 'devices/' + imei), { role: role }).then(loadDevices);
-            } else if (role) {
-                alert("Invalid Role.");
-            }
+            const role = prompt("Enter new role:");
+            if(role && ['User', 'Admin', 'SuperAdmin'].includes(role)) update(ref(db, 'devices/' + imei), { role: role }).then(loadDevices);
+            else if (role) alert("Invalid Role.");
         };
 
-        window.deleteDevice = function(imei) {
-            if(confirm("Delete this device?")) remove(ref(db, 'devices/' + imei)).then(loadDevices);
-        };
+        window.deleteDevice = function(imei) { if(confirm("Delete?")) remove(ref(db, 'devices/' + imei)).then(loadDevices); };
 
     </script>
 </body>
