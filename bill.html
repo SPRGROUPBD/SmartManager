@@ -791,11 +791,22 @@
                     <div class="card-header bg-primary text-white py-2">IOU List & Management</div>
                     <div class="card-body">
                         <div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end">
-                             <div class="col-6 col-md-4">
-                                <label class="fw-bold text-muted">Filter by Month</label>
+                             <div class="col-6 col-md-2">
+                                <label class="fw-bold text-muted">Month</label>
                                 <input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="loadAdminIOU()">
                             </div>
-                            <div class="col-12 col-md-4">
+                            
+                            <!-- NEW: Date Range Filter -->
+                            <div class="col-6 col-md-2">
+                                <label class="fw-bold text-muted">From Date</label>
+                                <input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()">
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label class="fw-bold text-muted">To Date</label>
+                                <input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()">
+                            </div>
+
+                            <div class="col-12 col-md-3">
                                 <label class="fw-bold text-muted">Filter by DA</label>
                                 <select id="filter_iou_da" class="form-select form-select-sm" onchange="loadAdminIOU()">
                                     <option value="">All DA</option>
@@ -2184,6 +2195,8 @@
         function cancelIOUEdit() { clearIOUForm(); }
         function resetIOUFilter() { 
             document.getElementById('filter_iou_month').value = ''; 
+            document.getElementById('iou_filter_start').value = ''; 
+            document.getElementById('iou_filter_end').value = ''; 
             document.getElementById('filter_iou_da').value = ''; 
             loadAdminIOU(); 
         }
@@ -2191,6 +2204,9 @@
         function loadAdminIOU() {
             const fMonth = document.getElementById('filter_iou_month').value;
             const fDa = document.getElementById('filter_iou_da').value;
+            // NEW: Get Date Range values
+            const fStart = document.getElementById('iou_filter_start').value;
+            const fEnd = document.getElementById('iou_filter_end').value;
             
             database.ref('IOU_List').on('value', snap => {
                 const tbody = document.getElementById('iou_admin_table_body'); tbody.innerHTML = '';
@@ -2202,6 +2218,11 @@
                     if(fMonth && !isDateInMonth(d.date, fMonth)) show = false; 
                     if(fDa && d.daId !== fDa) show = false;
                     
+                    // NEW: Date Range Filter Logic
+                    // Compare ISO strings (YYYY-MM-DD) directly works for standard comparison
+                    if(fStart && d.date < fStart) show = false;
+                    if(fEnd && d.date > fEnd) show = false;
+
                     if(show) {
                         const iSold = d.soldVal || ((d.sales || 0) - (d.returnVal || 0));
                         tSales += (d.sales || 0); tRet += (d.returnVal || 0); tSold += iSold; tQty += d.qty || 0; tBQty += d.bundleQty || 0; tTaka += d.taka || 0;
