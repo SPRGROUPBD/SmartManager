@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONICO PHARMA - Bill & IOU Management</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #c0392b;
+            --light-bg: #f4f7f6;
+            --warning-color: #f39c12;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light-bg);
+            color: #333;
+        }
+
+        /* --- Screen Styles --- */
+        .tabs {
+            display: flex;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            padding: 15px 20px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            color: #777;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover { color: var(--accent-color); background-color: #f9f9f9; }
+        .tab-btn.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 20px auto;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .form-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; color: #555; }
+        .form-control {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;
+            font-size: 14px; box-sizing: border-box;
+        }
+        .form-control[readonly] { background-color: #e9ecef; cursor: not-allowed; color: #555; }
+
+        .btn-group { margin-top: 20px; text-align: right; }
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;
+            font-weight: 600; font-size: 14px; margin-left: 10px; transition: background 0.2s;
+        }
+        .btn-save { background-color: var(--success-color); color: white; }
+        .btn-save:hover { background-color: #219150; }
+        .btn-new { background-color: var(--accent-color); color: white; }
+        .btn-new:hover { background-color: #2980b9; }
+        .btn-add { background-color: #333; color: white; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 5px;}
+        .btn-add:hover { background-color: #555; }
+        
+        .btn-edit { background-color: var(--warning-color); color: white; padding: 5px 10px; font-size: 12px; }
+        .btn-delete { background-color: var(--danger-color); color: white; padding: 5px 10px; font-size: 12px; }
+        .btn-print { background-color: #8e44ad; color: white; padding: 5px 10px; font-size: 12px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: middle; }
+        th { background-color: #f8f9fa; font-weight: 600; text-align: center; }
+        td input, td select { width: 100%; border: none; outline: none; background: transparent; padding: 5px; box-sizing: border-box;}
+        
+        .btn-delete-row {
+            color: var(--danger-color);
+            background: none;
+            border: none;
+            font-weight: bold;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+        .btn-delete-row:hover { color: red; }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-pending { background-color: #fff3cd; color: #856404; }
+        .status-used { background-color: #d4edda; color: #155724; }
+
+        #toast {
+            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
+            text-align: center; border-radius: 4px; padding: 16px; position: fixed;
+            z-index: 1; left: 50%; bottom: 30px; transform: translateX(-50%);
+        }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+        /* -----------------------------------------------------------
+           PRINT STYLES - FULL BORDER ADDED
+           ----------------------------------------------------------- */
+        @media print {
+            .tabs, #entry, #summary, #iou, #locations, #toast, .btn-group, .btn-add, .no-print, .quick-entry-container, .iou-list-container {
+                display: none !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+                background-color: white;
+                color: black;
+                -webkit-print-color-adjust: exact; 
+            }
+
+            #print-area {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                max-width: 190mm; 
+                width: 100%;
+                margin: 0 auto;
+                padding: 10px; /* Padding added so text doesn't touch the border */
+                font-family: 'Arial', sans-serif; 
+                font-size: 12px;
+                color: black !important;
+                z-index: 9999;
+                
+                /* ADDED FULL BORDER AROUND HEADER, BODY, FOOTER */
+                border: 2px solid black; 
+                box-sizing: border-box;
+                height: 100vh; /* Ensure it fills the printable area */
+            }
+
+            #print-area * {
+                visibility: visible !important;
+                color: black !important;
+                background-color: transparent !important;
+            }
+
+            .p-header { 
+                text-align: center; 
+                margin-bottom: 20px; 
+                font-size: 18px; 
+                font-weight: bold; 
+                text-transform: uppercase; 
+                border-bottom: 2px solid black; /* Inner separator */
+                padding-bottom: 10px;
+            }
+
+            .p-info-row {
+                display: flex !important; 
+                justify-content: space-between; 
+                margin-bottom: 8px;
+                border-bottom: 1px dotted #000;
+                padding-bottom: 2px;
+                width: 100%;
+            }
+            .p-label { font-weight: bold; margin-right: 5px; }
+
+            .p-table { 
+                width: 100%; 
+                border-collapse: collapse; 
+                margin-top: 15px; 
+                margin-bottom: 10px; 
+                font-size: 12px;
+                border: 1px solid black;
+                table-layout: fixed; 
+            }
+            .p-table th, .p-table td { 
+                border: 1px solid black; 
+                padding: 6px; 
+                text-align: center; 
+                vertical-align: middle;
+                overflow: hidden; 
+                white-space: nowrap;
+            }
+            .p-table th { 
+                background-color: #fff !important; 
+                font-weight: bold; 
+                border-bottom: 2px solid black; 
+            }
+            .p-table th:nth-child(1), .p-table td:nth-child(1) { width: 26.57%; }
+            .p-table th:nth-child(2), .p-table td:nth-child(2) { width: 26.57%; }
+            .p-table th:nth-child(3), .p-table td:nth-child(3) { width: 17.71%; }
+            .p-table th:nth-child(4), .p-table td:nth-child(4) { width: 14.14%; }
+            .p-table th:nth-child(5), .p-table td:nth-child(5) { width: 19.30%; }
+
+            .p-total-row {
+                text-align: right; 
+                margin-top: 5px;
+                font-weight: bold;
+                font-size: 14px;
+            }
+
+            .p-words {
+                margin-top: 5px;
+                border-bottom: 1px dotted #000;
+                padding-bottom: 5px;
+                font-size: 12px;
+                text-align: left;
+            }
+
+            .p-signatures { 
+                margin-top: 50px; 
+                display: flex !important; 
+                justify-content: space-between; 
+                text-align: center; 
+                width: 100%;
+            }
+            .sig-box { 
+                width: 30%; 
+                border-top: 1px solid black; 
+                padding-top: 5px; 
+                font-weight: bold; 
+                font-size: 12px;
+            }
+        }
+
+        #print-area { display: none; } 
+        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
+        .form-box { background: #fff; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
+        .list-box { background: #fff; padding: 20px; border: 1px solid #eee; border-radius: 8px; max-height: 600px; overflow-y: auto; }
+        @media(max-width: 768px) { .grid-layout { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="tabs no-print">
+        <button class="tab-btn active" onclick="switchTab('entry')">Bill Entry</button>
+        <button class="tab-btn" onclick="switchTab('summary')">Bill Summary</button>
+        <button class="tab-btn" onclick="switchTab('iou')">IOU Entry</button>
+        <button class="tab-btn" onclick="switchTab('locations')">From & To</button>
+    </div>
+
+    <!-- TAB 1: BILL ENTRY -->
+    <div id="entry" class="tab-content active">
+        <div class="form-container">
+            <div class="header-section">
+                <h2>MONICO PHARMA</h2>
+                <h3>Conveyance Bill Entry</h3>
+            </div>
+
+            <input type="hidden" id="billKey">
+            <div class="form-grid">
+                <div class="form-group"><label>Bill No (Auto)</label><input type="text" id="billNo" class="form-control" readonly placeholder="Generating..."></div>
+                <div class="form-group"><label>Bill Date</label><input type="date" id="billDate" class="form-control"></div>
+                <div class="form-group"><label>Name</label><input type="text" id="billName" class="form-control" placeholder="Md Sajjad Ahmed"></div>
+                <div class="form-group"><label>Depot</label><input type="text" id="billDepot" class="form-control" placeholder="Kushtia"></div>
+                <div class="form-group"><label>Department</label><input type="text" id="billDept" class="form-control" placeholder="Distribution"></div>
+                <div class="form-group"><label>Purpose</label><input type="text" id="billPurpose" class="form-control" placeholder="Official Visit"></div>
+            </div>
+
+            <div class="form-group no-print">
+                <label>Select IOU (Optional)</label>
+                <select id="iouSelect" class="form-control" onchange="handleIOUSelect()"><option value="">-- No IOU --</option></select>
+                <small style="color: #666; display:none;" id="iouAmountHint">IOU Amount: <span id="iouAmtDisplay">0</span> Tk</small>
+            </div>
+
+            <div class="no-print quick-entry-container">
+                <h2>Travel Details Quick Entry</h2>
+                <table id="travelTable">
+                    <tr>
+                        <th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>Action</th>
+                    </tr>
+                    <tr>
+                        <td><select id="quickFrom" class="form-control" style="border:1px solid #ddd; padding:8px;"><option value="">Select From</option></select></td>
+                        <td><select id="quickTo" class="form-control" style="border:1px solid #ddd; padding:8px;"><option value="">Select To</option></select></td>
+                        <td>
+                            <select id="quickMode" class="form-control" style="border:1px solid #ddd; padding:8px;">
+                                <option value="Auto">Auto</option><option value="Rickshaw">Rickshaw</option><option value="Van">Van</option>
+                                <option value="Bus">Bus</option><option value="CNG">CNG</option><option value="Other">Other</option>
+                            </select>
+                        </td>
+                        <td><input type="number" id="quickAmount" placeholder="Amount"></td>
+                        <td><button class="btn btn-add" onclick="addQuickRow()">+Add</button></td>
+                    </tr>
+                </table>
+            </div>
+
+            <h4>Travel Details</h4>
+            <button type="button" class="btn btn-add" onclick="addNewRow()">+ Add Row (Manual)</button>
+            <table id="entryTable">
+                <thead><tr><th style="width: 15%">From</th><th style="width: 15%">To</th><th style="width: 25%">Mode</th><th style="width: 15%">Amount</th><th style="width: 20%">Remarks</th><th style="width: 10%">Action</th></tr></thead>
+                <tbody id="entryTableBody"></tbody>
+                <tfoot><tr><td colspan="4" style="text-align: right; font-weight: bold;">Total =</td><td colspan="2" style="font-weight: bold;"><span id="displayTotal">0.00</span> Tk</td></tr></tfoot>
+            </table>
+            <div class="btn-group no-print"><button class="btn btn-new" onclick="resetForm()">New Bill</button><button class="btn btn-save" onclick="saveData()">Save Bill</button></div>
+        </div>
+    </div>
+
+    <!-- TAB 2: BILL SUMMARY -->
+    <div id="summary" class="tab-content">
+        <div class="form-container">
+            <h2>Bill Summary</h2>
+            <table id="summaryTable"><thead><tr><th>Bill No</th><th>Date</th><th>Name</th><th>Total Amount</th><th>IOU Used</th><th>Actions</th></tr></thead><tbody id="summaryTableBody"></tbody></table>
+        </div>
+    </div>
+
+    <!-- TAB 3: IOU ENTRY -->
+    <div id="iou" class="tab-content">
+        <div class="grid-layout">
+            <div class="form-box no-print">
+                <h2>IOU Entry Form</h2>
+                <input type="hidden" id="iouKey">
+                <div class="form-group"><label>IOU No (Auto)</label><input type="text" id="iouNo" class="form-control" readonly placeholder="Generating..."></div>
+                <table style="margin-top: 0;">
+                    <tr><th style="width:30%">Name</th><td><input type="text" id="iouName" class="form-control" value="Md Sajjad Ahmed"></td></tr>
+                    <tr><th>Depot</th><td><input type="text" id="iouDepot" class="form-control" value="Kushtia"></td></tr>
+                    <tr><th>Department</th><td><input type="text" id="iouDept" class="form-control" value="Distribution"></td></tr>
+                    <tr><th>Purpose</th><td><input type="text" id="iouPurpose" class="form-control" placeholder="Enter purpose "></td></tr>
+                    <tr><th>IOU Amount</th><td><input type="number" id="iouAmount" class="form-control" placeholder="Enter amount"></td></tr>
+                </table>
+                <br><div class="btn-group"><button class="btn btn-new" onclick="resetIOUForm()">New IOU</button><button class="btn btn-save" onclick="saveIOU()">Save IOU</button></div>
+            </div>
+            <div class="list-box iou-list-container"><h3>IOU List</h3><table id="iouListTable"><thead><tr><th>IOU No</th><th>Name</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody id="iouListBody"></tbody></table></div>
+        </div>
+    </div>
+
+    <!-- TAB 4: FROM & TO (LOCATIONS) ENTRY -->
+    <div id="locations" class="tab-content">
+        <div class="grid-layout">
+            <div class="form-box no-print">
+                <h2>Location Entry Form</h2>
+                <input type="hidden" id="locationKey">
+                <div class="form-group"><label>Location Name</label><input type="text" id="locationName" class="form-control" placeholder="e.g. Boro Bazar"></div>
+                <div class="btn-group"><button class="btn btn-new" onclick="resetLocationForm()">New Location</button><button class="btn btn-save" onclick="saveLocation()">Save Location</button></div>
+                <p style="font-size:12px; color:#666; margin-top:10px;">Note: System attempts to auto-add your list on first load.</p>
+            </div>
+            <div class="list-box"><h3>Location List</h3><table id="locationListTable"><thead><tr><th>Location Name</th><th>Action</th></tr></thead><tbody id="locationListBody"></tbody></table></div>
+        </div>
+    </div>
+
+    <!-- PRINT FORMAT -->
+    <div id="print-area">
+        <div class="p-header">Conveyance Bill</div>
+        <div class="p-info-row"><div class="p-left"><span class="p-label">Name:</span> <span id="pName"></span></div><div class="p-right"><span class="p-label">Depot:</span> <span id="pDepot"></span></div></div>
+        <div class="p-info-row"><div class="p-left"><span class="p-label">Department:</span> <span id="pDept"></span></div><div class="p-right"><span class="p-label">Bill No:</span> <span id="pBillNo"></span></div></div>
+        <div class="p-info-row"><div class="p-left"><span class="p-label">Purpose:</span> <span id="pPurpose"></span></div><div class="p-right"><span class="p-label">Bill Date:</span> <span id="pDate"></span></div></div>
+        <table class="p-table"><thead><tr><th>From</th><th>To</th><th>Mode Of Transport (Rick/Bus/CNG)</th><th>Amount(Tk)</th><th>Remarks</th></tr></thead><tbody id="pTableBody"></tbody></table>
+        <div class="p-total-row">Total = <span id="pTotal">0.00</span></div>
+        <div class="p-words"><span class="p-label">In Words:</span> <span id="pWords"></span></div>
+        <div class="p-signatures"><div class="sig-box">Prepared By</div><div class="sig-box">Chacked By RSM</div><div class="sig-box">Approved By</div></div>
+    </div>
+
+    <div id="toast">Message</div>
+
+    <!-- FIREBASE CONFIG & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove, update, get, set } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYZsMKqvLLB4hRes00zPmiOBW0NpH0uuo",
+            authDomain: "delivery-bill-report.firebaseapp.com",
+            databaseURL: "https://delivery-bill-report-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "delivery-bill-report",
+            storageBucket: "delivery-bill-report.firebasestorage.app",
+            messagingSenderId: "956980153576",
+            appId: "1:956980153576:web:690c129f48c0179ca8cd5d",
+            measurementId: "G-Y9XEBB6X74"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const billsRef = ref(db, 'bills');
+        const iousRef = ref(db, 'ious');
+        const locationsRef = ref(db, 'locations');
+
+        let locationOptionsHTML = '<option value="">Select Location</option>';
+
+        // --- SEED DATA: AUTO-ADD YOUR LOCATIONS ---
+        const SEED_LOCATIONS = [
+            "AJR Courier Service", "Boro Bazar", "Main Road", "Mojompur", "Office", 
+            "Sundarban Courier Service", "Thana More", "Trimohoni Bazar", "GP Center", 
+            "Laber", "DBBL ATM NS Road"
+        ];
+
+        async function checkAndSeedLocations() {
+            console.log("Checking if locations need seeding...");
+            const snapshot = await get(locationsRef);
+            if (!snapshot.exists() || Object.keys(snapshot.val()).length === 0) {
+                console.log("Database empty. Seeding locations...");
+                try {
+                    const promises = SEED_LOCATIONS.map(loc => push(locationsRef, { name: loc, timestamp: Date.now() }));
+                    await Promise.all(promises);
+                    alert("Success! " + SEED_LOCATIONS.length + " locations added automatically.");
+                } catch (error) {
+                    console.error("Seeding failed:", error);
+                    alert("Auto-Save Failed. Please update your Firebase Rules to allow Read/Write.");
+                }
+            } else {
+                console.log("Locations already exist.");
+            }
+        }
+        checkAndSeedLocations();
+
+        window.numberToEnglish = function(num) {
+            if(num === 0) return "Zero";
+            let a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+            let b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+            num = parseInt(num); 
+            if ((num = num.toString()).length > 9) return 'Overflow';
+            let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+            if (!n) return; 
+            let str = '';
+            str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+            str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+            str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+            str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+            str += (n[5] !=0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+            return str.trim(); 
+        };
+
+        window.refreshAllDropdowns = function() {
+            const quickFrom = document.getElementById('quickFrom');
+            const quickTo = document.getElementById('quickTo');
+            if(quickFrom) quickFrom.innerHTML = locationOptionsHTML;
+            if(quickTo) quickTo.innerHTML = locationOptionsHTML;
+
+            const fromSelects = document.querySelectorAll('.row-from');
+            const toSelects = document.querySelectorAll('.row-to');
+            const fromValues = Array.from(fromSelects).map(sel => sel.value);
+            const toValues = Array.from(toSelects).map(sel => sel.value);
+
+            fromSelects.forEach((sel, index) => {
+                sel.innerHTML = locationOptionsHTML;
+                if(fromValues[index]) sel.value = fromValues[index];
+            });
+
+            toSelects.forEach((sel, index) => {
+                sel.innerHTML = locationOptionsHTML;
+                if(toValues[index]) sel.value = toValues[index];
+            });
+        };
+
+        window.saveLocation = function() {
+            const name = document.getElementById('locationName').value.trim();
+            const key = document.getElementById('locationKey').value;
+            if(!name) { alert("Please enter a location name"); return; }
+            const locData = { name: name, timestamp: Date.now() };
+            const operation = key ? update(ref(db, 'locations/' + key), locData) : push(locationsRef, locData);
+            operation.then(() => { alert("Location Saved Successfully!"); resetLocationForm(); }).catch((error) => { alert("ERROR: " + error.message); });
+        };
+
+        window.resetLocationForm = function() {
+            document.getElementById('locationKey').value = '';
+            document.getElementById('locationName').value = '';
+        };
+
+        window.deleteLocation = function(key) {
+            if(confirm("Delete this location?")) { remove(ref(db, 'locations/' + key)).then(() => showToast("Deleted!")); }
+        };
+
+        window.editLocation = function(key) {
+            const dbRef = ref(db, 'locations/' + key);
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    document.getElementById('locationKey').value = key;
+                    document.getElementById('locationName').value = data.name;
+                }
+            }, {onlyOnce: true});
+        };
+
+        onValue(locationsRef, (snapshot) => {
+            const tbody = document.getElementById('locationListBody');
+            tbody.innerHTML = '';
+            locationOptionsHTML = '<option value="">Select Location</option>';
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const locations = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
+                locations.forEach(loc => {
+                    const row = `<tr><td>${loc.name}</td><td><button class="btn btn-edit" onclick="editLocation('${loc.key}')">Edit</button><button class="btn btn-delete" onclick="deleteLocation('${loc.key}')">Delete</button></td></tr>`;
+                    tbody.innerHTML += row;
+                    locationOptionsHTML += `<option value="${loc.name}">${loc.name}</option>`;
+                });
+            }
+            refreshAllDropdowns();
+        });
+
+        window.generateIOUNo = async function() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const prefix = `IOU-${year}${month}`;
+            try {
+                const snapshot = await get(iousRef);
+                let maxSeq = 0;
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    Object.values(data).forEach(iou => {
+                        if (iou.iouNo && iou.iouNo.startsWith(prefix)) {
+                            const seqStr = iou.iouNo.slice(-3);
+                            const seqNum = parseInt(seqStr, 10);
+                            if (!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum;
+                        }
+                    });
+                }
+                const nextSeq = maxSeq + 1;
+                const nextSeqStr = String(nextSeq).padStart(3, '0');
+                document.getElementById('iouNo').value = `${prefix}${nextSeqStr}`;
+            } catch (error) { console.error(error); document.getElementById('iouNo').value = `${prefix}Err`; }
+        };
+
+        window.saveIOU = function() {
+            const iouNo = document.getElementById('iouNo').value;
+            const name = document.getElementById('iouName').value;
+            const depot = document.getElementById('iouDepot').value;
+            const dept = document.getElementById('iouDept').value;
+            const purpose = document.getElementById('iouPurpose').value;
+            const amount = parseFloat(document.getElementById('iouAmount').value);
+            const iouKey = document.getElementById('iouKey').value;
+            if(!name || !depot || !amount) { showToast("Please fill all required fields"); return; }
+            const iouData = { iouNo, name, depot, dept, purpose, amount, status: 'Pending', timestamp: Date.now() };
+            if(iouKey) {
+                const dbRef = ref(db, 'ious/' + iouKey);
+                onValue(dbRef, (snap) => {
+                    const existing = snap.val();
+                    if(existing) update(ref(db, 'ious/' + iouKey), {...iouData, status: existing.status}).then(() => { showToast("IOU Updated!"); resetIOUForm(); });
+                }, {onlyOnce: true});
+            } else {
+                push(iousRef, iouData).then(() => { showToast("IOU Saved Successfully!"); resetIOUForm(); });
+            }
+        };
+
+        window.resetIOUForm = function() {
+            document.getElementById('iouKey').value = '';
+            document.getElementById('iouName').value = 'Md Sajjad Ahmed';
+            document.getElementById('iouDepot').value = 'Kushtia';
+            document.getElementById('iouDept').value = 'Distribution';
+            document.getElementById('iouPurpose').value = '';
+            document.getElementById('iouAmount').value = '';
+            generateIOUNo();
+        };
+
+        window.editIOU = function(key) {
+            const dbRef = ref(db, 'ious/' + key);
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    document.getElementById('iouKey').value = key;
+                    document.getElementById('iouNo').value = data.iouNo;
+                    document.getElementById('iouName').value = data.name;
+                    document.getElementById('iouDepot').value = data.depot;
+                    document.getElementById('iouDept').value = data.dept;
+                    document.getElementById('iouPurpose').value = data.purpose;
+                    document.getElementById('iouAmount').value = data.amount;
+                }
+            }, {onlyOnce: true});
+        };
+
+        window.deleteIOU = function(key) {
+            if(confirm("Delete this IOU?")) { remove(ref(db, 'ious/' + key)).then(() => showToast("IOU Deleted!")); }
+        };
+
+        onValue(iousRef, (snapshot) => {
+            const tbody = document.getElementById('iouListBody');
+            const iouSelect = document.getElementById('iouSelect');
+            tbody.innerHTML = '';
+            iouSelect.innerHTML = '<option value="">-- No IOU --</option>';
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const ious = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
+                ious.forEach(iou => {
+                    const statusClass = iou.status === 'Used' ? 'status-used' : 'status-pending';
+                    const row = `<tr onclick="editIOU('${iou.key}')" style="cursor:pointer"><td>${iou.iouNo}</td><td>${iou.name}</td><td>${iou.purpose}</td><td>${iou.amount.toFixed(2)}</td><td><span class="status-badge ${statusClass}">${iou.status}</span></td><td><button class="btn btn-delete" onclick="event.stopPropagation(); deleteIOU('${iou.key}')">Delete</button></td></tr>`;
+                    tbody.innerHTML += row;
+                    if (iou.status === 'Pending') {
+                        const option = `<option value="${iou.key}" data-amount="${iou.amount}" data-name="${iou.name}" data-depot="${iou.depot}" data-dept="${iou.dept}" data-purpose="${iou.purpose}">${iou.iouNo} - ${iou.amount} Tk (${iou.purpose})</option>`;
+                        iouSelect.innerHTML += option;
+                    }
+                });
+            }
+        });
+
+        window.handleIOUSelect = function() {
+            const select = document.getElementById('iouSelect');
+            const hint = document.getElementById('iouAmountHint');
+            const display = document.getElementById('iouAmtDisplay');
+            if(select.value) {
+                const selectedOption = select.options[select.selectedIndex];
+                document.getElementById('billName').value = selectedOption.getAttribute('data-name');
+                document.getElementById('billDepot').value = selectedOption.getAttribute('data-depot');
+                document.getElementById('billDept').value = selectedOption.getAttribute('data-dept');
+                document.getElementById('billPurpose').value = selectedOption.getAttribute('data-purpose');
+                const amount = selectedOption.getAttribute('data-amount');
+                display.innerText = amount;
+                hint.style.display = 'block';
+            } else {
+                hint.style.display = 'none';
+            }
+        }
+
+        window.generateNextBillNo = async function() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const prefix = `KS${year}${month}`;
+            document.getElementById('billNo').value = "Generating...";
+            try {
+                const snapshot = await get(billsRef);
+                let maxSeq = 0;
+                if (snapshot.exists()) {
+                    const data = snapshot.val();
+                    Object.values(data).forEach(bill => {
+                        if (bill.billNo && bill.billNo.startsWith(prefix)) {
+                            const seqStr = bill.billNo.slice(-2);
+                            const seqNum = parseInt(seqStr, 10);
+                            if (!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum;
+                        }
+                    });
+                }
+                const nextSeq = maxSeq + 1;
+                const nextSeqStr = String(nextSeq).padStart(2, '0');
+                document.getElementById('billNo').value = `${prefix}${nextSeqStr}`;
+            } catch (error) { console.error(error); document.getElementById('billNo').value = `${prefix}Err`; }
+        };
+
+        window.addNewRow = function() {
+            const tbody = document.getElementById('entryTableBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" placeholder="Bus/CNG"></td><td><input type="number" class="row-amount" oninput="calcTotal()" placeholder="0"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+            tbody.appendChild(tr);
+        };
+
+        window.deleteRow = function(btn) {
+            const row = btn.closest('tr');
+            row.remove();
+            calcTotal();
+        };
+
+        window.addQuickRow = function() {
+            const from = document.getElementById('quickFrom').value;
+            const to = document.getElementById('quickTo').value;
+            const mode = document.getElementById('quickMode').value;
+            const amount = parseFloat(document.getElementById('quickAmount').value) || 0;
+            if(!from || !to || amount === 0) { showToast("Please select From, To, and Amount"); return; }
+            const tbody = document.getElementById('entryTableBody');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${mode}"></td><td><input type="number" class="row-amount" value="${amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+            tbody.appendChild(tr);
+            const lastRow = tbody.lastElementChild;
+            lastRow.querySelector('.row-from').value = from;
+            lastRow.querySelector('.row-to').value = to;
+            document.getElementById('quickFrom').value = "";
+            document.getElementById('quickTo').value = "";
+            document.getElementById('quickAmount').value = "";
+            calcTotal();
+            showToast("Row Added!");
+        };
+
+        window.saveData = function() {
+            const billNo = document.getElementById('billNo').value;
+            if(billNo === "Generating...") { showToast("Wait for Bill No."); return; }
+            const billDate = document.getElementById('billDate').value;
+            const name = document.getElementById('billName').value;
+            const depot = document.getElementById('billDepot').value;
+            const dept = document.getElementById('billDept').value;
+            const purpose = document.getElementById('billPurpose').value;
+            const billKey = document.getElementById('billKey').value;
+            const iouKey = document.getElementById('iouSelect').value; 
+            let rows = [];
+            let total = 0;
+            const rowElements = document.querySelectorAll('#entryTableBody tr');
+            rowElements.forEach(tr => {
+                const from = tr.querySelector('.row-from').value;
+                const to = tr.querySelector('.row-to').value;
+                const mode = tr.querySelector('.row-mode').value;
+                const amount = parseFloat(tr.querySelector('.row-amount').value) || 0;
+                const remarks = tr.querySelector('.row-remarks').value;
+                if (from || to || amount > 0) {
+                    rows.push({ from, to, mode, amount, remarks });
+                    total += amount;
+                }
+            });
+            if (!name || !depot || rows.length === 0) { showToast("Please fill details and add at least one row."); return; }
+            const billData = { billNo, billDate, name, depot, dept, purpose, rows, total, iouId: iouKey || null, timestamp: Date.now() };
+            const savePromise = billKey ? update(ref(db, 'bills/' + billKey), billData) : push(billsRef, billData);
+            savePromise.then((snapshot) => {
+                const newBillKey = billKey || snapshot.key;
+                if(iouKey) {
+                    update(ref(db, 'ious/' + iouKey), { status: 'Used', usedInBillId: newBillKey }).then(() => { showToast("Bill Saved & IOU Marked as Used!"); resetForm(); });
+                } else {
+                    showToast("Saved!");
+                    resetForm();
+                }
+            }).catch(err => showToast("Error: " + err.message));
+        };
+
+        // UPDATED DELETE BILL FUNCTION - IOU REACTIVATION LOGIC
+        window.deleteBill = function(key) {
+            if(confirm("Delete this bill?")) {
+                // 1. Get the bill data first to see if an IOU was used
+                const billRef = ref(db, 'bills/' + key);
+                onValue(billRef, (snapshot) => {
+                    const billData = snapshot.val();
+                    
+                    if (billData && billData.iouId) {
+                        // 2. If IOU exists, update it back to Pending
+                        update(ref(db, 'ious/' + billData.iouId), {
+                            status: 'Pending',
+                            usedInBillId: null
+                        });
+                    }
+
+                    // 3. Delete the Bill
+                    remove(billRef).then(() => showToast("Bill Deleted!"));
+                }, { onlyOnce: true });
+            }
+        };
+
+        window.editBill = function(key) {
+            const dbRef = ref(db, 'bills/' + key);
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    document.getElementById('billKey').value = key;
+                    document.getElementById('billNo').value = data.billNo;
+                    document.getElementById('billDate').value = data.billDate;
+                    document.getElementById('billName').value = data.name;
+                    document.getElementById('billDepot').value = data.depot;
+                    document.getElementById('billDept').value = data.dept;
+                    document.getElementById('billPurpose').value = data.purpose;
+                    document.getElementById('entryTableBody').innerHTML = '';
+                    data.rows.forEach(rowData => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${rowData.mode}"></td><td><input type="number" class="row-amount" value="${rowData.amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" value="${rowData.remarks}"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+                        document.getElementById('entryTableBody').appendChild(tr);
+                        const lastRow = document.getElementById('entryTableBody').lastElementChild;
+                        lastRow.querySelector('.row-from').value = rowData.from;
+                        lastRow.querySelector('.row-to').value = rowData.to;
+                    });
+                    calcTotal();
+                    switchTab('entry');
+                    showToast("Loaded for Editing");
+                }
+            }, { onlyOnce: true });
+        };
+
+        window.printBill = function(key) {
+            const dbRef = ref(db, 'bills/' + key);
+            onValue(dbRef, (snapshot) => {
+                const data = snapshot.val();
+                if(data) {
+                    document.getElementById('pName').innerText = data.name;
+                    document.getElementById('pDept').innerText = data.dept;
+                    document.getElementById('pPurpose').innerText = data.purpose;
+                    document.getElementById('pDepot').innerText = data.depot;
+                    document.getElementById('pBillNo').innerText = data.billNo;
+                    document.getElementById('pDate').innerText = data.billDate;
+                    const tbody = document.getElementById('pTableBody');
+                    tbody.innerHTML = '';
+                    data.rows.forEach(row => {
+                        const tr = `<tr><td>${row.from}</td><td>${row.to}</td><td>${row.mode}</td><td>${row.amount}</td><td>${row.remarks}</td></tr>`;
+                        tbody.innerHTML += tr;
+                    });
+                    document.getElementById('pTotal').innerText = data.total.toFixed(2);
+                    const totalNum = parseFloat(data.total);
+                    const takaPart = Math.floor(totalNum);
+                    const paisaPart = Math.round((totalNum - takaPart) * 100);
+                    let words = window.numberToEnglish(takaPart) + " Taka";
+                    if (paisaPart > 0) words += " and " + window.numberToEnglish(paisaPart) + " Paisa";
+                    words += " Only";
+                    document.getElementById('pWords').innerText = words;
+                    setTimeout(() => { window.print(); }, 500);
+                }
+            }, { onlyOnce: true });
+        };
+
+        onValue(billsRef, (snapshot) => {
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = '';
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                const bills = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
+                bills.forEach(bill => {
+                    const iouStatus = bill.iouId ? '<span style="color:green; font-weight:bold;">Yes</span>' : '<span style="color:red;">No</span>';
+                    const row = `<tr><td>${bill.billNo}</td><td>${bill.billDate}</td><td>${bill.name}</td><td>${bill.total.toFixed(2)} Tk</td><td>${iouStatus}</td><td><button class="btn btn-edit" onclick="editBill('${bill.key}')">Edit</button><button class="btn btn-delete" onclick="deleteBill('${bill.key}')">Delete</button><button class="btn btn-print" onclick="printBill('${bill.key}')">Print</button></td></tr>`;
+                    tbody.innerHTML += row;
+                });
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No bills found.</td></tr>';
+            }
+        });
+    </script>
+
+    <!-- Global UI Logic -->
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            const btns = document.querySelectorAll('.tab-btn');
+            if(tabId === 'entry') btns[0].classList.add('active');
+            else if(tabId === 'summary') btns[1].classList.add('active');
+            else if(tabId === 'iou') btns[2].classList.add('active');
+            else btns[3].classList.add('active');
+        }
+
+        function calcTotal() {
+            const inputs = document.querySelectorAll('.row-amount');
+            let total = 0;
+            inputs.forEach(input => total += parseFloat(input.value) || 0);
+            document.getElementById('displayTotal').innerText = total.toFixed(2);
+        }
+
+        function resetForm() {
+            document.getElementById('billKey').value = '';
+            document.getElementById('billName').value = '';
+            document.getElementById('billDepot').value = '';
+            document.getElementById('billDept').value = '';
+            document.getElementById('billPurpose').value = '';
+            document.getElementById('entryTableBody').innerHTML = '';
+            document.getElementById('displayTotal').innerText = '0.00';
+            document.getElementById('quickFrom').value = "";
+            document.getElementById('quickTo').value = "";
+            document.getElementById('quickAmount').value = "";
+            document.getElementById('iouSelect').value = "";
+            document.getElementById('iouAmountHint').style.display = 'none';
+            document.getElementById('billDate').valueAsDate = new Date();
+            generateNextBillNo();
+        }
+
+        function showToast(msg) {
+            const x = document.getElementById("toast");
+            x.innerText = msg; x.className = "show";
+            setTimeout(() => x.className = x.className.replace("show", ""), 3000);
+        }
+
+        window.onload = function() {
+            resetForm();
+            generateIOUNo();
+        };
+    </script>
+</body>
+</html>
