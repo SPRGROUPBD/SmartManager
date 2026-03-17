@@ -3,157 +3,378 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MONICO PHARMA - Bill & IOU Management</title>
+    <title>MONICO PHARMA - System</title>
     <style>
+        /* --- RETRO THEME VARIABLES --- */
         :root {
-            --primary-color: #2c3e50;
-            --accent-color: #3498db;
-            --success-color: #27ae60;
-            --danger-color: #c0392b;
-            --light-bg: #f4f7f6;
-            --warning-color: #f39c12;
+            --win-gray: #c0c0c0;
+            --win-dark-gray: #808080;
+            --win-darker-gray: #404040;
+            --win-black: #000000;
+            --win-white: #ffffff;
+            --win-navy: #000080;
+            --win-teal: #008080;
+            --win-text: #000000;
+            --border-outset: 2px solid;
+            --border-outset-color: #ffffff #808080 #808080 #ffffff;
+            --border-inset: 2px solid;
+            --border-inset-color: #808080 #ffffff #ffffff #808080;
+            --font-main: 'Tahoma', 'Verdana', sans-serif;
         }
 
+        * { box-sizing: border-box; }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--light-bg);
-            color: #333;
-        }
-
-        /* --- Screen Styles --- */
-        .tabs {
+            background-color: var(--win-teal);
+            font-family: var(--font-main);
+            color: var(--win-text);
+            height: 100vh;
             display: flex;
-            background-color: #fff;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            overflow-x: auto;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
 
-        .tab-btn {
-            padding: 15px 20px;
+        /* --- MAIN WINDOW FRAME --- */
+        .window-frame {
+            width: 95%;
+            max-width: 1200px;
+            height: 90vh;
+            background-color: var(--win-gray);
+            display: flex;
+            flex-direction: column;
+            border-top: 2px solid var(--win-white);
+            border-left: 2px solid var(--win-white);
+            border-right: 2px solid var(--win-darker-gray);
+            border-bottom: 2px solid var(--win-darker-gray);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5); 
+        }
+
+        .title-bar {
+            background-color: var(--win-navy);
+            color: var(--win-white);
+            padding: 4px 8px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            letter-spacing: 1px;
+        }
+
+        .title-controls button {
+            background: var(--win-gray);
+            border-top: 1px solid var(--win-white);
+            border-left: 1px solid var(--win-white);
+            border-right: 1px solid var(--win-black);
+            border-bottom: 1px solid var(--win-black);
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            line-height: 12px;
+            font-weight: bold;
+            cursor: default;
+            margin-left: 2px;
+        }
+        .title-controls button:active {
+            border-top: 1px solid var(--win-black);
+            border-left: 1px solid var(--win-black);
+            border-right: 1px solid var(--win-white);
+            border-bottom: 1px solid var(--win-white);
+        }
+
+        /* --- WINDOW BODY (SPLIT LAYOUT) --- */
+        .window-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden; /* Scroll inside panes */
+            padding: 2px;
+        }
+
+        /* --- LEFT SIDEBAR MENU --- */
+        .sidebar {
+            width: 180px;
+            background-color: var(--win-gray);
+            border-right: 2px solid var(--win-darker-gray);
+            padding: 10px 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            overflow-y: auto;
+        }
+
+        .menu-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 8px 10px;
             cursor: pointer;
-            background: none;
-            border: none;
-            font-size: 16px;
-            font-weight: 600;
-            color: #777;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
-            white-space: nowrap;
+            font-family: var(--font-main);
+            font-size: 13px;
+            background: var(--win-gray);
+            border-top: 2px solid var(--win-white);
+            border-left: 2px solid var(--win-white);
+            border-right: 2px solid var(--win-darker-gray);
+            border-bottom: 2px solid var(--win-darker-gray);
+            margin-bottom: 2px;
         }
 
-        .tab-btn:hover { color: var(--accent-color); background-color: #f9f9f9; }
-        .tab-btn.active { color: var(--accent-color); border-bottom: 3px solid var(--accent-color); }
+        .menu-btn:hover {
+            background-color: #dcdcdc;
+        }
+
+        /* Active State: Pressed In (Inset) */
+        .menu-btn.active {
+            background-color: var(--win-gray);
+            border-top: 2px solid var(--win-darker-gray);
+            border-left: 2px solid var(--win-darker-gray);
+            border-right: 2px solid var(--win-white);
+            border-bottom: 2px solid var(--win-white);
+            font-weight: bold;
+            color: var(--win-navy);
+            padding: 9px 9px 7px 11px; /* Visual shift */
+        }
+
+        /* --- MAIN CONTENT AREA --- */
+        .content-area {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: var(--win-gray);
+            border-left: 2px solid var(--win-white); /* Splitter highlight */
+        }
 
         .tab-content {
             display: none;
-            padding: 20px;
-            max-width: 1200px;
-            margin: 20px auto;
-            animation: fadeIn 0.3s ease-in-out;
         }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+        /* --- FORMS & INPUTS --- */
         .form-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            padding: 10px;
         }
-
+        
         .header-section {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 15px;
+            border-bottom: 2px solid var(--win-dark-gray);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
         }
+        .header-section h2 { margin: 0; font-size: 24px; color: var(--win-navy); text-transform: uppercase; }
+        .header-section h3 { margin: 5px 0 0; font-size: 16px; font-weight: normal; }
 
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
         }
 
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; color: #555; }
-        .form-control {
-            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;
-            font-size: 14px; box-sizing: border-box;
+        .form-group { margin-bottom: 10px; }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 13px;
+            font-weight: bold;
         }
-        .form-control[readonly] { background-color: #e9ecef; cursor: not-allowed; color: #555; }
 
-        .btn-group { margin-top: 20px; text-align: right; }
+        input, select, textarea {
+            width: 100%;
+            padding: 4px;
+            border-top: 2px solid var(--win-darker-gray);
+            border-left: 2px solid var(--win-darker-gray);
+            border-right: 2px solid var(--win-white);
+            border-bottom: 2px solid var(--win-white);
+            background: var(--win-white);
+            font-family: var(--font-main);
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[readonly], select[disabled] {
+            background-color: var(--win-gray);
+            color: var(--win-dark-gray);
+            cursor: default;
+        }
+
+        /* --- BUTTONS --- */
         .btn {
-            padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;
-            font-weight: 600; font-size: 14px; margin-left: 10px; transition: background 0.2s;
-        }
-        .btn-save { background-color: var(--success-color); color: white; }
-        .btn-save:hover { background-color: #219150; }
-        .btn-new { background-color: var(--accent-color); color: white; }
-        .btn-new:hover { background-color: #2980b9; }
-        .btn-add { background-color: #333; color: white; margin-bottom: 10px; display: inline-flex; align-items: center; gap: 5px;}
-        .btn-add:hover { background-color: #555; }
-        
-        .btn-edit { background-color: var(--warning-color); color: white; padding: 5px 10px; font-size: 12px; }
-        .btn-delete { background-color: var(--danger-color); color: white; padding: 5px 10px; font-size: 12px; }
-        .btn-print { background-color: #8e44ad; color: white; padding: 5px 10px; font-size: 12px; }
-
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: middle; }
-        th { background-color: #f8f9fa; font-weight: 600; text-align: center; }
-        td input, td select { width: 100%; border: none; outline: none; background: transparent; padding: 5px; box-sizing: border-box;}
-        
-        .btn-delete-row {
-            color: var(--danger-color);
-            background: none;
-            border: none;
-            font-weight: bold;
-            font-size: 18px;
+            padding: 5px 15px;
+            border-top: 2px solid var(--win-white);
+            border-left: 2px solid var(--win-white);
+            border-right: 2px solid var(--win-darker-gray);
+            border-bottom: 2px solid var(--win-darker-gray);
+            background: var(--win-gray);
             cursor: pointer;
-            padding: 0 10px;
+            font-family: var(--font-main);
+            font-size: 13px;
+            font-weight: normal;
+            margin-right: 5px;
         }
-        .btn-delete-row:hover { color: red; }
+        .btn:active {
+            border-top: 2px solid var(--win-darker-gray);
+            border-left: 2px solid var(--win-darker-gray);
+            border-right: 2px solid var(--win-white);
+            border-bottom: 2px solid var(--win-white);
+            padding: 6px 14px 4px 16px; 
+        }
+        .btn-save { font-weight: bold; }
+        .btn-delete { color: var(--win-navy); } 
+        .btn-group { margin-top: 15px; text-align: right; border-top: 1px dotted var(--win-dark-gray); padding-top: 10px; }
+        .btn-add { margin-bottom: 10px; display: inline-flex; align-items: center; }
 
-        .status-badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+        /* --- TABLES --- */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px; 
+            font-size: 13px;
+            background: var(--win-white);
+            border-top: 2px solid var(--win-darker-gray);
+            border-left: 2px solid var(--win-darker-gray);
+            border-right: 2px solid var(--win-white);
+            border-bottom: 2px solid var(--win-white);
+        }
+        th {
+            background-color: var(--win-navy);
+            color: var(--win-white);
+            padding: 5px;
+            text-align: left;
+            border: 1px solid var(--win-white);
+        }
+        td {
+            border: 1px solid #c0c0c0;
+            padding: 3px;
+            vertical-align: middle;
+        }
+        td input, td select { border: none; width: 100%; background: transparent; padding: 2px; }
+        td input:focus, td select:focus { background: #e0e0e0; outline: 1px dotted var(--win-black); }
+
+        .btn-delete-row {
+            color: var(--win-text);
+            background: var(--win-gray);
+            border: 1px solid;
+            border-color: var(--win-white) var(--win-darker-gray) var(--win-darker-gray) var(--win-white);
+            font-weight: bold;
+            cursor: pointer;
+            width: 22px;
+            height: 22px;
+            line-height: 18px;
+        }
+        .btn-delete-row:active { border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); }
+
+        /* --- LAYOUT HELPERS --- */
+        .grid-layout { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+        .form-box { padding: 10px; border: 1px dotted var(--win-dark-gray); background: #e0e0e0; }
+        .list-box { 
+            padding: 10px; 
+            border-top: 2px solid var(--win-darker-gray);
+            border-left: 2px solid var(--win-darker-gray);
+            border-right: 2px solid var(--win-white);
+            border-bottom: 2px solid var(--win-white);
+            background: var(--win-white);
+            height: 500px;
+            overflow-y: scroll;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 16px; height: 16px; background: var(--win-gray); }
+        ::-webkit-scrollbar-button { background: var(--win-gray); border: 1px solid; border-color: var(--win-white) var(--win-darker-gray) var(--win-darker-gray) var(--win-white); width: 16px; height: 16px; }
+        ::-webkit-scrollbar-button:active { border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); }
+        ::-webkit-scrollbar-track { background: repeating-conic-gradient(#c0c0c0 0% 25%, #fff 0% 50%) 50% / 2px 2px; }
+        ::-webkit-scrollbar-thumb { background-color: var(--win-gray); border: 1px solid; border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); }
+
+        /* Status & Helpers */
+        .status-badge { padding: 2px 5px; font-size: 11px; border: 1px solid var(--win-black); }
+        .status-pending { background: var(--win-gray); color: var(--win-black); }
+        .status-used { background: var(--win-white); color: var(--win-black); text-decoration: line-through; }
+        .no-print { display: block; }
+
+        /* Settings Panel */
+        .settings-panel {
+            background: var(--win-white);
+            border: 2px solid var(--win-darker-gray);
+            border-right-color: var(--win-white);
+            border-bottom-color: var(--win-white);
+            padding: 20px;
+            max-width: 500px;
+        }
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            appearance: none;
+            background: var(--win-white);
+            border: 2px solid;
+            border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray);
+            position: relative;
+            cursor: pointer;
+        }
+        input[type="checkbox"]:checked {
+            background: var(--win-white);
+        }
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            top: -4px; left: 2px;
+            font-size: 18px;
+            color: var(--win-black);
             font-weight: bold;
         }
-        .status-pending { background-color: #fff3cd; color: #856404; }
-        .status-used { background-color: #d4edda; color: #155724; }
 
+        /* --- TOAST NOTIFICATION --- */
         #toast {
-            visibility: hidden; min-width: 250px; background-color: #333; color: #fff;
-            text-align: center; border-radius: 4px; padding: 16px; position: fixed;
-            z-index: 1; left: 50%; bottom: 30px; transform: translateX(-50%);
+            visibility: hidden;
+            min-width: 250px;
+            background-color: var(--win-gray);
+            color: var(--win-text);
+            text-align: center;
+            border-top: 2px solid var(--win-white);
+            border-left: 2px solid var(--win-white);
+            border-right: 2px solid var(--win-darker-gray);
+            border-bottom: 2px solid var(--win-darker-gray);
+            box-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+            padding: 0;
+            position: fixed;
+            z-index: 999;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
         }
-        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
-        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
-        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+        #toast.show { visibility: visible; }
+        .toast-title { background: var(--win-navy); color: var(--win-white); padding: 2px 5px; font-size: 12px; text-align: left; font-weight: bold; display: flex; justify-content: space-between; }
+        .toast-body { padding: 15px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .toast-icon { font-size: 20px; }
 
         /* -----------------------------------------------------------
-           PRINT STYLES - FULL BORDER ADDED
+           PRINT STYLES - ALL BLACK TEXT & BORDER CONTROL
            ----------------------------------------------------------- */
         @media print {
-            .tabs, #entry, #summary, #iou, #locations, #toast, .btn-group, .btn-add, .no-print, .quick-entry-container, .iou-list-container {
+            body {
+                background-color: white;
+                height: auto;
+                display: block;
+                overflow: visible;
+            }
+            .window-frame, .sidebar, .content-area, .btn-group, .btn-add, .no-print, .quick-entry-container, .iou-list-container, .title-bar, .settings-panel {
                 display: none !important;
             }
+            #entry, #summary, #iou, #locations, #settings { display: none !important; }
 
             @page {
                 size: A4;
                 margin: 10mm;
-            }
-
-            body {
-                margin: 0;
-                padding: 0;
-                background-color: white;
-                color: black;
-                -webkit-print-color-adjust: exact; 
             }
 
             #print-area {
@@ -161,25 +382,31 @@
                 position: absolute;
                 top: 0;
                 left: 0;
-                max-width: 190mm; 
                 width: 100%;
-                margin: 0 auto;
-                padding: 10px; /* Padding added so text doesn't touch the border */
-                font-family: 'Arial', sans-serif; 
-                font-size: 12px;
+                /* FORCE ALL TEXT BLACK */
                 color: black !important;
-                z-index: 9999;
-                
-                /* ADDED FULL BORDER AROUND HEADER, BODY, FOOTER */
-                border: 2px solid black; 
-                box-sizing: border-box;
-                height: 100vh; /* Ensure it fills the printable area */
+                background: white !important;
             }
 
+            /* Force everything inside print area to black */
             #print-area * {
-                visibility: visible !important;
-                color: black !important;
+                color: #000000 !important;
+                border-color: #000000 !important;
                 background-color: transparent !important;
+                text-shadow: none !important;
+            }
+
+            /* Override specific elements just in case */
+            #print-area th, #print-area td, #print-area div, #print-area span {
+                color: #000000 !important;
+            }
+
+            /* Outside Border Logic */
+            #print-area.with-border {
+                border: 2px solid black; 
+                padding: 15px; /* Padding inside the border */
+                height: 100vh;
+                box-sizing: border-box;
             }
 
             .p-header { 
@@ -188,206 +415,228 @@
                 font-size: 18px; 
                 font-weight: bold; 
                 text-transform: uppercase; 
-                border-bottom: 2px solid black; /* Inner separator */
+                border-bottom: 2px solid black; 
                 padding-bottom: 10px;
             }
-
-            .p-info-row {
-                display: flex !important; 
-                justify-content: space-between; 
-                margin-bottom: 8px;
-                border-bottom: 1px dotted #000;
-                padding-bottom: 2px;
-                width: 100%;
-            }
+            .p-info-row { display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px dotted #000; padding-bottom: 2px; }
             .p-label { font-weight: bold; margin-right: 5px; }
-
-            .p-table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin-top: 15px; 
-                margin-bottom: 10px; 
-                font-size: 12px;
-                border: 1px solid black;
-                table-layout: fixed; 
-            }
-            .p-table th, .p-table td { 
-                border: 1px solid black; 
-                padding: 6px; 
-                text-align: center; 
-                vertical-align: middle;
-                overflow: hidden; 
-                white-space: nowrap;
-            }
-            .p-table th { 
-                background-color: #fff !important; 
-                font-weight: bold; 
-                border-bottom: 2px solid black; 
-            }
+            .p-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 12px; border: 1px solid black; table-layout: fixed; }
+            .p-table th, .p-table td { border: 1px solid black; padding: 6px; text-align: center; }
+            .p-table th { background-color: #fff !important; font-weight: bold; border-bottom: 2px solid black; }
+            
             .p-table th:nth-child(1), .p-table td:nth-child(1) { width: 26.57%; }
             .p-table th:nth-child(2), .p-table td:nth-child(2) { width: 26.57%; }
             .p-table th:nth-child(3), .p-table td:nth-child(3) { width: 17.71%; }
             .p-table th:nth-child(4), .p-table td:nth-child(4) { width: 14.14%; }
             .p-table th:nth-child(5), .p-table td:nth-child(5) { width: 19.30%; }
 
-            .p-total-row {
-                text-align: right; 
-                margin-top: 5px;
-                font-weight: bold;
-                font-size: 14px;
-            }
-
-            .p-words {
-                margin-top: 5px;
-                border-bottom: 1px dotted #000;
-                padding-bottom: 5px;
-                font-size: 12px;
-                text-align: left;
-            }
-
-            .p-signatures { 
-                margin-top: 50px; 
-                display: flex !important; 
-                justify-content: space-between; 
-                text-align: center; 
-                width: 100%;
-            }
-            .sig-box { 
-                width: 30%; 
-                border-top: 1px solid black; 
-                padding-top: 5px; 
-                font-weight: bold; 
-                font-size: 12px;
-            }
+            .p-total-row { text-align: right; margin-top: 5px; font-weight: bold; font-size: 14px; }
+            .p-words { margin-top: 5px; border-bottom: 1px dotted #000; padding-bottom: 5px; font-size: 12px; }
+            .p-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; width: 100%; }
+            .sig-box { width: 30%; border-top: 1px solid black; padding-top: 5px; font-weight: bold; font-size: 12px; }
         }
 
         #print-area { display: none; } 
-        .grid-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 30px; }
-        .form-box { background: #fff; padding: 20px; border: 1px solid #eee; border-radius: 8px; }
-        .list-box { background: #fff; padding: 20px; border: 1px solid #eee; border-radius: 8px; max-height: 600px; overflow-y: auto; }
-        @media(max-width: 768px) { .grid-layout { grid-template-columns: 1fr; } }
+
+        /* Mobile adjustments */
+        @media(max-width: 768px) { 
+            .window-body { flex-direction: column; }
+            .sidebar { width: 100%; height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 2px solid var(--win-darker-gray); }
+            .menu-btn { width: auto; white-space: nowrap; margin-right: 5px; margin-bottom: 0; }
+            .grid-layout { grid-template-columns: 1fr; } 
+            .form-grid { grid-template-columns: 1fr; }
+            body { height: auto; overflow-y: auto; display: block; padding: 10px; }
+            .window-frame { width: 100%; height: auto; border: none; box-shadow: none; }
+            .title-bar { display: none; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="tabs no-print">
-        <button class="tab-btn active" onclick="switchTab('entry')">Bill Entry</button>
-        <button class="tab-btn" onclick="switchTab('summary')">Bill Summary</button>
-        <button class="tab-btn" onclick="switchTab('iou')">IOU Entry</button>
-        <button class="tab-btn" onclick="switchTab('locations')">From & To</button>
-    </div>
-
-    <!-- TAB 1: BILL ENTRY -->
-    <div id="entry" class="tab-content active">
-        <div class="form-container">
-            <div class="header-section">
-                <h2>MONICO PHARMA</h2>
-                <h3>Conveyance Bill Entry</h3>
+    <div class="window-frame">
+        <div class="title-bar">
+            <span>Conveyance Bill Entry System</span>
+            <div class="title-controls">
+                
             </div>
-
-            <input type="hidden" id="billKey">
-            <div class="form-grid">
-                <div class="form-group"><label>Bill No (Auto)</label><input type="text" id="billNo" class="form-control" readonly placeholder="Generating..."></div>
-                <div class="form-group"><label>Bill Date</label><input type="date" id="billDate" class="form-control"></div>
-                <div class="form-group"><label>Name</label><input type="text" id="billName" class="form-control" placeholder="Md Sajjad Ahmed"></div>
-                <div class="form-group"><label>Depot</label><input type="text" id="billDepot" class="form-control" placeholder="Kushtia"></div>
-                <div class="form-group"><label>Department</label><input type="text" id="billDept" class="form-control" placeholder="Distribution"></div>
-                <div class="form-group"><label>Purpose</label><input type="text" id="billPurpose" class="form-control" placeholder="Official Visit"></div>
-            </div>
-
-            <div class="form-group no-print">
-                <label>Select IOU (Optional)</label>
-                <select id="iouSelect" class="form-control" onchange="handleIOUSelect()"><option value="">-- No IOU --</option></select>
-                <small style="color: #666; display:none;" id="iouAmountHint">IOU Amount: <span id="iouAmtDisplay">0</span> Tk</small>
-            </div>
-
-            <div class="no-print quick-entry-container">
-                <h2>Travel Details Quick Entry</h2>
-                <table id="travelTable">
-                    <tr>
-                        <th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>Action</th>
-                    </tr>
-                    <tr>
-                        <td><select id="quickFrom" class="form-control" style="border:1px solid #ddd; padding:8px;"><option value="">Select From</option></select></td>
-                        <td><select id="quickTo" class="form-control" style="border:1px solid #ddd; padding:8px;"><option value="">Select To</option></select></td>
-                        <td>
-                            <select id="quickMode" class="form-control" style="border:1px solid #ddd; padding:8px;">
-                                <option value="Auto">Auto</option><option value="Rickshaw">Rickshaw</option><option value="Van">Van</option>
-                                <option value="Bus">Bus</option><option value="CNG">CNG</option><option value="Other">Other</option>
-                            </select>
-                        </td>
-                        <td><input type="number" id="quickAmount" placeholder="Amount"></td>
-                        <td><button class="btn btn-add" onclick="addQuickRow()">+Add</button></td>
-                    </tr>
-                </table>
-            </div>
-
-            <h4>Travel Details</h4>
-            <button type="button" class="btn btn-add" onclick="addNewRow()">+ Add Row (Manual)</button>
-            <table id="entryTable">
-                <thead><tr><th style="width: 15%">From</th><th style="width: 15%">To</th><th style="width: 25%">Mode</th><th style="width: 15%">Amount</th><th style="width: 20%">Remarks</th><th style="width: 10%">Action</th></tr></thead>
-                <tbody id="entryTableBody"></tbody>
-                <tfoot><tr><td colspan="4" style="text-align: right; font-weight: bold;">Total =</td><td colspan="2" style="font-weight: bold;"><span id="displayTotal">0.00</span> Tk</td></tr></tfoot>
-            </table>
-            <div class="btn-group no-print"><button class="btn btn-new" onclick="resetForm()">New Bill</button><button class="btn btn-save" onclick="saveData()">Save Bill</button></div>
         </div>
-    </div>
 
-    <!-- TAB 2: BILL SUMMARY -->
-    <div id="summary" class="tab-content">
-        <div class="form-container">
-            <h2>Bill Summary</h2>
-            <table id="summaryTable"><thead><tr><th>Bill No</th><th>Date</th><th>Name</th><th>Total Amount</th><th>IOU Used</th><th>Actions</th></tr></thead><tbody id="summaryTableBody"></tbody></table>
-        </div>
-    </div>
-
-    <!-- TAB 3: IOU ENTRY -->
-    <div id="iou" class="tab-content">
-        <div class="grid-layout">
-            <div class="form-box no-print">
-                <h2>IOU Entry Form</h2>
-                <input type="hidden" id="iouKey">
-                <div class="form-group"><label>IOU No (Auto)</label><input type="text" id="iouNo" class="form-control" readonly placeholder="Generating..."></div>
-                <table style="margin-top: 0;">
-                    <tr><th style="width:30%">Name</th><td><input type="text" id="iouName" class="form-control" value="Md Sajjad Ahmed"></td></tr>
-                    <tr><th>Depot</th><td><input type="text" id="iouDepot" class="form-control" value="Kushtia"></td></tr>
-                    <tr><th>Department</th><td><input type="text" id="iouDept" class="form-control" value="Distribution"></td></tr>
-                    <tr><th>Purpose</th><td><input type="text" id="iouPurpose" class="form-control" placeholder="Enter purpose "></td></tr>
-                    <tr><th>IOU Amount</th><td><input type="number" id="iouAmount" class="form-control" placeholder="Enter amount"></td></tr>
-                </table>
-                <br><div class="btn-group"><button class="btn btn-new" onclick="resetIOUForm()">New IOU</button><button class="btn btn-save" onclick="saveIOU()">Save IOU</button></div>
+        <div class="window-body">
+            <!-- LEFT SIDEBAR MENU -->
+            <div class="sidebar no-print">
+                <button class="menu-btn active" onclick="switchTab('entry')">BILL ENTRY</button>
+                <button class="menu-btn" onclick="switchTab('summary')">BILL SUMMARY</button>
+                <button class="menu-btn" onclick="switchTab('iou')">IOU ENTRY</button>
+                <button class="menu-btn" onclick="switchTab('locations')">FROM & TO</button>
+                <div style="border-top: 1px dotted var(--win-dark-gray); margin: 5px 0;"></div>
+                <button class="menu-btn" onclick="switchTab('settings')">OUTSIDE BORDER</button>
             </div>
-            <div class="list-box iou-list-container"><h3>IOU List</h3><table id="iouListTable"><thead><tr><th>IOU No</th><th>Name</th><th>Purpose</th><th>Amount</th><th>Status</th><th>Action</th></tr></thead><tbody id="iouListBody"></tbody></table></div>
-        </div>
-    </div>
 
-    <!-- TAB 4: FROM & TO (LOCATIONS) ENTRY -->
-    <div id="locations" class="tab-content">
-        <div class="grid-layout">
-            <div class="form-box no-print">
-                <h2>Location Entry Form</h2>
-                <input type="hidden" id="locationKey">
-                <div class="form-group"><label>Location Name</label><input type="text" id="locationName" class="form-control" placeholder="e.g. Boro Bazar"></div>
-                <div class="btn-group"><button class="btn btn-new" onclick="resetLocationForm()">New Location</button><button class="btn btn-save" onclick="saveLocation()">Save Location</button></div>
-                <p style="font-size:12px; color:#666; margin-top:10px;">Note: System attempts to auto-add your list on first load.</p>
-            </div>
-            <div class="list-box"><h3>Location List</h3><table id="locationListTable"><thead><tr><th>Location Name</th><th>Action</th></tr></thead><tbody id="locationListBody"></tbody></table></div>
-        </div>
-    </div>
+            <!-- MAIN CONTENT -->
+            <div class="content-area">
+                
+                <!-- TAB 1: BILL ENTRY -->
+                <div id="entry" class="tab-content active">
+                    <div class="form-container">
+                        <div class="header-section">
+                            <h2>MONICO PHARMA</h2>
+                            <h3>Conveyance Bill Entry System</h3>
+                        </div>
+
+                        <input type="hidden" id="billKey">
+                        <div class="form-grid">
+                            <div class="form-group"><label>Bill No (Auto)</label><input type="text" id="billNo" readonly placeholder="Generating..."></div>
+                            <div class="form-group"><label>Bill Date</label><input type="date" id="billDate"></div>
+                            <div class="form-group"><label>Name</label><input type="text" id="billName" placeholder="Md Sajjad Ahmed"></div>
+                            <div class="form-group"><label>Depot</label><input type="text" id="billDepot" placeholder="Kushtia"></div>
+                            <div class="form-group"><label>Department</label><input type="text" id="billDept" placeholder="Distribution"></div>
+                            <div class="form-group"><label>Purpose</label><input type="text" id="billPurpose" placeholder="Official Visit"></div>
+                        </div>
+
+                        <div class="form-group no-print" style="background: #e0e0e0; padding: 5px; border: 1px dotted #808080;">
+                            <label>Select IOU (Optional)</label>
+                            <select id="iouSelect" onchange="handleIOUSelect()"><option value="">-- No IOU --</option></select>
+                            <div id="iouAmountHint" style="display:none; font-size:12px; margin-top:2px; color: #000080;">IOU Amount: <span id="iouAmtDisplay">0</span> Tk</div>
+                        </div>
+
+                        <div class="no-print quick-entry-container">
+                            <fieldset style="border: 1px solid #808080; padding: 10px; margin-top: 15px;">
+                                <legend style="font-weight: bold; padding: 0 5px;">Quick Entry</legend>
+                                <table id="travelTable">
+                                    <tr><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th></th></tr>
+                                    <tr>
+                                        <td><select id="quickFrom"><option value="">Select From</option></select></td>
+                                        <td><select id="quickTo"><option value="">Select To</option></select></td>
+                                        <td>
+                                            <select id="quickMode">
+                                                <option value="Auto">Auto</option><option value="Rickshaw">Rickshaw</option><option value="Van">Van</option>
+                                                <option value="Bus">Bus</option><option value="CNG">CNG</option><option value="Other">Other</option>
+                                            </select>
+                                        </td>
+                                        <td><input type="number" id="quickAmount" placeholder="0"></td>
+                                        <td><button class="btn" onclick="addQuickRow()">Add</button></td>
+                                    </tr>
+                                </table>
+                            </fieldset>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 5px;">
+                                <label style="font-weight:bold;">Travel Details:</label>
+                                <button class="btn btn-add" onclick="addNewRow()">+ Add Row</button>
+                            </div>
+                            <table id="entryTable">
+                                <thead><tr><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>Remarks</th><th>X</th></tr></thead>
+                                <tbody id="entryTableBody"></tbody>
+                                <tfoot><tr><td colspan="3" style="text-align: right; font-weight: bold; padding-right: 10px;">Total:</td><td style="font-weight: bold; background: #e0e0e0;"><span id="displayTotal">0.00</span> Tk</td><td colspan="2"></td></tr></tfoot>
+                            </table>
+                        </div>
+                        <div class="btn-group no-print"><button class="btn" onclick="resetForm()">New Bill</button><button class="btn btn-save" onclick="saveData()">Save Bill</button></div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: BILL SUMMARY -->
+                <div id="summary" class="tab-content">
+                    <div class="form-container">
+                        <h2>Bill Summary Records</h2>
+                        <table id="summaryTable"><thead><tr><th>Bill No</th><th>Date</th><th>Name</th><th>Total</th><th>IOU</th><th>Actions</th></tr></thead><tbody id="summaryTableBody"></tbody></table>
+                    </div>
+                </div>
+
+                <!-- TAB 3: IOU ENTRY -->
+                <div id="iou" class="tab-content">
+                    <div class="grid-layout">
+                        <div class="form-box no-print">
+                            <h3 style="margin-top:0; border-bottom:1px solid gray; padding-bottom:5px;">IOU Entry Form</h3>
+                            <input type="hidden" id="iouKey">
+                            <table style="width:100%">
+                                <tr><th style="width:40%">IOU No</th><td><input type="text" id="iouNo" readonly></td></tr>
+                                <tr><th>Name</th><td><input type="text" id="iouName" value="Md Sajjad Ahmed"></td></tr>
+                                <tr><th>Depot</th><td><input type="text" id="iouDepot" value="Kushtia"></td></tr>
+                                <tr><th>Department</th><td><input type="text" id="iouDept" value="Distribution"></td></tr>
+                                <tr><th>Purpose</th><td><input type="text" id="iouPurpose"></td></tr>
+                                <tr><th>Amount</th><td><input type="number" id="iouAmount"></td></tr>
+                            </table>
+                            <br><div class="btn-group"><button class="btn" onclick="resetIOUForm()">New</button><button class="btn btn-save" onclick="saveIOU()">Save IOU</button></div>
+                        </div>
+                        <div class="list-box iou-list-container">
+                            <h3 style="margin-top:0; border-bottom:1px solid navy; color:navy; padding-bottom:5px;">IOU Database</h3>
+                            <table id="iouListTable"><thead><tr><th>IOU No</th><th>Name</th><th>Purpose</th><th>Amount</th><th>Status</th><th>X</th></tr></thead><tbody id="iouListBody"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: FROM & TO (LOCATIONS) ENTRY -->
+                <div id="locations" class="tab-content">
+                    <div class="grid-layout">
+                        <div class="form-box no-print">
+                            <h3 style="margin-top:0;">Location Master</h3>
+                            <input type="hidden" id="locationKey">
+                            <div class="form-group"><label>Location Name</label><input type="text" id="locationName" placeholder="e.g. Boro Bazar"></div>
+                            <div class="btn-group"><button class="btn" onclick="resetLocationForm()">New</button><button class="btn btn-save" onclick="saveLocation()">Save Location</button></div>
+                            <p style="font-size:11px; color:#444; margin-top:15px; border:1px dotted #000; padding:5px;"><strong>System Note:</strong> Auto-seeds on first load.</p>
+                        </div>
+                        <div class="list-box">
+                            <h3 style="margin-top:0; border-bottom:1px solid navy; color:navy;">Location List</h3>
+                            <table id="locationListTable"><thead><tr><th>Location Name</th><th>Edit / Del</th></tr></thead><tbody id="locationListBody"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: SETTINGS (OUTSIDE BORDER) -->
+                <div id="settings" class="tab-content">
+                    <h2>Print Settings</h2>
+                    <div class="settings-panel">
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="printBorderToggle" onchange="togglePrintBorder()">
+                            <label for="printBorderToggle">ENABLE FULL PAGE BORDER (OUTSIDE BORDER)</label>
+                        </div>
+                        <p style="font-size: 13px; margin-top: 10px; color: #444;">
+                            If checked, the printed bill will include a 2px solid black border around the entire page. All text will print in black regardless of this setting.
+                        </p>
+                    </div>
+                </div>
+
+            </div> <!-- End Content Area -->
+        </div> <!-- End Window Body -->
+    </div> <!-- End Window Frame -->
 
     <!-- PRINT FORMAT -->
     <div id="print-area">
         <div class="p-header">Conveyance Bill</div>
-        <div class="p-info-row"><div class="p-left"><span class="p-label">Name:</span> <span id="pName"></span></div><div class="p-right"><span class="p-label">Depot:</span> <span id="pDepot"></span></div></div>
-        <div class="p-info-row"><div class="p-left"><span class="p-label">Department:</span> <span id="pDept"></span></div><div class="p-right"><span class="p-label">Bill No:</span> <span id="pBillNo"></span></div></div>
-        <div class="p-info-row"><div class="p-left"><span class="p-label">Purpose:</span> <span id="pPurpose"></span></div><div class="p-right"><span class="p-label">Bill Date:</span> <span id="pDate"></span></div></div>
-        <table class="p-table"><thead><tr><th>From</th><th>To</th><th>Mode Of Transport (Rick/Bus/CNG)</th><th>Amount(Tk)</th><th>Remarks</th></tr></thead><tbody id="pTableBody"></tbody></table>
+        <div class="p-info-row">
+            <div class="p-left"><span class="p-label">Name:</span> <span id="pName"></span></div>
+            <div class="p-right"><span class="p-label">Depot:</span> <span id="pDepot"></span></div>
+        </div>
+        <div class="p-info-row">
+            <div class="p-left"><span class="p-label">Department:</span> <span id="pDept"></span></div>
+            <div class="p-right"><span class="p-label">Bill No:</span> <span id="pBillNo"></span></div>
+        </div>
+        <div class="p-info-row">
+            <div class="p-left"><span class="p-label">Purpose:</span> <span id="pPurpose"></span></div>
+            <div class="p-right"><span class="p-label">Bill Date:</span> <span id="pDate"></span></div>
+        </div>
+        <table class="p-table">
+            <thead><tr><th>From</th><th>To</th><th>Mode Of Transport</th><th>Amount(Tk)</th><th>Remarks</th></tr></thead>
+            <tbody id="pTableBody"></tbody>
+        </table>
         <div class="p-total-row">Total = <span id="pTotal">0.00</span></div>
         <div class="p-words"><span class="p-label">In Words:</span> <span id="pWords"></span></div>
-        <div class="p-signatures"><div class="sig-box">Prepared By</div><div class="sig-box">Chacked By RSM</div><div class="sig-box">Approved By</div></div>
+        <div class="p-signatures">
+            <div class="sig-box">Prepared By</div>
+            <div class="sig-box">Checked By RSM</div>
+            <div class="sig-box">Approved By</div>
+        </div>
     </div>
 
-    <div id="toast">Message</div>
+    <!-- TOAST MSG BOX -->
+    <div id="toast">
+        <div class="toast-title">System Message</div>
+        <div class="toast-body">
+            <span class="toast-icon">ℹ️</span>
+            <span id="toast-msg">Notification</span>
+        </div>
+    </div>
 
     <!-- FIREBASE CONFIG & LOGIC -->
     <script type="module">
@@ -413,7 +662,6 @@
 
         let locationOptionsHTML = '<option value="">Select Location</option>';
 
-        // --- SEED DATA: AUTO-ADD YOUR LOCATIONS ---
         const SEED_LOCATIONS = [
             "AJR Courier Service", "Boro Bazar", "Main Road", "Mojompur", "Office", 
             "Sundarban Courier Service", "Thana More", "Trimohoni Bazar", "GP Center", 
@@ -421,20 +669,16 @@
         ];
 
         async function checkAndSeedLocations() {
-            console.log("Checking if locations need seeding...");
             const snapshot = await get(locationsRef);
             if (!snapshot.exists() || Object.keys(snapshot.val()).length === 0) {
-                console.log("Database empty. Seeding locations...");
                 try {
                     const promises = SEED_LOCATIONS.map(loc => push(locationsRef, { name: loc, timestamp: Date.now() }));
                     await Promise.all(promises);
-                    alert("Success! " + SEED_LOCATIONS.length + " locations added automatically.");
+                    alert("System Initialization: " + SEED_LOCATIONS.length + " locations added.");
                 } catch (error) {
                     console.error("Seeding failed:", error);
-                    alert("Auto-Save Failed. Please update your Firebase Rules to allow Read/Write.");
+                    alert("Auto-Save Failed. Check Permissions.");
                 }
-            } else {
-                console.log("Locations already exist.");
             }
         }
         checkAndSeedLocations();
@@ -461,21 +705,12 @@
             const quickTo = document.getElementById('quickTo');
             if(quickFrom) quickFrom.innerHTML = locationOptionsHTML;
             if(quickTo) quickTo.innerHTML = locationOptionsHTML;
-
             const fromSelects = document.querySelectorAll('.row-from');
             const toSelects = document.querySelectorAll('.row-to');
             const fromValues = Array.from(fromSelects).map(sel => sel.value);
             const toValues = Array.from(toSelects).map(sel => sel.value);
-
-            fromSelects.forEach((sel, index) => {
-                sel.innerHTML = locationOptionsHTML;
-                if(fromValues[index]) sel.value = fromValues[index];
-            });
-
-            toSelects.forEach((sel, index) => {
-                sel.innerHTML = locationOptionsHTML;
-                if(toValues[index]) sel.value = toValues[index];
-            });
+            fromSelects.forEach((sel, index) => { sel.innerHTML = locationOptionsHTML; if(fromValues[index]) sel.value = fromValues[index]; });
+            toSelects.forEach((sel, index) => { sel.innerHTML = locationOptionsHTML; if(toValues[index]) sel.value = toValues[index]; });
         };
 
         window.saveLocation = function() {
@@ -484,7 +719,7 @@
             if(!name) { alert("Please enter a location name"); return; }
             const locData = { name: name, timestamp: Date.now() };
             const operation = key ? update(ref(db, 'locations/' + key), locData) : push(locationsRef, locData);
-            operation.then(() => { alert("Location Saved Successfully!"); resetLocationForm(); }).catch((error) => { alert("ERROR: " + error.message); });
+            operation.then(() => { alert("Location Saved!"); resetLocationForm(); }).catch((error) => { alert("ERROR: " + error.message); });
         };
 
         window.resetLocationForm = function() {
@@ -511,12 +746,11 @@
             const tbody = document.getElementById('locationListBody');
             tbody.innerHTML = '';
             locationOptionsHTML = '<option value="">Select Location</option>';
-
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 const locations = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
                 locations.forEach(loc => {
-                    const row = `<tr><td>${loc.name}</td><td><button class="btn btn-edit" onclick="editLocation('${loc.key}')">Edit</button><button class="btn btn-delete" onclick="deleteLocation('${loc.key}')">Delete</button></td></tr>`;
+                    const row = `<tr><td>${loc.name}</td><td><button class="btn" onclick="editLocation('${loc.key}')">Edit</button> <button class="btn btn-delete" onclick="deleteLocation('${loc.key}')">Del</button></td></tr>`;
                     tbody.innerHTML += row;
                     locationOptionsHTML += `<option value="${loc.name}">${loc.name}</option>`;
                 });
@@ -565,7 +799,7 @@
                     if(existing) update(ref(db, 'ious/' + iouKey), {...iouData, status: existing.status}).then(() => { showToast("IOU Updated!"); resetIOUForm(); });
                 }, {onlyOnce: true});
             } else {
-                push(iousRef, iouData).then(() => { showToast("IOU Saved Successfully!"); resetIOUForm(); });
+                push(iousRef, iouData).then(() => { showToast("IOU Saved!"); resetIOUForm(); });
             }
         };
 
@@ -604,13 +838,12 @@
             const iouSelect = document.getElementById('iouSelect');
             tbody.innerHTML = '';
             iouSelect.innerHTML = '<option value="">-- No IOU --</option>';
-
             if (snapshot.exists()) {
                 const data = snapshot.val();
                 const ious = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
                 ious.forEach(iou => {
                     const statusClass = iou.status === 'Used' ? 'status-used' : 'status-pending';
-                    const row = `<tr onclick="editIOU('${iou.key}')" style="cursor:pointer"><td>${iou.iouNo}</td><td>${iou.name}</td><td>${iou.purpose}</td><td>${iou.amount.toFixed(2)}</td><td><span class="status-badge ${statusClass}">${iou.status}</span></td><td><button class="btn btn-delete" onclick="event.stopPropagation(); deleteIOU('${iou.key}')">Delete</button></td></tr>`;
+                    const row = `<tr onclick="editIOU('${iou.key}')" style="cursor:pointer"><td>${iou.iouNo}</td><td>${iou.name}</td><td>${iou.purpose}</td><td>${iou.amount.toFixed(2)}</td><td><span class="status-badge ${statusClass}">${iou.status}</span></td><td><button class="btn btn-delete" onclick="event.stopPropagation(); deleteIOU('${iou.key}')">X</button></td></tr>`;
                     tbody.innerHTML += row;
                     if (iou.status === 'Pending') {
                         const option = `<option value="${iou.key}" data-amount="${iou.amount}" data-name="${iou.name}" data-depot="${iou.depot}" data-dept="${iou.dept}" data-purpose="${iou.purpose}">${iou.iouNo} - ${iou.amount} Tk (${iou.purpose})</option>`;
@@ -666,7 +899,7 @@
         window.addNewRow = function() {
             const tbody = document.getElementById('entryTableBody');
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" placeholder="Bus/CNG"></td><td><input type="number" class="row-amount" oninput="calcTotal()" placeholder="0"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+            tr.innerHTML = `<td><select class="form-control row-from">${locationOptionsHTML}</select></td><td><select class="form-control row-to">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" placeholder="Bus/CNG"></td><td><input type="number" class="row-amount" oninput="calcTotal()" placeholder="0"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)">X</button></td>`;
             tbody.appendChild(tr);
         };
 
@@ -681,10 +914,10 @@
             const to = document.getElementById('quickTo').value;
             const mode = document.getElementById('quickMode').value;
             const amount = parseFloat(document.getElementById('quickAmount').value) || 0;
-            if(!from || !to || amount === 0) { showToast("Please select From, To, and Amount"); return; }
+            if(!from || !to || amount === 0) { showToast("Select From, To, and Amount"); return; }
             const tbody = document.getElementById('entryTableBody');
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${mode}"></td><td><input type="number" class="row-amount" value="${amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+            tr.innerHTML = `<td><select class="form-control row-from">${locationOptionsHTML}</select></td><td><select class="form-control row-to">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${mode}"></td><td><input type="number" class="row-amount" value="${amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" placeholder="Remarks"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)">X</button></td>`;
             tbody.appendChild(tr);
             const lastRow = tbody.lastElementChild;
             lastRow.querySelector('.row-from').value = from;
@@ -726,31 +959,22 @@
             savePromise.then((snapshot) => {
                 const newBillKey = billKey || snapshot.key;
                 if(iouKey) {
-                    update(ref(db, 'ious/' + iouKey), { status: 'Used', usedInBillId: newBillKey }).then(() => { showToast("Bill Saved & IOU Marked as Used!"); resetForm(); });
+                    update(ref(db, 'ious/' + iouKey), { status: 'Used', usedInBillId: newBillKey }).then(() => { showToast("Bill Saved & IOU Marked Used!"); resetForm(); });
                 } else {
-                    showToast("Saved!");
+                    showToast("Bill Saved Successfully!");
                     resetForm();
                 }
             }).catch(err => showToast("Error: " + err.message));
         };
 
-        // UPDATED DELETE BILL FUNCTION - IOU REACTIVATION LOGIC
         window.deleteBill = function(key) {
             if(confirm("Delete this bill?")) {
-                // 1. Get the bill data first to see if an IOU was used
                 const billRef = ref(db, 'bills/' + key);
                 onValue(billRef, (snapshot) => {
                     const billData = snapshot.val();
-                    
                     if (billData && billData.iouId) {
-                        // 2. If IOU exists, update it back to Pending
-                        update(ref(db, 'ious/' + billData.iouId), {
-                            status: 'Pending',
-                            usedInBillId: null
-                        });
+                        update(ref(db, 'ious/' + billData.iouId), { status: 'Pending', usedInBillId: null });
                     }
-
-                    // 3. Delete the Bill
                     remove(billRef).then(() => showToast("Bill Deleted!"));
                 }, { onlyOnce: true });
             }
@@ -771,7 +995,7 @@
                     document.getElementById('entryTableBody').innerHTML = '';
                     data.rows.forEach(rowData => {
                         const tr = document.createElement('tr');
-                        tr.innerHTML = `<td><select class="form-control row-from" style="border:none;">${locationOptionsHTML}</select></td><td><select class="form-control row-to" style="border:none;">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${rowData.mode}"></td><td><input type="number" class="row-amount" value="${rowData.amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" value="${rowData.remarks}"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)" title="Delete Row">X</button></td>`;
+                        tr.innerHTML = `<td><select class="form-control row-from">${locationOptionsHTML}</select></td><td><select class="form-control row-to">${locationOptionsHTML}</select></td><td><input type="text" class="row-mode" value="${rowData.mode}"></td><td><input type="number" class="row-amount" value="${rowData.amount}" oninput="calcTotal()"></td><td><input type="text" class="row-remarks" value="${rowData.remarks}"></td><td style="text-align:center;"><button type="button" class="btn-delete-row" onclick="deleteRow(this)">X</button></td>`;
                         document.getElementById('entryTableBody').appendChild(tr);
                         const lastRow = document.getElementById('entryTableBody').lastElementChild;
                         lastRow.querySelector('.row-from').value = rowData.from;
@@ -809,6 +1033,15 @@
                     if (paisaPart > 0) words += " and " + window.numberToEnglish(paisaPart) + " Paisa";
                     words += " Only";
                     document.getElementById('pWords').innerText = words;
+                    
+                    // Check border setting
+                    const printArea = document.getElementById('print-area');
+                    if(localStorage.getItem('printBorder') === 'true') {
+                        printArea.classList.add('with-border');
+                    } else {
+                        printArea.classList.remove('with-border');
+                    }
+
                     setTimeout(() => { window.print(); }, 500);
                 }
             }, { onlyOnce: true });
@@ -821,12 +1054,12 @@
                 const data = snapshot.val();
                 const bills = Object.entries(data).map(([key, val]) => ({ key, ...val })).sort((a, b) => b.timestamp - a.timestamp);
                 bills.forEach(bill => {
-                    const iouStatus = bill.iouId ? '<span style="color:green; font-weight:bold;">Yes</span>' : '<span style="color:red;">No</span>';
-                    const row = `<tr><td>${bill.billNo}</td><td>${bill.billDate}</td><td>${bill.name}</td><td>${bill.total.toFixed(2)} Tk</td><td>${iouStatus}</td><td><button class="btn btn-edit" onclick="editBill('${bill.key}')">Edit</button><button class="btn btn-delete" onclick="deleteBill('${bill.key}')">Delete</button><button class="btn btn-print" onclick="printBill('${bill.key}')">Print</button></td></tr>`;
+                    const iouStatus = bill.iouId ? '<span style="color:var(--win-navy); font-weight:bold;">YES</span>' : '<span style="color:var(--win-text);">NO</span>';
+                    const row = `<tr><td>${bill.billNo}</td><td>${bill.billDate}</td><td>${bill.name}</td><td>${bill.total.toFixed(2)} Tk</td><td>${iouStatus}</td><td><button class="btn" onclick="editBill('${bill.key}')">Edit</button> <button class="btn btn-delete" onclick="deleteBill('${bill.key}')">Del</button> <button class="btn" onclick="printBill('${bill.key}')">Print</button></td></tr>`;
                     tbody.innerHTML += row;
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No bills found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No records found.</td></tr>';
             }
         });
     </script>
@@ -835,13 +1068,17 @@
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.menu-btn').forEach(b => b.classList.remove('active'));
+            
             document.getElementById(tabId).classList.add('active');
-            const btns = document.querySelectorAll('.tab-btn');
-            if(tabId === 'entry') btns[0].classList.add('active');
-            else if(tabId === 'summary') btns[1].classList.add('active');
-            else if(tabId === 'iou') btns[2].classList.add('active');
-            else btns[3].classList.add('active');
+            
+            const btns = document.querySelectorAll('.menu-btn');
+            // Find index based on ID order logic or event target if passed. 
+            // Simple map for 5 buttons:
+            const map = { 'entry':0, 'summary':1, 'iou':2, 'locations':3, 'settings':4 };
+            if(map[tabId] !== undefined) {
+                btns[map[tabId]].classList.add('active');
+            }
         }
 
         function calcTotal() {
@@ -870,13 +1107,27 @@
 
         function showToast(msg) {
             const x = document.getElementById("toast");
-            x.innerText = msg; x.className = "show";
+            const msgSpan = document.getElementById("toast-msg");
+            msgSpan.innerText = msg; 
+            x.className = "show";
             setTimeout(() => x.className = x.className.replace("show", ""), 3000);
+        }
+
+        // Settings Logic
+        function togglePrintBorder() {
+            const checkbox = document.getElementById('printBorderToggle');
+            localStorage.setItem('printBorder', checkbox.checked);
         }
 
         window.onload = function() {
             resetForm();
             generateIOUNo();
+            
+            // Load settings
+            const borderSetting = localStorage.getItem('printBorder');
+            if(borderSetting === 'true') {
+                document.getElementById('printBorderToggle').checked = true;
+            }
         };
     </script>
 </body>
