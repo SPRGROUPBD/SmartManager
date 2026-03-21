@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
@@ -188,7 +188,7 @@
                          <div class="card dash-card mb-3">
                             <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6>
-                                <span class="badge bg-light text-success" id="online_count_badge">0</span>
+                                < class="badge bg-light text-success" id="online_count_badge">0</span>
                             </div>
                             <div class="card-body p-2" style="max-height: 200px; overflow-y: auto;" id="online_users_list">
                                 <div class="text-center text-muted p-2">Checking...</div>
@@ -206,6 +206,9 @@
                         <h5>Delivery Expense Bill</h5>
                     </div>
                     
+                    <!-- DATALIST FOR AUTOCOMPLETE -->
+                    <datalist id="locations_list"></datalist>
+
                     <input type="hidden" id="form_iou_amount" value="0">
 
                     <div class="row mb-2">
@@ -249,11 +252,13 @@
                         <div class="row g-1">
                             <div class="col-4">
                                 <label>From</label>
-                                <input type="text" id="q_from" class="form-control form-control-sm q-from-input" placeholder="From">
+                                <!-- Added list attribute -->
+                                <input type="text" id="q_from" class="form-control form-control-sm q-from-input" placeholder="From" list="locations_list">
                             </div>
                             <div class="col-4">
                                 <label>To</label>
-                                <input type="text" id="q_to" class="form-control form-control-sm q-to-input" placeholder="To">
+                                <!-- Added list attribute -->
+                                <input type="text" id="q_to" class="form-control form-control-sm q-to-input" placeholder="To" list="locations_list">
                             </div>
                             <div class="col-4">
                                 <label>Mode</label>
@@ -433,7 +438,6 @@
             if (user && user.photoUrl) {
                 return user.photoUrl;
             }
-            // Fallback to UI Avatars
             const name = user ? user.name : "User";
             return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0D8ABC&color=fff&size=128`;
         }
@@ -449,7 +453,6 @@
                     snapshot.forEach((childSnapshot) => {
                         const userData = childSnapshot.val();
                         if (userData.password === passVal) {
-                            // Check if User Role
                             if(userData.role === 'admin' || userData.role === 'superadmin') {
                                 alert("This portal is for Field Users (DA) only. Please use the Admin Panel.");
                                 return;
@@ -460,7 +463,7 @@
                                 role: 'user', 
                                 depot: userData.depot,
                                 id: childSnapshot.key,
-                                photoUrl: userData.photoUrl || null // ADDED: Fetch photoUrl from DB
+                                photoUrl: userData.photoUrl || null
                             };
                             showPortal();
                         } else { alert("Password Incorrect!"); }
@@ -482,78 +485,92 @@
             document.getElementById('login_section').classList.add('hidden');
             document.getElementById('portal_section').classList.remove('hidden');
             
-            // Update Welcome Message
             document.getElementById('welcome_msg').innerText = "Welcome, " + currentUser.name;
 
-            // Update Header Profile
-            document.getElementById('header_user_name').innerText = currentUser.name;
             const displayUrl = getUserImageUrl(currentUser);
+            document.getElementById('header_user_name').innerText = currentUser.name;
             document.getElementById('header_profile_pic').src = displayUrl;
             
             // Setup Presence
             const presenceRef = database.ref('OnlineUsers/' + currentUser.id);
             presenceRef.set({ name: currentUser.name, role: 'User', lastOnline: firebase.database.ServerValue.TIMESTAMP });
             presenceRef.onDisconnect().remove();
+            
             listenForOnlineUsers();
-
+            loadUserLocations(); // Load suggestions for autocomplete
             loadUserDashboardData();
             prepareBillEntryForm();
             loadBills();
         }
 
+        // ================= AUTOCOMPLETE / LOCATION SUGGESTION LOGIC =================
+        
+        // 1. Load Locations from Firebase
+        function loadUserLocations() {
+            const locRef = database.ref('Locations/' + currentUser.id);
+            const datalist = document.getElementById('locations_list');
+            
+            locRef.on('value', (snapshot) => {
+                datalist.innerHTML = ''; // Clear existing options
+                if(snapshot.exists()) {
+                    // Create options for datalist
+                    snapshot.forEach(child => {
+                        const option = document.createElement('option');
+                        option.value = child.key;
+                        datalist.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        // 2. Save new Locations to Firebase (called during bill submit)
+        function saveNewLocations(expenses) {
+            if(!expenses || expenses.length === 0) return;
+            const locRef = database.ref('Locations/' + currentUser.id);
+            
+            expenses.forEach(exp => {
+                // Save 'From'
+                if(exp.from && exp.from.trim() !== '') {
+                    const key = exp.from.trim();
+                    // Use set to ensure it exists, duplicate keys are overwritten (no duplication)
+                    locRef.child(key).set(true); 
+                }
+                // Save 'To'
+                if(exp.to && exp.to.trim() !== '') {
+                    const key = exp.to.trim();
+                    locRef.child(key).set(true);
+                }
+            });
+        }
+
         // ================= MODAL LOGIC =================
         function openProfileModal() {
             if(!currentUser) return;
-            
-            // Populate Modal
             const displayUrl = getUserImageUrl(currentUser);
             document.getElementById('modal_profile_img').src = displayUrl;
-            
-            // Pre-fill the input with current URL if it exists
             document.getElementById('edit_photo_url').value = currentUser.photoUrl || "";
-            
             document.getElementById('modal_profile_name').innerText = currentUser.name;
             document.getElementById('modal_profile_id').innerText = currentUser.id;
             document.getElementById('modal_profile_depot').innerText = currentUser.depot;
-
-            // Show Modal
             var myModal = new bootstrap.Modal(document.getElementById('profileModal'));
             myModal.show();
         }
 
         function saveProfileChanges() {
             const newPhotoUrl = document.getElementById('edit_photo_url').value.trim();
-
-            // Update Local Object
             currentUser.photoUrl = newPhotoUrl || null;
-
-            // Update UI Immediately
             const newDisplayUrl = getUserImageUrl(currentUser);
             document.getElementById('header_profile_pic').src = newDisplayUrl;
             document.getElementById('modal_profile_img').src = newDisplayUrl;
-
-            // Update Firebase DB
-            database.ref('Users/' + currentUser.id).update({
-                photoUrl: currentUser.photoUrl
-            }).then(() => {
-                alert("Profile Updated Successfully!");
-                
-                // Hide Modal
-                var modalEl = document.getElementById('profileModal');
-                var modal = bootstrap.Modal.getInstance(modalEl);
-                modal.hide();
-            }).catch((error) => {
-                alert("Error updating profile: " + error.message);
-            });
+            database.ref('Users/' + currentUser.id).update({ photoUrl: currentUser.photoUrl })
+            .then(() => { alert("Profile Updated Successfully!"); bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide(); })
+            .catch((error) => { alert("Error updating profile: " + error.message); });
         }
 
         function openChangePassModal() {
-            // Clear fields
             document.getElementById('modal_old_pass').value = '';
             document.getElementById('modal_new_pass').value = '';
             document.getElementById('modal_confirm_pass').value = '';
-            
-            // Show Modal
             var myModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
             myModal.show();
         }
@@ -562,41 +579,17 @@
             const oldPass = document.getElementById('modal_old_pass').value;
             const newPass = document.getElementById('modal_new_pass').value;
             const confirmPass = document.getElementById('modal_confirm_pass').value;
+            if(!oldPass || !newPass || !confirmPass) { alert("Please fill in all fields."); return; }
+            if(newPass !== confirmPass) { alert("New Password and Confirm Password do not match."); return; }
+            if(newPass.length < 4) { alert("Password is too short."); return; }
 
-            if(!oldPass || !newPass || !confirmPass) {
-                alert("Please fill in all fields.");
-                return;
-            }
-
-            if(newPass !== confirmPass) {
-                alert("New Password and Confirm Password do not match.");
-                return;
-            }
-
-            if(newPass.length < 4) {
-                alert("Password is too short.");
-                return;
-            }
-
-            // Verify Old Password with DB
             database.ref('Users/' + currentUser.id).once('value', (snapshot) => {
                 const userData = snapshot.val();
                 if (userData.password === oldPass) {
-                    // Update Password
-                    snapshot.ref.update({
-                        password: newPass
-                    }).then(() => {
-                        alert("Password updated successfully!");
-                        // Hide Modal
-                        var modalEl = document.getElementById('changePasswordModal');
-                        var modal = bootstrap.Modal.getInstance(modalEl);
-                        modal.hide();
-                    }).catch((error) => {
-                        alert("Error updating password: " + error.message);
-                    });
-                } else {
-                    alert("Old Password is incorrect.");
-                }
+                    snapshot.ref.update({ password: newPass })
+                    .then(() => { alert("Password updated successfully!"); bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide(); })
+                    .catch((error) => { alert("Error updating password: " + error.message); });
+                } else { alert("Old Password is incorrect."); }
             });
         }
 
@@ -606,18 +599,12 @@
                 const activeBody = document.getElementById('user_active_iou_list');
                 const usedBody = document.getElementById('user_used_iou_list');
                 activeBody.innerHTML = ''; usedBody.innerHTML = '';
-                
                 let hasActive = false, hasUsed = false;
-                
                 if(snap.exists()) {
                     snap.forEach(child => {
                         const d = child.val();
                         const type = d.type || 'Delivery'; 
-                        
-                        // FILTER: Skip General and Bill Payment
-                        if(type === 'General' || type === 'Bill Payment') {
-                            return;
-                        }
+                        if(type === 'General' || type === 'Bill Payment') return;
 
                         if(d.status === 'used') {
                             hasUsed = true;
@@ -639,12 +626,7 @@
             database.ref('OnlineUsers').on('value', snap => {
                 let html = ''; let count = 0;
                 if(snap.exists()) {
-                    snap.forEach(child => {
-                        const u = child.val(); count++;
-                        html += `<div class="p-1 d-flex align-items-center border-bottom">
-                            <span class="online-dot"></span> ${u.name} <small class="text-muted ms-auto">(${u.role})</small>
-                        </div>`;
-                    });
+                    snap.forEach(child => { const u = child.val(); count++; html += `<div class="p-1 d-flex align-items-center border-bottom"><span class="online-dot"></span> ${u.name} <small class="text-muted ms-auto">(${u.role})</small></div>`; });
                 }
                 listContainer.innerHTML = html || '<div class="text-center text-muted p-2">No users online</div>';
                 countBadge.innerText = count;
@@ -685,7 +667,7 @@
             calculateRowTotal(amtInput);
         }
 
-        // Quick Entry Toggle
+        // Quick Entry Event Listener for Mode Change
         document.getElementById('q_mode').addEventListener('change', function() {
             const isDaily = (this.value === 'Daily Allowance');
             document.getElementById('q_from').disabled = isDaily;
@@ -709,7 +691,9 @@
             
             const tbody = document.getElementById('expense_table_body');
             const row = tbody.insertRow();
-            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${mode == 'Van' ? 'selected' : ''}>Van</option><option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(amount)||0) + (parseFloat(da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            
+            // Added list="locations_list" to inputs
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${from}" list="locations_list" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${to}" list="locations_list" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${mode == 'Van' ? 'selected' : ''}>Van</option><option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(amount)||0) + (parseFloat(da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
             
             const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj);
             calculateGrandTotal(); triggerAutoSave();
@@ -720,7 +704,9 @@
             const tbody = document.getElementById('expense_table_body');
             const today = document.getElementById('form_dep_date').value || new Date().toISOString().split('T')[0];
             const row = tbody.insertRow();
-            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${today}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+            
+            // Added list="locations_list" to inputs
+            row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${today}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" list="locations_list" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" list="locations_list" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
             triggerAutoSave();
         }
 
@@ -770,7 +756,9 @@
                 const data = JSON.parse(savedData);
                 document.getElementById('form_dep_date').value = data.depDate || ''; document.getElementById('form_ret_date').value = data.retDate || ''; document.getElementById('form_submit_date').value = data.submitDate || ''; document.getElementById('form_route').value = data.route || ''; document.getElementById('form_mpo').value = data.mpo || ''; document.getElementById('form_summary').value = data.summary || ''; document.getElementById('form_invoice_val').value = data.invoiceVal || ''; document.getElementById('form_return_val').value = data.returnVal || 0; document.getElementById('form_invoice_qty').value = data.invoiceQty || ''; document.getElementById('form_bundle_qty').value = data.bundleQty || ''; document.getElementById('form_iou_amount').value = data.iouAmount || 0; document.getElementById('form_remarks').value = data.remarks || ''; currentIouId = data.iouId || null; calculateSoldValue();
                 const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
-                if(data.expenses && data.expenses.length > 0) { data.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
+                
+                // Added list="locations_list" to dynamic row generation inside loadLocalDraft
+                if(data.expenses && data.expenses.length > 0) { data.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" list="locations_list" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" list="locations_list" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
                 calculateGrandTotal(); document.getElementById('auto_save_status').innerText = "Draft Restored"; document.getElementById('auto_save_status').classList.add('text-success');
             } catch (e) { console.error("Error loading draft", e); }
         }
@@ -788,17 +776,36 @@
 
         function submitOrUpdateBill(statusType) {
             const grandTotal = parseFloat(document.getElementById('grand_total').value) || 0; const iouAmount = parseFloat(document.getElementById('form_iou_amount').value) || 0; const remarks = document.getElementById('form_remarks').value;
-            const billData = { daName: currentUser.name, daId: currentUser.id, depot: currentUser.depot, depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summaryNo: document.getElementById('form_summary').value, invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0, returnVal: parseFloat(document.getElementById('form_return_val').value) || 0, soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0, invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0, bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0, totalAmount: grandTotal, originalAmount: grandTotal, status: statusType, timestamp: Date.now(), iouId: currentIouId, iouAmount: iouAmount, remarks: remarks, deduction: 0 };
-            let expenses = []; document.querySelectorAll('#expense_table_body tr').forEach(r => { expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value }); }); billData.expenses = expenses;
+            
+            let expenses = []; 
+            document.querySelectorAll('#expense_table_body tr').forEach(r => { expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value }); }); 
+            
+            const billData = { daName: currentUser.name, daId: currentUser.id, depot: currentUser.depot, depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summaryNo: document.getElementById('form_summary').value, invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0, returnVal: parseFloat(document.getElementById('form_return_val').value) || 0, soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0, invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0, bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0, totalAmount: grandTotal, originalAmount: grandTotal, status: statusType, timestamp: Date.now(), iouId: currentIouId, iouAmount: iouAmount, remarks: remarks, deduction: 0, expenses: expenses };
+            
             if (!billData.route) { alert("Please fill Route"); return; }
+            
             const basePath = 'Bills/' + billData.depot + '/' + currentUser.id;
             const processIOU = () => { if (editingBillId && originalIouId && originalIouId !== currentIouId) database.ref('IOU_List/' + originalIouId).update({ status: 'active' }); if (currentIouId) database.ref('IOU_List/' + currentIouId).update({ status: statusType === 'draft' ? 'active' : 'used' }); };
+            
+            // Function to save locations
+            const saveLocations = () => { saveNewLocations(expenses); };
+
             if (editingBillId) {
-                database.ref(basePath + '/' + editingBillId).update(billData, (error) => { if (error) alert("Error"); else { processIOU(); alert("Updated!"); cancelEdit(); document.getElementById('history-tab').click(); } });
+                database.ref(basePath + '/' + editingBillId).update(billData, (error) => { 
+                    if (error) alert("Error"); 
+                    else { processIOU(); saveLocations(); alert("Updated!"); cancelEdit(); document.getElementById('history-tab').click(); } 
+                });
             } else {
                 const newBillRef = database.ref(basePath).push();
                 newBillRef.set(billData, (error) => {
-                    if (error) alert("Error"); else { processIOU(); clearLocalDraft(); alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!"); document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = ''; document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = ''; document.getElementById('form_bundle_qty').value = ''; document.getElementById('form_remarks').value = ''; document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%'; document.getElementById('expense_table_body').innerHTML = ''; document.getElementById('form_iou_amount').value = 0; calculateSoldValue(); currentIouId = null; originalIouId = null; prepareBillEntryForm(); document.getElementById('history-tab').click(); }
+                    if (error) alert("Error"); 
+                    else { 
+                        processIOU(); 
+                        saveLocations(); // Save locations on new bill
+                        clearLocalDraft(); 
+                        alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!"); 
+                        document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = ''; document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = ''; document.getElementById('form_bundle_qty').value = ''; document.getElementById('form_remarks').value = ''; document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%'; document.getElementById('expense_table_body').innerHTML = ''; document.getElementById('form_iou_amount').value = 0; calculateSoldValue(); currentIouId = null; originalIouId = null; prepareBillEntryForm(); document.getElementById('history-tab').click(); 
+                    }
                 });
             }
         }
@@ -809,7 +816,9 @@
                 clearLocalDraft(); editingBillDaId = bill.daId; originalIouId = bill.iouId || null; currentIouId = bill.iouId || null;
                 document.getElementById('form_da_name').value = bill.daName; document.getElementById('form_depot').value = bill.depot; document.getElementById('form_dep_date').value = bill.depDate; document.getElementById('form_ret_date').value = bill.retDate; document.getElementById('form_submit_date').value = bill.submitDate || bill.depDate; document.getElementById('form_route').value = bill.route; document.getElementById('form_mpo').value = bill.mpo; document.getElementById('form_summary').value = bill.summaryNo; document.getElementById('form_invoice_val').value = bill.invoiceVal; document.getElementById('form_return_val').value = bill.returnVal; document.getElementById('form_invoice_qty').value = bill.invoiceQty; document.getElementById('form_bundle_qty').value = bill.bundleQty || 0; document.getElementById('form_iou_amount').value = bill.iouAmount || 0; document.getElementById('form_remarks').value = bill.remarks || '';
                 const tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
-                if(bill.expenses) { bill.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
+                
+                // Added list="locations_list" to dynamic row generation inside editBill
+                if(bill.expenses) { bill.expenses.forEach(exp => { const row = tbody.insertRow(); row.innerHTML = `<td><input type="date" class="form-control form-control-sm exp-date" value="${exp.date}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="${exp.from}" list="locations_list" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="${exp.to}" list="locations_list" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ${exp.mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option><option ${exp.mode == 'Auto' ? 'selected' : ''}>Auto</option><option ${exp.mode == 'Bus' ? 'selected' : ''}>Bus</option><option ${exp.mode == 'CNG' ? 'selected' : ''}>CNG</option><option ${exp.mode == 'Van' ? 'selected' : ''}>Van</option><option ${exp.mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option><option ${exp.mode == 'Tempo' ? 'selected' : ''}>Tempo</option><option ${exp.mode == 'Pickup' ? 'selected' : ''}>Pickup</option><option ${exp.mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option><option ${exp.mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="${exp.amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="${exp.da}" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="${(parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0)}" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`; const selectObj = row.querySelector('.exp-mode'); toggleRowInputs(selectObj); }); }
                 calculateGrandTotal(); calculateSoldValue(); editingBillId = billId; document.getElementById('main_submit_btn').innerText = "Update Bill"; document.getElementById('main_submit_btn').classList.remove('btn-success'); document.getElementById('main_submit_btn').classList.add('btn-warning'); document.getElementById('cancel_edit_btn').classList.remove('hidden'); document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); document.getElementById('entryTab').classList.add('show', 'active'); document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); document.getElementById('entry-tab').classList.add('active');
             });
         }
@@ -848,7 +857,6 @@
                 
                 let billsArray = [];
                 snapshot.forEach(child => { billsArray.push({ key: child.key, ...child.val() }); });
-                // Sort by date descending
                 billsArray.sort((a, b) => new Date(b.submitDate || b.depDate || 0) - new Date(a.submitDate || a.depDate || 0));
 
                 billsArray.forEach(bill => {
@@ -871,4 +879,4 @@
         function formatDate(dateStr) { if (!dateStr) return ''; if (dateStr.indexOf('-') !== 4) return dateStr; const parts = dateStr.split('-'); return `${parts[2]}-${parts[1]}-${parts[0]}`; }
     </script>
 </body>
-</html>
+</html>                     
