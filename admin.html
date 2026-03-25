@@ -6,6 +6,8 @@
     <title>Bill Managment System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- SheetJS Library for Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { background-color: #C0C0C0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 14px; }
         
@@ -483,6 +485,27 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- EXCEL IMPORT/EXPORT SECTION -->
+                            <div class="card dash-card no-print border border-primary">
+                                <div class="card-header bg-primary text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Excel Operations</h6>
+                                </div>
+                                <div class="card-body p-2">
+                                    <div class="d-grid gap-2">
+                                        <button onclick="exportBillsToExcel()" class="btn btn-success btn-sm">
+                                            <i class="bi bi-download me-1"></i> Export Pending Bills to Excel
+                                        </button>
+                                        <div class="input-group">
+                                            <input type="file" id="excel_upload_input" class="form-control form-control-sm" accept=".xlsx, .xls">
+                                            <button onclick="importBillsFromExcel('excel_upload_input')" class="btn btn-warning btn-sm">
+                                                <i class="bi bi-upload me-1"></i> Import Bills
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">Note: Excel file must match the format of exported bills.</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -584,8 +607,17 @@
                          <div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Any specific notes..." oninput="triggerAutoSave()"></div>
                     </div>
                     
+                    <!-- QUICK ENTRY & EXCEL UPLOAD SECTION -->
                     <div class="quick-entry-card no-print">
-                        <h6 class="text-primary mb-2"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="text-primary mb-0"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6>
+                            <!-- NEW: Excel Upload Button for Users -->
+                            <div class="input-group input-group-sm" style="max-width: 220px;">
+                                <input type="file" id="user_exp_excel_input" class="form-control form-control-sm" accept=".xlsx, .xls" style="font-size: 10px;">
+                                <button class="btn btn-info text-white" onclick="importExpensesToTable()">Excel Import</button>
+                            </div>
+                        </div>
+                        
                         <div class="row g-1">
                             <div class="col-4">
                                 <label>From</label>
@@ -622,6 +654,7 @@
                                 <button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button>
                             </div>
                         </div>
+                        <small class="text-muted d-block mt-1">Excel Format: Date, From, To, Mode, Amount, DA</small>
                     </div>
 
                     <div class="table-responsive">
@@ -1303,8 +1336,6 @@
                         const selectObj = row.querySelector('.exp-mode');
                         toggleRowInputs(selectObj);
                     });
-                } else {
-                    // If no expenses in draft, leave table empty
                 }
                 
                 calculateGrandTotal();
@@ -1343,7 +1374,6 @@
                 document.getElementById('form_ret_date').value = today;
                 document.getElementById('form_submit_date').value = today;
                 
-                // Clear Table completely
                 document.getElementById('expense_table_body').innerHTML = '';
                 
                 document.getElementById('grand_total').value = '0'; 
@@ -2229,7 +2259,7 @@
                         const badge = d.status === 'used' ? '<span class="badge bg-secondary">Used</span>' : '<span class="badge bg-success">Active</span>';
                         const typeBadge = d.type ? `<span class="badge bg-info">${d.type}</span>` : '';
                         
-                        tbody.innerHTML += `<tr class="${d.status === 'used' ? 'table-secondary' : ''}"><td>${count++}</td><td>${formatDate(d.date)}</td><td>${d.daName}</td><td>${typeBadge}</td><td>${d.territory}</td><td>${d.mpo}</td><td>${d.summary}</td><td>${d.sales || 0}</td><td>${d.returnVal || 0}</td><td>${iSold}</td><td>${d.qty}</td><td>${d.bundleQty || 0}</td><td>${d.taka}</td><td>${d.percent}%</td><td>${badge} <button class="btn btn-sm btn-warning" onclick="editIOU('${child.key}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU('${child.key}')">X</button></td></tr>`;
+                        tbody.innerHTML += `<tr class="${d.status === 'used' ? 'table-secondary' : ''}"><td>${count++}</td><td>${formatDate(d.date)}</td><td>${d.daName}</td><td>${typeBadge}</td><td>${d.territory}</td><td>${d.mpo}</td><td>${d.summary}</td><td>${d.sales || 0}</td><td>${d.returnVal || 0}</td><td>${iSold}</td><td>${d.qty}</td><td>${d.bundleQty || 0}</td><td>${d.taka}</td><td>${d.percent}%</td><td>${badge} <button class="btn btn-sm btn-warning" onclick="editIOU('${child.key}')">Edit</button>                      <button class="btn btn-sm btn-danger" onclick="deleteIOU('${child.key}')">X</button></td></tr>`;
                     }
                 });
                 document.getElementById('iou_tot_sales').innerText = tSales; 
@@ -2270,26 +2300,20 @@
                 document.getElementById('form_invoice_val').value = iou.soldVal || iou.sales; 
                 document.getElementById('form_return_val').value = iou.returnVal || 0; 
                 document.getElementById('form_invoice_qty').value = iou.qty; 
-                
-                // FIX: Fill Bundle Qty
                 document.getElementById('form_bundle_qty').value = iou.bundleQty || 0;
                 
                 calculateSoldValue();
                 
-                // FIX: Do NOT automatically add a row. Leave table empty or strictly empty.
                 const tbody = document.getElementById('expense_table_body');
-                tbody.innerHTML = ''; // Ensure strictly empty
-                
-                // FIX: Do NOT auto-fill a row with amount.
-                // User must use Quick Entry
-                                triggerAutoSave(); 
+                tbody.innerHTML = ''; 
+                triggerAutoSave(); 
                 
                 document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('show', 'active')); 
                 document.getElementById('entryTab').classList.add('show', 'active');
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active')); 
                 document.getElementById('entry-tab').classList.add('active');
                 
-                alert("Form Auto-filled! Please add expense rows manually using Quick Entry.");
+                alert("Form Auto-filled! Please add expense rows manually or use Excel Import.");
             });
         }
 
@@ -2575,7 +2599,7 @@
             }
 
             const daName = document.getElementById('summary_da').selectedOptions[0].text;
-            let tSales = 0, tTaka = 0, tDA = 0, tNet = 0;
+            let tSales = 0,            tTaka = 0, tDA = 0, tNet = 0;
 
             database.ref('Bills/' + depot + '/' + daId).once('value', snap => {
                 if(!snap.exists()) {
@@ -2586,7 +2610,7 @@
                 let billsArray = [];
                 snap.forEach(child => {
                     const bill = child.val();
-                    if(bill.status === 'green') billsArray.push(bill);
+                    if(bill.status === 'green') billsArray.push({id: child.key, ...bill});
                 });
 
                 if(billsArray.length === 0) {
@@ -2601,20 +2625,16 @@
                     if(monthVal && !isDateInMonth(bill.submitDate || bill.depDate, monthVal)) return;
 
                     const netSales = bill.soldVal || (bill.invoiceVal - bill.returnVal);
-                    const netAmount = bill.totalAmount || 0; // Final Payable Amount
+                    const netAmount = bill.totalAmount || 0; 
                     
-                    // Calculate DA from Expenses
                     let sumDA = 0;
                     if(bill.expenses && Array.isArray(bill.expenses)) {
                         bill.expenses.forEach(exp => {
-                            // DA is stored in 'da' field of expense object (based on input logic)
                             sumDA += (parseFloat(exp.da) || 0);
                         });
                     }
 
-                    // Taka = Net Amount - DA (As per user formula: Net Amount = Taka + DA)
                     const takaVal = netAmount - sumDA;
-
                     const costPct = netSales > 0 ? ((netAmount / netSales) * 100).toFixed(2) : "0.00";
 
                     tSales += netSales;
@@ -2973,6 +2993,570 @@
                     loadDAListForSummary();
                 }
             });
+        }
+
+        // ================= EXCEL IMPORT / EXPORT LOGIC =================
+
+        function exportBillsToExcel() {
+            if(!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'superadmin')) {
+                alert("Unauthorized");
+                return;
+            }
+
+            database.ref('Bills').once('value', (snapshot) => {
+                if(!snapshot.exists()) {
+                    alert("No bills found to export.");
+                    return;
+                }
+
+                let data = [];
+                let header = ["BillID", "Submit Date", "DA Name", "Depot", "Route", "Invoice", "Return", "Sold", "Date", "From", "To", "Mode", "Amount", "DA Exp", "Total", "Deduction", "Status"];
+                data.push(header);
+
+                snapshot.forEach(depotSnap => {
+                    depotSnap.forEach(daSnap => {
+                        daSnap.forEach(billSnap => {
+                            const bill = billSnap.val();
+                            // Only export Pending (red) bills for checking
+                            if(bill.status === 'red') {
+                                if(bill.expenses) {
+                                    bill.expenses.forEach(exp => {
+                                        data.push([
+                                            billSnap.key,
+                                            bill.submitDate || bill.depDate,
+                                            bill.daName,
+                                            bill.depot,
+                                            bill.route,
+                                            bill.invoiceVal,
+                                            bill.returnVal,
+                                            bill.soldVal,
+                                            exp.date,
+                                            exp.from,
+                                            exp.to,
+                                            exp.mode,
+                                            exp.amount,
+                                            exp.da,
+                                            (parseFloat(exp.amount)||0) + (parseFloat(exp.da)||0),
+                                            exp.deduction || 0,
+                                            bill.status
+                                        ]);
+                                    });
+                                }
+                            }
+                        });
+                    });
+                });
+
+                if(data.length === 1) {
+                    alert("No pending bills to export.");
+                    return;
+                }
+
+                const ws = XLSX.utils.aoa_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Pending Bills");
+                XLSX.writeFile(wb, "Pending_Bills_" + new Date().toISOString().split('T')[0] + ".xlsx");
+            });
+        }
+
+        // Admin Import Function
+        function importBillsFromExcel(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input.files || !input.files[0]) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    if(jsonData.length < 2) {
+                        alert("Empty file or invalid format.");
+                        return;
+                    }
+
+                    let billGroups = {};
+                    
+                    for(let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if(!row || row.length < 10) continue;
+
+                        const billId = row[0];
+                        const daName = row[2];
+                        
+                        let daId = null;
+                        Object.keys(daListCache).forEach(key => {
+                            if(daListCache[key] === daName) daId = key;
+                        });
+
+                        if(!daId) {
+                            console.warn("DA not found for name: " + daName);
+                            continue;
+                        }
+
+                        if(!billGroups[billId]) {
+                            billGroups[billId] = {
+                                data: {
+                                    daName: daName,
+                                    daId: daId,
+                                    depot: row[3] || 'Kushtia',
+                                    route: row[4] || '',
+                                    invoiceVal: parseFloat(row[5]) || 0,
+                                    returnVal: parseFloat(row[6]) || 0,
+                                    soldVal: parseFloat(row[7]) || 0,
+                                    submitDate: row[1] || new Date().toISOString().split('T')[0],
+                                    status: 'red',
+                                    expenses: [],
+                                    timestamp: Date.now()
+                                },
+                                new: (billId === 'NEW' || billId === 'new')
+                            };
+                        }
+
+                        billGroups[billId].data.expenses.push({
+                            date: row[8] || billGroups[billId].data.submitDate,
+                            from: row[9] || '',
+                            to: row[10] || '',
+                            mode: row[11] || 'Rickshaw',
+                            amount: parseFloat(row[12]) || 0,
+                            da: parseFloat(row[13]) || 0,
+                            deduction: parseFloat(row[15]) || 0
+                        });
+                    }
+
+                    let updates = {};
+                    let newCount = 0;
+                    let updateCount = 0;
+
+                    Object.keys(billGroups).forEach(key => {
+                        const item = billGroups[key];
+                        
+                        let totalAmt = 0;
+                        item.data.expenses.forEach(ex => {
+                            totalAmt += ((parseFloat(ex.amount)||0) + (parseFloat(ex.da)||0) - (parseFloat(ex.deduction)||0));
+                        });
+                        item.data.totalAmount = totalAmt;
+                        item.data.originalAmount = totalAmt;
+
+                        const basePath = 'Bills/' + item.data.depot + '/' + item.data.daId;
+                        
+                        if(item.new) {
+                            const newRef = database.ref(basePath).push();
+                            updates[basePath + '/' + newRef.key] = item.data;
+                            newCount++;
+                        } else {
+                            updates[basePath + '/' + key] = item.data;
+                            updateCount++;
+                        }
+                    });
+
+                    if(Object.keys(updates).length > 0) {
+                        database.ref().update(updates).then(() => {
+                            alert(`Import Successful!\nNew Bills: ${newCount}\nUpdated Bills: ${updateCount}`);
+                            input.value = '';
+                        }).catch(err => {
+                            alert("Import Failed: " + err.message);
+                        });
+                    } else {
+                        alert("No valid data found to import.");
+                    }
+
+                } catch (ex) {
+                    console.error(ex);
+                    alert("Error parsing file. Make sure it is a valid Excel file.");
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ================= USER EXCEL IMPORT (NEW FEATURE) =================
+        
+        function importExpensesToTable() {
+            const input = document.getElementById('user_exp_excel_input');
+            if (!input.files || !input.files[0]) {
+                alert("Please select an Excel file.");
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    // Expecting columns: Date(0), From(1), To(2), Mode(3), Amount(4), DA(5)
+                    // Skip header row if it looks like a header
+                    let startIndex = 0;
+                    if(jsonData.length > 0 && typeof jsonData[0][0] === 'string' && jsonData[0][0].toLowerCase().includes('date')) {
+                        startIndex = 1;
+                    }
+
+                    const tbody = document.getElementById('expense_table_body');
+                    const depDate = document.getElementById('form_dep_date').value;
+
+                    let importCount = 0;
+
+                    for (let i = startIndex; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if (!row || row.length === 0) continue; // Skip empty rows
+
+                        // Handle Date
+                        let dateVal = depDate; // Default
+                        if (row[0]) {
+                            if (typeof row[0] === 'number') {
+                                // Excel Serial Date
+                                const date = new Date((row[0] - (25567 + 2)) * 86400 * 1000);
+                                dateVal = date.toISOString().split('T')[0];
+                            } else {
+                                // String Date (basic cleanup)
+                                dateVal = String(row[0]).trim();
+                            }
+                        }
+
+                        const from = row[1] || '';
+                        const to = row[2] || '';
+                        const mode = row[3] || 'Rickshaw';
+                        const amount = parseFloat(row[4]) || 0;
+                        const daExp = parseFloat(row[5]) || 0;
+
+                        const rowTotal = amount + daExp;
+
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><input type="date" class="form-control form-control-sm exp-date" value="${dateVal}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-from" value="${from}" oninput="triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-to" value="${to}" oninput="triggerAutoSave()"></td>
+                            <td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()">
+                                <option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option>
+                                <option ${mode == 'Auto' ? 'selected' : ''}>Auto</option>
+                                <option ${mode == 'Bus' ? 'selected' : ''}>Bus</option>
+                                <option ${mode == 'CNG' ? 'selected' : ''}>CNG</option>
+                                <option ${mode == 'Van' ? 'selected' : ''}>Van</option>
+                                <option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option>
+                                <option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option>
+                                <option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option>
+                                <option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option>
+                                <option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option>
+                            </select></td>
+                            <td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="number" class="form-control form-control-sm exp-da" value="${daExp}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                            <td><input type="text" class="form-control form-control-sm exp-total" value="${rowTotal}" readonly></td>
+                            <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+                        
+                        tbody.appendChild(tr);
+                        
+                        // Trigger toggle for mode specific logic
+                        toggleRowInputs(tr.querySelector('.exp-mode'));
+                        
+                        importCount++;
+                    }
+
+                    calculateGrandTotal();
+                    triggerAutoSave();
+                    alert(`Imported ${importCount} rows successfully!`);
+                    input.value = ''; // Clear file
+
+                } catch (ex) {
+                    console.error(ex);
+                    alert("Error reading file. Ensure columns: Date, From, To, Mode, Amount, DA.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+                // ================= AUTO IMPORT FIX =================
+        
+        // 1. User Expense Auto Import (Bill Entry Tab)
+        const userExpInput = document.getElementById('user_exp_excel_input');
+        if(userExpInput) {
+            userExpInput.addEventListener('change', function() {
+                // Check if file is selected
+                if (this.files && this.files[0]) {
+                    importExpensesToTable(); 
+                }
+            });
+        }
+
+        // 2. Admin Bill Auto Import (Dashboard Tab)
+        const adminExpInput = document.getElementById('excel_upload_input');
+        if(adminExpInput) {
+            adminExpInput.addEventListener('change', function() {
+                 if (this.files && this.files[0]) {
+                    importBillsFromExcel('excel_upload_input');
+                }
+            });
+        }
+
+        // ================= UPDATED IMPORT FUNCTIONS =================
+
+        // Updated User Import Function
+        function importExpensesToTable() {
+    // 1. Check if SheetJS library is loaded
+    if (typeof XLSX === 'undefined') {
+        alert("Excel Library not loaded. Please check internet connection.");
+        return;
+    }
+
+    const input = document.getElementById('user_exp_excel_input');
+    if (!input.files || !input.files[0]) {
+        alert("Please select an Excel file.");
+        return;
+    }
+
+    const file = input.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true }); // cellDates: true helps with dates
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            
+            // Convert to JSON. header:1 means array of arrays
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+            if (jsonData.length <= 1) {
+                alert("Excel file is empty or has only headers.");
+                return;
+            }
+
+            const tbody = document.getElementById('expense_table_body');
+            const depDate = document.getElementById('form_dep_date').value;
+            let importCount = 0;
+
+            // Determine start index (Skip header if exists)
+            let startIndex = 0;
+            if (jsonData.length > 0 && typeof jsonData[0][0] === 'string' && jsonData[0][0].toLowerCase().includes('date')) {
+                startIndex = 1;
+            }
+
+            for (let i = startIndex; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row || row.length === 0) continue;
+
+                // --- Date Processing ---
+                let dateVal = depDate; 
+                if (row[0]) {
+                    if (row[0] instanceof Date) {
+                        // If JS Date object
+                        dateVal = row[0].toISOString().split('T')[0];
+                    } else if (typeof row[0] === 'number') {
+                        // If Excel Serial Date
+                        const date = new Date((row[0] - (25567 + 2)) * 86400 * 1000);
+                        dateVal = date.toISOString().split('T')[0];
+                    } else {
+                        // If String (try to format safely)
+                        let d = new Date(row[0]);
+                        if (!isNaN(d.getTime())) {
+                            dateVal = d.toISOString().split('T')[0];
+                        } else {
+                            dateVal = String(row[0]);
+                        }
+                    }
+                }
+
+                // --- Column Mapping ---
+                // Expected: Date(0), From(1), To(2), Mode(3), Amount(4), DA(5)
+                let from = row[1] || '';
+                let to = row[2] || '';
+                let mode = row[3] || 'Rickshaw';
+                let amount = parseFloat(row[4]) || 0;
+                let daExp = parseFloat(row[5]) || 0;
+
+                // --- Smart Logic for Daily Allowance ---
+                // If Mode is Daily Allowance, but user put value in Amount column instead of DA column
+                if (mode === 'Daily Allowance') {
+                    if (amount > 0 && daExp === 0) {
+                        daExp = amount; // Move amount to DA
+                        amount = 0;     // Reset transport amount
+                    }
+                    // Clear route for daily allowance automatically if empty
+                    if(!from) from = '-';
+                    if(!to) to = '-';
+                }
+
+                const rowTotal = amount + daExp;
+
+                // --- Create Table Row ---
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><input type="date" class="form-control form-control-sm exp-date" value="${dateVal}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                    <td><input type="text" class="form-control form-control-sm exp-from" value="${from}" oninput="triggerAutoSave()"></td>
+                    <td><input type="text" class="form-control form-control-sm exp-to" value="${to}" oninput="triggerAutoSave()"></td>
+                    <td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()">
+                        <option ${mode == 'Rickshaw' ? 'selected' : ''}>Rickshaw</option>
+                        <option ${mode == 'Auto' ? 'selected' : ''}>Auto</option>
+                        <option ${mode == 'Bus' ? 'selected' : ''}>Bus</option>
+                        <option ${mode == 'CNG' ? 'selected' : ''}>CNG</option>
+                        <option ${mode == 'Van' ? 'selected' : ''}>Van</option>
+                        <option ${mode == 'Motorcycle' ? 'selected' : ''}>Motorcycle</option>
+                        <option ${mode == 'Tempo' ? 'selected' : ''}>Tempo</option>
+                        <option ${mode == 'Pickup' ? 'selected' : ''}>Pickup</option>
+                        <option ${mode == 'Daily Allowance' ? 'selected' : ''}>Daily Allowance</option>
+                        <option ${mode == 'Labour Bill' ? 'selected' : ''}>Labour Bill</option>
+                    </select></td>
+                    <td><input type="number" class="form-control form-control-sm exp-amount" value="${amount}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                    <td><input type="number" class="form-control form-control-sm exp-da" value="${daExp}" oninput="calculateRowTotal(this); triggerAutoSave()"></td>
+                    <td><input type="text" class="form-control form-control-sm exp-total" value="${rowTotal}" readonly></td>
+                    <td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>`;
+                
+                tbody.appendChild(tr);
+
+                // Trigger logic to disable inputs if mode is Daily Allowance
+                const selectObj = tr.querySelector('.exp-mode');
+                toggleRowInputs(selectObj);
+                
+                importCount++;
+            }
+
+            calculateGrandTotal();
+            triggerAutoSave();
+            
+            alert(`Import Successful! ${importCount} rows added.`);
+            input.value = ''; // Clear file input
+
+        } catch (ex) {
+            console.error("Import Error:", ex);
+            alert("Error reading file. Please check format.\nColumns: Date, From, To, Mode, Amount, DA");
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+        // Updated Admin Import Function
+        function importBillsFromExcel(inputId) {
+            const input = document.getElementById(inputId);
+            if (!input.files || !input.files[0]) {
+                alert("Please select a file first.");
+                return;
+            }
+
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                    if(jsonData.length < 2) {
+                        alert("Empty file or invalid format.");
+                        return;
+                    }
+
+                    let billGroups = {};
+                    
+                    for(let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        if(!row || row.filter(cell => cell !== '').length === 0) continue;
+
+                        // Columns: BillID(0), Submit Date(1), DA Name(2), Depot(3), Route(4), Invoice(5)...
+                        const billId = String(row[0]).trim();
+                        const daName = row[2];
+                        
+                        // Find DA ID from name
+                        let daId = null;
+                        Object.keys(daListCache).forEach(key => {
+                            if(daListCache[key] === daName) daId = key;
+                        });
+
+                        // If DA ID not found, skip or alert
+                        if(!daId) {
+                            console.warn("Skipped row, DA not found: " + daName);
+                            continue;
+                        }
+
+                        // Initialize group if not exists
+                        if(!billGroups[billId]) {
+                            billGroups[billId] = {
+                                data: {
+                                    daName: daName,
+                                    daId: daId,
+                                    depot: row[3] || 'Kushtia',
+                                    route: row[4] || '',
+                                    invoiceVal: parseFloat(row[5]) || 0,
+                                    returnVal: parseFloat(row[6]) || 0,
+                                    soldVal: parseFloat(row[7]) || 0,
+                                    submitDate: row[1] || new Date().toISOString().split('T')[0],
+                                    status: 'red',
+                                    expenses: [],
+                                    timestamp: Date.now()
+                                },
+                                isNew: (billId === 'NEW' || billId === 'new' || billId === '')
+                            };
+                        }
+
+                        // Add Expense
+                        billGroups[billId].data.expenses.push({
+                            date: row[8] || billGroups[billId].data.submitDate,
+                            from: row[9] || '',
+                            to: row[10] || '',
+                            mode: row[11] || 'Rickshaw',
+                            amount: parseFloat(row[12]) || 0,
+                            da: parseFloat(row[13]) || 0,
+                            deduction: parseFloat(row[15]) || 0
+                        });
+                    }
+
+                    let updates = {};
+                    let newCount = 0;
+                    let updateCount = 0;
+
+                    Object.keys(billGroups).forEach(key => {
+                        const item = billGroups[key];
+                        
+                        // Calculate Totals
+                        let totalAmt = 0;
+                        item.data.expenses.forEach(ex => {
+                            totalAmt += ((parseFloat(ex.amount)||0) + (parseFloat(ex.da)||0) - (parseFloat(ex.deduction)||0));
+                        });
+                        item.data.totalAmount = totalAmt;
+                        item.data.originalAmount = totalAmt;
+
+                        const basePath = 'Bills/' + item.data.depot + '/' + item.data.daId;
+                        
+                        if(item.isNew) {
+                            // Create New Bill
+                            const newRef = database.ref(basePath).push();
+                            updates[basePath + '/' + newRef.key] = item.data;
+                            newCount++;
+                        } else {
+                            // Update Existing Bill
+                            updates[basePath + '/' + key] = item.data;
+                            updateCount++;
+                        }
+                    });
+
+                    if(Object.keys(updates).length > 0) {
+                        database.ref().update(updates).then(() => {
+                            alert(`Import Successful!\nNew Bills: ${newCount}\nUpdated Bills: ${updateCount}`);
+                            input.value = '';
+                        }).catch(err => {
+                            alert("Import Failed: " + err.message);
+                        });
+                    } else {
+                        alert("No valid data found or DA names didn't match.");
+                    }
+
+                } catch (ex) {
+                    console.error(ex);
+                    alert("Error parsing file.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
         }
     </script>
 </body>
