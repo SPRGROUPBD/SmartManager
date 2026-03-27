@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MONICO PHARMA LTD - Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #0056b3;
+            --secondary: #004085;
+            --dark: #343a40;
+            --sidebar-width: 260px;
+            --success: #28a745;
+            --warning: #ffc107;
+            --info: #17a2b8;
+            --danger: #dc3545;
+        }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { margin: 0; background-color: #f4f7f6; }
+
+        /* Login Screen */
+        .login-container { height: 100vh; display: flex; justify-content: center; align-items: center; padding: 15px; }
+        .login-box { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        .login-box h2 { color: var(--primary); text-align: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; font-size: 13px; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; width: auto; }
+        
+        /* Dashboard Layout */
+        .dashboard { display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        .sidebar { 
+            width: var(--sidebar-width); 
+            background: var(--dark); 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            transition: transform 0.3s ease;
+            position: fixed;
+            height: 100%;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar { transform: translateX(0); }
+            .main-content { margin-left: var(--sidebar-width); }
+            .menu-toggle { display: none !important; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; width: 100%; }
+            .menu-toggle { display: block; }
+            .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none; }
+            .overlay.active { display: block; }
+        }
+
+        .brand { padding: 20px; background: var(--secondary); text-align: center; }
+        .brand h2 { margin: 0; font-size: 18px; color: white; }
+        .brand p { margin: 5px 0 0; font-size: 11px; opacity: 0.7; }
+        
+        .user-info { padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 13px; }
+        .user-info span { font-weight: bold; color: #ffc107; display: block; margin-bottom: 5px; }
+
+        .nav-menu { flex: 1; padding: 15px 0; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; padding: 12px 20px; color: #ccc; cursor: pointer; transition: 0.2s; text-decoration: none; }
+        .nav-item:hover, .nav-item.active { background: var(--primary); color: white; }
+        .nav-item i { width: 25px; margin-right: 10px; }
+
+        /* Main Content */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; width: 100%; }
+        .top-bar { height: 50px; background: white; border-bottom: 1px solid #ddd; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; }
+        .content-area { flex: 1; padding: 20px; overflow-y: auto; }
+
+        /* Cards & Tables */
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 25px; margin-bottom: 20px; }
+        .card-header { border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; font-size: 20px; text-align: center; color: var(--primary); text-transform: uppercase; font-weight: bold; }
+        
+        /* Dashboard Widgets */
+        .widget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .widget { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; }
+        .widget-info h3 { margin: 0; font-size: 28px; color: var(--dark); }
+        .widget-info p { margin: 5px 0 0; color: #666; font-size: 14px; }
+        .widget-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+        .bg-primary { background: var(--primary); }
+        .bg-success { background: var(--success); }
+        .bg-warning { background: var(--warning); }
+        .bg-danger { background: var(--danger); }
+        .bg-info { background: var(--info); }
+
+        /* Table Styles */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 0; min-width: 600px; }
+        th, td { padding: 4px; border: 1px solid #000; text-align: center; font-size: 11px; }
+        th { background: #f0f0f0; font-weight: bold; }
+        
+        @media (max-width: 600px) {
+            th, td { padding: 2px; font-size: 9px; }
+            .info-label { width: 80px; font-size: 9px; }
+            .info-value input { font-size: 9px; padding: 2px; }
+            .card { padding: 10px; }
+            .card-header { font-size: 16px; }
+        }
+        
+        /* Info Grid */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000; margin-bottom: 10px; }
+        .info-cell { display: flex; border-bottom: 1px solid #000; }
+        .info-cell:nth-child(odd) { border-right: 1px solid #000; }
+        
+        .info-label { padding: 4px 8px; font-weight: bold; font-size: 11px; background: #f8f9fa; width: 130px; border-right: 1px solid #000; display: flex; align-items: center; }
+        .info-value { flex: 1; padding: 0 5px; display: flex; align-items: center; }
+        .info-value input { border: none; width: 100%; font-size: 11px; padding: 4px; }
+        .info-value input[readonly] { background: transparent; }
+        
+        table select { border: none; background: transparent; width: 100%; font-size: 11px; padding: 2px; }
+        table select:disabled { background: #f0f0f0; color: #555; font-weight: bold; }
+        
+        .hidden { display: none; }
+        .status-msg { font-size: 12px; margin-top: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+        .auto-save-indicator { font-size: 11px; color: #666; margin-left: 10px; font-style: italic; }
+
+        /* Signature Area */
+        .signature-area { display: flex; justify-content: space-between; margin-top: 30px; width: 100%; flex-wrap: wrap; }
+        .sig-box { width: 24%; text-align: center; font-size: 11px; margin-bottom: 10px; }
+        @media (max-width: 500px) { .sig-box { width: 100%; margin-top: 15px; } }
+        .sig-name { font-weight: bold; min-height: 15px; border-bottom: 1px solid #000; margin-bottom: 2px; padding-bottom: 2px; }
+
+        /* Status Badges */
+        .badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+
+        /* Area Grouping Style */
+        .area-group-header { background: #e9ecef; padding: 8px; font-weight: bold; margin-top: 10px; border-left: 4px solid var(--primary); }
+        
+        /* ==================== PRINT STYLES (Provided by User) ==================== */
+        @media print {
+            @page { size: A4; margin: 5mm; }
+            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; zoom: 90%; }
+            .sidebar, .top-bar, .no-print, .status-msg, .btn, .nav-menu, .menu-toggle, .overlay, .widget-grid { display: none !important; }
+            .main-content, .content-area { width: 100%; margin: 0; padding: 0; display: block; overflow: visible; }
+            .card { box-shadow: none; border: none; margin: 0; padding: 0; }
+            .card-header { border-bottom: 2px solid #000; font-size: 16px; margin-bottom: 3px; padding-bottom: 3px; text-align: center; }
+            .address-text { text-align: center; font-size: 9px; margin-bottom: 3px; }
+            h3 { font-size: 14px; margin: 5px 0; text-align: center; }
+            .info-grid { display: table !important; width: 100%; border-collapse: collapse !important; border: 1px solid #000 !important; margin-bottom: 5px; }
+            .info-cell { display: table-row !important; }
+            .info-label, .info-value { display: table-cell !important; border: 1px solid #000 !important; padding: 2px 4px; font-size: 9pt; }
+            .info-label { font-weight: bold; width: 35%; background: #f8f9fa !important; }
+            .info-value input { border: none !important; font-size: 9pt; width: 100%; background: transparent !important; }
+            table { width: 100%; border-collapse: collapse !important; font-size: 9pt; }
+            th, td { border: 1px solid #000 !important; padding: 2px; text-align: center; }
+            th { background: #eee !important; }
+            .signature-area { margin-top: 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h2>MONICO PHARMA LTD</h2>
+            <div class="form-group">
+                <label>User ID</label>
+                <input type="text" id="loginUsername" placeholder="Enter User ID">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" placeholder="Enter Password">
+            </div>
+            <button onclick="handleLogin()" class="btn btn-primary" style="width:100%;">Login</button>
+            <div id="loginError" class="status-msg error" style="text-align:center; margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboardScreen" class="dashboard hidden">
+        
+        <!-- Sidebar -->
+        <div class="sidebar no-print" id="sidebar">
+            <div class="brand">
+                <h2>MONICO PHARMA</h2>
+                <p>Health. We Care.</p>
+            </div>
+            <div class="user-info">
+                <span id="sidebarName">User Name</span>
+                <div id="sidebarRole">Role: User</div>
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-item active" onclick="showSection('home')">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a class="nav-item" onclick="showSection('tourPlan')">
+                    <i class="fas fa-calendar-alt"></i> Tour Plan Entry
+                </a>
+                <a class="nav-item" onclick="showSection('tourHistory')">
+                    <i class="fas fa-history"></i> Tour Plan History
+                </a>
+                <a class="nav-item hidden" id="menuUserMgmt" onclick="showSection('userMgmt')">
+                    <i class="fas fa-users-cog"></i> User Management
+                </a>
+            </nav>
+            <div style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.1);">
+                <button onclick="logout()" class="btn btn-danger" style="width:100%;">Logout</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="top-bar no-print">
+                <button class="btn btn-primary menu-toggle" onclick="toggleSidebar()" style="padding: 5px 10px;">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span id="topBarDate"></span>
+                <button id="printBtn" onclick="window.print()" class="btn btn-sm btn-primary no-print"><i class="fas fa-print"></i> Print</button>
+            </div>
+            
+            <div class="content-area">
+                
+                <!-- SECTION: HOME DASHBOARD -->
+                <div id="sectionHome" class="section">
+                    <div class="card">
+                        <div class="card-header">Dashboard Overview</div>
+                        <div class="widget-grid">
+                            <div class="widget">
+                                <div class="widget-info">
+                                    <h3 id="stat-pending">0</h3>
+                                    <p>Pending Approvals</p>
+                                </div>
+                                <div class="widget-icon bg-warning">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                            </div>
+                            <div class="widget">
+                                <div class="widget-info">
+                                    <h3 id="stat-rejected">0</h3>
+                                    <p>Rejected Plans</p>
+                                </div>
+                                <div class="widget-icon bg-danger">
+                                    <i class="fas fa-times-circle"></i>
+                                </div>
+                            </div>
+                             <div class="widget">
+                                <div class="widget-info">
+                                    <h3 id="stat-approved">0</h3>
+                                    <p>Approved Plans</p>
+                                </div>
+                                <div class="widget-icon bg-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="color:#666;">Welcome, <span id="welcomeName" style="font-weight:bold;"></span>!</p>
+                    </div>
+                </div>
+
+                <!-- SECTION: Tour Plan Entry -->
+                <div id="sectionTourPlan" class="section hidden">
+                    <div class="card" id="tourPlanCard">
+                        <div class="card-header">MONICO PHARMA LTD</div>
+                        <div class="address-text">8/1, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</div>
+                        <h3 style="text-align:center; margin:0 0 10px 0; font-size:16px; font-weight:bold;">MONTHLY TOUR PLAN</h3>
+                        
+                        <div class="info-grid">
+                            <div class="info-cell"><div class="info-label">Emp. ID :</div><div class="info-value"><input type="text" id="tp_empId" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Month :</div><div class="info-value"><select id="tp_month" onchange="handleMonthChange()" style="border:none; width:100%; font-size:11px;"></select></div></div>
+                            <div class="info-cell"><div class="info-label">Name of Emp :</div><div class="info-value"><input type="text" id="tp_name" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Designation :</div><div class="info-value"><input type="text" id="tp_designation" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Territory :</div><div class="info-value"><input type="text" id="tp_territory" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Area Manager :</div><div class="info-value"><input type="text" id="tp_areaManager" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Area :</div><div class="info-value"><input type="text" id="tp_area" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">RSM :</div><div class="info-value"><input type="text" id="tp_rsm" readonly></div></div>
+                            <div class="info-cell"><div class="info-label">Region :</div><div class="info-value"><input type="text" id="tp_region" readonly></div></div>
+                        </div>
+
+                        <form id="tourPlanForm">
+                            <div class="table-container">
+                                <table>
+                                    <thead><tr><th style="width:5%">Date</th><th style="width:15%">HQ/EX.HQ.</th><th>Morning</th><th>Evening</th></tr></thead>
+                                    <tbody id="tourPlanTableBody"></tbody>
+                                </table>
+                            </div>
+
+                            <div class="signature-area">
+                                <div class="sig-box"><div id="sig_prepared" class="sig-name"></div><small>Prepared by</small></div>
+                                <div class="sig-box"><div id="sig_am" class="sig-name"></div><small>Checked by AM</small></div>
+                                <div class="sig-box"><div id="sig_rsm" class="sig-name"></div><small>Re-checked by RSM</small></div>
+                                <div class="sig-box"><div id="sig_approved" class="sig-name"></div><small>Approved by</small></div>
+                            </div>
+
+                            <div style="text-align:center; margin-top:20px;" class="no-print">
+                                <span id="autoSaveStatus" class="auto-save-indicator"></span>
+                                <button type="button" onclick="validateAndSave()" class="btn btn-success">Submit Plan</button>
+                            </div>
+                            <div id="tp_status" class="status-msg no-print" style="text-align:center;"></div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SECTION: Tour Plan History -->
+                <div id="sectionTourHistory" class="section hidden">
+                    <div class="card">
+                        <div class="card-header">Tour Plan History</div>
+                        <div class="no-print" style="margin-bottom:15px;">
+                            <label>Select Month:</label>
+                            <select id="historyMonthFilter" onchange="loadTourHistory()"></select>
+                        </div>
+                        <div id="tourHistoryContent"></div>
+                    </div>
+                </div>
+
+                <!-- SECTION: User Management -->
+                <div id="sectionUserMgmt" class="section hidden">
+                    <div class="card">
+                        <div class="card-header">User Management</div>
+                        <div style="background:#f8f9fa; padding:15px; border-radius:5px; margin-bottom:20px;" class="no-print">
+                            <form id="userForm">
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                                    <div class="form-group"><label>Emp. ID</label><input type="text" id="m_empId" placeholder="Official ID"></div>
+                                    <div class="form-group"><label>Name of Emp</label><input type="text" id="m_name"></div>
+                                    <div class="form-group"><label>Role</label><select id="m_role" onchange="handleRoleChange()" style="padding:8px; width:100%;"></select></div>
+                                    <div class="form-group"><label>Designation</label><input type="text" id="m_designation" placeholder="e.g., MPO, AM, RSM"></div>
+                                    <div class="form-group"><label>Assign to RSM</label><select id="m_parent_rsm" onchange="handleParentRSMChange()" style="padding:8px; width:100%;"></select></div>
+                                    <div class="form-group"><label>Assign to AM</label><select id="m_parent_am" style="padding:8px; width:100%;"></select></div>
+                                    <div class="form-group"><label>Territory</label><input type="text" id="m_territory"></div>
+                                    <div class="form-group"><label>Area</label><input type="text" id="m_area"></div>
+                                    <div class="form-group"><label>Region</label><input type="text" id="m_region"></div>
+                                    <div class="form-group"><label>User ID (Login)</label><input type="text" id="m_username" required></div>
+                                    <div class="form-group"><label>Password</label><input type="text" id="m_password" required></div>
+                                </div>
+                                <button type="button" onclick="saveUser()" class="btn btn-success btn-sm">Save User</button>
+                                <div id="m_status" class="status-msg"></div>
+                            </form>
+                        </div>
+                        <div class="table-container">
+                            <table><thead><tr><th>Emp.ID</th><th>Name</th><th>Role</th><th>Parent</th><th>User ID</th><th>Actions</th></tr></thead><tbody id="userTableBody"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getDatabase, ref, set, get, remove, update, query, orderByChild, equalTo, onValue } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD90NSHFMl-_qUfHkTnFaXHPkmHD2S7wOQ",
+            authDomain: "application-templet.firebaseapp.com",
+            databaseURL: "https://application-templet-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "application-templet",
+            storageBucket: "application-templet.firebasestorage.app",
+            messagingSenderId: "709244727461",
+            appId: "1:709244727461:web:d955063b6fc0b64eba9d4c",
+            measurementId: "G-TQZ9239CZJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentUser = null;
+        let autoSaveTimer = null; 
+
+        // ================== HELPER FUNCTIONS ==================
+        
+        function getHolidayName(dateObj) {
+            const month = dateObj.getMonth() + 1; 
+            const day = dateObj.getDate();
+            const year = dateObj.getFullYear();
+            
+            const fixedHolidays = {
+                "2-21": "Shaheed Day", "3-17": "Sheikh Mujib's Birthday", "3-26": "Independence Day",
+                "4-14": "Pohela Boishakh", "5-1":  "May Day", "8-15": "National Mourning Day", "12-16": "Victory Day"
+            };
+            const key = `${month}-${day}`;
+            if(fixedHolidays[key]) return fixedHolidays[key];
+
+            const eidDates = {
+                "2024-04-10": "Eid ul-Fitr", "2024-04-11": "Eid ul-Fitr", "2024-04-12": "Eid ul-Fitr",
+                "2024-06-16": "Eid ul-Azha", "2024-06-17": "Eid ul-Azha", "2024-06-18": "Eid ul-Azha",
+                "2025-03-30": "Eid ul-Fitr", "2025-03-31": "Eid ul-Fitr", "2025-04-01": "Eid ul-Fitr",
+                "2025-06-06": "Eid ul-Azha", "2025-06-07": "Eid ul-Azha", "2025-06-08": "Eid ul-Azha",
+                "2026-03-20": "Eid ul-Fitr", "2026-03-21": "Eid ul-Fitr", "2026-03-22": "Eid ul-Fitr",
+                "2026-05-27": "Eid ul-Azha", "2026-05-28": "Eid ul-Azha", "2026-05-29": "Eid ul-Azha"
+            };
+            const dateKey = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            return eidDates[dateKey] || null;
+        }
+
+        function getRoleName(role) {
+            if(role === 'superadmin') return 'SuperAdmin';
+            if(role === 'admin') return 'RSM';
+            if(role === 'user') return 'AM';
+            if(role === 'mpo') return 'MPO';
+            return role;
+        }
+
+        function populateMonthDropdowns() {
+            const selectEntry = document.getElementById('tp_month');
+            const selectHistory = document.getElementById('historyMonthFilter');
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const currentDate = new Date();
+            
+            let optionsHtml = "";
+            for(let y = currentDate.getFullYear(); y <= currentDate.getFullYear() + 1; y++) {
+                let yearShort = y.toString().slice(-2);
+                months.forEach((m) => {
+                    optionsHtml += `<option value="${m}-${yearShort}">${m}-${yearShort}</option>`;
+                });
+            }
+            selectEntry.innerHTML = optionsHtml;
+            selectHistory.innerHTML = optionsHtml;
+            const currentMonthName = months[currentDate.getMonth()];
+            const currentYearShort = currentDate.getFullYear().toString().slice(-2);
+            const currentVal = `${currentMonthName}-${currentYearShort}`;
+            selectEntry.value = currentVal;
+            selectHistory.value = currentVal;
+        }
+
+        function generateTourPlanTable() {
+            const tbody = document.getElementById('tourPlanTableBody');
+            tbody.innerHTML = "";
+            for(let i=1; i<=31; i++) {
+                tbody.innerHTML += `
+                    <tr id="row_${i}" style="display:none;">
+                        <td>${i}</td>
+                        <td><select name="hq_${i}" class="hq-select" style="width:100%;" onchange="handleHqChange(${i})">
+                            <option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option>
+                        </select></td>
+                        <td><input type="text" name="morning_${i}" class="work-input" style="border:none; text-align:center; width:100%;"></td>
+                        <td><input type="text" name="evening_${i}" class="work-input" style="border:none; text-align:center; width:100%;"></td>
+                    </tr>`;
+            }
+            setupAutoSave();
+        }
+        
+        window.handleHqChange = function(i) {
+            const hqSel = document.querySelector(`[name="hq_${i}"]`);
+            const morning = document.querySelector(`[name="morning_${i}"]`);
+            const evening = document.querySelector(`[name="evening_${i}"]`);
+            if(hqSel.value === "Holiday" && !morning.readOnly) { morning.value = "Holiday"; evening.value = "Holiday"; }
+            morning.dispatchEvent(new Event('input'));
+        }
+
+        function setupAutoSave() {
+            const inputs = document.querySelectorAll('.work-input, .hq-select');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    clearTimeout(autoSaveTimer);
+                    document.getElementById('autoSaveStatus').innerText = "Typing...";
+                    autoSaveTimer = setTimeout(() => { validateAndSave(true); }, 2000); 
+                });
+            });
+        }
+
+        window.handleMonthChange = function() {
+            for(let i=1; i<=31; i++) {
+                const row = document.getElementById(`row_${i}`);
+                if(row) {
+                    row.style.display = "none";
+                    const hqSel = document.querySelector(`[name="hq_${i}"]`);
+                    const mIn = document.querySelector(`[name="morning_${i}"]`);
+                    const eIn = document.querySelector(`[name="evening_${i}"]`);
+                    if(hqSel) hqSel.value = "";
+                    if(mIn) mIn.value = "";
+                    if(eIn) eIn.value = "";
+                }
+            }
+            const monthVal = document.getElementById('tp_month').value; 
+            if(!monthVal) return;
+            const parts = monthVal.split("-");
+            const monthName = parts[0];
+            const yearShort = parts[1];
+            const year = 2000 + parseInt(yearShort);
+            const monthIndex = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(monthName);
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+            for(let i=1; i<=daysInMonth; i++) {
+                const row = document.getElementById(`row_${i}`);
+                if(row) {
+                    row.style.display = ""; 
+                    const d = new Date(year, monthIndex, i);
+                    const dayOfWeek = d.getDay(); 
+                    const holidayName = getHolidayName(d);
+                    const hqSel = document.querySelector(`[name="hq_${i}"]`);
+                    const mIn = document.querySelector(`[name="morning_${i}"]`);
+                    const eIn = document.querySelector(`[name="evening_${i}"]`);
+
+                    if(dayOfWeek === 5 || holidayName) { 
+                        let displayName = holidayName || "Weekend (Friday)";
+                        mIn.value = displayName; eIn.value = displayName;
+                        hqSel.innerHTML = '<option value="Holiday">Holiday</option>'; hqSel.value = "Holiday"; hqSel.disabled = true;
+                        mIn.readOnly = true; eIn.readOnly = true;
+                    } else {
+                        hqSel.innerHTML = `<option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option>`;
+                        hqSel.value = ""; hqSel.disabled = false;
+                        mIn.value = ""; mIn.readOnly = false; eIn.value = ""; eIn.readOnly = false;
+                    }
+                }
+            }
+        }
+
+        window.toggleSidebar = function() {
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('overlay').classList.toggle('active');
+        }
+
+        document.getElementById('topBarDate').innerText = new Date().toDateString();
+        generateTourPlanTable();
+        populateMonthDropdowns();
+
+        // ================== LOGIN LOGIC ==================
+        window.handleLogin = function() {
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value;
+            const err = document.getElementById('loginError');
+            err.textContent = "";
+            if(!u || !p) { err.textContent = "Input required"; return; }
+
+            if ((u === 'systemadmin' || u === 'KS') && p === 'Monico@Ku007') {
+                currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'systemadmin', designation: 'SuperAdmin' };
+                showDashboard();
+                return;
+            }
+            get(query(ref(db, 'Users'), orderByChild('username'), equalTo(u))).then(snapshot => {
+                if(snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const d = child.val();
+                        if(d.password === p) {
+                            currentUser = { ...d, id: child.key };
+                            showDashboard();
+                        } else { err.textContent = "Password Incorrect"; }
+                    });
+                } else { err.textContent = "User not found"; }
+            }).catch(e => { err.textContent = "DB Error"; console.error(e); });
+        }
+
+        window.logout = function() { location.reload(); }
+
+        // ================== DASHBOARD UI LOGIC ==================
+        function showDashboard() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('dashboardScreen').classList.remove('hidden');
+            document.getElementById('sidebarName').innerText = currentUser.name;
+            document.getElementById('sidebarRole').innerText = `Role: ${getRoleName(currentUser.role)}`;
+            document.getElementById('welcomeName').innerText = currentUser.name;
+
+            if(currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'user') {
+                document.getElementById('menuUserMgmt').classList.remove('hidden');
+            } else { document.getElementById('menuUserMgmt').classList.add('hidden'); }
+            showSection('home');
+        }
+
+        window.showSection = function(sectionId) {
+            if(window.innerWidth <= 768) { toggleSidebar(); }
+            document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const section = document.getElementById('section' + sectionId.charAt(0).toUpperCase() + sectionId.slice(1));
+            if(section) section.classList.remove('hidden');
+            
+            const menuItems = document.querySelectorAll('.nav-item');
+            menuItems.forEach(item => { if(item.textContent.toLowerCase().includes(sectionId.toLowerCase())) item.classList.add('active'); });
+
+            const printBtn = document.getElementById('printBtn');
+            printBtn.style.display = (sectionId === 'tourPlan' || sectionId === 'home') ? 'none' : 'block';
+
+            if(sectionId === 'home') loadDashboardStats();
+            if(sectionId === 'userMgmt') initUserMgmt();
+            if(sectionId === 'tourHistory') loadTourHistory();
+            if(sectionId === 'tourPlan') {
+                 document.getElementById('sig_prepared').innerText = currentUser.name;
+                 document.getElementById('sig_am').innerText = ""; document.getElementById('sig_rsm').innerText = ""; document.getElementById('sig_approved').innerText = "";
+                 document.getElementById('tp_empId').value = currentUser.empId || currentUser.username;
+                 document.getElementById('tp_name').value = currentUser.name;
+                 document.getElementById('tp_designation').value = currentUser.designation || getRoleName(currentUser.role);
+                 document.getElementById('tp_areaManager').value = currentUser.areaManagerName || '';
+                 document.getElementById('tp_rsm').value = currentUser.rsmName || '';
+                 document.getElementById('tp_territory').value = currentUser.territory || '';
+                 document.getElementById('tp_area').value = currentUser.area || '';
+                 document.getElementById('tp_region').value = currentUser.region || '';
+                 handleMonthChange();
+            }
+        }
+
+        // ================== DASHBOARD STATS ==================
+        function loadDashboardStats() {
+            document.getElementById('stat-pending').innerText = "0";
+            document.getElementById('stat-rejected').innerText = "0";
+            document.getElementById('stat-approved').innerText = "0";
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const d = new Date();
+            const currentMonth = `${months[d.getMonth()]}-${d.getFullYear().toString().slice(-2)}`;
+
+            get(ref(db, 'tourPlans')).then(snapshot => {
+                let pending = 0, rejected = 0, approved = 0;
+                if(snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const plan = child.val();
+                        let canView = false;
+                        if(plan.info.month === currentMonth) {
+                            if(currentUser.role === 'superadmin') canView = true;
+                            else if(currentUser.role === 'admin' && plan.info.approvalFlow?.rsmId === currentUser.username) canView = true;
+                            else if(currentUser.role === 'user' && plan.info.approvalFlow?.amId === currentUser.username) canView = true;
+                            else if(plan.info.empId === currentUser.empId) canView = true;
+                            
+                            if(canView) {
+                                if(plan.info.status.includes('Pending')) pending++;
+                                if(plan.info.status === 'Rejected') rejected++;
+                                if(plan.info.status === 'Approved') approved++;
+                            }
+                        }
+                    });
+                }
+                document.getElementById('stat-pending').innerText = pending;
+                document.getElementById('stat-rejected').innerText = rejected;
+                document.getElementById('stat-approved').innerText = approved;
+            });
+        }
+
+        // ================== TOUR PLAN LOGIC =================
+        
+        window.validateAndSave = function(isAutoSave = false) {
+            const empId = document.getElementById('tp_empId').value;
+            const month = document.getElementById('tp_month').value;
+            const statusDiv = document.getElementById('tp_status');
+            const autoStatusDiv = document.getElementById('autoSaveStatus');
+            
+            let planData = [];
+            let rows = document.querySelectorAll('#tourPlanTableBody tr');
+            let allFilled = true;
+            
+            rows.forEach(row => {
+                if(row.style.display !== "none") {
+                    const i = row.id.split('_')[1];
+                    const hq = document.querySelector(`[name="hq_${i}"]`);
+                    const morning = document.querySelector(`[name="morning_${i}"]`);
+                    const evening = document.querySelector(`[name="evening_${i}"]`);
+                    if(hq.value !== "Holiday" && (hq.value === "" || morning.value === "" || evening.value === "")) allFilled = false;
+                    planData.push({ date: i, hq: hq.value, morning: morning.value, evening: evening.value });
+                }
+            });
+
+            if(!allFilled) {
+                if(!isAutoSave) statusDiv.innerHTML = "<span class='error'>Fill all fields.</span>";
+                else autoStatusDiv.innerText = "Incomplete...";
+                return;
+            }
+
+            let initialStatus = "Pending";
+            let signatures = {};
+            let approvalFlow = {};
+            
+            const existingPrepared = document.getElementById('sig_prepared').innerText;
+            signatures.prepared = existingPrepared || currentUser.name;
+
+            if(currentUser.role === 'mpo') {
+                initialStatus = "Pending_AM";
+                approvalFlow = { amId: currentUser.amId, rsmId: currentUser.rsmId };
+            } else if (currentUser.role === 'user') { 
+                initialStatus = "Pending_RSM"; 
+                approvalFlow = { amId: currentUser.username, rsmId: currentUser.rsmId };
+                if(!existingPrepared) signatures.prepared = currentUser.name;
+            } else if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                initialStatus = "Approved";
+                signatures.rsm = currentUser.name; 
+            }
+
+            const key = `${empId}_${month.replace(/\s/g, '_')}`;
+            set(ref(db, 'tourPlans/' + key), {
+                info: { 
+                    empId, month, name: document.getElementById('tp_name').value, designation: document.getElementById('tp_designation').value,
+                    areaManager: document.getElementById('tp_areaManager').value, rsm: document.getElementById('tp_rsm').value,
+                    territory: document.getElementById('tp_territory').value, area: document.getElementById('tp_area').value, region: document.getElementById('tp_region').value,
+                    timestamp: Date.now(), status: initialStatus, approvalFlow: approvalFlow, signatures: signatures
+                },
+                plan: planData
+            }).then(() => {
+                if(isAutoSave) { autoStatusDiv.innerText = "Saved"; autoStatusDiv.style.color = "green"; }
+                else statusDiv.innerHTML = "<span class='success'>Submitted!</span>";
+            });
+        };
+
+        // --- Tour History & Approval ---
+        function loadTourHistory() {
+            const container = document.getElementById('tourHistoryContent');
+            container.innerHTML = "Loading...";
+            const selectedMonth = document.getElementById('historyMonthFilter').value;
+            
+            get(ref(db, 'tourPlans')).then(snapshot => {
+                let records = [];
+                if(snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const d = child.val();
+                        const isMonth = d.info.month === selectedMonth;
+                        let canView = false;
+                        
+                        if(d.info.empId === currentUser.empId || d.info.empId === currentUser.username) canView = true;
+                        if(currentUser.role === 'superadmin') canView = true;
+                        if(currentUser.role === 'admin' && d.info.approvalFlow?.rsmId === currentUser.username) canView = true;
+                        if(currentUser.role === 'user' && d.info.approvalFlow?.amId === currentUser.username) canView = true;
+
+                        if(canView && isMonth) records.push({ key: child.key, data: d });
+                    });
+                }
+
+                let html = "";
+                if(records.length === 0) html = "No records found.";
+                else {
+                    if(currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                        const grouped = {};
+                        records.forEach(r => {
+                            const area = r.data.info.area || "Unknown";
+                            if(!grouped[area]) grouped[area] = [];
+                            grouped[area].push(r);
+                        });
+                        for(const area in grouped) {
+                            html += `<div class="area-group-header">Area: ${area}</div>`;
+                            grouped[area].forEach(r => { html += generateRowHtml(r.data, r.key); });
+                        }
+                    } else {
+                        records.forEach(r => { html += generateRowHtml(r.data, r.key); });
+                    }
+                }
+                container.innerHTML = html;
+            });
+        }
+
+        function generateRowHtml(d, key) {
+            let statusBadge = d.info.status;
+            if(statusBadge.includes('Pending')) statusBadge = `<span class='badge badge-pending'>${statusBadge.replace('_', ' ')}</span>`;
+            else if(statusBadge === 'Approved') statusBadge = "<span class='badge badge-approved'>Approved</span>";
+            else if(statusBadge === 'Rejected') statusBadge = "<span class='badge badge-rejected'>Rejected</span>";
+
+            let actionBtns = `<button class="btn btn-sm btn-info" onclick="viewTourPlan('${key}')">View</button> `;
+            
+            const isOwner = (d.info.empId === currentUser.empId || d.info.empId === currentUser.username);
+            const isPendingAM = d.info.status === 'Pending_AM';
+            const isPendingRSM = d.info.status === 'Pending_RSM';
+            const isRejected = d.info.status === 'Rejected';
+            const isApproved = d.info.status === 'Approved';
+
+            if((currentUser.role === 'user' && isPendingAM) || (currentUser.role === 'admin' && isPendingRSM) || (currentUser.role === 'superadmin' && (isPendingAM || isPendingRSM))) {
+                actionBtns += `<button class="btn btn-sm btn-success" onclick="approvePlan('${key}')">Approve</button> `;
+            }
+
+            if((currentUser.role === 'user' && isPendingAM) || (currentUser.role === 'admin' && isPendingRSM) || (currentUser.role === 'superadmin')) {
+                if(!isApproved && !isRejected) actionBtns += `<button class="btn btn-sm btn-danger" onclick="rejectPlan('${key}')">Reject</button> `;
+            }
+
+            // Print Button - Separate Window for Admin/RSM
+            if(currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+                actionBtns += `<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i> Print</button> `;
+            }
+
+            let canEdit = false;
+            if(isOwner && !isApproved) canEdit = true;
+            if(currentUser.role === 'user' && isPendingAM) canEdit = true;
+            if(currentUser.role === 'admin' && isPendingRSM) canEdit = true;
+            if(currentUser.role === 'superadmin' && !isApproved) canEdit = true;
+            if(isRejected && isOwner) canEdit = true;
+
+            if(canEdit) actionBtns += `<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')">Edit</button> `;
+
+            if((isOwner || currentUser.role === 'superadmin') && !isApproved) {
+                actionBtns += `<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')">Delete</button>`;
+            }
+
+            return `
+                <div style="background:#fff; border:1px solid #ddd; padding:10px; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+                    <div style="margin-bottom:5px;">
+                        <strong>${d.info.name}</strong> (${d.info.empId}) - ${statusBadge}<br>
+                        <small>Area: ${d.info.area || 'N/A'} | Desig: ${d.info.designation || 'N/A'}</small>
+                    </div>
+                    <div>${actionBtns}</div>
+                </div>`;
+        }
+
+        window.approvePlan = function(key) {
+            get(ref(db, 'tourPlans/' + key)).then(snapshot => {
+                if(snapshot.exists()) {
+                    const d = snapshot.val();
+                    let updates = {};
+                    let sigUpdates = {};
+                    if(currentUser.role === 'user') { updates['info/status'] = 'Pending_RSM'; sigUpdates['am'] = currentUser.name; }
+                    else { updates['info/status'] = 'Approved'; sigUpdates['rsm'] = currentUser.name; }
+                    const newSigs = {...(d.info.signatures || {}), ...sigUpdates};
+                    updates['info/signatures'] = newSigs;
+                    update(ref(db, 'tourPlans/' + key), updates).then(() => { alert("Approved!"); loadTourHistory(); });
+                }
+            });
+        }
+
+        window.rejectPlan = function(key) {
+            if(confirm("Are you sure you want to reject this plan?")) {
+                update(ref(db, 'tourPlans/' + key), { 'info/status': 'Rejected' }).then(() => { alert("Rejected!"); loadTourHistory(); });
+            }
+        }
+
+        window.viewTourPlan = function(key) {
+            get(ref(db, 'tourPlans/' + key)).then(snapshot => {
+                if(snapshot.exists()) {
+                    const d = snapshot.val();
+                    const sigs = d.info.signatures || {};
+                    document.getElementById('sig_prepared').innerText = sigs.prepared || '';
+                    document.getElementById('sig_am').innerText = sigs.am || '';
+                    document.getElementById('sig_rsm').innerText = sigs.rsm || '';
+                    document.getElementById('sig_approved').innerText = sigs.approved || '';
+                    
+                    const html = generateHistoryTable(d.info, d.plan);
+                    
+                    const modal = document.createElement('div');
+                    modal.style.cssText = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1001; display:flex; justify-content:center; align-items:center; padding:10px;";
+                    modal.innerHTML = `
+                        <div style="background:#fff; width:100%; max-width:900px; max-height:90vh; overflow-y:auto; padding:20px; position:relative;">
+                            <button onclick="this.parentElement.parentElement.remove()" class="btn btn-danger btn-sm no-print" style="position:absolute; top:10px; right:10px;">X</button>
+                            ${html}
+                        </div>`;
+                    document.body.appendChild(modal);
+                }
+            });
+        }
+
+        window.editTourPlan = function(key) {
+            get(ref(db, 'tourPlans/' + key)).then(snapshot => {
+                if(snapshot.exists()) {
+                    const d = snapshot.val();
+                    showSection('tourPlan');
+                    
+                    document.getElementById('tp_month').value = d.info.month;
+                    handleMonthChange();
+                    
+                    d.plan.forEach(p => {
+                        const hq = document.querySelector(`[name="hq_${p.date}"]`);
+                        const morning = document.querySelector(`[name="morning_${p.date}"]`);
+                        const evening = document.querySelector(`[name="evening_${p.date}"]`);
+                        if(hq) hq.value = p.hq;
+                        if(morning) morning.value = p.morning;
+                        if(evening) evening.value = p.evening;
+                    });
+
+                    document.getElementById('tp_empId').value = d.info.empId;
+                    document.getElementById('tp_name').value = d.info.name;
+                    document.getElementById('tp_designation').value = d.info.designation;
+                    document.getElementById('tp_areaManager').value = d.info.areaManager;
+                    document.getElementById('tp_rsm').value = d.info.rsm;
+                    
+                    const sigs = d.info.signatures || {};
+                    document.getElementById('sig_prepared').innerText = sigs.prepared || d.info.name;
+                    document.getElementById('sig_am').innerText = sigs.am || '';
+                    document.getElementById('sig_rsm').innerText = sigs.rsm || '';
+                    document.getElementById('sig_approved').innerText = sigs.approved || '';
+
+                    document.getElementById('tp_status').innerHTML = "<span class='success'>Editing mode. Modify and Save.</span>";
+                    window.scrollTo(0, 0);
+                }
+            });
+        }
+
+        window.deleteTourPlan = function(key) {
+            if(confirm("Delete this plan?")) remove(ref(db, 'tourPlans/' + key)).then(() => loadTourHistory());
+        }
+
+        // ================== PRINT RECORD WINDOW (User Provided Function Updated) ==================
+        window.printHistoryRecord = function(key) {
+            get(ref(db, 'tourPlans/' + key)).then(snapshot => {
+                if(snapshot.exists()) {
+                    const d = snapshot.val();
+                    const win = window.open('', '_blank');
+                    
+                    let rows = "";
+                    d.plan.forEach(p => {
+                        rows += `<tr>
+                            <td style="border:1px solid #000; padding:2px; text-align:center;">${p.date}</td>
+                            <td style="border:1px solid #000; padding:2px; text-align:center;">${p.hq}</td>
+                            <td style="border:1px solid #000; padding:2px;">${p.morning}</td>
+                            <td style="border:1px solid #000; padding:2px;">${p.evening}</td>
+                        </tr>`;
+                    });
+
+                    const sigs = d.info.signatures || {};
+                    // Using the user provided HTML structure with dynamic data
+                    const printHtml = `
+                        <html>
+                        <head>
+                            <title>Tour Plan Print</title>
+                            <style>
+                                body { font-family: sans-serif; font-size: 10px; margin: 0; padding: 5mm; }
+                                table { width: 100%; border-collapse: collapse; }
+                                th, td { border: 1px solid #000; padding: 2px; text-align: center; }
+                                th { background-color: #f0f0f0; }
+                                .header { text-align: center; margin-bottom: 10px; }
+                                .info-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1px solid #000; }
+                                .info-table td { border: 1px solid #000; padding: 3px; text-align: left; }
+                                .info-label { font-weight: bold; display: inline-block; width: 110px; }
+                                .signature-area-print { display: flex; justify-content: space-between; margin-top: 30px; width: 100%; }
+                                .sig-box-print { width: 24%; text-align: center; font-size: 10pt; }
+                                .sig-line-print { border-top: 1px solid #000; margin-top: 40px; padding-top: 5px; }
+                                @page { size: A4; margin: 5mm; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h2 style="margin:0; color:#0056b3;">MONICO PHARMA LTD</h2>
+                                <p style="margin:3px 0 0;">8/1, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</p>
+                                <h3 style="margin:8px 0;">MONTHLY TOUR PLAN</h3>
+                            </div>
+
+                            <table class="info-table">
+                                <tr>
+                                    <td><span class="info-label">Emp. ID:</span> ${d.info.empId}</td>
+                                    <td><span class="info-label">Month:</span> ${d.info.month}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="info-label">Name of Emp:</span> ${d.info.name}</td>
+                                    <td><span class="info-label">Area Manager:</span> ${d.info.areaManager || ''}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="info-label">Territory:</span> ${d.info.territory || ''}</td>
+                                    <td><span class="info-label">RSM:</span> ${d.info.rsm || ''}</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="info-label">Area:</span> ${d.info.area || ''}</td>
+                                    <td><span class="info-label">Region:</span> ${d.info.region || ''}</td>
+                                </tr>
+                            </table>
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>HQ/EX.HQ.</th>
+                                        <th>Morning Work Place</th>
+                                        <th>Evening Work Place</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rows}
+                                </tbody>
+                            </table>
+
+                            <div class="signature-area-print">
+                                <div class="sig-box-print">
+                                    <div class="sig-line-print">
+                                        Signature<br><span style="font-weight:bold;">${sigs.prepared || d.info.name}</span>
+                                    </div>
+                                </div>
+                                <div class="sig-box-print">
+                                    <div class="sig-line-print">
+                                        AM Signature<br><span style="font-weight:bold;">${sigs.am || ''}</span>
+                                    </div>
+                                </div>
+                                <div class="sig-box-print">
+                                    <div class="sig-line-print">
+                                        RSM Signature<br><span style="font-weight:bold;">${sigs.rsm || ''}</span>
+                                    </div>
+                                </div>
+                                <div class="sig-box-print">
+                                    <div class="sig-line-print">
+                                        Approved By<br><span style="font-weight:bold;">${sigs.approved || ''}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+
+                    win.document.write(printHtml);
+                    win.document.close();
+                    win.focus();
+                    win.print();
+                }
+            });
+        }
+
+        function generateHistoryTable(info, plan) {
+            let rows = "";
+            plan.forEach(p => {
+                if(p.hq || p.morning || p.evening) {
+                    rows += `<tr>
+                        <td>${p.date}</td>
+                        <td>${p.hq}</td>
+                        <td>${p.morning}</td>
+                        <td>${p.evening}</td>
+                    </tr>`;
+                }
+            });
+
+            return `
+                <div style="border:1px solid #ccc; padding:15px;">
+                    <p><strong>Employee:</strong> ${info.name} (${info.empId})</p>
+                    <p><strong>Area Manager:</strong> ${info.areaManager}</p>
+                    <div class="table-container">
+                        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                            <thead><tr style="background:#eee;"><th style="border:1px solid #ddd; padding:5px;">Date</th><th style="border:1px solid #ddd; padding:5px;">HQ</th><th style="border:1px solid #ddd; padding:5px;">Morning</th><th style="border:1px solid #ddd; padding:5px;">Evening</th></tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ================== USER MANAGEMENT ==================
+        function initUserMgmt() { loadUsers(); prepareUserForm(); }
+
+        function prepareUserForm() {
+            const roleSelect = document.getElementById('m_role');
+            roleSelect.innerHTML = "";
+            if(currentUser.role === 'superadmin') {
+                roleSelect.innerHTML = `<option value="admin">RSM (Admin)</option><option value="user">AM (Area Manager)</option><option value="mpo">MPO</option>`;
+                loadAllRSMs();
+            } else if (currentUser.role === 'admin') {
+                roleSelect.innerHTML = `<option value="user">AM (Area Manager)</option><option value="mpo">MPO</option>`;
+                document.getElementById('m_parent_rsm').innerHTML = `<option value="${currentUser.username}" selected>${currentUser.name}</option>`;
+                document.getElementById('m_parent_rsm').disabled = true;
+                handleParentRSMChange(); 
+            } else if (currentUser.role === 'user') {
+                roleSelect.innerHTML = `<option value="mpo">MPO</option>`;
+                document.getElementById('m_parent_rsm').innerHTML = `<option value="${currentUser.rsmId}" selected>${currentUser.rsmName}</option>`;
+                document.getElementById('m_parent_rsm').disabled = true;
+                document.getElementById('m_parent_am').innerHTML = `<option value="${currentUser.username}" selected>${currentUser.name}</option>`;
+                document.getElementById('m_parent_am').disabled = true;
+            }
+        }
+
+        function loadAllRSMs() {
+             const rsmSelect = document.getElementById('m_parent_rsm');
+             rsmSelect.innerHTML = "<option value=''>Select RSM</option>";
+             get(query(ref(db, 'Users'), orderByChild('role'), equalTo('admin'))).then(snapshot => {
+                 if(snapshot.exists()) snapshot.forEach(child => { const u = child.val(); rsmSelect.innerHTML += `<option value="${u.username}">${u.name}</option>`; });
+             });
+        }
+
+        window.handleRoleChange = function() {
+             const role = document.getElementById('m_role').value;
+             if(currentUser.role === 'superadmin') {
+                 document.getElementById('m_parent_rsm').disabled = (role === 'admin');
+                 document.getElementById('m_parent_am').disabled = (role !== 'mpo');
+             }
+             if(currentUser.role === 'admin' && role === 'mpo') handleParentRSMChange(); 
+        }
+
+        window.handleParentRSMChange = function() {
+            const rsmId = document.getElementById('m_parent_rsm').value;
+            const amSelect = document.getElementById('m_parent_am');
+            amSelect.innerHTML = "<option value=''>Select AM</option>";
+            if(!rsmId) return;
+            get(query(ref(db, 'Users'), orderByChild('rsmId'), equalTo(rsmId))).then(snapshot => {
+                if(snapshot.exists()) snapshot.forEach(child => { const u = child.val(); if(u.role === 'user') amSelect.innerHTML += `<option value="${u.username}">${u.name}</option>`; });
+            });
+        }
+
+        window.saveUser = function() {
+            const role = document.getElementById('m_role').value;
+            const parentRSM = document.getElementById('m_parent_rsm');
+            const parentAM = document.getElementById('m_parent_am');
+            const userData = {
+                empId: document.getElementById('m_empId').value.trim(), name: document.getElementById('m_name').value.trim(),
+                designation: document.getElementById('m_designation').value.trim(), territory: document.getElementById('m_territory').value.trim(),
+                area: document.getElementById('m_area').value.trim(), region: document.getElementById('m_region').value.trim(),
+                username: document.getElementById('m_username').value.trim(), password: document.getElementById('m_password').value,
+                role: role,
+                rsmId: parentRSM.value || "", rsmName: parentRSM.options[parentRSM.selectedIndex]?.text || "",
+                amId: parentAM.value || "", areaManagerName: parentAM.options[parentAM.selectedIndex]?.text || ""
+            };
+            if(!userData.username || !userData.password || !userData.name) { document.getElementById('m_status').innerHTML = "<span class='error'>Missing fields</span>"; return; }
+            const safeKey = userData.username.replace(/[.#$\[\]]/g, '_');
+            set(ref(db, 'Users/' + safeKey), userData).then(() => { document.getElementById('m_status').innerHTML = "<span class='success'>Saved!</span>"; document.getElementById('userForm').reset(); prepareUserForm(); loadUsers(); });
+        }
+
+        function loadUsers() {
+            const tbody = document.getElementById('userTableBody'); tbody.innerHTML = "Loading...";
+            onValue(ref(db, 'Users'), snapshot => {
+                tbody.innerHTML = "";
+                if(snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const u = child.val();
+                        let show = false;
+                        if(currentUser.role === 'superadmin') show = true;
+                        else if(currentUser.role === 'admin' && u.rsmId === currentUser.username) show = true;
+                        else if(currentUser.role === 'user' && u.amId === currentUser.username) show = true;
+                        if(show) tbody.innerHTML += `<tr><td>${u.empId || '-'}</td><td>${u.name}</td><td>${getRoleName(u.role)}</td><td>${u.rsmName || '-'} / ${u.areaManagerName || '-'}</td><td>${u.username}</td><td><button class="btn btn-sm btn-warning" onclick='editUser(${JSON.stringify(u)})'>Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteUser('${child.key}')">Delete</button></td></tr>`;
+                    });
+                } else { tbody.innerHTML = "<tr><td colspan='6'>No users</td></tr>"; }
+            });
+        }
+
+        window.editUser = function(u) {
+            document.getElementById('m_empId').value = u.empId || ''; document.getElementById('m_name').value = u.name || '';
+            document.getElementById('m_designation').value = u.designation || ''; document.getElementById('m_territory').value = u.territory || '';
+            document.getElementById('m_area').value = u.area || ''; document.getElementById('m_region').value = u.region || '';
+            document.getElementById('m_username').value = u.username || ''; document.getElementById('m_password').value = u.password || '';
+            document.getElementById('m_role').value = u.role || 'mpo';
+            window.scrollTo(0, 0); handleRoleChange();
+        }
+
+        window.deleteUser = function(key) { if(confirm("Delete user?")) remove(ref(db, 'Users/' + key)); }
+
+    </script>
+</body>
+</html>
