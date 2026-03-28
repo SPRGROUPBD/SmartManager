@@ -92,7 +92,7 @@
         .widget-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .widget { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; }
         .widget-info h3 { margin: 0; font-size: 28px; color: var(--dark); }
-        .widget-info p { margin: 5px 0 0; color: #666; font-size: 14px; }
+        .widget-info p { margin: 5px 0 0; color: #666; font-size: 12px; }
         .widget-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
         .bg-primary { background: var(--primary); }
         .bg-success { background: var(--success); }
@@ -148,25 +148,49 @@
         /* Area Grouping Style */
         .area-group-header { background: #e9ecef; padding: 8px; font-weight: bold; margin-top: 10px; border-left: 4px solid var(--primary); }
         
+        /* Day Column Style */
+        .day-name { font-weight: bold; background: #f9f9f9; }
+
         /* ==================== PRINT STYLES ==================== */
         @media print {
-            @page { size: A4; margin: 5mm; }
-            body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; zoom: 90%; }
-            .sidebar, .top-bar, .no-print, .status-msg, .btn, .nav-menu, .menu-toggle, .overlay, .widget-grid { display: none !important; }
+            body { margin: 0; padding: 0; background-color: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            
+            /* Hide non-essential UI */
+            .sidebar, .top-bar, .no-print, .status-msg, .btn, .nav-menu, .menu-toggle, .overlay, .widget-grid, .login-container { display: none !important; }
+            
+            /* Reset Layout */
             .main-content, .content-area { width: 100%; margin: 0; padding: 0; display: block; overflow: visible; }
+            
+            /* Ensure sections behave correctly */
+            .section { display: block !important; page-break-inside: avoid; }
+            
+            /* Print specific container */
+            #print_area { display: block !important; width: 100%; padding: 0; }
+            
+            /* History View Table Fix */
+            #sectionTourHistory .card { box-shadow: none; border: none; }
+            #sectionTourHistory table { font-size: 10pt; }
+            #sectionTourHistory th, #sectionTourHistory td { border: 1px solid #000 !important; }
+
+            /* Form Styling for Print */
             .card { box-shadow: none; border: none; margin: 0; padding: 0; }
             .card-header { border-bottom: 2px solid #000; font-size: 16px; margin-bottom: 3px; padding-bottom: 3px; text-align: center; }
             .address-text { text-align: center; font-size: 9px; margin-bottom: 3px; }
             h3 { font-size: 14px; margin: 5px 0; text-align: center; }
-            .info-grid { display: table !important; width: 100%; border-collapse: collapse !important; border: 1px solid #000 !important; margin-bottom: 5px; }
-            .info-cell { display: table-row !important; }
-            .info-label, .info-value { display: table-cell !important; border: 1px solid #000 !important; padding: 2px 4px; font-size: 9pt; }
+            
+            .info-grid { display: grid !important; width: 100%; border: 1px solid #000 !important; margin-bottom: 5px; }
+            .info-cell { display: flex !important; border-bottom: 1px solid #000 !important; }
+            .info-label, .info-value { display: flex !important; align-items: center; border-right: 1px solid #000 !important; padding: 2px 4px; font-size: 9pt; }
             .info-label { font-weight: bold; width: 35%; background: #f8f9fa !important; }
+            .info-value { border-right: none !important; }
             .info-value input { border: none !important; font-size: 9pt; width: 100%; background: transparent !important; }
+            
             table { width: 100%; border-collapse: collapse !important; font-size: 9pt; }
             th, td { border: 1px solid #000 !important; padding: 2px; text-align: center; }
             th { background: #eee !important; }
+            
             .signature-area { margin-top: 10px; }
+            .sig-box { width: 24%; }
         }
     </style>
 </head>
@@ -274,44 +298,56 @@
 
                 <!-- SECTION: Tour Plan Entry -->
                 <div id="sectionTourPlan" class="section hidden">
-                    <div class="card" id="tourPlanCard">
-                        <div class="card-header">MONICO PHARMA LTD</div>
-                        <div class="address-text">8/1, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</div>
-                        <h3 style="text-align:center; margin:0 0 10px 0; font-size:16px; font-weight:bold;">MONTHLY TOUR PLAN</h3>
-                        
-                        <div class="info-grid">
-                            <div class="info-cell"><div class="info-label">Emp. ID :</div><div class="info-value"><input type="text" id="tp_empId" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Month :</div><div class="info-value"><select id="tp_month" onchange="handleMonthChange()" style="border:none; width:100%; font-size:11px;"></select></div></div>
-                            <div class="info-cell"><div class="info-label">Name of Emp :</div><div class="info-value"><input type="text" id="tp_name" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Designation :</div><div class="info-value"><input type="text" id="tp_designation" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Territory :</div><div class="info-value"><input type="text" id="tp_territory" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Area Manager :</div><div class="info-value"><input type="text" id="tp_areaManager" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Area :</div><div class="info-value"><input type="text" id="tp_area" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">RSM :</div><div class="info-value"><input type="text" id="tp_rsm" readonly></div></div>
-                            <div class="info-cell"><div class="info-label">Region :</div><div class="info-value"><input type="text" id="tp_region" readonly></div></div>
+                    
+                    <!-- PRINT CONTAINER -->
+                    <div class="print-container" id="print_area">
+                        <div class="card" id="tourPlanCard">
+                            <div class="card-header">MONICO PHARMA LTD</div>
+                            <div class="address-text">7, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</div>
+                            <h3 style="text-align:center; margin:0 0 10px 0; font-size:16px; font-weight:bold;">MONTHLY TOUR PLAN</h3>
+                            
+                            <div class="info-grid">
+                                <div class="info-cell"><div class="info-label">Emp. ID :</div><div class="info-value"><input type="text" id="tp_empId" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Month :</div><div class="info-value"><select id="tp_month" onchange="handleMonthChange()" style="border:none; width:100%; font-size:11px;"></select></div></div>
+                                <div class="info-cell"><div class="info-label">Name of Emp :</div><div class="info-value"><input type="text" id="tp_name" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Designation :</div><div class="info-value"><input type="text" id="tp_designation" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Territory :</div><div class="info-value"><input type="text" id="tp_territory" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Name of Area Manager:</div><div class="info-value"><input type="text" id="tp_areaManager" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Area :</div><div class="info-value"><input type="text" id="tp_area" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Name of  RSM/Sr.RSM:</div><div class="info-value"><input type="text" id="tp_rsm" readonly></div></div>
+                                <div class="info-cell"><div class="info-label">Region :</div><div class="info-value"><input type="text" id="tp_region" readonly></div></div>
+                            </div>
+
+                            <form id="tourPlanForm">
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th style="width:5%">Date</th>
+                                                <th style="width:7%">Day</th>
+                                                <th style="width:15%">HQ/EX.HQ.</th>
+                                                <th>Morning</th>
+                                                <th>Evening</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tourPlanTableBody"></tbody>
+                                    </table>
+                                </div>
+
+                                <div class="signature-area">
+                                    <div class="sig-box"><div id="sig_prepared" class="sig-name"></div><small>Prepared by</small></div>
+                                    <div class="sig-box"><div id="sig_am" class="sig-name"></div><small>Checked by AM</small></div>
+                                    <div class="sig-box"><div id="sig_rsm" class="sig-name"></div><small>Re-checked by RSM</small></div>
+                                    <div class="sig-box"><div id="sig_approved" class="sig-name"></div><small>Approved by</small></div>
+                                </div>
+
+                                <div style="text-align:center; margin-top:20px;" class="no-print">
+                                    <span id="autoSaveStatus" class="auto-save-indicator"></span>
+                                    <button type="button" onclick="validateAndSave()" class="btn btn-success">Submit Plan</button>
+                                </div>
+                                <div id="tp_status" class="status-msg no-print" style="text-align:center;"></div>
+                            </form>
                         </div>
-
-                        <form id="tourPlanForm">
-                            <div class="table-container">
-                                <table>
-                                    <thead><tr><th style="width:5%">Date</th><th style="width:15%">HQ/EX.HQ.</th><th>Morning</th><th>Evening</th></tr></thead>
-                                    <tbody id="tourPlanTableBody"></tbody>
-                                </table>
-                            </div>
-
-                            <div class="signature-area">
-                                <div class="sig-box"><div id="sig_prepared" class="sig-name"></div><small>Prepared by</small></div>
-                                <div class="sig-box"><div id="sig_am" class="sig-name"></div><small>Checked by AM</small></div>
-                                <div class="sig-box"><div id="sig_rsm" class="sig-name"></div><small>Re-checked by RSM</small></div>
-                                <div class="sig-box"><div id="sig_approved" class="sig-name"></div><small>Approved by</small></div>
-                            </div>
-
-                            <div style="text-align:center; margin-top:20px;" class="no-print">
-                                <span id="autoSaveStatus" class="auto-save-indicator"></span>
-                                <button type="button" onclick="validateAndSave()" class="btn btn-success">Submit Plan</button>
-                            </div>
-                            <div id="tp_status" class="status-msg no-print" style="text-align:center;"></div>
-                        </form>
                     </div>
                 </div>
 
@@ -381,6 +417,7 @@
 
         let currentUser = null;
         let autoSaveTimer = null; 
+        let workPlaceOptions = []; 
 
         // ================== HELPER FUNCTIONS ==================
         
@@ -415,6 +452,16 @@
             if(role === 'mpo') return 'MPO';
             return role;
         }
+        
+        function getDayNameByDate(dateNum, monthStr) {
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const parts = monthStr.split("-");
+            const year = 2000 + parseInt(parts[1]);
+            const monthIndex = months.indexOf(parts[0]);
+            const d = new Date(year, monthIndex, dateNum);
+            const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            return days[d.getDay()];
+        }
 
         function populateMonthDropdowns() {
             const selectEntry = document.getElementById('tp_month');
@@ -445,22 +492,49 @@
                 tbody.innerHTML += `
                     <tr id="row_${i}" style="display:none;">
                         <td>${i}</td>
+                        <td id="dayName_${i}" class="day-name"></td>
                         <td><select name="hq_${i}" class="hq-select" style="width:100%;" onchange="handleHqChange(${i})">
                             <option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option>
                         </select></td>
-                        <td><input type="text" name="morning_${i}" class="work-input" style="border:none; text-align:center; width:100%;"></td>
-                        <td><input type="text" name="evening_${i}" class="work-input" style="border:none; text-align:center; width:100%;"></td>
+                        <td id="morning_cell_${i}"></td>
+                        <td id="evening_cell_${i}"></td>
                     </tr>`;
             }
-            setupAutoSave();
+        }
+
+        async function loadWorkPlaceOptions() {
+            workPlaceOptions = [];
+            try {
+                const snapshot = await get(ref(db, 'Users'));
+                if (snapshot.exists()) {
+                    snapshot.forEach(child => {
+                        const u = child.val();
+                        if (currentUser.role === 'admin') {
+                            if (u.role === 'user' && u.rsmId === currentUser.username && u.area) {
+                                workPlaceOptions.push(u.area);
+                            }
+                        } else if (currentUser.role === 'user') {
+                            if (u.role === 'mpo' && u.amId === currentUser.username && u.territory) {
+                                workPlaceOptions.push(u.territory);
+                            }
+                        }
+                    });
+                }
+                workPlaceOptions = [...new Set(workPlaceOptions)];
+            } catch (error) {
+                console.error("Error loading workplaces:", error);
+            }
         }
         
         window.handleHqChange = function(i) {
             const hqSel = document.querySelector(`[name="hq_${i}"]`);
             const morning = document.querySelector(`[name="morning_${i}"]`);
             const evening = document.querySelector(`[name="evening_${i}"]`);
-            if(hqSel.value === "Holiday" && !morning.readOnly) { morning.value = "Holiday"; evening.value = "Holiday"; }
-            morning.dispatchEvent(new Event('input'));
+            if(hqSel.value === "Holiday") { 
+                if(morning) morning.value = "Holiday"; 
+                if(evening) evening.value = "Holiday"; 
+            }
+            if(morning) morning.dispatchEvent(new Event('input'));
         }
 
         function setupAutoSave() {
@@ -474,19 +548,20 @@
             });
         }
 
-        window.handleMonthChange = function() {
+        window.handleMonthChange = async function() {
             for(let i=1; i<=31; i++) {
                 const row = document.getElementById(`row_${i}`);
                 if(row) {
                     row.style.display = "none";
                     const hqSel = document.querySelector(`[name="hq_${i}"]`);
-                    const mIn = document.querySelector(`[name="morning_${i}"]`);
-                    const eIn = document.querySelector(`[name="evening_${i}"]`);
+                    const dayCell = document.getElementById(`dayName_${i}`);
                     if(hqSel) hqSel.value = "";
-                    if(mIn) mIn.value = "";
-                    if(eIn) eIn.value = "";
+                    if(dayCell) dayCell.innerText = "";
+                    document.getElementById(`morning_cell_${i}`).innerHTML = "";
+                    document.getElementById(`evening_cell_${i}`).innerHTML = "";
                 }
             }
+
             const monthVal = document.getElementById('tp_month').value; 
             if(!monthVal) return;
             const parts = monthVal.split("-");
@@ -495,6 +570,21 @@
             const year = 2000 + parseInt(yearShort);
             const monthIndex = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].indexOf(monthName);
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+            const isDropdownMode = (currentUser.role === 'admin' || currentUser.role === 'user');
+            
+            let optionsHtml = "<option value=''>Select</option>";
+            if (isDropdownMode) {
+                if (workPlaceOptions.length > 0) {
+                    workPlaceOptions.forEach(opt => {
+                        optionsHtml += `<option value="${opt}">${opt}</option>`;
+                    });
+                } else {
+                    optionsHtml += `<option value='' disabled>No Data Found</option>`;
+                }
+                optionsHtml += "<option value='Holiday'>Holiday</option>";
+            }
 
             for(let i=1; i<=daysInMonth; i++) {
                 const row = document.getElementById(`row_${i}`);
@@ -502,23 +592,36 @@
                     row.style.display = ""; 
                     const d = new Date(year, monthIndex, i);
                     const dayOfWeek = d.getDay(); 
+                    const dayName = dayNames[dayOfWeek];
                     const holidayName = getHolidayName(d);
                     const hqSel = document.querySelector(`[name="hq_${i}"]`);
-                    const mIn = document.querySelector(`[name="morning_${i}"]`);
-                    const eIn = document.querySelector(`[name="evening_${i}"]`);
+                    const dayCell = document.getElementById(`dayName_${i}`);
+                    const mCell = document.getElementById(`morning_cell_${i}`);
+                    const eCell = document.getElementById(`evening_cell_${i}`);
+                    
+                    if(dayCell) dayCell.innerText = dayName;
 
                     if(dayOfWeek === 5 || holidayName) { 
-                        let displayName = holidayName || "Weekend (Friday)";
-                        mIn.value = displayName; eIn.value = displayName;
+                        let displayName = holidayName || "Weekend";
+                        mCell.innerHTML = `<input type="text" name="morning_${i}" class="work-input" value="${displayName}" readonly style="border:none; width:100%; text-align:center;">`;
+                        eCell.innerHTML = `<input type="text" name="evening_${i}" class="work-input" value="${displayName}" readonly style="border:none; width:100%; text-align:center;">`;
+                        
                         hqSel.innerHTML = '<option value="Holiday">Holiday</option>'; hqSel.value = "Holiday"; hqSel.disabled = true;
-                        mIn.readOnly = true; eIn.readOnly = true;
                     } else {
                         hqSel.innerHTML = `<option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option>`;
                         hqSel.value = ""; hqSel.disabled = false;
-                        mIn.value = ""; mIn.readOnly = false; eIn.value = ""; eIn.readOnly = false;
+
+                        if (isDropdownMode) {
+                            mCell.innerHTML = `<select name="morning_${i}" class="work-input" style="width:100%; border:none; text-align:center;">${optionsHtml}</select>`;
+                            eCell.innerHTML = `<select name="evening_${i}" class="work-input" style="width:100%; border:none; text-align:center;">${optionsHtml}</select>`;
+                        } else {
+                            mCell.innerHTML = `<input type="text" name="morning_${i}" class="work-input" style="border:none; width:100%; text-align:center;">`;
+                            eCell.innerHTML = `<input type="text" name="evening_${i}" class="work-input" style="border:none; width:100%; text-align:center;">`;
+                        }
                     }
                 }
             }
+            setupAutoSave();
         }
 
         window.toggleSidebar = function() {
@@ -559,7 +662,7 @@
         window.logout = function() { location.reload(); }
 
         // ================== DASHBOARD UI LOGIC ==================
-        function showDashboard() {
+        async function showDashboard() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('dashboardScreen').classList.remove('hidden');
             document.getElementById('sidebarName').innerText = currentUser.name;
@@ -569,10 +672,12 @@
             if(currentUser.role === 'superadmin' || currentUser.role === 'admin' || currentUser.role === 'user') {
                 document.getElementById('menuUserMgmt').classList.remove('hidden');
             } else { document.getElementById('menuUserMgmt').classList.add('hidden'); }
+            
+            await loadWorkPlaceOptions();
             showSection('home');
         }
 
-        window.showSection = function(sectionId) {
+        window.showSection = async function(sectionId) {
             if(window.innerWidth <= 768) { toggleSidebar(); }
             document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
@@ -590,7 +695,10 @@
             if(sectionId === 'tourHistory') loadTourHistory();
             if(sectionId === 'tourPlan') {
                  document.getElementById('sig_prepared').innerText = currentUser.name;
-                 document.getElementById('sig_am').innerText = ""; document.getElementById('sig_rsm').innerText = ""; document.getElementById('sig_approved').innerText = "";
+                 document.getElementById('sig_am').innerText = ""; 
+                 document.getElementById('sig_rsm').innerText = ""; 
+                 document.getElementById('sig_approved').innerText = "";
+                 
                  document.getElementById('tp_empId').value = currentUser.empId || currentUser.username;
                  document.getElementById('tp_name').value = currentUser.name;
                  document.getElementById('tp_designation').value = currentUser.designation || getRoleName(currentUser.role);
@@ -598,16 +706,18 @@
                  document.getElementById('tp_area').value = currentUser.area || '';
                  document.getElementById('tp_region').value = currentUser.region || '';
                  
-                 // LOGIC UPDATE: If RSM, set Area Manager and RSM fields to '-'
                  if(currentUser.role === 'admin') {
                      document.getElementById('tp_areaManager').value = '-';
                      document.getElementById('tp_rsm').value = '-';
+                 } else if (currentUser.role === 'user') {
+                     document.getElementById('tp_areaManager').value = currentUser.name;
+                     document.getElementById('tp_rsm').value = currentUser.rsmName || '-';
                  } else {
                      document.getElementById('tp_areaManager').value = currentUser.areaManagerName || '-';
                      document.getElementById('tp_rsm').value = currentUser.rsmName || '-';
                  }
 
-                 handleMonthChange();
+                 await handleMonthChange();
             }
         }
 
@@ -679,8 +789,7 @@
             let signatures = {};
             let approvalFlow = {};
             
-            const existingPrepared = document.getElementById('sig_prepared').innerText;
-            signatures.prepared = existingPrepared || currentUser.name;
+            signatures.prepared = currentUser.name;
 
             if(currentUser.role === 'mpo') {
                 initialStatus = "Pending_AM";
@@ -688,10 +797,11 @@
             } else if (currentUser.role === 'user') { 
                 initialStatus = "Pending_RSM"; 
                 approvalFlow = { amId: currentUser.username, rsmId: currentUser.rsmId };
-                if(!existingPrepared) signatures.prepared = currentUser.name;
-            } else if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
+            } else if (currentUser.role === 'admin') { 
                 initialStatus = "Approved";
-                signatures.rsm = currentUser.name; 
+            } else if (currentUser.role === 'superadmin') {
+                initialStatus = "Approved";
+                signatures.rsm = currentUser.name;
             }
 
             const key = `${empId}_${month.replace(/\s/g, '_')}`;
@@ -704,8 +814,14 @@
                 },
                 plan: planData
             }).then(() => {
-                if(isAutoSave) { autoStatusDiv.innerText = "Saved"; autoStatusDiv.style.color = "green"; }
-                else statusDiv.innerHTML = "<span class='success'>Submitted!</span>";
+                if(isAutoSave) { 
+                    autoStatusDiv.innerText = "Saved"; 
+                    autoStatusDiv.style.color = "green"; 
+                } else {
+                    alert("Tour Plan Submitted Successfully!");
+                    statusDiv.innerHTML = "<span class='success'>Successfully Saved!</span>";
+                    handleMonthChange(); 
+                }
             });
         };
 
@@ -776,7 +892,6 @@
                 if(!isApproved && !isRejected) actionBtns += `<button class="btn btn-sm btn-danger" onclick="rejectPlan('${key}')">Reject</button> `;
             }
 
-            // Print Button - Separate Window for Admin/RSM
             if(currentUser.role === 'admin' || currentUser.role === 'superadmin') {
                 actionBtns += `<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i> Print</button> `;
             }
@@ -842,6 +957,7 @@
                     modal.innerHTML = `
                         <div style="background:#fff; width:100%; max-width:900px; max-height:90vh; overflow-y:auto; padding:20px; position:relative;">
                             <button onclick="this.parentElement.parentElement.remove()" class="btn btn-danger btn-sm no-print" style="position:absolute; top:10px; right:10px;">X</button>
+                            <button onclick="printHistoryRecord('${key}')" class="btn btn-primary btn-sm no-print" style="position:absolute; top:10px; right:60px;"><i class="fas fa-print"></i> Print</button>
                             ${html}
                         </div>`;
                     document.body.appendChild(modal);
@@ -858,14 +974,16 @@
                     document.getElementById('tp_month').value = d.info.month;
                     handleMonthChange();
                     
-                    d.plan.forEach(p => {
-                        const hq = document.querySelector(`[name="hq_${p.date}"]`);
-                        const morning = document.querySelector(`[name="morning_${p.date}"]`);
-                        const evening = document.querySelector(`[name="evening_${p.date}"]`);
-                        if(hq) hq.value = p.hq;
-                        if(morning) morning.value = p.morning;
-                        if(evening) evening.value = p.evening;
-                    });
+                    setTimeout(() => {
+                        d.plan.forEach(p => {
+                            const hq = document.querySelector(`[name="hq_${p.date}"]`);
+                            const morning = document.querySelector(`[name="morning_${p.date}"]`);
+                            const evening = document.querySelector(`[name="evening_${p.date}"]`);
+                            if(hq) hq.value = p.hq;
+                            if(morning) morning.value = p.morning;
+                            if(evening) evening.value = p.evening;
+                        });
+                    }, 500);
 
                     document.getElementById('tp_empId').value = d.info.empId;
                     document.getElementById('tp_name').value = d.info.name;
@@ -898,8 +1016,10 @@
                     
                     let rows = "";
                     d.plan.forEach(p => {
+                        const dayName = getDayNameByDate(p.date, d.info.month);
                         rows += `<tr>
                             <td style="border:1px solid #000; padding:2px; text-align:center;">${p.date}</td>
+                            <td style="border:1px solid #000; padding:2px; text-align:center;">${dayName}</td>
                             <td style="border:1px solid #000; padding:2px; text-align:center;">${p.hq}</td>
                             <td style="border:1px solid #000; padding:2px;">${p.morning}</td>
                             <td style="border:1px solid #000; padding:2px;">${p.evening}</td>
@@ -907,11 +1027,7 @@
                     });
 
                     const sigs = d.info.signatures || {};
-
-                    // LOGIC UPDATE: Check if the user is RSM (Admin) based on designation or role saved in DB
                     const isRSM = (d.info.designation && d.info.designation.toLowerCase().includes('rsm')) || d.info.role === 'admin';
-                    
-                    // If RSM, show dash, otherwise show saved name or dash
                     const areaManagerVal = isRSM ? '-' : (d.info.areaManager || '-');
                     const rsmVal = isRSM ? '-' : (d.info.rsm || '-');
 
@@ -937,7 +1053,7 @@
                         <body>
                             <div class="header">
                                 <h2 style="margin:0; color:#0056b3;">MONICO PHARMA LTD</h2>
-                                <p style="margin:3px 0 0;">8/1, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</p>
+                                <p style="margin:3px 0 0;">7, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh</p>
                                 <h3 style="margin:8px 0;">MONTHLY TOUR PLAN</h3>
                             </div>
 
@@ -964,6 +1080,7 @@
                                 <thead>
                                     <tr>
                                         <th>Date</th>
+                                        <th>Day</th>
                                         <th>HQ/EX.HQ.</th>
                                         <th>Morning Work Place</th>
                                         <th>Evening Work Place</th>
@@ -977,7 +1094,6 @@
                             <div class="signature-area-print">
                                 <div class="sig-box-print">
                                     <div class="sig-line-print">
-                                    
                                         Prepared By<br><span style="font-weight:bold;">${sigs.prepared || d.info.name}</span>
                                     </div>
                                 </div>
@@ -1003,8 +1119,12 @@
 
                     win.document.write(printHtml);
                     win.document.close();
-                    win.focus();
-                    win.print();
+                    
+                    // Fix for blank page: wait for content to load
+                    setTimeout(() => {
+                        win.focus();
+                        win.print();
+                    }, 500);
                 }
             });
         }
@@ -1013,8 +1133,10 @@
             let rows = "";
             plan.forEach(p => {
                 if(p.hq || p.morning || p.evening) {
+                    const dayName = getDayNameByDate(p.date, info.month);
                     rows += `<tr>
                         <td>${p.date}</td>
+                        <td>${dayName}</td>
                         <td>${p.hq}</td>
                         <td>${p.morning}</td>
                         <td>${p.evening}</td>
@@ -1022,7 +1144,6 @@
                 }
             });
 
-            // LOGIC UPDATE: Handle RSM view in modal
             const isRSM = (info.designation && info.designation.toLowerCase().includes('rsm')) || info.role === 'admin';
             const areaManagerVal = isRSM ? '-' : (info.areaManager || '-');
             const rsmVal = isRSM ? '-' : (info.rsm || '-');
@@ -1034,7 +1155,13 @@
                     <p><strong>RSM:</strong> ${rsmVal}</p>
                     <div class="table-container">
                         <table style="width:100%; border-collapse:collapse; margin-top:10px;">
-                            <thead><tr style="background:#eee;"><th style="border:1px solid #ddd; padding:5px;">Date</th><th style="border:1px solid #ddd; padding:5px;">HQ</th><th style="border:1px solid #ddd; padding:5px;">Morning</th><th style="border:1px solid #ddd; padding:5px;">Evening</th></tr></thead>
+                            <thead><tr style="background:#eee;">
+                                <th style="border:1px solid #ddd; padding:5px;">Date</th>
+                                <th style="border:1px solid #ddd; padding:5px;">Day</th>
+                                <th style="border:1px solid #ddd; padding:5px;">HQ</th>
+                                <th style="border:1px solid #ddd; padding:5px;">Morning</th>
+                                <th style="border:1px solid #ddd; padding:5px;">Evening</th>
+                            </tr></thead>
                             <tbody>${rows}</tbody>
                         </table>
                     </div>
