@@ -148,7 +148,7 @@
         /* Area Grouping Style */
         .area-group-header { background: #e9ecef; padding: 8px; font-weight: bold; margin-top: 10px; border-left: 4px solid var(--primary); }
         
-        /* ==================== PRINT STYLES (Provided by User) ==================== */
+        /* ==================== PRINT STYLES ==================== */
         @media print {
             @page { size: A4; margin: 5mm; }
             body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; zoom: 90%; }
@@ -594,11 +594,19 @@
                  document.getElementById('tp_empId').value = currentUser.empId || currentUser.username;
                  document.getElementById('tp_name').value = currentUser.name;
                  document.getElementById('tp_designation').value = currentUser.designation || getRoleName(currentUser.role);
-                 document.getElementById('tp_areaManager').value = currentUser.areaManagerName || '';
-                 document.getElementById('tp_rsm').value = currentUser.rsmName || '';
                  document.getElementById('tp_territory').value = currentUser.territory || '';
                  document.getElementById('tp_area').value = currentUser.area || '';
                  document.getElementById('tp_region').value = currentUser.region || '';
+                 
+                 // LOGIC UPDATE: If RSM, set Area Manager and RSM fields to '-'
+                 if(currentUser.role === 'admin') {
+                     document.getElementById('tp_areaManager').value = '-';
+                     document.getElementById('tp_rsm').value = '-';
+                 } else {
+                     document.getElementById('tp_areaManager').value = currentUser.areaManagerName || '-';
+                     document.getElementById('tp_rsm').value = currentUser.rsmName || '-';
+                 }
+
                  handleMonthChange();
             }
         }
@@ -881,7 +889,7 @@
             if(confirm("Delete this plan?")) remove(ref(db, 'tourPlans/' + key)).then(() => loadTourHistory());
         }
 
-        // ================== PRINT RECORD WINDOW (User Provided Function Updated) ==================
+        // ================== PRINT RECORD WINDOW ==================
         window.printHistoryRecord = function(key) {
             get(ref(db, 'tourPlans/' + key)).then(snapshot => {
                 if(snapshot.exists()) {
@@ -899,7 +907,14 @@
                     });
 
                     const sigs = d.info.signatures || {};
-                    // Using the user provided HTML structure with dynamic data
+
+                    // LOGIC UPDATE: Check if the user is RSM (Admin) based on designation or role saved in DB
+                    const isRSM = (d.info.designation && d.info.designation.toLowerCase().includes('rsm')) || d.info.role === 'admin';
+                    
+                    // If RSM, show dash, otherwise show saved name or dash
+                    const areaManagerVal = isRSM ? '-' : (d.info.areaManager || '-');
+                    const rsmVal = isRSM ? '-' : (d.info.rsm || '-');
+
                     const printHtml = `
                         <html>
                         <head>
@@ -933,11 +948,11 @@
                                 </tr>
                                 <tr>
                                     <td><span class="info-label">Name of Emp:</span> ${d.info.name}</td>
-                                    <td><span class="info-label">Area Manager:</span> ${d.info.areaManager || ''}</td>
+                                    <td><span class="info-label">Area Manager:</span> ${areaManagerVal}</td>
                                 </tr>
                                 <tr>
                                     <td><span class="info-label">Territory:</span> ${d.info.territory || ''}</td>
-                                    <td><span class="info-label">RSM:</span> ${d.info.rsm || ''}</td>
+                                    <td><span class="info-label">RSM:</span> ${rsmVal}</td>
                                 </tr>
                                 <tr>
                                     <td><span class="info-label">Area:</span> ${d.info.area || ''}</td>
@@ -962,17 +977,18 @@
                             <div class="signature-area-print">
                                 <div class="sig-box-print">
                                     <div class="sig-line-print">
-                                        Signature<br><span style="font-weight:bold;">${sigs.prepared || d.info.name}</span>
+                                    
+                                        Prepared By<br><span style="font-weight:bold;">${sigs.prepared || d.info.name}</span>
                                     </div>
                                 </div>
                                 <div class="sig-box-print">
                                     <div class="sig-line-print">
-                                        AM Signature<br><span style="font-weight:bold;">${sigs.am || ''}</span>
+                                        Approved AM<br><span style="font-weight:bold;">${sigs.am || ''}</span>
                                     </div>
                                 </div>
                                 <div class="sig-box-print">
                                     <div class="sig-line-print">
-                                        RSM Signature<br><span style="font-weight:bold;">${sigs.rsm || ''}</span>
+                                        Approved RSM<br><span style="font-weight:bold;">${sigs.rsm || ''}</span>
                                     </div>
                                 </div>
                                 <div class="sig-box-print">
@@ -1006,10 +1022,16 @@
                 }
             });
 
+            // LOGIC UPDATE: Handle RSM view in modal
+            const isRSM = (info.designation && info.designation.toLowerCase().includes('rsm')) || info.role === 'admin';
+            const areaManagerVal = isRSM ? '-' : (info.areaManager || '-');
+            const rsmVal = isRSM ? '-' : (info.rsm || '-');
+
             return `
                 <div style="border:1px solid #ccc; padding:15px;">
                     <p><strong>Employee:</strong> ${info.name} (${info.empId})</p>
-                    <p><strong>Area Manager:</strong> ${info.areaManager}</p>
+                    <p><strong>Area Manager:</strong> ${areaManagerVal}</p>
+                    <p><strong>RSM:</strong> ${rsmVal}</p>
                     <div class="table-container">
                         <table style="width:100%; border-collapse:collapse; margin-top:10px;">
                             <thead><tr style="background:#eee;"><th style="border:1px solid #ddd; padding:5px;">Date</th><th style="border:1px solid #ddd; padding:5px;">HQ</th><th style="border:1px solid #ddd; padding:5px;">Morning</th><th style="border:1px solid #ddd; padding:5px;">Evening</th></tr></thead>
