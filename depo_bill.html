@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depot Management System (Firebase)</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #64748b;
+            --bg-color: #f1f5f9;
+            --sidebar-bg: #1e293b;
+            --sidebar-text: #94a3b8;
+            --sidebar-active: #ffffff;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 250px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100%;
+            transition: 0.3s;
+            z-index: 100;
+        }
+
+        .brand {
+            padding: 24px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: white;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            list-style: none;
+            padding: 20px 0;
+            flex-grow: 1;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background-color: #334155;
+            color: var(--sidebar-active);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        /* --- Main Content --- */
+        .main-content {
+            margin-left: 250px;
+            flex-grow: 1;
+            padding: 30px;
+            width: calc(100% - 250px);
+        }
+
+        header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h2.page-title {
+            font-size: 1.8rem;
+            color: var(--text-main);
+        }
+
+        /* --- Sections (SPA Logic) --- */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Dashboard Widgets --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        /* --- Forms & Tables --- */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-header {
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid { grid-template-columns: 1fr 1fr; }
+            .full-width { grid-column: span 2; }
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        select, input[type="text"], input[type="number"], input[type="month"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+        .btn-danger { background-color: var(--danger-color); color: white; }
+        .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+        }
+
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .action-btn:hover { color: var(--primary-color); }
+        .action-btn.delete:hover { color: var(--danger-color); }
+
+        /* --- REPORT SPECIFIC STYLES (A4 Paper Layout) --- */
+        #reportPaper {
+            background: white;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            display: none; /* Hidden until generated */
+            font-family: 'Times New Roman', Times, serif;
+            color: #000;
+            position: relative; /* Anchor for the print button */
+        }
+
+        .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+        .report-title { font-size: 22px; font-weight: bold; text-transform: uppercase; margin: 10px 0; }
+        .report-subtitle { font-size: 16px; font-weight: bold; margin-top: 15px; }
+        .report-meta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 14px; }
+        
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 8px; text-align: center; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; }
+        .report-table .text-left { text-align: left; }
+        
+        .group-header { background-color: #e2e8f0; font-weight: bold; }
+        .subtotal-row { background-color: #f8fafc; font-weight: bold; }
+        .grand-total-row { background-color: #dbeafe; font-weight: bold; font-size: 16px; }
+
+        .report-footer { margin-top: 30px; border-top: 2px solid #000; padding-top: 10px; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 60px; text-align: center; }
+        .sign-box { width: 30%; }
+
+        .report-summary { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Print Button Position (Top Right) */
+        #printBtnContainer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: none;
+            z-index: 10;
+        }
+
+        /* --- Print CSS --- */
+        @media print {
+            body * { visibility: hidden; }
+            #reportPaper, #reportPaper * { visibility: visible; }
+            #reportPaper {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                box-shadow: none;
+                display: block !important;
+            }
+            .sidebar, header, .controls-section, #printBtnContainer { display: none !important; }
+        }
+
+        /* --- Toast & Modal --- */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 1000;
+            bottom: 30px;
+            right: 30px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #toast.show { opacity: 1; bottom: 50px; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .brand span, .nav-item span { display: none; }
+            .brand { justify-content: center; }
+            .nav-item { justify-content: center; padding: 15px; }
+            .main-content { margin-left: 70px; width: calc(100% - 70px); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>DepotSys</span>
+        </div>
+        <ul class="nav-links">
+            <li class="nav-item active" onclick="showSection('dashboard')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Dashboard</span>
+            </li>
+            <li class="nav-item" onclick="showSection('bills')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Manage Bills</span>
+            </li>
+            <li class="nav-item" onclick="showSection('reports')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Reports</span>
+            </li>
+            <li class="nav-item" onclick="showSection('particulars')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Particulars</span>
+            </li>
+            <li class="nav-item" onclick="window.location.href='/'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>DepotSys</span>
+            </li>
+           
+        </ul>
+    </aside>
+
+    <main class="main-content">
+        <!-- Header -->
+        <header>
+            <h2 class="page-title" id="pageTitle">Dashboard Overview</h2>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                Admin (Live)
+            </div>
+        </header>
+
+        <!-- 1. DASHBOARD SECTION -->
+        <section id="dashboard" class="section active">
+            <div class="dashboard-grid">
+                <div class="stat-card" style="border-color: #2563eb;">
+                    <h3>Total Expense</h3>
+                    <div class="value" id="dashTotalExpense">৳ 0.00</div>
+                </div>
+                <div class="stat-card" style="border-color: #10b981;">
+                    <h3>Total Bills</h3>
+                    <div class="value" id="dashTotalBills">0</div>
+                </div>
+                <div class="stat-card" style="border-color: #f59e0b;">
+                    <h3>Maintenance Cost</h3>
+                    <div class="value" id="dashMaintCost">৳ 0.00</div>
+                </div>
+                <div class="stat-card" style="border-color: #8b5cf6;">
+                    <h3>Delivery Cost</h3>
+                    <div class="value" id="dashDeliveryCost">৳ 0.00</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">Recent Bills</div>
+                <div class="table-container">
+                    <table id="dashTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Category</th>
+                                <th>Particular</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashTableBody">
+                            <!-- Recent rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. MANAGE BILLS SECTION -->
+        <section id="bills" class="section">
+            <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr;">
+                <!-- Form -->
+                <div class="card">
+                    <div class="card-header" id="billFormTitle">Add Bill</div>
+                    <form id="billForm">
+                        <input type="hidden" id="billId">
+                        <div class="form-group">
+                            <label>Month</label>
+                            <input type="month" id="billMonth" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="billCategory" required>
+                                <option value="" disabled selected>Select Category</option>
+                                <option value="Depot Stationery Bill">Depot Stationery Bill</option>
+                                <option value="Depot Maintenance Bill">Depot Maintenance Bill</option>
+                                <option value="Delivery Bill">Delivery Bill</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Particular</label>
+                            <select id="billParticular" required>
+                                <!-- Populated via JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Type</label>
+                            <select id="billType" required>
+                                <option value="" disabled selected>Select Type</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Credit">Credit</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Net Amount (৳)</label>
+                            <input type="number" id="billAmount" placeholder="0.00" min="0" step="0.01" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="submitBillBtn">Add Bill</button>
+                        <button type="button" class="btn" style="background:#64748b; color:white; margin-top:10px; display:none;" id="cancelBillBtn">Cancel</button>
+                    </form>
+                </div>
+                
+                <!-- List -->
+                <div class="card">
+                    <div class="card-header">All Bills</div>
+                    <div class="table-container">
+                        <table id="billsTable">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Category</th>
+                                    <th>Particular</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="emptyBills" class="empty-state" style="text-align:center; padding:20px; display:none;">Loading bills...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. REPORTS SECTION -->
+        <section id="reports" class="section">
+            <div class="card controls-section">
+                <div class="card-header">Generate Expense Bill Summary</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Select Month</label>
+                        <input type="month" id="reportMonth">
+                    </div>
+                    <div class="form-group">
+                        <label>Bill No</label>
+                        <input type="text" id="reportBillNo" placeholder="e.g., 2025011">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Product Delivery Sales (TP+Vat)</label>
+                        <input type="number" id="reportTotalSales" placeholder="0.00" min="0">
+                        <small style="color:var(--text-muted);">Used for Cost % calculation</small>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The Printable Report Paper -->
+            <div id="reportPaper">
+                <!-- PRINT BUTTON TOP RIGHT -->
+                <div id="printBtnContainer">
+                    <button class="btn btn-primary" onclick="window.print()">Print Summary</button>
+                </div>
+
+                <div class="report-header">
+                    <h3>Monico Pharma Ltd</h3>
+                    <p>Kushtia Depot</p>
+                    <p>04/01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</p>
+                    <div class="report-title">Depot Expense Bill</div>
+                </div>
+
+                <div class="report-meta">
+                    <span id="rptMonthDisplay">Month Of: November-25</span>
+                    <span id="rptBillNoDisplay">Bill No: 2025011</span>
+                </div>
+
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Sl No</th>
+                            <th class="text-left">Perticular</th>
+                            <th style="width: 15%;">Type</th>
+                            <th style="width: 20%;">Net Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rptTableBody">
+                        <!-- Content injected via JS -->
+                    </tbody>
+                </table>
+
+                <div class="report-summary">
+                    <div style="text-align: left;">
+                        <strong>Product Delivery Cost</strong><br>
+                        <span id="rptSalesMonth">Dec-25</span>
+                    </div>
+                    <div style="text-align: right;">
+                        Total TP+Vat<br>
+                        <span id="rptSalesAmount">0</span>
+                    </div>
+                    <div style="text-align: right;">
+                        Cost %: <span id="rptCostPercent">0%</span>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px; border-top: 1px solid #000; padding-top: 5px; display: flex; justify-content: space-between;">
+                    <strong>Grand Total Bill</strong>
+                    <strong id="rptGrandTotal">2,000</strong>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <strong>In Words: </strong> <span id="rptInWords">Taka Two Thousand Only</span>
+                </div>
+
+                <div class="report-footer">
+                    <div class="signatures">
+                        <div class="sign-box">
+                            <br><br><br>________________________<br>Prepared by
+                        </div>
+                        <div class="sign-box">
+                            <br><br><br>________________________<br>Checked by Sr RSM
+                        </div>
+                        <div class="sign-box">
+                            <br><br><br>________________________<br>Approved by
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. MANAGE PARTICULARS SECTION -->
+        <section id="particulars" class="section">
+            <div class="card">
+                <div class="card-header" id="partFormTitle">Add Particular</div>
+                <form id="partForm">
+                    <input type="hidden" id="partId">
+                    <div class="form-group">
+                        <label>Particular Name</label>
+                        <input type="text" id="partName" placeholder="e.g., Conveyance, Internet Bill" required>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary" id="submitPartBtn">Add Particular</button>
+                        <button type="button" class="btn" style="background:#64748b; color:white; display:none;" id="cancelPartBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card">
+                <div class="card-header">All Particulars</div>
+                <table id="partTable">
+                    <thead>
+                        <tr>
+                            <th>Particular Name</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="partTableBody"></tbody>
+                </table>
+                <div id="emptyParts" style="text-align:center; padding:20px; display:none;">Loading particulars...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast & Modals -->
+    <div id="toast">Message here</div>
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal">
+            <h3>Delete Item?</h3>
+            <p>This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn" style="background:#e2e8f0;" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyBEaGG_UsXGf6RGHQ_ckalf33fLla-P2J8",
+          authDomain: "whatapp-8d8ed.firebaseapp.com",
+          databaseURL: "https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",
+          projectId: "whatapp-8d8ed",
+          storageBucket: "whatapp-8d8ed.firebasestorage.app",
+          messagingSenderId: "618833956157",
+          appId: "1:618833956157:web:2c3835d5c03668afa7c954",
+          measurementId: "G-JLG1K25Z7N"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // References
+        const billsRef = ref(db, 'bills');
+        const particularsRef = ref(db, 'particulars');
+
+        // --- STATE ---
+        let bills = [];
+        let particulars = [];
+        let deleteTarget = { type: null, id: null };
+
+        // --- UTILITIES ---
+        const $ = (id) => document.getElementById(id);
+        const formatCurrency = (num) => '৳ ' + parseFloat(num).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        const getMonthName = (str) => {
+            if(!str) return '';
+            const d = new Date(str + '-01');
+            return d.toLocaleString('default', { month: 'short', year: 'numeric' });
+        };
+
+        // --- NUMBER TO WORDS (INDIAN SYSTEM FIX) ---
+        function numberToWords(n) {
+            if (n === 0) return "Zero";
+            
+            const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+            const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+            // Helper to convert numbers < 100
+            const convertTwoDigit = (num) => {
+                if (num < 10) return units[num];
+                if (num < 20) return teens[num - 10];
+                return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? " " + units[num % 10] : "");
+            };
+
+            let str = "";
+            let val = n;
+
+            // Crore (10,000,000+)
+            if (val >= 10000000) {
+                str += convertTwoDigit(Math.floor(val / 10000000)) + " Crore ";
+                val %= 10000000;
+            }
+            // Lac (100,000+)
+            if (val >= 100000) {
+                str += convertTwoDigit(Math.floor(val / 100000)) + " Lac ";
+                val %= 100000;
+            }
+            // Thousand (1,000+)
+            if (val >= 1000) {
+                str += convertTwoDigit(Math.floor(val / 1000)) + " Thousand ";
+                val %= 1000;
+            }
+            // Hundred (100+)
+            if (val >= 100) {
+                str += units[Math.floor(val / 100)] + " Hundred ";
+                val %= 100;
+            }
+            // Last two digits (1-99)
+            if (val > 0) {
+                str += convertTwoDigit(val) + " ";
+            }
+
+            return str.trim();
+        }
+
+        function showToast(msg) {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = "show";
+            setTimeout(() => t.className = "", 3000);
+        }
+
+        // --- NAVIGATION ---
+        window.showSection = (id) => {
+            document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            $(id).classList.add('active');
+            
+            // Highlight nav
+            const navs = document.querySelectorAll('.nav-item');
+            if(id === 'dashboard') navs[0].classList.add('active');
+            if(id === 'bills') navs[1].classList.add('active');
+            if(id === 'reports') navs[2].classList.add('active');
+            if(id === 'particulars') navs[3].classList.add('active');
+
+            // Update Title
+            const titles = {
+                'dashboard': 'Dashboard Overview',
+                'bills': 'Manage Depot Bills',
+                'reports': 'Depot Expense Report',
+                'particulars': 'Manage Particulars'
+            };
+            $('pageTitle').textContent = titles[id];
+
+            if(id === 'dashboard') updateDashboard();
+        }
+
+        // --- FIREBASE LISTENERS (REAL-TIME) ---
+
+        // 1. Listen to Particulars
+        onValue(particularsRef, (snapshot) => {
+            $('emptyParts').style.display = 'none';
+            const data = snapshot.val();
+            if (data) {
+                const arr = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
+                particulars = arr.sort((a,b) => a.name.localeCompare(b.name));
+            } else {
+                particulars = [];
+            }
+            renderParticulars();
+            renderParticularSelect();
+        });
+
+        // 2. Listen to Bills
+        onValue(billsRef, (snapshot) => {
+            $('emptyBills').style.display = 'none';
+            const data = snapshot.val();
+            if (data) {
+                const arr = Object.entries(data).map(([key, val]) => ({ id: key, ...val }));
+                bills = arr;
+            } else {
+                bills = [];
+            }
+            renderBills();
+            updateDashboard();
+        });
+
+        // --- DASHBOARD ---
+        function updateDashboard() {
+            let total = 0, maint = 0, delivery = 0;
+            bills.forEach(b => {
+                const amt = parseFloat(b.amount);
+                total += amt;
+                if(b.category === 'Depot Maintenance Bill') maint += amt;
+                if(b.category === 'Delivery Bill') delivery += amt;
+            });
+
+            $('dashTotalExpense').textContent = formatCurrency(total);
+            $('dashTotalBills').textContent = bills.length;
+            $('dashMaintCost').textContent = formatCurrency(maint);
+            $('dashDeliveryCost').textContent = formatCurrency(delivery);
+
+            // Recent bills (last 5)
+            const sorted = [...bills].sort((a,b) => b.id.localeCompare(a.id)).slice(0, 5);
+            const tbody = $('dashTableBody');
+            tbody.innerHTML = sorted.map(b => `
+                <tr>
+                    <td>${getMonthName(b.month)}</td>
+                    <td>${b.category}</td>
+                    <td>${b.particular}</td>
+                    <td>${formatCurrency(b.amount)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // --- BILLS LOGIC ---
+        function renderBills() {
+            const tbody = $('billsTableBody');
+            tbody.innerHTML = '';
+            
+            if(bills.length === 0) {
+                $('emptyBills').style.display = 'block';
+                return;
+            }
+            $('emptyBills').style.display = 'none';
+
+            const sorted = [...bills].sort((a,b) => b.id.localeCompare(a.id));
+            sorted.forEach(b => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${getMonthName(b.month)}</td>
+                    <td>${b.category}</td>
+                    <td>${b.particular}</td>
+                    <td><span style="font-size:0.8rem; padding:2px 6px; background:#e2e8f0; border-radius:4px;">${b.type}</span></td>
+                    <td style="font-weight:bold;">${formatCurrency(b.amount)}</td>
+                    <td>
+                        <button class="action-btn" onclick="window.editBill('${b.id}')">✎</button>
+                        <button class="action-btn delete" onclick="window.confirmDelete('bill', '${b.id}')">✕</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Populate Particular Select
+        function renderParticularSelect() {
+            const sel = $('billParticular');
+            sel.innerHTML = '<option value="" disabled selected>Select Particular</option>';
+            particulars.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.name;
+                sel.appendChild(opt);
+            });
+        }
+
+        // Add/Edit Bill
+        $('billForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = $('billId').value;
+            const data = {
+                month: $('billMonth').value,
+                category: $('billCategory').value,
+                particular: $('billParticular').value,
+                type: $('billType').value,
+                amount: parseFloat($('billAmount').value)
+            };
+
+            try {
+                if(id) {
+                    // Update existing
+                    await update(ref(db, 'bills/' + id), data);
+                    showToast('Bill Updated');
+                } else {
+                    // Add new
+                    await push(billsRef, data);
+                    showToast('Bill Added');
+                }
+                resetBillForm();
+            } catch (error) {
+                console.error(error);
+                showToast('Error saving bill');
+            }
+        });
+
+        window.editBill = (id) => {
+            const b = bills.find(x => x.id === id);
+            if(!b) return;
+            $('billId').value = b.id;
+            $('billMonth').value = b.month;
+            $('billCategory').value = b.category;
+            $('billParticular').value = b.particular;
+            $('billType').value = b.type;
+            $('billAmount').value = b.amount;
+
+            $('billFormTitle').textContent = 'Edit Bill';
+            $('submitBillBtn').textContent = 'Update Bill';
+            $('cancelBillBtn').style.display = 'inline-block';
+        };
+
+        function resetBillForm() {
+            $('billForm').reset();
+            $('billId').value = '';
+            const now = new Date();
+            $('billMonth').value = now.toISOString().slice(0,7);
+            $('billFormTitle').textContent = 'Add Bill';
+            $('submitBillBtn').textContent = 'Add Bill';
+            $('cancelBillBtn').style.display = 'none';
+        }
+        $('cancelBillBtn').onclick = resetBillForm;
+
+        // --- PARTICULARS LOGIC ---
+        function renderParticulars() {
+            const tbody = $('partTableBody');
+            tbody.innerHTML = '';
+            if(particulars.length === 0) {
+                $('emptyParts').style.display = 'block';
+            } else {
+                $('emptyParts').style.display = 'none';
+                particulars.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${p.name}</td>
+                        <td>
+                            <button class="action-btn" onclick="window.editPart('${p.id}')">✎</button>
+                            <button class="action-btn delete" onclick="window.confirmDelete('part', '${p.id}')">✕</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+
+        $('partForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = $('partName').value;
+            const id = $('partId').value;
+
+            try {
+                if(id) {
+                    await update(ref(db, 'particulars/' + id), { name });
+                    showToast('Particular Updated');
+                } else {
+                    await push(particularsRef, { name });
+                    showToast('Particular Added');
+                }
+                resetPartForm();
+            } catch (error) {
+                console.error(error);
+                showToast('Error saving particular');
+            }
+        });
+
+        window.editPart = (id) => {
+            const p = particulars.find(x => x.id === id);
+            if(!p) return;
+            $('partId').value = p.id;
+            $('partName').value = p.name;
+            $('partFormTitle').textContent = 'Edit Particular';
+            $('submitPartBtn').textContent = 'Update';
+            $('cancelPartBtn').style.display = 'inline-block';
+        };
+
+        function resetPartForm() {
+            $('partForm').reset();
+            $('partId').value = '';
+            $('partFormTitle').textContent = 'Add Particular';
+            $('submitPartBtn').textContent = 'Add Particular';
+            $('cancelPartBtn').style.display = 'none';
+        }
+        $('cancelPartBtn').onclick = resetPartForm;
+
+        // --- DELETE LOGIC ---
+        window.confirmDelete = (type, id) => {
+            deleteTarget = { type, id };
+            $('deleteModal').classList.add('open');
+        };
+        window.closeModal = () => $('deleteModal').classList.remove('open');
+        
+        $('confirmDeleteBtn').onclick = async () => {
+            try {
+                if(deleteTarget.type === 'bill') {
+                    await remove(ref(db, 'bills/' + deleteTarget.id));
+                    showToast('Bill Deleted');
+                } else {
+                    await remove(ref(db, 'particulars/' + deleteTarget.id));
+                    showToast('Particular Deleted');
+                }
+                closeModal();
+            } catch (error) {
+                showToast('Error deleting item');
+            }
+        };
+
+        // --- REPORTS LOGIC ---
+        window.generateReport = () => {
+            const month = $('reportMonth').value;
+            const billNo = $('reportBillNo').value;
+            const totalSales = parseFloat($('reportTotalSales').value) || 0;
+
+            if(!month) { showToast('Please select a month'); return; }
+
+            // Filter Data
+            const filtered = bills.filter(b => b.month === month);
+            if(filtered.length === 0) { showToast('No bills found for this month'); return; }
+
+            // Group Data
+            const categories = ['Depot Stationery Bill', 'Depot Maintenance Bill', 'Delivery Bill'];
+            let grandTotal = 0;
+            let deliveryTotal = 0; 
+            let html = '';
+            let globalSl = 1;
+
+            categories.forEach(cat => {
+                const catBills = filtered.filter(b => b.category === cat);
+                if(catBills.length > 0) {
+                    // Header Row
+                    html += `<tr><td colspan="4" class="group-header">${cat}</td></tr>`;
+                    
+                    // Rows
+                    let catTotal = 0;
+                    catBills.forEach(b => {
+                        catTotal += b.amount;
+                        grandTotal += b.amount;
+                        html += `
+                            <tr>
+                                <td>${globalSl++}</td>
+                                <td class="text-left">${b.particular}</td>
+                                <td>${b.type}</td>
+                                <td>${formatCurrency(b.amount)}</td>
+                            </tr>
+                        `;
+                    });
+
+                    // Subtotal Row
+                    html += `
+                        <tr class="subtotal-row">
+                            <td colspan="3" class="text-left">${cat} Total</td>
+                            <td>${formatCurrency(catTotal)}</td>
+                        </tr>
+                    `;
+
+                    // Capture Delivery Total for Cost Calculation
+                    if(cat === 'Delivery Bill') {
+                        deliveryTotal = catTotal;
+                    }
+                }
+            });
+
+            // Update Report DOM
+            $('rptMonthDisplay').textContent = "Month Of: " + getMonthName(month);
+            $('rptBillNoDisplay').textContent = "Bill No: " + (billNo || 'N/A');
+            $('rptTableBody').innerHTML = html;
+            $('rptGrandTotal').textContent = formatCurrency(grandTotal);
+            
+            // Sales & Cost %
+            $('rptSalesMonth').textContent = getMonthName(month);
+            $('rptSalesAmount').textContent = formatCurrency(totalSales);
+            const costPercent = totalSales > 0 ? ((deliveryTotal / totalSales) * 100).toFixed(2) : 0;
+            $('rptCostPercent').textContent = costPercent + "%";
+
+            // FIX: In Words using Indian System logic
+            const amountInWords = numberToWords(Math.floor(grandTotal));
+            $('rptInWords').textContent = "Taka " + amountInWords + " Only"; 
+
+            // Show paper and print button
+            $('reportPaper').style.display = 'block';
+            $('printBtnContainer').style.display = 'block';
+        };
+
+        // --- INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const d = new Date();
+            const mStr = d.toISOString().slice(0,7);
+            $('billMonth').value = mStr;
+            $('reportMonth').value = mStr;
+        });
+
+    </script>
+</body>
+</html>
