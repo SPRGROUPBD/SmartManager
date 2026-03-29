@@ -179,7 +179,6 @@
             .report-table th,.report-table td{border:.5px solid #000;padding:3px 4px;font-size:8pt;line-height:1.15}
             .report-table th{font-size:8pt}
             .report-table .group-header{font-size:8pt}
-            .report-summary{margin-top:4px;font-size:8pt;line-height:1.2}
             .report-footer{margin-top:6px;border-top:1.5px solid #000;padding-top:4px}
             .signatures{margin-top:90px}
             .sign-box,.sign-line,.sign-label{font-size:8pt}
@@ -297,7 +296,6 @@
                     <div class="bill-no-preview"><span class="badge">Auto</span><small style="color:var(--muted)">Format: KSYYYYMMSS</small></div>
                     <div class="status-indicator" id="billStatus" style="display:none"><span class="status-dot" id="statusDot"></span><span id="statusText"></span></div>
                 </div>
-                <div class="form-group"><label>Total Product Delivery Sales (TP+Vat)</label><input type="number" id="reportTotalSales" placeholder="0.00" min="0"><small style="color:var(--muted)">Used for Delivery Cost % calculation</small></div>
                 <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary" id="generateReportBtn" onclick="window.generateReport()"><span id="genBtnText">Generate Report</span></button></div>
             </div>
         </div>
@@ -311,8 +309,7 @@
                 <thead><tr><th style="width:7%">Sl No</th><th class="text-left">Perticular</th><th style="width:7%">Bill Qty</th><th style="width:10%">Type</th><th style="width:16%">Net Amount</th></tr></thead>
                 <tbody id="rptTableBody"></tbody>
             </table>
-            <div class="report-summary"><div style="text-align:left"><strong>Product Delivery Cost</strong><br><span id="rptSalesMonth"></span></div><div style="text-align:right">Total TP+Vat<br><span id="rptSalesAmount"></span></div><div style="text-align:right">Cost %: <span id="rptCostPercent"></span></div></div>
-            <div style="margin-top:6px;border-top:1px solid #000;padding-top:4px;display:flex;justify-content:space-between;font-size:12px"><strong>Grand Total Bill</strong><strong id="rptGrandTotal"></strong></div>
+            <div style="margin-top:8px;border-top:2px solid #000;padding-top:6px;display:flex;justify-content:space-between;font-size:13px"><strong>Grand Total Expense</strong><strong id="rptGrandTotal"></strong></div>
             <div style="margin-top:4px;font-size:11px"><strong>In Words: </strong><span id="rptInWords"></span></div>
             <div class="report-footer"><div class="signatures"><div class="sign-box"><div class="sign-line">________________________</div><div class="sign-label">Prepared by</div></div><div class="sign-box"><div class="sign-line">________________________</div><div class="sign-label">Checked by Sr RSM</div></div><div class="sign-box"><div class="sign-line">________________________</div><div class="sign-label">Approved by</div></div></div></div>
         </div>
@@ -474,21 +471,20 @@ function buildReportHTML(items){
 
 function renderReportHistory(){const c=$('reportHistoryList');$('historyCount').textContent=savedReports.length>0?'('+savedReports.length+')':'';if(!savedReports.length){c.innerHTML='<div class="empty-state">No reports generated yet</div>';return}c.innerHTML=savedReports.map(r=>{const d=r.generatedAt?new Date(r.generatedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';return`<div class="history-item"><div><div class="history-billno">${r.billNo}</div><div class="history-meta">${mn(r.month)} &bull; ${d}</div></div><div style="display:flex;align-items:center;gap:12px"><span class="history-amount">${fmt(r.grandTotal)}</span><button class="action-btn" onclick="window.viewSavedReport('${r.id}')" title="View">&#128065;</button><button class="action-btn delete" onclick="window.confirmDelete('report','${r.id}')" title="Delete">&#10005;</button></div></div>`}).join('')}
 
-window.viewSavedReport=rid=>{const r=savedReports.find(x=>x.id===rid);if(!r||!r.items)return;$('rptMonthDisplay').textContent="Month Of: "+mn(r.month);$('rptBillNoDisplay').textContent="Bill No: "+r.billNo;$('rptTableBody').innerHTML=buildReportHTML(r.items);$('rptGrandTotal').textContent=fmt(r.grandTotal);$('rptSalesMonth').textContent=mn(r.month);$('rptSalesAmount').textContent=fmt(r.totalSales||0);$('rptCostPercent').textContent=(r.costPercent||'0')+"%";$('rptInWords').textContent="Taka "+numberToWords(Math.floor(r.grandTotal))+" Only";$('reportPaper').style.display='block';$('printBtnContainer').style.display='block';$('reportPaper').scrollIntoView({behavior:'smooth',block:'start'})};
+window.viewSavedReport=rid=>{const r=savedReports.find(x=>x.id===rid);if(!r||!r.items)return;$('rptMonthDisplay').textContent="Month Of: "+mn(r.month);$('rptBillNoDisplay').textContent="Bill No: "+r.billNo;$('rptTableBody').innerHTML=buildReportHTML(r.items);$('rptGrandTotal').textContent=fmt(r.grandTotal);$('rptInWords').textContent="Taka "+numberToWords(Math.floor(r.grandTotal))+" Only";$('reportPaper').style.display='block';$('printBtnContainer').style.display='block';$('reportPaper').scrollIntoView({behavior:'smooth',block:'start'})};
 
 window.generateReport=async()=>{
-    const month=$('reportMonth').value,totalSales=parseFloat($('reportTotalSales').value)||0;
+    const month=$('reportMonth').value;
     if(!month){showToast('Please select a month','error');return}
     if(monthHasReport(month)){const ex=getExistingReportForMonth(month);showToast(ex.billNo+' already exists! Delete it first.','error');return}
     const filtered=bills.filter(b=>b.month===month);if(!filtered.length){showToast('No bills found for '+mn(month),'error');return}
     const btn=$('generateReportBtn'),bt=$('genBtnText');btn.disabled=true;bt.textContent='Generating...';
     try{
         const[y,m]=month.split('-');const ss=await getNextSerialForYearFromDB(y);const billNo='KS'+y+m+ss;
-        let grandTotal=0,deliveryTotal=0,reportItems=[];
-        filtered.forEach(b=>{grandTotal+=b.amount;reportItems.push({particular:b.particular,qty:b.qty||1,type:b.type,amount:b.amount,category:b.category});if(b.category==='Delivery Expense')deliveryTotal+=b.amount});
-        const costPercent=totalSales>0?((deliveryTotal/totalSales)*100).toFixed(2):'0';
-        await push(reportsRef,{billNo,month,totalSales,grandTotal,deliveryTotal,costPercent,items:reportItems,generatedAt:new Date().toISOString()});
-        $('reportBillNo').value=billNo;$('rptMonthDisplay').textContent="Month Of: "+mn(month);$('rptBillNoDisplay').textContent="Bill No: "+billNo;$('rptTableBody').innerHTML=buildReportHTML(reportItems);$('rptGrandTotal').textContent=fmt(grandTotal);$('rptSalesMonth').textContent=mn(month);$('rptSalesAmount').textContent=fmt(totalSales);$('rptCostPercent').textContent=costPercent+"%";$('rptInWords').textContent="Taka "+numberToWords(Math.floor(grandTotal))+" Only";
+        let grandTotal=0,reportItems=[];
+        filtered.forEach(b=>{grandTotal+=b.amount;reportItems.push({particular:b.particular,qty:b.qty||1,type:b.type,amount:b.amount,category:b.category})});
+        await push(reportsRef,{billNo,month,grandTotal,items:reportItems,generatedAt:new Date().toISOString()});
+        $('reportBillNo').value=billNo;$('rptMonthDisplay').textContent="Month Of: "+mn(month);$('rptBillNoDisplay').textContent="Bill No: "+billNo;$('rptTableBody').innerHTML=buildReportHTML(reportItems);$('rptGrandTotal').textContent=fmt(grandTotal);$('rptInWords').textContent="Taka "+numberToWords(Math.floor(grandTotal))+" Only";
         $('reportPaper').style.display='block';$('printBtnContainer').style.display='block';showToast('Report saved! '+billNo,'success');setTimeout(()=>$('reportPaper').scrollIntoView({behavior:'smooth',block:'start'}),200);
     }catch(e){console.error(e);showToast('Error generating report','error')}finally{bt.textContent='Generate Report'}
 };
