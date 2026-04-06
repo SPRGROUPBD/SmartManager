@@ -738,6 +738,22 @@
         let modalUserBill = 0;
         let modalIou = 0;
 
+        // Helper: IOU types that require a separate bill
+        function isBillRequiredIOU(type) {
+            return (type === 'Delivery' || type === 'Collection' || type === 'Return');
+        }
+
+        // Helper: IOU types that do NOT require a bill
+        function isNoBillIOU(type) {
+            return (type === 'General' || type === 'Bill Payment');
+        }
+
+        // Helper: get DA name from cache or fallback
+        function getDAName(daId) {
+            if (daListCache[daId]) return daListCache[daId];
+            return 'Unknown';
+        }
+
         // ================= GLOBAL MONTH FILTER =================
         let globalFilterMonth = '';
 
@@ -755,65 +771,30 @@
 
         function setGlobalMonth(monthVal) {
             globalFilterMonth = monthVal || '';
-
-            const allMonthInputs = [
-                'global_month_filter',
-                'filter_history_month',
-                'summary_month',
-                'filter_approved_month',
-                'filter_iou_month'
-            ];
-            allMonthInputs.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.value = globalFilterMonth;
-            });
-
+            var allMonthInputs = ['global_month_filter','filter_history_month','summary_month','filter_approved_month','filter_iou_month'];
+            allMonthInputs.forEach(function(id) { var el = document.getElementById(id); if (el) el.value = globalFilterMonth; });
             var btnCurrent = document.getElementById('btn_month_current');
             var btnAll = document.getElementById('btn_month_all');
             if (btnCurrent && btnAll) {
-                if (globalFilterMonth === getCurrentMonth()) {
-                    btnCurrent.classList.add('active-month');
-                    btnAll.classList.remove('active-month');
-                } else if (globalFilterMonth === '') {
-                    btnAll.classList.add('active-month');
-                    btnCurrent.classList.remove('active-month');
-                } else {
-                    btnCurrent.classList.remove('active-month');
-                    btnAll.classList.remove('active-month');
-                }
+                if (globalFilterMonth === getCurrentMonth()) { btnCurrent.classList.add('active-month'); btnAll.classList.remove('active-month'); }
+                else if (globalFilterMonth === '') { btnAll.classList.add('active-month'); btnCurrent.classList.remove('active-month'); }
+                else { btnCurrent.classList.remove('active-month'); btnAll.classList.remove('active-month'); }
             }
-
             var label = formatMonthLabel(globalFilterMonth);
-            var labelEls = ['dash_da_month_label', 'iou_pending_month_label', 'approved_vs_iou_month_label', 'user_active_iou_month_label', 'user_used_iou_month_label'];
-            labelEls.forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.innerText = '(' + label + ')';
-            });
-
+            var labelEls = ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label'];
+            labelEls.forEach(function(id) { var el = document.getElementById(id); if (el) el.innerText = '(' + label + ')'; });
             localStorage.setItem('globalFilterMonth', globalFilterMonth);
-
             reloadAllData();
         }
 
         function reloadAllData() {
             if (!currentUser) return;
-
-            if (currentUser.role === 'user') {
-                loadUserDashboardData();
-            } else {
-                loadAdminDashboardData();
-                loadAdminIOU();
-            }
-
+            if (currentUser.role === 'user') { loadUserDashboardData(); }
+            else { loadAdminDashboardData(); loadAdminIOU(); }
             loadBills();
-
-            // FIX #1: Missing dot was here - document.getElementById('summaryTab')classList
-            if (document.getElementById('summaryTab').classList.contains('show')) {
-                generateSummary();
-            }
+            if (document.getElementById('summaryTab').classList.contains('show')) { generateSummary(); }
         }
 
-        // ================= HELPER FUNCTIONS =================
         function isDateInMonth(dateStr, monthVal) {
             if (!monthVal) return true;
             if (!dateStr) return false;
@@ -825,17 +806,13 @@
             var row = selectElement.closest('tr');
             var mode = selectElement.value;
             var isDaily = (mode === 'Daily Allowance');
-            var fromInput = row.querySelector('.exp-from');
-            var toInput = row.querySelector('.exp-to');
-            var amtInput = row.querySelector('.exp-amount');
-            var daInput = row.querySelector('.exp-da');
-            fromInput.disabled = isDaily;
-            toInput.disabled = isDaily;
-            amtInput.disabled = isDaily;
-            if (isDaily) { fromInput.value = ''; toInput.value = ''; amtInput.value = ''; }
-            daInput.disabled = !isDaily;
-            if (!isDaily) { daInput.value = ''; }
-            calculateRowTotal(amtInput);
+            row.querySelector('.exp-from').disabled = isDaily;
+            row.querySelector('.exp-to').disabled = isDaily;
+            row.querySelector('.exp-amount').disabled = isDaily;
+            if (isDaily) { row.querySelector('.exp-from').value = ''; row.querySelector('.exp-to').value = ''; row.querySelector('.exp-amount').value = ''; }
+            row.querySelector('.exp-da').disabled = !isDaily;
+            if (!isDaily) { row.querySelector('.exp-da').value = ''; }
+            calculateRowTotal(row.querySelector('.exp-amount'));
         }
 
         document.getElementById('q_mode').addEventListener('change', function() {
@@ -844,13 +821,8 @@
             document.getElementById('q_to').disabled = isDaily;
             document.getElementById('q_amount').disabled = isDaily;
             document.getElementById('q_da_expense').disabled = !isDaily;
-            if (isDaily) {
-                document.getElementById('q_from').value = '';
-                document.getElementById('q_to').value = '';
-                document.getElementById('q_amount').value = '';
-            } else {
-                document.getElementById('q_da_expense').value = '';
-            }
+            if (isDaily) { document.getElementById('q_from').value = ''; document.getElementById('q_to').value = ''; document.getElementById('q_amount').value = ''; }
+            else { document.getElementById('q_da_expense').value = ''; }
         });
 
         // ================= AUTO SAVE LOGIC =================
@@ -874,30 +846,16 @@
 
         function saveLocalDraft() {
             var data = {
-                depDate: document.getElementById('form_dep_date').value,
-                retDate: document.getElementById('form_ret_date').value,
-                submitDate: document.getElementById('form_submit_date').value,
-                route: document.getElementById('form_route').value,
-                mpo: document.getElementById('form_mpo').value,
-                summary: document.getElementById('form_summary').value,
-                invoiceVal: document.getElementById('form_invoice_val').value,
-                returnVal: document.getElementById('form_return_val').value,
-                invoiceQty: document.getElementById('form_invoice_qty').value,
-                bundleQty: document.getElementById('form_bundle_qty').value,
-                iouId: currentIouId,
-                iouAmount: document.getElementById('form_iou_amount').value,
-                remarks: document.getElementById('form_remarks').value,
-                expenses: []
+                depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value,
+                submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value,
+                mpo: document.getElementById('form_mpo').value, summary: document.getElementById('form_summary').value,
+                invoiceVal: document.getElementById('form_invoice_val').value, returnVal: document.getElementById('form_return_val').value,
+                invoiceQty: document.getElementById('form_invoice_qty').value, bundleQty: document.getElementById('form_bundle_qty').value,
+                iouId: currentIouId, iouAmount: document.getElementById('form_iou_amount').value,
+                remarks: document.getElementById('form_remarks').value, expenses: []
             };
             document.querySelectorAll('#expense_table_body tr').forEach(function(r) {
-                data.expenses.push({
-                    date: r.querySelector('.exp-date').value,
-                    from: r.querySelector('.exp-from').value,
-                    to: r.querySelector('.exp-to').value,
-                    mode: r.querySelector('.exp-mode').value,
-                    amount: r.querySelector('.exp-amount').value,
-                    da: r.querySelector('.exp-da').value
-                });
+                data.expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value });
             });
             localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data));
         }
@@ -933,44 +891,29 @@
                 calculateGrandTotal();
                 document.getElementById('auto_save_status').innerText = "Draft Restored";
                 document.getElementById('auto_save_status').classList.add('text-success');
-            } catch (e) {
-                console.error("Error loading draft", e);
-            }
+            } catch (e) { console.error("Error loading draft", e); }
         }
 
-        function clearLocalDraft() {
-            localStorage.removeItem(AUTO_SAVE_KEY);
-            document.getElementById('auto_save_status').innerText = "";
-        }
+        function clearLocalDraft() { localStorage.removeItem(AUTO_SAVE_KEY); document.getElementById('auto_save_status').innerText = ""; }
 
         function clearBillForm() {
             if (confirm("Are you sure you want to clear all data?")) {
-                editingBillId = null;
-                editingBillDaId = null;
-                originalIouId = null;
-                currentIouId = null;
+                editingBillId = null; editingBillDaId = null; originalIouId = null; currentIouId = null;
                 document.getElementById('main_submit_btn').innerText = "Submit Bill";
                 document.getElementById('main_submit_btn').classList.add('btn-success');
                 document.getElementById('main_submit_btn').classList.remove('btn-warning');
                 document.getElementById('cancel_edit_btn').classList.add('hidden');
-                document.getElementById('form_route').value = '';
-                document.getElementById('form_mpo').value = '';
-                document.getElementById('form_summary').value = '';
-                document.getElementById('form_invoice_val').value = '';
-                document.getElementById('form_return_val').value = 0;
-                document.getElementById('form_invoice_qty').value = '';
-                document.getElementById('form_bundle_qty').value = '';
-                document.getElementById('form_iou_amount').value = 0;
+                document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = '';
+                document.getElementById('form_summary').value = ''; document.getElementById('form_invoice_val').value = '';
+                document.getElementById('form_return_val').value = 0; document.getElementById('form_invoice_qty').value = '';
+                document.getElementById('form_bundle_qty').value = 0; document.getElementById('form_iou_amount').value = 0;
                 document.getElementById('form_remarks').value = '';
                 var today = new Date().toISOString().split('T')[0];
-                document.getElementById('form_dep_date').value = today;
-                document.getElementById('form_ret_date').value = today;
+                document.getElementById('form_dep_date').value = today; document.getElementById('form_ret_date').value = today;
                 document.getElementById('form_submit_date').value = today;
                 document.getElementById('expense_table_body').innerHTML = '';
-                document.getElementById('grand_total').value = '0';
-                document.getElementById('form_cost_percent').innerText = '0%';
-                calculateSoldValue();
-                clearLocalDraft();
+                document.getElementById('grand_total').value = '0'; document.getElementById('form_cost_percent').innerText = '0%';
+                calculateSoldValue(); clearLocalDraft();
                 if (currentUser && currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
                     document.getElementById('form_da_name').value = currentUser.name;
                     document.getElementById('form_depot').value = currentUser.depot;
@@ -992,40 +935,22 @@
             var passVal = document.getElementById('password').value;
             if (userVal === 'KS' && passVal === 'Monico@Ku007') {
                 currentUser = { name: 'Md Sajjad Ahmed', role: 'superadmin', depot: 'Kushtia', designation: 'RSM', id: 'admin_001' };
-                showDashboard();
-                return;
+                showDashboard(); return;
             }
-            var userRef = database.ref('Users');
-            userRef.orderByChild('username').equalTo(userVal).once('value', function(snapshot) {
+            database.ref('Users').orderByChild('username').equalTo(userVal).once('value', function(snapshot) {
                 if (snapshot.exists()) {
                     snapshot.forEach(function(childSnapshot) {
                         var userData = childSnapshot.val();
-                        if (userData.password === passVal) {
-                            currentUser = { name: userData.name, role: userData.role || 'user', depot: userData.depot, id: childSnapshot.key, photoUrl: userData.photoUrl || null };
-                            showDashboard();
-                        } else {
-                            alert("Password Incorrect!");
-                        }
+                        if (userData.password === passVal) { currentUser = { name: userData.name, role: userData.role || 'user', depot: userData.depot, id: childSnapshot.key, photoUrl: userData.photoUrl || null }; showDashboard(); }
+                        else { alert("Password Incorrect!"); }
                     });
-                } else {
-                    alert("User not found!");
-                }
-            }, function(error) {
-                console.error("Login Error:", error);
-                alert("Database Connection Failed!");
-            });
+                } else { alert("User not found!"); }
+            }, function(error) { console.error("Login Error:", error); alert("Database Connection Failed!"); });
         }
 
-        function logout() {
-            if (currentUser) database.ref('OnlineUsers/' + currentUser.id).remove();
-            currentUser = null;
-            location.reload();
-        }
+        function logout() { if (currentUser) database.ref('OnlineUsers/' + currentUser.id).remove(); currentUser = null; location.reload(); }
 
-        function resetAllTabs() {
-            document.querySelectorAll('.nav-link').forEach(function(link) { link.classList.remove('active'); });
-            document.querySelectorAll('.tab-pane').forEach(function(pane) { pane.classList.remove('show', 'active'); });
-        }
+        function resetAllTabs() { document.querySelectorAll('.nav-link').forEach(function(link) { link.classList.remove('active'); }); document.querySelectorAll('.tab-pane').forEach(function(pane) { pane.classList.remove('show', 'active'); }); }
 
         // ================= PROFILE MODAL LOGIC =================
         function openProfileModal() {
@@ -1033,78 +958,27 @@
             profilePhotoBase64 = null;
             database.ref('Users/' + currentUser.id).once('value', function(snap) {
                 var u = snap.val();
-                if (u) {
-                    document.getElementById('prof_name').value = u.name || '';
-                    document.getElementById('prof_phone').value = u.phone || '';
-                    document.getElementById('prof_depot').value = u.depot || 'Kushtia';
-                    document.getElementById('prof_username').value = u.username || '';
-                    document.getElementById('prof_prev_img').src = u.photoUrl || 'https://via.placeholder.com/100';
-                }
+                if (u) { document.getElementById('prof_name').value = u.name || ''; document.getElementById('prof_phone').value = u.phone || ''; document.getElementById('prof_depot').value = u.depot || 'Kushtia'; document.getElementById('prof_username').value = u.username || ''; document.getElementById('prof_prev_img').src = u.photoUrl || 'https://via.placeholder.com/100'; }
                 new bootstrap.Modal(document.getElementById('profileModal')).show();
             });
         }
-
-        function previewProfilePhoto(input) {
-            if (input.files && input.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('prof_prev_img').src = e.target.result;
-                    profilePhotoBase64 = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
+        function previewProfilePhoto(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function(e) { document.getElementById('prof_prev_img').src = e.target.result; profilePhotoBase64 = e.target.result; }; reader.readAsDataURL(input.files[0]); } }
         function saveProfile() {
-            var name = document.getElementById('prof_name').value;
-            var phone = document.getElementById('prof_phone').value;
-            var depot = document.getElementById('prof_depot').value;
-            var username = document.getElementById('prof_username').value;
+            var name = document.getElementById('prof_name').value, phone = document.getElementById('prof_phone').value, depot = document.getElementById('prof_depot').value, username = document.getElementById('prof_username').value;
             if (!name || !username) { alert("Name and Username required"); return; }
             var updates = { name: name, phone: phone, depot: depot, username: username };
             if (profilePhotoBase64) updates.photoUrl = profilePhotoBase64;
-            database.ref('Users/' + currentUser.id).update(updates).then(function() {
-                alert("Profile Updated!");
-                currentUser.name = name;
-                currentUser.depot = depot;
-                currentUser.photoUrl = profilePhotoBase64 || currentUser.photoUrl;
-                document.getElementById('header_user_name').innerText = name;
-                if (currentUser.photoUrl) document.getElementById('header_profile_pic').src = currentUser.photoUrl;
-                bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
-            }).catch(function(e) { alert(e.message); });
+            database.ref('Users/' + currentUser.id).update(updates).then(function() { alert("Profile Updated!"); currentUser.name = name; currentUser.depot = depot; currentUser.photoUrl = profilePhotoBase64 || currentUser.photoUrl; document.getElementById('header_user_name').innerText = name; if (currentUser.photoUrl) document.getElementById('header_profile_pic').src = currentUser.photoUrl; bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide(); }).catch(function(e) { alert(e.message); });
         }
-
-        function openChangePassModal() {
-            if (!currentUser || currentUser.id === 'admin_001') { alert("Admin password cannot be changed here."); return; }
-            document.getElementById('cp_current').value = '';
-            document.getElementById('cp_new').value = '';
-            document.getElementById('cp_confirm').value = '';
-            new bootstrap.Modal(document.getElementById('changePassModal')).show();
-        }
-
+        function openChangePassModal() { if (!currentUser || currentUser.id === 'admin_001') { alert("Admin password cannot be changed here."); return; } document.getElementById('cp_current').value = ''; document.getElementById('cp_new').value = ''; document.getElementById('cp_confirm').value = ''; new bootstrap.Modal(document.getElementById('changePassModal')).show(); }
         function changePassword() {
-            var curr = document.getElementById('cp_current').value;
-            var newP = document.getElementById('cp_new').value;
-            var conf = document.getElementById('cp_confirm').value;
-            if (!curr || !newP || !conf) { alert("Fill all fields"); return; }
-            if (newP !== conf) { alert("New passwords do not match"); return; }
-            database.ref('Users/' + currentUser.id).once('value', function(snap) {
-                var u = snap.val();
-                if (u.password !== curr) { alert("Current password is incorrect"); return; }
-                database.ref('Users/' + currentUser.id).update({ password: newP }).then(function() {
-                    alert("Password changed successfully!");
-                    bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();
-                }).catch(function(e) { alert(e.message); });
-            });
+            var curr = document.getElementById('cp_current').value, newP = document.getElementById('cp_new').value, conf = document.getElementById('cp_confirm').value;
+            if (!curr || !newP || !conf) { alert("Fill all fields"); return; } if (newP !== conf) { alert("New passwords do not match"); return; }
+            database.ref('Users/' + currentUser.id).once('value', function(snap) { var u = snap.val(); if (u.password !== curr) { alert("Current password is incorrect"); return; } database.ref('Users/' + currentUser.id).update({ password: newP }).then(function() { alert("Password changed successfully!"); bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide(); }).catch(function(e) { alert(e.message); }); });
         }
 
         // ================= PRESENCE SYSTEM =================
-        function setupPresence() {
-            if (!currentUser) return;
-            var presenceRef = database.ref('OnlineUsers/' + currentUser.id);
-            presenceRef.set({ name: currentUser.name, role: currentUser.role, lastOnline: firebase.database.ServerValue.TIMESTAMP });
-            presenceRef.onDisconnect().remove();
-        }
+        function setupPresence() { if (!currentUser) return; var presenceRef = database.ref('OnlineUsers/' + currentUser.id); presenceRef.set({ name: currentUser.name, role: currentUser.role, lastOnline: firebase.database.ServerValue.TIMESTAMP }); presenceRef.onDisconnect().remove(); }
 
         // ================= DASHBOARD VIEW =================
         function showDashboard() {
@@ -1112,64 +986,54 @@
             document.getElementById('dashboard_section').classList.remove('hidden');
             document.getElementById('header_user_name').innerText = currentUser.name;
             var headerPic = document.getElementById('header_profile_pic');
-            if (currentUser.photoUrl) headerPic.src = currentUser.photoUrl;
-            else headerPic.src = "https://via.placeholder.com/30";
-
+            if (currentUser.photoUrl) headerPic.src = currentUser.photoUrl; else headerPic.src = "https://via.placeholder.com/30";
             document.querySelectorAll('.admin-only').forEach(function(item) { item.style.display = 'none'; });
             document.querySelectorAll('.user-only').forEach(function(item) { item.style.display = 'none'; });
             document.querySelectorAll('.admin-superadmin-only').forEach(function(item) { item.style.display = 'none'; });
             resetAllTabs();
             document.getElementById('dash-tab').classList.add('active');
             document.getElementById('dashTab').classList.add('show', 'active');
-            setupPresence();
-            listenForOnlineUsers();
-
+            setupPresence(); listenForOnlineUsers();
             if (currentUser.role === 'user') {
                 document.querySelectorAll('.user-only').forEach(function(item) { item.style.display = 'block'; });
                 document.getElementById('history_tab_li').style.display = 'block';
-                // FIX #3: Load IOU global first so user dashboard has data
                 loadIOUListGlobal();
                 var savedMonth = localStorage.getItem('globalFilterMonth');
-                var defaultMonth = savedMonth !== null ? savedMonth : getCurrentMonth();
-                setGlobalMonth(defaultMonth);
+                setGlobalMonth(savedMonth !== null ? savedMonth : getCurrentMonth());
             } else {
                 document.querySelectorAll('.admin-only').forEach(function(item) { item.style.display = 'block'; });
                 document.querySelectorAll('.admin-superadmin-only').forEach(function(item) { item.style.display = 'block'; });
                 document.getElementById('history_tab_li').style.display = 'block';
-                // FIX #3: Load IOU list BEFORE setting month (which triggers reloadAllData -> loadDashboardStats which needs iouListGlobal)
-                loadDAListForIOU();
-                loadIOUListGlobal();
-                loadDAListForSummary();
-                var savedMonthAdmin = localStorage.getItem('globalFilterMonth');
-                var defaultMonthAdmin = savedMonthAdmin !== null ? savedMonthAdmin : getCurrentMonth();
-                setGlobalMonth(defaultMonthAdmin);
-                loadAdminIOU();
+                // FIX: Load DA list FIRST, then IOU, then set month (which triggers dashboard reload)
+                loadDAListForIOU(function() {
+                    loadIOUListGlobal();
+                    loadDAListForSummary();
+                    var savedMonthAdmin = localStorage.getItem('globalFilterMonth');
+                    setGlobalMonth(savedMonthAdmin !== null ? savedMonthAdmin : getCurrentMonth());
+                    loadAdminIOU();
+                });
             }
             prepareBillEntryForm();
         }
 
         // ================= USER DASHBOARD DATA =================
-        // FIX #2: Changed .on() to .once() to prevent listener stacking on every reloadAllData() call
         function loadUserDashboardData() {
             database.ref('IOU_List').orderByChild('daId').equalTo(currentUser.id).once('value', function(snap) {
                 var activeBody = document.getElementById('user_active_iou_list');
                 var usedBody = document.getElementById('user_used_iou_list');
-                activeBody.innerHTML = '';
-                usedBody.innerHTML = '';
+                activeBody.innerHTML = ''; usedBody.innerHTML = '';
                 var hasActive = false, hasUsed = false;
                 if (snap.exists()) {
                     snap.forEach(function(child) {
                         var d = child.val();
                         var type = d.type || 'Delivery';
-                        if (type === 'General' || type === 'Bill Payment') return;
                         if (globalFilterMonth && !isDateInMonth(d.date, globalFilterMonth)) return;
-
-                        if (d.status === 'used') {
+                        if (isNoBillIOU(type) || d.status === 'used') {
                             hasUsed = true;
-                            usedBody.innerHTML += '<tr><td>' + formatDate(d.date) + '</td><td><small>' + type + '</small></td><td>' + d.territory + '</td><td>' + d.taka + '</td><td><span class="badge bg-secondary">Used</span></td></tr>';
+                            usedBody.innerHTML += '<tr><td>' + formatDate(d.date) + '</td><td><small class="badge bg-secondary">' + type + '</small></td><td>' + d.territory + '</td><td>' + d.taka + '</td><td><span class="badge bg-secondary">Used</span></td></tr>';
                         } else {
                             hasActive = true;
-                            activeBody.innerHTML += '<tr class="clickable-row" onclick="fillBillFromIOU(\'' + child.key + '\')"><td>' + formatDate(d.date) + '</td><td><small>' + type + '</small></td><td>' + d.territory + '</td><td>' + d.taka + '</td><td><i class="bi bi-check-circle-fill text-success"></i></td></tr>';
+                            activeBody.innerHTML += '<tr class="clickable-row" onclick="fillBillFromIOU(\'' + child.key + '\')"><td>' + formatDate(d.date) + '</td><td><small class="badge bg-info">' + type + '</small></td><td>' + d.territory + '</td><td>' + d.taka + '</td><td><i class="bi bi-check-circle-fill text-success"></i></td></tr>';
                         }
                     });
                 }
@@ -1179,42 +1043,25 @@
         }
 
         // ================= ADMIN DASHBOARD DATA =================
-        function loadAdminDashboardData() {
-            loadDashboardStats();
-            loadApprovedBillSummary();
-            loadUnbilledIOUList();
-        }
+        function loadAdminDashboardData() { loadDashboardStats(); loadApprovedBillSummary(); loadUnbilledIOUList(); }
 
-        // FIX #2: Changed .on() to .once() - prevents listener stacking
         function loadUnbilledIOUList() {
             var tbody = document.getElementById('unbilled_iou_list');
             var countBadge = document.getElementById('unbilled_iou_count');
-            database.ref('IOU_List').orderByChild('status').equalTo('active').once('value', function(snap) {
-                tbody.innerHTML = '';
-                var count = 0;
-                if (!snap.exists()) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success p-2">No Pending IOUs</td></tr>';
-                    countBadge.innerText = "0";
-                    return;
-                }
+            database.ref('IOU_List').once('value', function(snap) {
+                tbody.innerHTML = ''; var count = 0;
+                if (!snap.exists()) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-success p-2">No Pending IOUs</td></tr>'; countBadge.innerText = "0"; return; }
                 var iouArray = [];
                 snap.forEach(function(child) { iouArray.push({ key: child.key, val: child.val() }); });
                 iouArray.sort(function(a, b) { return (b.val.date || '').localeCompare(a.val.date || ''); });
                 iouArray.forEach(function(item) {
-                    var d = item.val;
-                    var type = d.type || 'Delivery';
-                    if (type === 'General' || type === 'Bill Payment') return;
+                    var d = item.val; var type = d.type || 'Delivery';
+                    if (!isBillRequiredIOU(type)) return;
                     if (globalFilterMonth && !isDateInMonth(d.date, globalFilterMonth)) return;
-
+                    if (d.status === 'used') return;
                     count++;
                     var daysPassed = "";
-                    if (d.date) {
-                        var iouDate = new Date(d.date);
-                        var today = new Date();
-                        var diffTime = Math.abs(today - iouDate);
-                        var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        daysPassed = '<span class="badge bg-light text-dark ms-1">' + diffDays + 'd</span>';
-                    }
+                    if (d.date) { var iouDate = new Date(d.date); var today2 = new Date(); var diffTime = Math.abs(today2 - iouDate); var diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); daysPassed = '<span class="badge bg-light text-dark ms-1">' + diffDays + 'd</span>'; }
                     var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + formatDate(d.date) + ' ' + daysPassed + '</td><td>' + d.daName + '</td><td><small class="badge bg-secondary">' + type + '</small></td><td>' + d.territory + '</td><td class="text-end fw-bold text-danger">' + d.taka + '</td>';
                     tbody.appendChild(tr);
@@ -1229,74 +1076,85 @@
             var adminCountBadge = document.getElementById('online_count_badge');
             var userListContainer = document.getElementById('user_online_list_view');
             var userCountBadge = document.getElementById('user_online_count_badge');
-            // This one stays .on() because it's called ONCE from showDashboard
             database.ref('OnlineUsers').on('value', function(snap) {
                 var adminHtml = '', userHtml = '', count = 0;
-                if (snap.exists()) {
-                    snap.forEach(function(child) {
-                        var u = child.val();
-                        count++;
-                        var itemHtml = '<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> ' + u.name + ' <small class="text-muted ms-auto">' + (u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'DA') + '</small></div>';
-                        adminHtml += itemHtml;
-                        userHtml += itemHtml;
-                    });
-                }
+                if (snap.exists()) { snap.forEach(function(child) { var u = child.val(); count++; var itemHtml = '<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> ' + u.name + ' <small class="text-muted ms-auto">' + (u.role === 'superadmin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'DA') + '</small></div>'; adminHtml += itemHtml; userHtml += itemHtml; }); }
                 if (adminListContainer) { adminListContainer.innerHTML = adminHtml || '<div class="text-center text-muted p-2">No users online</div>'; adminCountBadge.innerText = count; }
                 if (userListContainer) { userListContainer.innerHTML = userHtml || '<div class="text-center text-muted p-2">No users online</div>'; userCountBadge.innerText = count; }
             });
         }
 
-        // FIX #2: Changed .on() to .once()
+        // ================= FIX: loadDashboardStats - loads IOU inside, uses daListCache for names =================
         function loadDashboardStats() {
             var monthFilter = globalFilterMonth;
-            var iouCountsPerDA = {};
-            if (iouListGlobal) {
-                Object.keys(iouListGlobal).forEach(function(key) {
-                    var iou = iouListGlobal[key];
-                    if (globalFilterMonth && !isDateInMonth(iou.date, globalFilterMonth)) return;
-                    if (iou.type === 'General' || iou.type === 'Bill Payment') return;
-                    if (!iouCountsPerDA[iou.daId]) iouCountsPerDA[iou.daId] = 0;
-                    iouCountsPerDA[iou.daId]++;
-                });
-            }
-            database.ref('Bills').once('value', function(snapshot) {
-                var totalBills = 0, pendingBills = 0, approvedBills = 0;
-                var daStats = {};
-                if (snapshot.exists()) {
-                    snapshot.forEach(function(depotSnapshot) {
-                        depotSnapshot.forEach(function(daSnapshot) {
-                            var daId = daSnapshot.key;
-                            if (!daStats[daId]) daStats[daId] = { name: 'Unknown', total: 0, pending: 0, approved: 0 };
-                            daSnapshot.forEach(function(billSnapshot) {
-                                var bill = billSnapshot.val();
-                                if (!isDateInMonth(bill.submitDate || bill.depDate, monthFilter)) return;
-                                if (bill.daName) daStats[daId].name = bill.daName;
-                                totalBills++;
-                                daStats[daId].total++;
-                                if (bill.status === 'green') { approvedBills++; daStats[daId].approved++; }
-                                else { pendingBills++; daStats[daId].pending++; }
-                            });
-                        });
+
+            // STEP 1: Load IOU data directly (not relying on global cache to avoid race condition)
+            database.ref('IOU_List').once('value', function(iouSnap) {
+                var iouCountsPerDA = {};
+                if (iouSnap.exists()) {
+                    iouSnap.forEach(function(child) {
+                        var iou = child.val();
+                        if (globalFilterMonth && !isDateInMonth(iou.date, globalFilterMonth)) return;
+                        // Only count bill-required IOUs
+                        if (!isBillRequiredIOU(iou.type)) return;
+                        if (!iouCountsPerDA[iou.daId]) iouCountsPerDA[iou.daId] = 0;
+                        iouCountsPerDA[iou.daId]++;
                     });
                 }
-                document.getElementById('dash_total_count').innerText = totalBills;
-                document.getElementById('dash_pending_count').innerText = pendingBills;
-                document.getElementById('dash_approved_count').innerText = approvedBills;
-                var tbody = document.getElementById('dash_da_table_body');
-                tbody.innerHTML = '';
-                Object.keys(daStats).forEach(function(daId) {
-                    var da = daStats[daId];
-                    var iouCount = iouCountsPerDA[daId] || 0;
-                    if (da.total > 0 || iouCount > 0) {
-                        var tr = document.createElement('tr');
-                        tr.innerHTML = '<td><i class="bi bi-person-badge me-1"></i>' + da.name + '</td><td class="text-center"><span class="badge bg-primary">' + iouCount + '</span></td><td class="text-center"><span class="badge bg-info">' + da.total + '</span></td><td class="text-center"><span class="badge bg-warning text-dark">' + da.pending + '</span></td><td class="text-center"><span class="badge bg-success">' + da.approved + '</span></td>';
-                        tbody.appendChild(tr);
+
+                // STEP 2: Load Bills data
+                database.ref('Bills').once('value', function(snapshot) {
+                    var totalBills = 0, pendingBills = 0, approvedBills = 0;
+                    var daStats = {};
+
+                    if (snapshot.exists()) {
+                        snapshot.forEach(function(depotSnapshot) {
+                            depotSnapshot.forEach(function(daSnapshot) {
+                                var daId = daSnapshot.key;
+                                if (!daStats[daId]) daStats[daId] = { name: getDAName(daId), total: 0, pending: 0, approved: 0 };
+                                daSnapshot.forEach(function(billSnapshot) {
+                                    var bill = billSnapshot.val();
+                                    if (!isDateInMonth(bill.submitDate || bill.depDate, monthFilter)) return;
+                                    // Get name from bill if available, otherwise from cache
+                                    if (bill.daName && bill.daName !== 'Unknown') daStats[daId].name = bill.daName;
+                                    totalBills++; daStats[daId].total++;
+                                    if (bill.status === 'green') { approvedBills++; daStats[daId].approved++; }
+                                    else { pendingBills++; daStats[daId].pending++; }
+                                });
+                            });
+                        });
                     }
+
+                    document.getElementById('dash_total_count').innerText = totalBills;
+                    document.getElementById('dash_pending_count').innerText = pendingBills;
+                    document.getElementById('dash_approved_count').innerText = approvedBills;
+
+                    // STEP 3: Merge IOU counts with bill stats - ensure ALL DAs with IOUs appear
+                    var allDaIds = new Set([].concat(Object.keys(daStats), Object.keys(iouCountsPerDA)));
+                    var tbody = document.getElementById('dash_da_table_body');
+                    tbody.innerHTML = '';
+
+                    if (allDaIds.size === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No data for this period</td></tr>';
+                        return;
+                    }
+
+                    allDaIds.forEach(function(daId) {
+                        var da = daStats[daId] || { name: getDAName(daId), total: 0, pending: 0, approved: 0 };
+                        var iouCount = iouCountsPerDA[daId] || 0;
+
+                        // Show DA if they have IOUs OR bills
+                        if (da.total > 0 || iouCount > 0) {
+                            var tr = document.createElement('tr');
+                            tr.innerHTML = '<td><i class="bi bi-person-badge me-1"></i>' + da.name + '</td><td class="text-center"><span class="badge bg-primary">' + iouCount + '</span></td><td class="text-center"><span class="badge bg-info">' + da.total + '</span></td><td class="text-center"><span class="badge bg-warning text-dark">' + da.pending + '</span></td><td class="text-center"><span class="badge bg-success">' + da.approved + '</span></td>';
+                            tbody.appendChild(tr);
+                        }
+                    });
                 });
             });
         }
 
-        // FIX #2: Changed nested .on() to .once() - this was especially bad since each IOU_List change added a new Bills listener
+        // ================= APPROVED BILL vs IOU SUMMARY =================
         function loadApprovedBillSummary() {
             database.ref('IOU_List').once('value', function(iouSnap) {
                 var iouData = {};
@@ -1304,9 +1162,13 @@
                     iouSnap.forEach(function(child) {
                         var iou = child.val();
                         if (globalFilterMonth && !isDateInMonth(iou.date, globalFilterMonth)) return;
-                        if (iou.type === 'General' || iou.type === 'Bill Payment') return;
-                        if (!iouData[iou.daId]) iouData[iou.daId] = { name: iou.daName, totalIou: 0 };
-                        iouData[iou.daId].totalIou += iou.taka || 0;
+                        if (!iouData[iou.daId]) iouData[iou.daId] = { name: iou.daName, totalIou: 0, noBillAmount: 0 };
+                        var type = iou.type || 'Delivery';
+                        if (isNoBillIOU(type)) {
+                            iouData[iou.daId].noBillAmount += iou.taka || 0;
+                        } else if (isBillRequiredIOU(type)) {
+                            iouData[iou.daId].totalIou += iou.taka || 0;
+                        }
                     });
                 }
                 database.ref('Bills').once('value', function(billSnap) {
@@ -1315,10 +1177,7 @@
                         billSnap.forEach(function(depotSnap) {
                             depotSnap.forEach(function(daSnap) {
                                 var daId = daSnap.key;
-                                if (!billData[daId]) {
-                                    var dName = (iouData[daId]) ? iouData[daId].name : 'Unknown';
-                                    billData[daId] = { name: dName, totalApproved: 0, totalBundleQty: 0 };
-                                }
+                                if (!billData[daId]) { var dName = (iouData[daId]) ? iouData[daId].name : getDAName(daId); billData[daId] = { name: dName, totalApproved: 0, totalBundleQty: 0 }; }
                                 daSnap.forEach(function(billChild) {
                                     var bill = billChild.val();
                                     if (bill.status === 'green') {
@@ -1331,18 +1190,18 @@
                             });
                         });
                     }
-                    var tbody = document.getElementById('approved_summary_body');
-                    tbody.innerHTML = '';
+                    var tbody = document.getElementById('approved_summary_body'); tbody.innerHTML = '';
                     var allDaIds = new Set([].concat(Object.keys(iouData), Object.keys(billData)));
                     if (allDaIds.size === 0) { tbody.innerHTML = '<tr><td colspan="6" class="text-center">No Data</td></tr>'; return; }
                     allDaIds.forEach(function(id) {
-                        var iouInfo = iouData[id] || { name: 'Unknown', totalIou: 0 };
+                        var iouInfo = iouData[id] || { name: getDAName(id), totalIou: 0, noBillAmount: 0 };
                         var billInfo = billData[id] || { name: iouInfo.name, totalApproved: 0, totalBundleQty: 0 };
                         var totalIou = iouInfo.totalIou || 0;
-                        var totalApp = billInfo.totalApproved || 0;
+                        var noBillAmt = iouInfo.noBillAmount || 0;
+                        var totalApp = (billInfo.totalApproved || 0) + noBillAmt;
                         var totalBund = billInfo.totalBundleQty || 0;
                         var balance = totalApp - totalIou;
-                        var name = billInfo.name || iouInfo.name || id;
+                        var name = billInfo.name || iouInfo.name || getDAName(id);
                         var tr = document.createElement('tr');
                         tr.innerHTML = '<td>' + name + '</td><td class="text-end fw-bold">' + totalIou.toFixed(2) + '</td><td class="text-end fw-bold">' + totalApp.toFixed(2) + '</td><td class="text-end fw-bold">' + balance.toFixed(2) + '</td><td class="text-center fw-bold">' + totalBund + '</td><td class="text-center">' + (balance < 0 ? '<span class="badge bg-danger">Due Bill</span>' : '<span class="badge bg-success">Clear</span>') + '</td>';
                         tbody.appendChild(tr);
@@ -1352,17 +1211,7 @@
         }
 
         // ================= IMAGE HANDLING =================
-        function previewUserPhoto(input) {
-            if (input.files && input.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('photo_preview').src = e.target.result;
-                    document.getElementById('photo_preview').classList.remove('hidden');
-                    userPhotoBase64 = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
+        function previewUserPhoto(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function(e) { document.getElementById('photo_preview').src = e.target.result; document.getElementById('photo_preview').classList.remove('hidden'); userPhotoBase64 = e.target.result; }; reader.readAsDataURL(input.files[0]); } }
 
         // ================= BILL ENTRY LOGIC =================
         function prepareBillEntryForm() {
@@ -1370,9 +1219,7 @@
             document.getElementById('form_da_name').value = currentUser.name;
             document.getElementById('form_depot').value = currentUser.depot;
             var today = new Date().toISOString().split('T')[0];
-            document.getElementById('form_dep_date').value = today;
-            document.getElementById('form_ret_date').value = today;
-            document.getElementById('form_submit_date').value = today;
+            document.getElementById('form_dep_date').value = today; document.getElementById('form_ret_date').value = today; document.getElementById('form_submit_date').value = today;
             document.getElementById('expense_table_body').innerHTML = '';
             if (!editingBillId) loadLocalDraft();
         }
@@ -1385,24 +1232,16 @@
         }
 
         function addQuickEntryRow() {
-            var from = document.getElementById('q_from').value;
-            var to = document.getElementById('q_to').value;
-            var mode = document.getElementById('q_mode').value;
-            var amount = document.getElementById('q_amount').value;
-            var da = document.getElementById('q_da_expense').value;
+            var from = document.getElementById('q_from').value, to = document.getElementById('q_to').value, mode = document.getElementById('q_mode').value;
+            var amount = document.getElementById('q_amount').value, da = document.getElementById('q_da_expense').value;
             var date = document.getElementById('form_dep_date').value;
             var modesWithoutRoute = ['Daily Allowance', 'Labour Bill'];
             if (!modesWithoutRoute.includes(mode)) { if (!from && !to) { alert("Enter From/To"); return; } }
             var tbody = document.getElementById('expense_table_body');
             var row = tbody.insertRow();
             row.innerHTML = '<td><input type="date" class="form-control form-control-sm exp-date" value="' + date + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="' + from + '" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="' + to + '" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ' + (mode == 'Rickshaw' ? 'selected' : '') + '>Rickshaw</option><option ' + (mode == 'Auto' ? 'selected' : '') + '>Auto</option><option ' + (mode == 'Bus' ? 'selected' : '') + '>Bus</option><option ' + (mode == 'CNG' ? 'selected' : '') + '>CNG</option><option ' + (mode == 'Van' ? 'selected' : '') + '>Van</option><option ' + (mode == 'Motorcycle' ? 'selected' : '') + '>Motorcycle</option><option ' + (mode == 'Tempo' ? 'selected' : '') + '>Tempo</option><option ' + (mode == 'Pickup' ? 'selected' : '') + '>Pickup</option><option ' + (mode == 'Daily Allowance' ? 'selected' : '') + '>Daily Allowance</option><option ' + (mode == 'Labour Bill' ? 'selected' : '') + '>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="' + amount + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="' + da + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="' + ((parseFloat(amount) || 0) + (parseFloat(da) || 0)) + '" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';
-            toggleRowInputs(row.querySelector('.exp-mode'));
-            calculateGrandTotal();
-            triggerAutoSave();
-            document.getElementById('q_from').value = '';
-            document.getElementById('q_to').value = '';
-            document.getElementById('q_amount').value = '';
-            document.getElementById('q_da_expense').value = '';
+            toggleRowInputs(row.querySelector('.exp-mode')); calculateGrandTotal(); triggerAutoSave();
+            document.getElementById('q_from').value = ''; document.getElementById('q_to').value = ''; document.getElementById('q_amount').value = ''; document.getElementById('q_da_expense').value = '';
             document.getElementById('q_from').focus();
         }
 
@@ -1417,127 +1256,47 @@
         function removeRow(btn) {
             var tbody = document.getElementById('expense_table_body');
             if (tbody.rows.length > 1) btn.parentNode.parentNode.remove();
-            else {
-                var row = tbody.rows[0];
-                row.querySelectorAll('input').forEach(function(i) {
-                    if (i.type !== 'date') i.value = '';
-                    else i.value = document.getElementById('form_dep_date').value;
-                });
-                var select = row.querySelector('select');
-                select.selectedIndex = 0;
-                toggleRowInputs(select);
-            }
-            calculateGrandTotal();
-            triggerAutoSave();
+            else { var row = tbody.rows[0]; row.querySelectorAll('input').forEach(function(i) { if (i.type !== 'date') i.value = ''; else i.value = document.getElementById('form_dep_date').value; }); var select = row.querySelector('select'); select.selectedIndex = 0; toggleRowInputs(select); }
+            calculateGrandTotal(); triggerAutoSave();
         }
 
-        function calculateRowTotal(input) {
-            var row = input.parentNode.parentNode;
-            var amount = parseFloat(row.querySelector('.exp-amount').value) || 0;
-            var da = parseFloat(row.querySelector('.exp-da').value) || 0;
-            row.querySelector('.exp-total').value = amount + da;
-            calculateGrandTotal();
-        }
+        function calculateRowTotal(input) { var row = input.parentNode.parentNode; var amount = parseFloat(row.querySelector('.exp-amount').value) || 0; var da = parseFloat(row.querySelector('.exp-da').value) || 0; row.querySelector('.exp-total').value = amount + da; calculateGrandTotal(); }
 
-        function calculateGrandTotal() {
-            var total = 0;
-            document.querySelectorAll('.exp-total').forEach(function(t) { total += (parseFloat(t.value) || 0); });
-            document.getElementById('grand_total').value = total;
-            updateEntryFormCostPercent();
-        }
+        function calculateGrandTotal() { var total = 0; document.querySelectorAll('.exp-total').forEach(function(t) { total += (parseFloat(t.value) || 0); }); document.getElementById('grand_total').value = total; updateEntryFormCostPercent(); }
 
-        function updateEntryFormCostPercent() {
-            var inv = parseFloat(document.getElementById('form_invoice_val').value) || 0;
-            var total = parseFloat(document.getElementById('grand_total').value) || 0;
-            document.getElementById('form_cost_percent').innerText = inv > 0 ? ((total / inv) * 100).toFixed(2) + "%" : "0%";
-        }
+        function updateEntryFormCostPercent() { var inv = parseFloat(document.getElementById('form_invoice_val').value) || 0; var total = parseFloat(document.getElementById('grand_total').value) || 0; document.getElementById('form_cost_percent').innerText = inv > 0 ? ((total / inv) * 100).toFixed(2) + "%" : "0%"; }
 
         // ================= SUBMIT / UPDATE / DRAFT =================
         function submitOrUpdateBill(statusType) {
-            var targetDaId = currentUser.id;
-            var targetDaName = currentUser.name;
-            var targetDepot = currentUser.depot;
-            if (editingBillId && editingBillDaId) {
-                targetDaId = editingBillDaId;
-                targetDaName = document.getElementById('form_da_name').value;
-                targetDepot = document.getElementById('form_depot').value;
-            }
+            var targetDaId = currentUser.id, targetDaName = currentUser.name, targetDepot = currentUser.depot;
+            if (editingBillId && editingBillDaId) { targetDaId = editingBillDaId; targetDaName = document.getElementById('form_da_name').value; targetDepot = document.getElementById('form_depot').value; }
             var grandTotal = parseFloat(document.getElementById('grand_total').value) || 0;
             var iouAmount = parseFloat(document.getElementById('form_iou_amount').value) || 0;
             var remarks = document.getElementById('form_remarks').value;
-            var billData = {
-                daName: targetDaName, daId: targetDaId, depot: targetDepot,
-                depDate: document.getElementById('form_dep_date').value,
-                retDate: document.getElementById('form_ret_date').value,
-                submitDate: document.getElementById('form_submit_date').value,
-                route: document.getElementById('form_route').value,
-                mpo: document.getElementById('form_mpo').value,
-                summaryNo: document.getElementById('form_summary').value,
-                invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0,
-                returnVal: parseFloat(document.getElementById('form_return_val').value) || 0,
-                soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0,
-                invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0,
-                bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0,
-                totalAmount: grandTotal, originalAmount: grandTotal,
-                status: statusType, timestamp: Date.now(),
-                iouId: currentIouId, iouAmount: iouAmount,
-                remarks: remarks, deduction: 0
-            };
+            var billData = { daName: targetDaName, daId: targetDaId, depot: targetDepot, depDate: document.getElementById('form_dep_date').value, retDate: document.getElementById('form_ret_date').value, submitDate: document.getElementById('form_submit_date').value, route: document.getElementById('form_route').value, mpo: document.getElementById('form_mpo').value, summaryNo: document.getElementById('form_summary').value, invoiceVal: parseFloat(document.getElementById('form_invoice_val').value) || 0, returnVal: parseFloat(document.getElementById('form_return_val').value) || 0, soldVal: parseFloat(document.getElementById('form_sold_val').value) || 0, invoiceQty: parseInt(document.getElementById('form_invoice_qty').value) || 0, bundleQty: parseInt(document.getElementById('form_bundle_qty').value) || 0, totalAmount: grandTotal, originalAmount: grandTotal, status: statusType, timestamp: Date.now(), iouId: currentIouId, iouAmount: iouAmount, remarks: remarks, deduction: 0 };
             var expenses = [];
-            document.querySelectorAll('#expense_table_body tr').forEach(function(r) {
-                expenses.push({
-                    date: r.querySelector('.exp-date').value,
-                    from: r.querySelector('.exp-from').value,
-                    to: r.querySelector('.exp-to').value,
-                    mode: r.querySelector('.exp-mode').value,
-                    amount: r.querySelector('.exp-amount').value,
-                    da: r.querySelector('.exp-da').value
-                });
-            });
+            document.querySelectorAll('#expense_table_body tr').forEach(function(r) { expenses.push({ date: r.querySelector('.exp-date').value, from: r.querySelector('.exp-from').value, to: r.querySelector('.exp-to').value, mode: r.querySelector('.exp-mode').value, amount: r.querySelector('.exp-amount').value, da: r.querySelector('.exp-da').value }); });
             billData.expenses = expenses;
             if (!billData.route) { alert("Please fill Route"); return; }
             var basePath = 'Bills/' + billData.depot + '/' + targetDaId;
             var processIOU = function() {
-                if (editingBillId && originalIouId && originalIouId !== currentIouId)
-                    database.ref('IOU_List/' + originalIouId).update({ status: 'active' });
-                if (currentIouId)
-                    database.ref('IOU_List/' + currentIouId).update({ status: statusType === 'draft' ? 'active' : 'used' });
+                if (editingBillId && originalIouId && originalIouId !== currentIouId) database.ref('IOU_List/' + originalIouId).update({ status: 'active' });
+                if (currentIouId) database.ref('IOU_List/' + currentIouId).update({ status: statusType === 'draft' ? 'active' : 'used' });
             };
             if (editingBillId) {
-                database.ref(basePath + '/' + editingBillId).update(billData, function(error) {
-                    if (error) alert("Error");
-                    else {
-                        processIOU();
-                        alert("Updated!");
-                        cancelEdit();
-                        document.getElementById('history-tab').click();
-                    }
-                });
+                database.ref(basePath + '/' + editingBillId).update(billData, function(error) { if (error) alert("Error"); else { processIOU(); alert("Updated!"); cancelEdit(); document.getElementById('history-tab').click(); } });
             } else {
                 var newBillRef = database.ref(basePath).push();
                 newBillRef.set(billData, function(error) {
-                    if (error) alert("Error");
-                    else {
-                        processIOU();
-                        clearLocalDraft();
-                        alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!");
-                        document.getElementById('form_route').value = '';
-                        document.getElementById('form_mpo').value = '';
-                        document.getElementById('form_summary').value = '';
-                        document.getElementById('form_invoice_val').value = '';
-                        document.getElementById('form_return_val').value = 0;
-                        document.getElementById('form_invoice_qty').value = '';
-                        document.getElementById('form_bundle_qty').value = '';
-                        document.getElementById('form_remarks').value = '';
-                        document.getElementById('grand_total').value = '0';
-                        document.getElementById('form_cost_percent').innerText = '0%';
-                        document.getElementById('expense_table_body').innerHTML = '';
-                        document.getElementById('form_iou_amount').value = 0;
-                        calculateSoldValue();
-                        currentIouId = null;
-                        originalIouId = null;
-                        prepareBillEntryForm();
-                        document.getElementById('history-tab').click();
+                    if (error) alert("Error"); else {
+                        processIOU(); clearLocalDraft(); alert(statusType === 'draft' ? "Draft Saved!" : "Submitted!");
+                        document.getElementById('form_route').value = ''; document.getElementById('form_mpo').value = ''; document.getElementById('form_summary').value = '';
+                        document.getElementById('form_invoice_val').value = ''; document.getElementById('form_return_val').value = 0;
+                        document.getElementById('form_invoice_qty').value = ''; document.getElementById('form_bundle_qty').value = 0;
+                        document.getElementById('form_remarks').value = ''; document.getElementById('grand_total').value = '0';
+                        document.getElementById('form_cost_percent').innerText = '0%'; document.getElementById('expense_table_body').innerHTML = '';
+                        document.getElementById('form_iou_amount').value = 0; calculateSoldValue();
+                        currentIouId = null; originalIouId = null; prepareBillEntryForm(); document.getElementById('history-tab').click();
                     }
                 });
             }
@@ -1545,28 +1304,17 @@
 
         function editBill(billId, depot, daId) {
             database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', function(snapshot) {
-                var bill = snapshot.val();
-                if (!bill) return;
-                clearLocalDraft();
-                editingBillDaId = bill.daId;
-                originalIouId = bill.iouId || null;
-                currentIouId = bill.iouId || null;
-                document.getElementById('form_da_name').value = bill.daName;
-                document.getElementById('form_depot').value = bill.depot;
-                document.getElementById('form_dep_date').value = bill.depDate;
-                document.getElementById('form_ret_date').value = bill.retDate;
+                var bill = snapshot.val(); if (!bill) return;
+                clearLocalDraft(); editingBillDaId = bill.daId; originalIouId = bill.iouId || null; currentIouId = bill.iouId || null;
+                document.getElementById('form_da_name').value = bill.daName; document.getElementById('form_depot').value = bill.depot;
+                document.getElementById('form_dep_date').value = bill.depDate; document.getElementById('form_ret_date').value = bill.retDate;
                 document.getElementById('form_submit_date').value = bill.submitDate || bill.depDate;
-                document.getElementById('form_route').value = bill.route;
-                document.getElementById('form_mpo').value = bill.mpo;
-                document.getElementById('form_summary').value = bill.summaryNo;
-                document.getElementById('form_invoice_val').value = bill.invoiceVal;
-                document.getElementById('form_return_val').value = bill.returnVal;
-                document.getElementById('form_invoice_qty').value = bill.invoiceQty;
-                document.getElementById('form_bundle_qty').value = bill.bundleQty || 0;
-                document.getElementById('form_iou_amount').value = bill.iouAmount || 0;
+                document.getElementById('form_route').value = bill.route; document.getElementById('form_mpo').value = bill.mpo;
+                document.getElementById('form_summary').value = bill.summaryNo; document.getElementById('form_invoice_val').value = bill.invoiceVal;
+                document.getElementById('form_return_val').value = bill.returnVal; document.getElementById('form_invoice_qty').value = bill.invoiceQty;
+                document.getElementById('form_bundle_qty').value = bill.bundleQty || 0; document.getElementById('form_iou_amount').value = bill.iouAmount || 0;
                 document.getElementById('form_remarks').value = bill.remarks || '';
-                var tbody = document.getElementById('expense_table_body');
-                tbody.innerHTML = '';
+                var tbody = document.getElementById('expense_table_body'); tbody.innerHTML = '';
                 if (bill.expenses) {
                     bill.expenses.forEach(function(exp) {
                         var row = tbody.insertRow();
@@ -1574,117 +1322,64 @@
                         toggleRowInputs(row.querySelector('.exp-mode'));
                     });
                 }
-                calculateGrandTotal();
-                calculateSoldValue();
-                editingBillId = billId;
-                document.getElementById('main_submit_btn').innerText = "Update Bill";
-                document.getElementById('main_submit_btn').classList.remove('btn-success');
-                document.getElementById('main_submit_btn').classList.add('btn-warning');
-                document.getElementById('cancel_edit_btn').classList.remove('hidden');
-                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
-                document.getElementById('entryTab').classList.add('show', 'active');
-                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
-                document.getElementById('entry-tab').classList.add('active');
+                calculateGrandTotal(); calculateSoldValue(); editingBillId = billId;
+                document.getElementById('main_submit_btn').innerText = "Update Bill"; document.getElementById('main_submit_btn').classList.remove('btn-success'); document.getElementById('main_submit_btn').classList.add('btn-warning'); document.getElementById('cancel_edit_btn').classList.remove('hidden');
+                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); }); document.getElementById('entryTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); }); document.getElementById('entry-tab').classList.add('active');
             });
         }
 
         function deleteBill(billId, depot, daId) {
             if (confirm("Delete?")) {
                 var billRef = database.ref('Bills/' + depot + '/' + daId + '/' + billId);
-                billRef.once('value', function(snapshot) {
-                    var billData = snapshot.val();
-                    billRef.remove().then(function() {
-                        alert("Deleted!");
-                        if (billData && billData.iouId) database.ref('IOU_List/' + billData.iouId).update({ status: 'active' });
-                        reloadAllData();
-                    }).catch(function(e) { alert(e.message); });
-                });
+                billRef.once('value', function(snapshot) { var billData = snapshot.val(); billRef.remove().then(function() { alert("Deleted!"); if (billData && billData.iouId) database.ref('IOU_List/' + billData.iouId).update({ status: 'active' }); reloadAllData(); }).catch(function(e) { alert(e.message); }); });
             }
         }
 
         function cancelEdit() {
-            editingBillId = null;
-            editingBillDaId = null;
-            originalIouId = null;
-            document.getElementById('main_submit_btn').innerText = "Submit Bill";
-            document.getElementById('main_submit_btn').classList.add('btn-success');
-            document.getElementById('main_submit_btn').classList.remove('btn-warning');
-            document.getElementById('cancel_edit_btn').classList.add('hidden');
-            clearLocalDraft();
-            prepareBillEntryForm();
+            editingBillId = null; editingBillDaId = null; originalIouId = null;
+            document.getElementById('main_submit_btn').innerText = "Submit Bill"; document.getElementById('main_submit_btn').classList.add('btn-success'); document.getElementById('main_submit_btn').classList.remove('btn-warning');
+            document.getElementById('cancel_edit_btn').classList.add('hidden'); clearLocalDraft(); prepareBillEntryForm();
             if (currentUser.role !== 'user') document.getElementById('history-tab').click();
         }
 
         // ================= IOU LOGIC =================
-        // This stays .on() because it's called ONCE from showDashboard and needs to keep iouListGlobal updated
         function loadIOUListGlobal() {
             database.ref('IOU_List').off('value');
-            database.ref('IOU_List').on('value', function(snap) {
-                iouListGlobal = {};
-                if (snap.exists()) {
-                    snap.forEach(function(child) { iouListGlobal[child.key] = child.val(); });
-                }
-            });
+            database.ref('IOU_List').on('value', function(snap) { iouListGlobal = {}; if (snap.exists()) { snap.forEach(function(child) { iouListGlobal[child.key] = child.val(); }); } });
         }
 
         function calcIouPercent() {
             var sales = parseFloat(document.getElementById('iou_sales').value) || 0;
             var returnVal = parseFloat(document.getElementById('iou_return').value) || 0;
-            var sold = sales - returnVal;
-            var taka = parseFloat(document.getElementById('iou_taka').value) || 0;
+            var sold = sales - returnVal; var taka = parseFloat(document.getElementById('iou_taka').value) || 0;
             document.getElementById('iou_sold').value = sold;
             document.getElementById('iou_percent').value = sold > 0 ? ((taka / sold) * 100).toFixed(2) : "0";
         }
 
-        function loadDAListForIOU() {
+        // FIX: loadDAListForIOU now accepts callback so we can chain operations
+        function loadDAListForIOU(callback) {
             database.ref('Users').once('value', function(snap) {
-                var selectAdd = document.getElementById('iou_da_name');
-                var selectFilter = document.getElementById('filter_iou_da');
-                var selectHistory = document.getElementById('filter_history_da');
-                var selectApproved = document.getElementById('filter_approved_da');
+                var selectAdd = document.getElementById('iou_da_name'), selectFilter = document.getElementById('filter_iou_da');
+                var selectHistory = document.getElementById('filter_history_da'), selectApproved = document.getElementById('filter_approved_da');
                 daListCache = {};
                 if (selectAdd) selectAdd.innerHTML = '<option value="">Select DA</option>';
                 if (selectFilter) selectFilter.innerHTML = '<option value="">All DA</option>';
                 if (selectHistory) selectHistory.innerHTML = '<option value="">All DAs</option>';
                 if (selectApproved) selectApproved.innerHTML = '<option value="">All DAs</option>';
-                if (snap.exists()) {
-                    snap.forEach(function(child) {
-                        var u = child.val();
-                        if (u.role !== 'admin' && u.role !== 'superadmin') {
-                            daListCache[child.key] = u.name;
-                            var opt = '<option value="' + child.key + '">' + u.name + '</option>';
-                            if (selectAdd) selectAdd.innerHTML += opt;
-                            if (selectFilter) selectFilter.innerHTML += opt;
-                            if (selectHistory) selectHistory.innerHTML += opt;
-                            if (selectApproved) selectApproved.innerHTML += opt;
-                        }
-                    });
-                }
+                if (snap.exists()) { snap.forEach(function(child) { var u = child.val(); if (u.role !== 'admin' && u.role !== 'superadmin') { daListCache[child.key] = u.name; var opt = '<option value="' + child.key + '">' + u.name + '</option>'; if (selectAdd) selectAdd.innerHTML += opt; if (selectFilter) selectFilter.innerHTML += opt; if (selectHistory) selectHistory.innerHTML += opt; if (selectApproved) selectApproved.innerHTML += opt; } }); }
+                if (callback) callback();
             });
         }
 
         function loadDAListForSummary() {
-            var selectSummary = document.getElementById('summary_da');
-            if (!selectSummary) return;
+            var selectSummary = document.getElementById('summary_da'); if (!selectSummary) return;
             selectSummary.innerHTML = '<option value="">-- Select DA --</option>';
-            if (Object.keys(daListCache).length > 0) {
-                Object.keys(daListCache).forEach(function(key) {
-                    selectSummary.innerHTML += '<option value="' + key + '">' + daListCache[key] + '</option>';
-                });
-            } else {
-                database.ref('Users').once('value', function(snap) {
-                    if (snap.exists()) {
-                        snap.forEach(function(child) {
-                            var u = child.val();
-                            if (u.role !== 'admin' && u.role !== 'superadmin') {
-                                selectSummary.innerHTML += '<option value="' + child.key + '">' + u.name + '</option>';
-                            }
-                        });
-                    }
-                });
-            }
+            if (Object.keys(daListCache).length > 0) { Object.keys(daListCache).forEach(function(key) { selectSummary.innerHTML += '<option value="' + key + '">' + daListCache[key] + '</option>'; }); }
+            else { database.ref('Users').once('value', function(snap) { if (snap.exists()) { snap.forEach(function(child) { var u = child.val(); if (u.role !== 'admin' && u.role !== 'superadmin') { selectSummary.innerHTML += '<option value="' + child.key + '">' + u.name + '</option>'; } }); } }); }
         }
 
+        // ================= SAVE IOU =================
         function saveIOU() {
             var daId = document.getElementById('iou_da_name').value;
             if (!daId) { alert("Select DA"); return; }
@@ -1692,227 +1387,132 @@
             var returnVal = parseFloat(document.getElementById('iou_return').value) || 0;
             var soldVal = salesVal - returnVal;
             var iouType = document.getElementById('iou_type').value;
-            var data = {
-                date: document.getElementById('iou_date').value,
-                daId: daId,
-                daName: document.getElementById('iou_da_name').selectedOptions[0].text,
-                territory: document.getElementById('iou_territory').value,
-                mpo: document.getElementById('iou_mpo').value,
-                summary: document.getElementById('iou_summary').value,
-                sales: salesVal, returnVal: returnVal, soldVal: soldVal,
-                qty: parseInt(document.getElementById('iou_qty').value) || 0,
-                bundleQty: parseInt(document.getElementById('iou_bundle_qty').value) || 0,
-                taka: parseFloat(document.getElementById('iou_taka').value) || 0,
-                percent: document.getElementById('iou_percent').value,
-                status: 'active', type: iouType
-            };
-            var op = editingIouId
-                ? database.ref('IOU_List/' + editingIouId).update(data)
-                : database.ref('IOU_List').push(data);
-            op.then(function() {
-                alert(editingIouId ? "Updated!" : "Saved!");
-                clearIOUForm();
-                reloadAllData();
-            }).catch(function(e) { alert(e.message); });
+            var autoStatus = isNoBillIOU(iouType) ? 'used' : 'active';
+            var data = { date: document.getElementById('iou_date').value, daId: daId, daName: document.getElementById('iou_da_name').selectedOptions[0].text, territory: document.getElementById('iou_territory').value, mpo: document.getElementById('iou_mpo').value, summary: document.getElementById('iou_summary').value, sales: salesVal, returnVal: returnVal, soldVal: soldVal, qty: parseInt(document.getElementById('iou_qty').value) || 0, bundleQty: parseInt(document.getElementById('iou_bundle_qty').value) || 0, taka: parseFloat(document.getElementById('iou_taka').value) || 0, percent: document.getElementById('iou_percent').value, status: autoStatus, type: iouType };
+            var op = editingIouId ? database.ref('IOU_List/' + editingIouId).update(data) : database.ref('IOU_List').push(data);
+            op.then(function() { alert(editingIouId ? "Updated!" : "Saved!"); clearIOUForm(); reloadAllData(); }).catch(function(e) { alert(e.message); });
         }
 
         function clearIOUForm() {
-            document.getElementById('iou_date').value = '';
-            document.getElementById('iou_da_name').value = '';
-            document.getElementById('iou_territory').value = '';
-            document.getElementById('iou_mpo').value = '';
-            document.getElementById('iou_summary').value = '';
-            document.getElementById('iou_sales').value = '';
-            document.getElementById('iou_return').value = '';
-            document.getElementById('iou_sold').value = '';
-            document.getElementById('iou_qty').value = '';
-            document.getElementById('iou_bundle_qty').value = '';
-            document.getElementById('iou_taka').value = '';
-            document.getElementById('iou_percent').value = '0';
+            document.getElementById('iou_date').value = ''; document.getElementById('iou_da_name').value = '';
+            document.getElementById('iou_territory').value = ''; document.getElementById('iou_mpo').value = '';
+            document.getElementById('iou_summary').value = ''; document.getElementById('iou_sales').value = '';
+            document.getElementById('iou_return').value = ''; document.getElementById('iou_sold').value = '';
+            document.getElementById('iou_qty').value = ''; document.getElementById('iou_bundle_qty').value = '';
+            document.getElementById('iou_taka').value = ''; document.getElementById('iou_percent').value = '0';
             document.getElementById('iou_type').value = 'Delivery';
-            editingIouId = null;
-            document.getElementById('iou_save_btn').innerText = "Save IOU Entry";
-            document.getElementById('iou_cancel_btn').classList.add('hidden');
+            editingIouId = null; document.getElementById('iou_save_btn').innerText = "Save IOU Entry"; document.getElementById('iou_cancel_btn').classList.add('hidden');
         }
 
         function editIOU(id) {
             database.ref('IOU_List/' + id).once('value', function(snap) {
-                var d = snap.val();
-                if (!d) return;
-                document.getElementById('iou_date').value = d.date;
-                document.getElementById('iou_da_name').value = d.daId;
-                document.getElementById('iou_territory').value = d.territory;
-                document.getElementById('iou_mpo').value = d.mpo;
-                document.getElementById('iou_summary').value = d.summary;
-                document.getElementById('iou_sales').value = d.sales || 0;
-                document.getElementById('iou_return').value = d.returnVal || 0;
-                document.getElementById('iou_sold').value = d.soldVal || 0;
-                document.getElementById('iou_qty').value = d.qty;
-                document.getElementById('iou_bundle_qty').value = d.bundleQty || 0;
-                document.getElementById('iou_taka').value = d.taka;
-                document.getElementById('iou_percent').value = d.percent;
+                var d = snap.val(); if (!d) return;
+                document.getElementById('iou_date').value = d.date; document.getElementById('iou_da_name').value = d.daId;
+                document.getElementById('iou_territory').value = d.territory; document.getElementById('iou_mpo').value = d.mpo;
+                document.getElementById('iou_summary').value = d.summary; document.getElementById('iou_sales').value = d.sales || 0;
+                document.getElementById('iou_return').value = d.returnVal || 0; document.getElementById('iou_sold').value = d.soldVal || 0;
+                document.getElementById('iou_qty').value = d.qty; document.getElementById('iou_bundle_qty').value = d.bundleQty || 0;
+                document.getElementById('iou_taka').value = d.taka; document.getElementById('iou_percent').value = d.percent;
                 document.getElementById('iou_type').value = d.type || 'Delivery';
-                editingIouId = id;
-                document.getElementById('iou_save_btn').innerText = "Update";
-                document.getElementById('iou_cancel_btn').classList.remove('hidden');
-                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
-                document.getElementById('dashTab').classList.add('show', 'active');
-                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
-                document.getElementById('dash-tab').classList.add('active');
+                editingIouId = id; document.getElementById('iou_save_btn').innerText = "Update"; document.getElementById('iou_cancel_btn').classList.remove('hidden');
+                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); }); document.getElementById('dashTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); }); document.getElementById('dash-tab').classList.add('active');
             });
         }
 
         function cancelIOUEdit() { clearIOUForm(); }
+        function resetIOUFilter() { document.getElementById('filter_iou_month').value = ''; document.getElementById('iou_filter_start').value = ''; document.getElementById('iou_filter_end').value = ''; document.getElementById('filter_iou_da').value = ''; setGlobalMonth(''); }
 
-        function resetIOUFilter() {
-            document.getElementById('filter_iou_month').value = '';
-            document.getElementById('iou_filter_start').value = '';
-            document.getElementById('iou_filter_end').value = '';
-            document.getElementById('filter_iou_da').value = '';
-            setGlobalMonth('');
-        }
-
-        // FIX #2: Changed .on() to .once()
+        // ================= LOAD ADMIN IOU LIST =================
         function loadAdminIOU() {
             var fDa = document.getElementById('filter_iou_da').value;
             var fStart = document.getElementById('iou_filter_start').value;
             var fEnd = document.getElementById('iou_filter_end').value;
             var fMonth = globalFilterMonth;
             database.ref('IOU_List').once('value', function(snap) {
-                var tbody = document.getElementById('iou_admin_table_body');
-                tbody.innerHTML = '';
+                var tbody = document.getElementById('iou_admin_table_body'); tbody.innerHTML = '';
                 var tSales = 0, tRet = 0, tSold = 0, tQty = 0, tBQty = 0, tTaka = 0, count = 1;
                 if (!snap.exists()) tbody.innerHTML = '<tr><td colspan="15" class="text-center">No Data</td></tr>';
                 snap.forEach(function(child) {
-                    var d = child.val();
-                    var show = true;
+                    var d = child.val(); var show = true;
                     if (fMonth && !isDateInMonth(d.date, fMonth)) show = false;
                     if (fDa && d.daId !== fDa) show = false;
                     if (fStart && d.date < fStart) show = false;
                     if (fEnd && d.date > fEnd) show = false;
                     if (show) {
                         var iSold = d.soldVal || ((d.sales || 0) - (d.returnVal || 0));
-                        tSales += (d.sales || 0);
-                        tRet += (d.returnVal || 0);
-                        tSold += iSold;
-                        tQty += d.qty || 0;
-                        tBQty += d.bundleQty || 0;
-                        tTaka += d.taka || 0;
-                        var badge = d.status === 'used' ? '<span class="badge bg-secondary">Used</span>' : '<span class="badge bg-success">Active</span>';
-                        var typeBadge = d.type ? '<span class="badge bg-info">' + d.type + '</span>' : '';
-                        tbody.innerHTML += '<tr class="' + (d.status === 'used' ? 'table-secondary' : '') + '"><td>' + count++ + '</td><td>' + formatDate(d.date) + '</td><td>' + d.daName + '</td><td>' + typeBadge + '</td><td>' + d.territory + '</td><td>' + d.mpo + '</td><td>' + d.summary + '</td><td>' + (d.sales || 0) + '</td><td>' + (d.returnVal || 0) + '</td><td>' + iSold + '</td><td>' + d.qty + '</td><td>' + (d.bundleQty || 0) + '</td><td>' + d.taka + '</td><td>' + d.percent + '%</td><td>' + badge + ' <button class="btn btn-sm btn-warning" onclick="editIOU(\'' + child.key + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\'' + child.key + '\')">X</button></td></tr>';
+                        tSales += (d.sales || 0); tRet += (d.returnVal || 0); tSold += iSold;
+                        tQty += d.qty || 0; tBQty += d.bundleQty || 0; tTaka += d.taka || 0;
+                        var type = d.type || 'Delivery';
+                        var badge = (d.status === 'used' || isNoBillIOU(type))
+                            ? '<span class="badge bg-secondary">Used</span>'
+                            : '<span class="badge bg-success">Active</span>';
+                        var typeBadge = type ? '<span class="badge bg-info">' + type + '</span>' : '';
+                        var rowClass = (d.status === 'used' || isNoBillIOU(type)) ? 'table-secondary' : '';
+                        tbody.innerHTML += '<tr class="' + rowClass + '"><td>' + count++ + '</td><td>' + formatDate(d.date) + '</td><td>' + d.daName + '</td><td>' + typeBadge + '</td><td>' + d.territory + '</td><td>' + d.mpo + '</td><td>' + d.summary + '</td><td>' + (d.sales || 0) + '</td><td>' + (d.returnVal || 0) + '</td><td>' + iSold + '</td><td>' + d.qty + '</td><td>' + (d.bundleQty || 0) + '</td><td>' + d.taka + '</td><td>' + d.percent + '%</td><td>' + badge + ' <button class="btn btn-sm btn-warning" onclick="editIOU(\'' + child.key + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\'' + child.key + '\')">X</button></td></tr>';
                     }
                 });
-                document.getElementById('iou_tot_sales').innerText = tSales;
-                document.getElementById('iou_tot_ret').innerText = tRet;
-                document.getElementById('iou_tot_sold').innerText = tSold;
-                document.getElementById('iou_tot_qty').innerText = tQty;
-                document.getElementById('iou_tot_bqty').innerText = tBQty;
-                document.getElementById('iou_tot_taka').innerText = tTaka;
+                document.getElementById('iou_tot_sales').innerText = tSales; document.getElementById('iou_tot_ret').innerText = tRet;
+                document.getElementById('iou_tot_sold').innerText = tSold; document.getElementById('iou_tot_qty').innerText = tQty;
+                document.getElementById('iou_tot_bqty').innerText = tBQty; document.getElementById('iou_tot_taka').innerText = tTaka;
             });
         }
 
-        function deleteIOU(id) {
-            if (confirm("Delete?")) {
-                database.ref('IOU_List/' + id).remove();
-                if (editingIouId === id) clearIOUForm();
-                reloadAllData();
-            }
-        }
+        function deleteIOU(id) { if (confirm("Delete?")) { database.ref('IOU_List/' + id).remove(); if (editingIouId === id) clearIOUForm(); reloadAllData(); } }
 
         function fillBillFromIOU(iouId) {
             database.ref('IOU_List/' + iouId).once('value', function(snap) {
-                var iou = snap.val();
-                if (!iou) return;
-                if (iou.type === 'General' || iou.type === 'Bill Payment') {
-                    alert("This is a " + iou.type + " IOU. A bill is not required.");
-                    return;
-                }
+                var iou = snap.val(); if (!iou) return;
+                if (isNoBillIOU(iou.type)) { alert("This is a " + iou.type + " IOU. A bill is not required."); return; }
                 currentIouId = iouId;
                 document.getElementById('form_iou_amount').value = iou.taka;
-                document.getElementById('form_dep_date').value = iou.date;
-                document.getElementById('form_ret_date').value = iou.date;
-                document.getElementById('form_submit_date').value = iou.date;
-                                document.getElementById('form_route').value = iou.territory;
-                document.getElementById('form_mpo').value = iou.mpo;
-                document.getElementById('form_summary').value = iou.summary;
+                document.getElementById('form_dep_date').value = iou.date; document.getElementById('form_ret_date').value = iou.date;
+                document.getElementById('form_submit_date').value = iou.date; document.getElementById('form_route').value = iou.territory;
+                document.getElementById('form_mpo').value = iou.mpo; document.getElementById('form_summary').value = iou.summary;
                 document.getElementById('form_invoice_val').value = iou.soldVal || iou.sales;
                 document.getElementById('form_return_val').value = iou.returnVal || 0;
-                document.getElementById('form_invoice_qty').value = iou.qty;
-                document.getElementById('form_bundle_qty').value = iou.bundleQty || 0;
-                calculateSoldValue();
-                document.getElementById('expense_table_body').innerHTML = '';
-                triggerAutoSave();
-                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); });
-                document.getElementById('entryTab').classList.add('show', 'active');
-                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); });
-                document.getElementById('entry-tab').classList.add('active');
+                document.getElementById('form_invoice_qty').value = iou.qty; document.getElementById('form_bundle_qty').value = iou.bundleQty || 0;
+                calculateSoldValue(); document.getElementById('expense_table_body').innerHTML = ''; triggerAutoSave();
+                document.querySelectorAll('.tab-pane').forEach(function(p) { p.classList.remove('show', 'active'); }); document.getElementById('entryTab').classList.add('show', 'active');
+                document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); }); document.getElementById('entry-tab').classList.add('active');
                 alert("Form Auto-filled! Please add expense rows manually or use Excel Import.");
             });
         }
 
         // ================= BILL HISTORY LOGIC =================
-        function resetHistoryFilter() {
-            document.getElementById('filter_history_da').value = '';
-            loadBills();
-        }
-        function resetApprovedFilter() {
-            document.getElementById('filter_approved_da').value = '';
-            loadBills();
-        }
+        function resetHistoryFilter() { document.getElementById('filter_history_da').value = ''; loadBills(); }
+        function resetApprovedFilter() { document.getElementById('filter_approved_da').value = ''; loadBills(); }
 
-        // FIX #2: Changed .on() to .once() - this was the BIGGEST leak since loadBills was called on every month/DA change
         function loadBills() {
-            var tableHead = document.getElementById('bill_table_head');
-            var tableBody = document.getElementById('bill_table_body');
-            var tableFoot = document.getElementById('bill_table_foot');
-            var approvedTableBody = document.getElementById('approved_bill_table_body');
-            var approvedTableFoot = document.getElementById('approved_bill_table_foot');
-
+            var tableHead = document.getElementById('bill_table_head'), tableBody = document.getElementById('bill_table_body'), tableFoot = document.getElementById('bill_table_foot');
+            var approvedTableBody = document.getElementById('approved_bill_table_body'), approvedTableFoot = document.getElementById('approved_bill_table_foot');
             var historyDA = document.getElementById('filter_history_da') ? document.getElementById('filter_history_da').value : '';
             var approvedDA = document.getElementById('filter_approved_da') ? document.getElementById('filter_approved_da').value : '';
             var activeMonth = globalFilterMonth;
-
             tableBody.innerHTML = '<tr><td colspan="12" class="text-center">Loading...</td></tr>';
             approvedTableBody.innerHTML = '<tr><td colspan="11" class="text-center">Loading...</td></tr>';
-
             var historyTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
             var approvedTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
-
-            if (currentUser.role === 'user') {
-                tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Depot</th><th>Route</th><th>Amount</th><th>Status</th></tr>';
-            } else if (currentUser.role === 'admin') {
-                tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Status</th><th>Action</th></tr>';
-            } else {
-                tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Status</th><th>Action</th></tr>';
-            }
-
+            if (currentUser.role === 'user') { tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Depot</th><th>Route</th><th>Amount</th><th>Status</th></tr>'; }
+            else if (currentUser.role === 'admin') { tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Status</th><th>Action</th></tr>'; }
+            else { tableHead.innerHTML = '<tr><th>Date</th><th>DA Name</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Status</th><th>Action</th></tr>'; }
             database.ref('Bills').once('value', function(snapshot) {
-                tableBody.innerHTML = '';
-                approvedTableBody.innerHTML = '';
-                historyTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
-                approvedTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
-
+                tableBody.innerHTML = ''; approvedTableBody.innerHTML = '';
+                historyTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 }; approvedTotals = { iou: 0, sales: 0, userBill: 0, payable: 0 };
                 if (!snapshot.exists()) {
                     var colSpan = currentUser.role === 'user' ? '6' : '12';
                     tableBody.innerHTML = '<tr><td colspan="' + colSpan + '" class="text-center text-danger">No Bills Found</td></tr>';
                     approvedTableBody.innerHTML = '<tr><td colspan="11" class="text-center text-danger">No Bills Found</td></tr>';
-                    tableFoot.innerHTML = '';
-                    approvedTableFoot.innerHTML = '';
-                    return;
+                    tableFoot.innerHTML = ''; approvedTableFoot.innerHTML = ''; return;
                 }
-
                 var approvedBillsArray = [];
-
                 snapshot.forEach(function(depotSnapshot) {
                     depotSnapshot.forEach(function(daSnapshot) {
                         daSnapshot.forEach(function(billSnapshot) {
                             var bill = billSnapshot.val();
                             var billId = billSnapshot.key;
                             var daId = bill.daId;
-
                             if (activeMonth && !isDateInMonth(bill.submitDate || bill.depDate, activeMonth)) return;
-
                             var sales = bill.invoiceVal || 0;
                             var iou = bill.iouAmount || 0;
                             if (!iou && bill.iouId && iouListGlobal[bill.iouId]) iou = iouListGlobal[bill.iouId].taka || 0;
@@ -1935,33 +1535,32 @@
                                 if (bill.status === 'green') statusText = "APPROVED";
                                 tr.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + bill.depot + '</td><td>' + (bill.route || 'N/A') + '</td><td class="fw-bold">' + originalAmount.toFixed(2) + '</td><td><b>' + statusText + '</b></td>';
                                 tableBody.appendChild(tr);
-
                             } else if (currentUser.role === 'admin') {
                                 if (historyDA && bill.daId !== historyDA) return;
-
                                 if (bill.status === 'red') {
                                     historyTotals.iou += iou; historyTotals.sales += sales; historyTotals.userBill += originalAmount; historyTotals.payable += originalAmount;
                                     var trP = document.createElement('tr'); trP.classList.add('status-red');
-                                    var actionBtns = '<button class="btn btn-warning btn-sm" onclick="editBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Edit</button> ';
+                                    // FIX: Added Print button for pending bills
+                                    var actionBtns = '<button class="btn btn-info btn-sm text-white" onclick="printBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Print</button> ';
+                                    actionBtns += '<button class="btn btn-warning btn-sm" onclick="editBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Edit</button> ';
                                     actionBtns += '<button class="btn btn-secondary btn-sm" onclick="openCutModal(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Check</button> ';
                                     actionBtns += '<button class="btn btn-danger btn-sm" onclick="deleteBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Del</button>';
-                                    trP.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + (bill.route || 'N/A') + '</td><td class="text-end">' + iou.toFixed(2) + '</td><td class="text-end">' + sales.toFixed(2) + '</td><td class="text-end">' + originalAmount.toFixed(2) + '</td><td class="text-end">' + userBillPer + '%</td><td><b>PENDING</b></td><td>' + actionBtns + '</td>';
+                                    trP.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + (bill.route || 'N/A') + '</td><td class="text-end">' + iou.toFixed(2) + '</td><td class="text-end">' + sales.toFixed(2) + '</td><td class="text-end">' + originalAmount.toFixed(2) + '</td><td class="text-end">' + userBillPer + '%</td><td><b>PENDING</b></td><td class="text-nowrap">' + actionBtns + '</td>';
                                     tableBody.appendChild(trP);
                                 }
                                 if (bill.status === 'orange' || bill.status === 'green') {
                                     approvedBillsArray.push({ bill: bill, billId: billId, daId: daId, iou: iou, sales: sales, originalAmount: originalAmount, approvedAmount: approvedAmount, userBillPer: userBillPer, payPer: payPer, deduction: deduction });
                                 }
-
                             } else {
                                 if (historyDA && bill.daId !== historyDA) return;
-
                                 if (bill.status === 'orange') {
                                     historyTotals.iou += iou; historyTotals.sales += sales; historyTotals.userBill += originalAmount; historyTotals.payable += approvedAmount;
                                     var trS = document.createElement('tr'); trS.classList.add('status-orange');
-                                    var sActionBtns = '<button class="btn btn-warning btn-sm" onclick="openCutModal(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Recheck</button> ';
-                                    sActionBtns += '<button class="btn btn-success btn-sm" onclick="approveBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Approve</button>';
+                                    var sActionBtns = '<button class="btn btn-info btn-sm text-white" onclick="printBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Print</button> ';
+                                    sActionBtns += '<button class="btn btn-warning btn-sm" onclick="openCutModal(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Recheck</button> ';
+                                    sActionBtns += '<button class="btn btn-success btn-sm" onclick="approveBill(\''+billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Approve</button>';
                                     var sPayDisplay = deduction > 0 ? '<span class="cut-amount">' + originalAmount.toFixed(2) + '</span> <span class="payable-amount">' + approvedAmount.toFixed(2) + '</span>' : approvedAmount.toFixed(2);
-                                    trS.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + (bill.route || 'N/A') + '</td><td class="text-end">' + iou.toFixed(2) + '</td><td class="text-end">' + sales.toFixed(2) + '</td><td class="text-end">' + originalAmount.toFixed(2) + '</td><td class="text-end">' + userBillPer + '%</td><td class="text-end fw-bold">' + sPayDisplay + '</td><td class="text-end">' + payPer + '%</td><td><b>CHECKED</b></td><td>' + sActionBtns + '</td>';
+                                    trS.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + (bill.route || 'N/A') + '</td><td class="text-end">' + iou.toFixed(2) + '</td><td class="text-end">' + sales.toFixed(2) + '</td><td class="text-end">' + originalAmount.toFixed(2) + '</td><td class="text-end">' + userBillPer + '%</td><td class="text-end fw-bold">' + sPayDisplay + '</td><td class="text-end">' + payPer + '%</td><td><b>CHECKED</b></td><td class="text-nowrap">' + sActionBtns + '</td>';
                                     tableBody.appendChild(trS);
                                 }
                                 if (bill.status === 'green') {
@@ -1983,9 +1582,7 @@
                     var iou = item.iou, sales = item.sales, originalAmount = item.originalAmount;
                     var approvedAmount = item.approvedAmount, userBillPer = item.userBillPer;
                     var payPer = item.payPer, deduction = item.deduction;
-
                     if (approvedDA && bill.daId !== approvedDA) return;
-
                     approvedTotals.iou += iou; approvedTotals.sales += sales;
                     approvedTotals.userBill += originalAmount; approvedTotals.payable += approvedAmount;
                     var trApp = document.createElement('tr');
@@ -2002,83 +1599,55 @@
                 } else if (currentUser.role === 'superadmin') {
                     tableFoot.innerHTML = '<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">' + historyTotals.iou.toFixed(2) + '</td><td class="text-end">' + historyTotals.sales.toFixed(2) + '</td><td class="text-end">' + historyTotals.userBill.toFixed(2) + '</td><td></td><td class="text-end">' + historyTotals.payable.toFixed(2) + '</td><td colspan="3"></td></tr>';
                 }
-
                 if (currentUser.role === 'admin' || currentUser.role === 'superadmin') {
                     approvedTableFoot.innerHTML = '<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">' + approvedTotals.iou.toFixed(2) + '</td><td class="text-end">' + approvedTotals.sales.toFixed(2) + '</td><td class="text-end">' + approvedTotals.userBill.toFixed(2) + '</td><td></td><td class="text-end">' + approvedTotals.payable.toFixed(2) + '</td><td colspan="3"></td></tr>';
                 }
-            }, function(error) {
-                console.error("Firebase Read Failed: ", error);
-            });
+            }, function(error) { console.error("Firebase Read Failed: ", error); });
         }
 
         // ================= BILL SUMMARY LOGIC =================
-        // FIX #2: Changed .on() to .once()
         function generateSummary() {
             var daId = document.getElementById('summary_da').value;
             var monthVal = globalFilterMonth;
             var tbody = document.getElementById('summary_table_body');
-            tbody.innerHTML = '';
-            currentSummaryData = [];
-
+            tbody.innerHTML = ''; currentSummaryData = [];
             if (!daId) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Please select a DA.</td></tr>'; return; }
-
             var tSales = 0, tTaka = 0, tDA = 0, tNet = 0;
-
             database.ref('Bills').once('value', function(snap) {
-                tbody.innerHTML = '';
-                currentSummaryData = [];
-                tSales = 0; tTaka = 0; tDA = 0; tNet = 0;
-
+                tbody.innerHTML = ''; currentSummaryData = []; tSales = 0; tTaka = 0; tDA = 0; tNet = 0;
                 if (!snap.exists()) { tbody.innerHTML = '<tr><td colspan="9" class="text-center">No bills found.</td></tr>'; return; }
-
                 var billsArray = [];
                 snap.forEach(function(depotSnap) {
                     depotSnap.forEach(function(daSnap) {
                         if (daSnap.key !== daId) return;
-                        daSnap.forEach(function(billChild) {
-                            var bill = billChild.val();
-                            if (bill.status === 'green') billsArray.push({ id: billChild.key, data: bill });
-                        });
+                        daSnap.forEach(function(billChild) { var bill = billChild.val(); if (bill.status === 'green') billsArray.push({ id: billChild.key, data: bill }); });
                     });
                 });
-
                 if (billsArray.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="text-center text-warning">No Approved bills found.</td></tr>'; return; }
-
-                billsArray.sort(function(a, b) {
-                    return (a.data.submitDate || a.data.depDate || '').localeCompare(b.data.submitDate || b.data.depDate || '');
-                });
-
+                billsArray.sort(function(a, b) { return (a.data.submitDate || a.data.depDate || '').localeCompare(b.data.submitDate || b.data.depDate || ''); });
                 var sl = 1;
                 billsArray.forEach(function(item) {
                     var bill = item.data;
                     if (monthVal && !isDateInMonth(bill.submitDate || bill.depDate, monthVal)) return;
-
                     var netSales = bill.soldVal || (bill.invoiceVal - bill.returnVal);
                     var netAmount = bill.totalAmount || 0;
                     var sumDA = 0;
-                    if (bill.expenses && Array.isArray(bill.expenses)) {
-                        bill.expenses.forEach(function(exp) { sumDA += (parseFloat(exp.da) || 0); });
-                    }
+                    if (bill.expenses && Array.isArray(bill.expenses)) { bill.expenses.forEach(function(exp) { sumDA += (parseFloat(exp.da) || 0); }); }
                     var takaVal = netAmount - sumDA;
                     var costPct = netSales > 0 ? ((netAmount / netSales) * 100).toFixed(2) : "0.00";
-
                     tSales += netSales; tTaka += takaVal; tDA += sumDA; tNet += netAmount;
-
                     currentSummaryData.push({ sl: sl, date: formatDate(bill.submitDate || bill.depDate), territory: bill.route || 'N/A', type: 'Delivery', sales: netSales, taka: takaVal, da: sumDA, net: netAmount, cost: costPct });
                     sl++;
-
                     var tr = document.createElement('tr');
                     tr.innerHTML = '<td>' + (sl - 1) + '</td><td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + (bill.route || '') + '</td><td>Delivery</td><td class="text-end">' + netSales.toFixed(2) + '</td><td class="text-end">' + takaVal.toFixed(2) + '</td><td class="text-end">' + sumDA.toFixed(2) + '</td><td class="text-end fw-bold">' + netAmount.toFixed(2) + '</td><td class="text-end">' + costPct + '%</td>';
                     tbody.appendChild(tr);
                 });
-
                 document.getElementById('sum_foot_sales').innerText = tSales.toFixed(2);
                 document.getElementById('sum_foot_taka').innerText = tTaka.toFixed(2);
                 document.getElementById('sum_foot_da').innerText = tDA.toFixed(2);
                 document.getElementById('sum_foot_net').innerText = tNet.toFixed(2);
                 var totalCostPct = tSales > 0 ? ((tNet / tSales) * 100).toFixed(2) : "0.00";
                 document.getElementById('sum_foot_cost').innerText = totalCostPct + "%";
-
                 if (currentSummaryData.length === 0) tbody.innerHTML = '<tr><td colspan="9" class="text-center">No bills found for selected period.</td></tr>';
             });
         }
@@ -2089,18 +1658,14 @@
             document.getElementById('print_sum_da_name').innerText = daName;
             document.getElementById('print_sum_depot').innerText = "Kushtia Depot";
             document.getElementById('print_sum_month').innerText = formatMonthLabel(globalFilterMonth);
-
-            var tbody = document.getElementById('print_sum_tbody');
-            tbody.innerHTML = '';
+            var tbody = document.getElementById('print_sum_tbody'); tbody.innerHTML = '';
             var tSales = 0, tTaka = 0, tDA = 0, tNet = 0;
-
             currentSummaryData.forEach(function(row) {
                 tSales += row.sales; tTaka += row.taka; tDA += row.da; tNet += row.net;
                 var tr = document.createElement('tr');
                 tr.innerHTML = '<td style="padding:2px;text-align:center;">' + row.sl + '</td><td style="padding:2px;text-align:left;">' + row.date + '</td><td style="padding:2px;text-align:left;">' + row.territory + '</td><td style="padding:2px;text-align:left;">' + row.type + '</td><td style="padding:2px;text-align:right;">' + row.sales.toFixed(2) + '</td><td style="padding:2px;text-align:right;">' + row.taka.toFixed(2) + '</td><td style="padding:2px;text-align:right;">' + row.da.toFixed(2) + '</td><td style="padding:2px;text-align:right;">' + row.net.toFixed(2) + '</td><td style="padding:2px;text-align:right;">' + row.cost + '%</td>';
                 tbody.appendChild(tr);
             });
-
             document.getElementById('print_sum_foot_sales').innerText = tSales.toFixed(2);
             document.getElementById('print_sum_foot_taka').innerText = tTaka.toFixed(2);
             document.getElementById('print_sum_foot_da').innerText = tDA.toFixed(2);
@@ -2109,7 +1674,6 @@
             document.getElementById('print_sum_foot_cost').innerText = totalCostPct + "%";
             document.getElementById('print_sum_cost_pct').innerText = totalCostPct + "%";
             document.getElementById('print_sum_words').innerText = numberToEnglish(tNet) + " Taka Only";
-
             document.getElementById('print_summary_area').classList.add('active-print');
             document.getElementById('print_area').classList.remove('active-print');
             window.print();
@@ -2121,20 +1685,15 @@
             document.getElementById('edit_depot').value = depot;
             document.getElementById('edit_depot').dataset.daId = daId;
             database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', function(snapshot) {
-                var bill = snapshot.val();
-                if (!bill) return;
+                var bill = snapshot.val(); if (!bill) return;
                 modalSales = bill.invoiceVal || 0;
                 modalUserBill = bill.originalAmount || bill.totalAmount || 0;
                 modalIou = bill.iouAmount || 0;
-                var tbody = document.getElementById('modal_expense_body');
-                tbody.innerHTML = '';
+                var tbody = document.getElementById('modal_expense_body'); tbody.innerHTML = '';
                 if (bill.expenses) {
                     bill.expenses.forEach(function(exp) {
-                        var amt = parseFloat(exp.amount) || 0;
-                        var da = parseFloat(exp.da) || 0;
-                        var origTotal = amt + da;
-                        var currentDed = parseFloat(exp.deduction) || 0;
-                        var currentTot = origTotal - currentDed;
+                        var amt = parseFloat(exp.amount) || 0, da = parseFloat(exp.da) || 0;
+                        var origTotal = amt + da, currentDed = parseFloat(exp.deduction) || 0, currentTot = origTotal - currentDed;
                         var row = tbody.insertRow();
                         row.innerHTML = '<td><input type="text" class="form-control form-control-sm" value="' + formatDate(exp.date) + '" disabled></td><td><input type="text" class="form-control form-control-sm" value="' + exp.from + '" disabled></td><td><input type="text" class="form-control form-control-sm" value="' + exp.to + '" disabled></td><td><input type="text" class="form-control form-control-sm" value="' + exp.mode + '" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-amt" value="' + amt + '" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-da" value="' + da + '" disabled></td><td><input type="number" class="form-control form-control-sm text-danger row-deduction" value="' + currentDed + '" placeholder="0" oninput="calculateModalTotals()"></td><td><span class="fw-bold row-total">' + currentTot + '</span></td>';
                     });
@@ -2151,8 +1710,7 @@
                 var amt = parseFloat(row.querySelector('.row-amt').value) || 0;
                 var da = parseFloat(row.querySelector('.row-da').value) || 0;
                 var deduct = parseFloat(row.querySelector('.row-deduction').value) || 0;
-                var origTotal = amt + da;
-                var rowTotal = origTotal - deduct;
+                var origTotal = amt + da, rowTotal = origTotal - deduct;
                 var totalSpan = row.querySelector('.row-total');
                 if (deduct > 0) totalSpan.innerHTML = '<span style="text-decoration:line-through;color:red;">' + origTotal + '</span> <span style="color:green;">' + rowTotal + '</span>';
                 else totalSpan.innerText = rowTotal;
@@ -2176,46 +1734,27 @@
             var daId = document.getElementById('edit_depot').dataset.daId;
             var newExpenses = [], newTotalAmount = 0, totalDeduction = 0, originalAmt = 0;
             var remarks = document.getElementById('modal_remarks').value;
-
             document.querySelectorAll('#modal_expense_body tr').forEach(function(row) {
                 var amt = parseFloat(row.querySelector('.row-amt').value) || 0;
                 var da = parseFloat(row.querySelector('.row-da').value) || 0;
                 var ded = parseFloat(row.querySelector('.row-deduction').value) || 0;
                 originalAmt += (amt + da);
-                newExpenses.push({
-                    date: row.cells[0].querySelector('input').value,
-                    from: row.cells[1].querySelector('input').value,
-                    to: row.cells[2].querySelector('input').value,
-                    mode: row.cells[3].querySelector('input').value,
-                    amount: amt, da: da, deduction: ded
-                });
-                newTotalAmount += (amt + da - ded);
-                totalDeduction += ded;
+                newExpenses.push({ date: row.cells[0].querySelector('input').value, from: row.cells[1].querySelector('input').value, to: row.cells[2].querySelector('input').value, mode: row.cells[3].querySelector('input').value, amount: amt, da: da, deduction: ded });
+                newTotalAmount += (amt + da - ded); totalDeduction += ded;
             });
-
-            var updateData = {
-                expenses: newExpenses, totalAmount: newTotalAmount,
-                deduction: totalDeduction, originalAmount: originalAmt,
-                status: 'orange', remarks: remarks
-            };
+            var updateData = { expenses: newExpenses, totalAmount: newTotalAmount, deduction: totalDeduction, originalAmount: originalAmt, status: 'orange', remarks: remarks };
             if (currentUser.role === 'superadmin') updateData.recheckedBy = currentUser.name;
             else updateData.checkedBy = currentUser.name;
-
             database.ref('Bills/' + depot + '/' + daId + '/' + billId).update(updateData, function(error) {
                 if (error) alert("Failed");
-                else {
-                    alert("Changes Saved!");
-                    bootstrap.Modal.getInstance(document.getElementById('cutBillModal')).hide();
-                    reloadAllData();
-                }
+                else { alert("Changes Saved!"); bootstrap.Modal.getInstance(document.getElementById('cutBillModal')).hide(); reloadAllData(); }
             });
         }
 
         function approveBill(billId, depot, daId) {
             if (confirm("Approve this bill?")) {
                 database.ref('Bills/' + depot + '/' + daId + '/' + billId).update({ status: 'green', approvedBy: currentUser.name }, function(error) {
-                    if (error) alert("Error");
-                    else { alert("Bill Approved!"); reloadAllData(); }
+                    if (error) alert("Error"); else { alert("Bill Approved!"); reloadAllData(); }
                 });
             }
         }
@@ -2223,11 +1762,9 @@
         // ================= PRINT LOGIC =================
         function printBill(billId, depot, daId) {
             database.ref('Bills/' + depot + '/' + daId + '/' + billId).once('value', function(snapshot) {
-                var bill = snapshot.val();
-                if (!bill) return;
+                var bill = snapshot.val(); if (!bill) return;
                 var costPercent = "0%";
                 if (bill.invoiceVal > 0) costPercent = ((bill.totalAmount / bill.invoiceVal) * 100).toFixed(2) + "%";
-
                 document.getElementById('p_da_name').innerText = bill.daName;
                 document.getElementById('p_depot').innerText = bill.depot;
                 document.getElementById('p_dep_date').innerText = formatDate(bill.depDate);
@@ -2247,32 +1784,24 @@
                 document.getElementById('p_remarks').innerText = bill.remarks || '';
                 document.getElementById('p_checked_by').innerText = bill.checkedBy || '';
                 document.getElementById('p_rechecked_by').innerText = bill.recheckedBy || bill.approvedBy || '';
-
-                var tbody = document.getElementById('p_expense_body');
-                tbody.innerHTML = '';
+                var tbody = document.getElementById('p_expense_body'); tbody.innerHTML = '';
                 var totAmt = 0, totDa = 0, totDed = 0, totNet = 0, totTotal = 0;
-
                 if (bill.expenses) {
                     bill.expenses.forEach(function(exp) {
                         if (!exp.date) return;
-                        var amt = parseFloat(exp.amount) || 0;
-                        var da = parseFloat(exp.da) || 0;
-                        var ded = parseFloat(exp.deduction) || 0;
-                        var total = amt + da;
-                        var netAmount = total - ded;
+                        var amt = parseFloat(exp.amount) || 0, da = parseFloat(exp.da) || 0, ded = parseFloat(exp.deduction) || 0;
+                        var total = amt + da, netAmount = total - ded;
                         totAmt += amt; totDa += da; totTotal += total; totDed += ded; totNet += netAmount;
                         var totalDisplay = total;
                         if (ded > 0) totalDisplay = '<span class="cut-text">' + total + '</span>';
                         tbody.innerHTML += '<tr><td style="padding:2px;text-align:left;">' + formatDate(exp.date) + '</td><td style="padding:2px;text-align:left;">' + exp.from + '</td><td style="padding:2px;text-align:left;">' + exp.to + '</td><td style="padding:2px;text-align:left;">' + exp.mode + '</td><td style="padding:2px;text-align:right;">' + amt + '</td><td style="padding:2px;text-align:right;">' + da + '</td><td style="padding:2px;text-align:right;">' + totalDisplay + '</td><td style="padding:2px;text-align:right;color:red;">' + (ded > 0 ? ded : '') + '</td><td style="padding:2px;text-align:right;font-weight:bold;">' + netAmount + '</td></tr>';
                     });
                 }
-
                 document.getElementById('p_foot_amt').innerText = totAmt;
                 document.getElementById('p_foot_da').innerText = totDa;
                 document.getElementById('p_foot_total').innerText = totTotal;
                 document.getElementById('p_foot_ded').innerText = totDed;
                 document.getElementById('p_total_amount').innerText = totNet;
-
                 document.getElementById('print_area').classList.add('active-print');
                 document.getElementById('print_summary_area').classList.remove('active-print');
                 window.print();
@@ -2312,18 +1841,12 @@
                 if (error) alert("Error creating user");
                 else {
                     alert("User Created Successfully!");
-                    document.getElementById('new_user_id').value = '';
-                    document.getElementById('new_user_name').value = '';
-                    document.getElementById('new_user_phone').value = '';
-                    document.getElementById('new_user_username').value = '';
-                    document.getElementById('new_user_pass').value = '';
-                    document.getElementById('new_user_depot').value = 'Kushtia';
-                    document.getElementById('new_user_role').value = 'user';
-                    document.getElementById('new_user_photo').value = '';
-                    document.getElementById('photo_preview').classList.add('hidden');
-                    userPhotoBase64 = null;
-                    loadDAListForIOU();
-                    loadDAListForSummary();
+                    document.getElementById('new_user_id').value = ''; document.getElementById('new_user_name').value = '';
+                    document.getElementById('new_user_phone').value = ''; document.getElementById('new_user_username').value = '';
+                    document.getElementById('new_user_pass').value = ''; document.getElementById('new_user_depot').value = 'Kushtia';
+                    document.getElementById('new_user_role').value = 'user'; document.getElementById('new_user_photo').value = '';
+                    document.getElementById('photo_preview').classList.add('hidden'); userPhotoBase64 = null;
+                    loadDAListForIOU(); loadDAListForSummary();
                 }
             });
         }
@@ -2360,8 +1883,7 @@
         function importBillsFromExcel(inputId) {
             var input = document.getElementById(inputId);
             if (!input.files || !input.files[0]) { alert("Please select a file first."); return; }
-            var file = input.files[0];
-            var reader = new FileReader();
+            var file = input.files[0]; var reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     var data = new Uint8Array(e.target.result);
@@ -2374,61 +1896,36 @@
                         var row = jsonData[i];
                         if (!row || row.filter(function(cell) { return cell !== ''; }).length === 0) continue;
                         var billId = String(row[0]).trim();
-                        var daName = row[2];
-                        var daId = null;
+                        var daName = row[2]; var daId = null;
                         Object.keys(daListCache).forEach(function(key) { if (daListCache[key] === daName) daId = key; });
                         if (!daId) { console.warn("Skipped, DA not found: " + daName); continue; }
                         if (!billGroups[billId]) {
-                            billGroups[billId] = {
-                                data: {
-                                    daName: daName, daId: daId, depot: row[3] || 'Kushtia',
-                                    route: row[4] || '', invoiceVal: parseFloat(row[5]) || 0,
-                                    returnVal: parseFloat(row[6]) || 0, soldVal: parseFloat(row[7]) || 0,
-                                    submitDate: row[1] || new Date().toISOString().split('T')[0],
-                                    status: 'red', expenses: [], timestamp: Date.now()
-                                },
-                                isNew: (billId === 'NEW' || billId === 'new' || billId === '')
-                            };
+                            billGroups[billId] = { data: { daName: daName, daId: daId, depot: row[3] || 'Kushtia', route: row[4] || '', invoiceVal: parseFloat(row[5]) || 0, returnVal: parseFloat(row[6]) || 0, soldVal: parseFloat(row[7]) || 0, submitDate: row[1] || new Date().toISOString().split('T')[0], status: 'red', expenses: [], timestamp: Date.now() }, isNew: (billId === 'NEW' || billId === 'new' || billId === '') };
                         }
-                        billGroups[billId].data.expenses.push({
-                            date: row[8] || billGroups[billId].data.submitDate,
-                            from: row[9] || '', to: row[10] || '', mode: row[11] || 'Rickshaw',
-                            amount: parseFloat(row[12]) || 0, da: parseFloat(row[13]) || 0,
-                            deduction: parseFloat(row[15]) || 0
-                        });
+                        billGroups[billId].data.expenses.push({ date: row[8] || billGroups[billId].data.submitDate, from: row[9] || '', to: row[10] || '', mode: row[11] || 'Rickshaw', amount: parseFloat(row[12]) || 0, da: parseFloat(row[13]) || 0, deduction: parseFloat(row[15]) || 0 });
                     }
                     var updates = {}, newCount = 0, updateCount = 0;
                     Object.keys(billGroups).forEach(function(key) {
-                        var item = billGroups[key];
-                        var totalAmt = 0;
-                        item.data.expenses.forEach(function(ex) {
-                            totalAmt += ((parseFloat(ex.amount) || 0) + (parseFloat(ex.da) || 0) - (parseFloat(ex.deduction) || 0));
-                        });
-                        item.data.totalAmount = totalAmt;
-                        item.data.originalAmount = totalAmt;
+                        var item = billGroups[key]; var totalAmt = 0;
+                        item.data.expenses.forEach(function(ex) { totalAmt += ((parseFloat(ex.amount) || 0) + (parseFloat(ex.da) || 0) - (parseFloat(ex.deduction) || 0)); });
+                        item.data.totalAmount = totalAmt; item.data.originalAmount = totalAmt;
                         var basePath = 'Bills/' + item.data.depot + '/' + item.data.daId;
                         if (item.isNew) { var newRef = database.ref(basePath).push(); updates[basePath + '/' + newRef.key] = item.data; newCount++; }
                         else { updates[basePath + '/' + key] = item.data; updateCount++; }
                     });
                     if (Object.keys(updates).length > 0) {
-                        database.ref().update(updates).then(function() {
-                            alert('Import Successful!\nNew: ' + newCount + '\nUpdated: ' + updateCount);
-                            input.value = '';
-                            reloadAllData();
-                        }).catch(function(err) { alert("Failed: " + err.message); });
+                        database.ref().update(updates).then(function() { alert('Import Successful!\nNew: ' + newCount + '\nUpdated: ' + updateCount); input.value = ''; reloadAllData(); }).catch(function(err) { alert("Failed: " + err.message); });
                     } else { alert("No valid data found or DA names didn't match."); }
                 } catch (ex) { console.error(ex); alert("Error parsing file."); }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // User Excel Import for Expense Rows
         function importExpensesToTable() {
             if (typeof XLSX === 'undefined') { alert("Excel Library not loaded."); return; }
             var input = document.getElementById('user_exp_excel_input');
             if (!input.files || !input.files[0]) { alert("Please select an Excel file."); return; }
-            var file = input.files[0];
-            var reader = new FileReader();
+            var file = input.files[0]; var reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     var data = new Uint8Array(e.target.result);
@@ -2454,14 +1951,10 @@
                         var rowTotal = amount + daExp;
                         var tr = document.createElement('tr');
                         tr.innerHTML = '<td><input type="date" class="form-control form-control-sm exp-date" value="' + dateVal + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="' + from + '" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="' + to + '" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this); triggerAutoSave()"><option ' + (mode == 'Rickshaw' ? 'selected' : '') + '>Rickshaw</option><option ' + (mode == 'Auto' ? 'selected' : '') + '>Auto</option><option ' + (mode == 'Bus' ? 'selected' : '') + '>Bus</option><option ' + (mode == 'CNG' ? 'selected' : '') + '>CNG</option><option ' + (mode == 'Van' ? 'selected' : '') + '>Van</option><option ' + (mode == 'Motorcycle' ? 'selected' : '') + '>Motorcycle</option><option ' + (mode == 'Tempo' ? 'selected' : '') + '>Tempo</option><option ' + (mode == 'Pickup' ? 'selected' : '') + '>Pickup</option><option ' + (mode == 'Daily Allowance' ? 'selected' : '') + '>Daily Allowance</option><option ' + (mode == 'Labour Bill' ? 'selected' : '') + '>Labour Bill</option></select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="' + amount + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="' + daExp + '" oninput="calculateRowTotal(this); triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="' + rowTotal + '" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';
-                        tbody.appendChild(tr);
-                        toggleRowInputs(tr.querySelector('.exp-mode'));
-                        importCount++;
+                        tbody.appendChild(tr); toggleRowInputs(tr.querySelector('.exp-mode')); importCount++;
                     }
-                    calculateGrandTotal();
-                    triggerAutoSave();
-                    alert('Imported ' + importCount + ' rows successfully!');
-                    input.value = '';
+                    calculateGrandTotal(); triggerAutoSave();
+                    alert('Imported ' + importCount + ' rows successfully!'); input.value = '';
                 } catch (ex) { console.error(ex); alert("Error reading file.\nColumns: Date, From, To, Mode, Amount, DA"); }
             };
             reader.readAsArrayBuffer(file);
@@ -2469,25 +1962,13 @@
 
         // ================= AUTO IMPORT LISTENERS =================
         var userExpInput = document.getElementById('user_exp_excel_input');
-        if (userExpInput) {
-            userExpInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) importExpensesToTable();
-            });
-        }
+        if (userExpInput) { userExpInput.addEventListener('change', function() { if (this.files && this.files[0]) importExpensesToTable(); }); }
         var adminExpInput = document.getElementById('excel_upload_input');
-        if (adminExpInput) {
-            adminExpInput.addEventListener('change', function() {
-                if (this.files && this.files[0]) importBillsFromExcel('excel_upload_input');
-            });
-        }
+        if (adminExpInput) { adminExpInput.addEventListener('change', function() { if (this.files && this.files[0]) importBillsFromExcel('excel_upload_input'); }); }
 
         // Enter key login support
-        document.getElementById('password').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') handleLogin();
-        });
-        document.getElementById('username').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') document.getElementById('password').focus();
-        });
+        document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+        document.getElementById('username').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('password').focus(); });
     </script>
 </body>
 </html>
