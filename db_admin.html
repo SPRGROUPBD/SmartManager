@@ -39,14 +39,15 @@
         .profile-img-lg { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #0d6efd; }
         .print-container { display: none; position: relative; }
         .print-summary-container { display: none; position: relative; } 
+        .print-iou-container { display: none; position: relative; }
         @media print {
             body * { visibility: hidden; }
             .no-print { display: none !important; }
-            .print-container, .print-summary-container { display: none !important; visibility: hidden; }
+            .print-container, .print-summary-container, .print-iou-container { display: none !important; visibility: hidden; }
             .active-print { display: block !important; position: absolute; left: 0; top: 0; width: 100%; visibility: visible !important; }
             .active-print * { visibility: visible !important; }
-            #pageFooter, #pageFooterSummary { position: fixed; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 14px; }
-            #pageFooter:after, #pageFooterSummary:after { content: "PAGE : " counter(page); }
+            #pageFooter, #pageFooterSummary, #pageFooterIOU { position: fixed; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: 14px; }
+            #pageFooter:after, #pageFooterSummary:after, #pageFooterIOU:after { content: "PAGE : " counter(page); }
             thead { display: table-header-group; } tfoot { display: table-footer-group; }
             table, th, td { border: 1px solid #000 !important; border-collapse: collapse; }
             th, td { padding: 2px 4px; font-size: 14px; line-height: 1.2; }
@@ -567,7 +568,10 @@
             <!-- Admin Tab: IOU List -->
             <div class="tab-pane fade admin-only" id="iouTab" role="tabpanel">
                 <div class="card dash-card no-print">
-                    <div class="card-header bg-primary text-white py-2">IOU List & Management</div>
+                    <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                        <span>IOU List & Management</span>
+                        <button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i> Print IOU List</button>
+                    </div>
                     <div class="card-body">
                         <div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end">
                             <div class="col-6 col-md-2">
@@ -704,6 +708,61 @@
         </table>
     </div>
 
+    <!-- PRINT IOU LIST CONTAINER -->
+    <div class="print-iou-container" id="print_iou_area">
+        <div style="text-align: center; border-bottom: 2px solid #000; margin-bottom: 10px;">
+            <h2 style="margin:0; letter-spacing: 2px;">MONICO PHARMA LTD</h2>
+            <h4 style="margin:0;">IOU Register</h4>
+            <h5 style="margin:0;">Kushtia Depot</h5>
+            <h6 style="margin:0;">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold;">
+            <div>Period: <span id="print_iou_period"></span></div>
+            <div>Filter: <span id="print_iou_filter_info"></span></div>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px;">
+            <thead>
+                <tr style="background-color: #e0e0e0;">
+                    <th style="padding: 3px; text-align: center; width: 4%;">#</th>
+                    <th style="padding: 3px; text-align: left; width: 9%;">Date</th>
+                    <th style="padding: 3px; text-align: left; width: 12%;">DA Name</th>
+                    <th style="padding: 3px; text-align: center; width: 8%;">Type</th>
+                    <th style="padding: 3px; text-align: left; width: 12%;">Territory</th>
+                    <th style="padding: 3px; text-align: left; width: 8%;">MPO</th>
+                    <th style="padding: 3px; text-align: center; width: 6%;">Summary</th>
+                    <th style="padding: 3px; text-align: right; width: 8%;">Sales</th>
+                    <th style="padding: 3px; text-align: right; width: 6%;">Ret</th>
+                    <th style="padding: 3px; text-align: right; width: 8%;">Sold</th>
+                    <th style="padding: 3px; text-align: center; width: 5%;">Qty</th>
+                    <th style="padding: 3px; text-align: center; width: 5%;">Bund Qty</th>
+                    <th style="padding: 3px; text-align: right; width: 6%;">Taka</th>
+                    <th style="padding: 3px; text-align: right; width: 5%;">%</th>
+                </tr>
+            </thead>
+            <tbody id="print_iou_tbody"></tbody>
+            <tfoot>
+                <tr style="font-weight: bold; background-color: #e9ecef;">
+                    <td colspan="7" style="text-align: right; padding: 3px;">Grand Total:</td>
+                    <td style="text-align: right; padding: 3px;" id="print_iou_foot_sales">0</td>
+                    <td style="text-align: right; padding: 3px;" id="print_iou_foot_ret">0</td>
+                    <td style="text-align: right; padding: 3px;" id="print_iou_foot_sold">0</td>
+                    <td style="text-align: center; padding: 3px;" id="print_iou_foot_qty">0</td>
+                    <td style="text-align: center; padding: 3px;" id="print_iou_foot_bqty">0</td>
+                    <td style="text-align: right; padding: 3px;" id="print_iou_foot_taka">0</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+        <div style="margin-top: 30px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="height: 80px; vertical-align: bottom;">
+                    <td style="width: 50%; text-align: center; border-top: 1px solid #000;">Prepared By</td>
+                    <td style="width: 50%; text-align: center; border-top: 1px solid #000;">Checked By DIC</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
@@ -737,37 +796,19 @@
         let modalSales = 0;
         let modalUserBill = 0;
         let modalIou = 0;
+        // IOU print cache - filtered data stored here for printing
+        let iouPrintCache = [];
 
-        // Helper: IOU types that require a separate bill
-        function isBillRequiredIOU(type) {
-            return (type === 'Delivery' || type === 'Collection' || type === 'Return');
-        }
-
-        // Helper: IOU types that do NOT require a bill
-        function isNoBillIOU(type) {
-            return (type === 'General' || type === 'Bill Payment');
-        }
-
-        // Helper: get DA name from cache or fallback
-        function getDAName(daId) {
-            if (daListCache[daId]) return daListCache[daId];
-            return 'Unknown';
-        }
+        function isBillRequiredIOU(type) { return (type === 'Delivery' || type === 'Collection' || type === 'Return'); }
+        function isNoBillIOU(type) { return (type === 'General' || type === 'Bill Payment'); }
+        function getDAName(daId) { if (daListCache[daId]) return daListCache[daId]; return 'Unknown'; }
 
         // ================= GLOBAL MONTH FILTER =================
         let globalFilterMonth = '';
 
-        function getCurrentMonth() {
-            const now = new Date();
-            return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-        }
+        function getCurrentMonth() { var now = new Date(); return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0'); }
 
-        function formatMonthLabel(monthVal) {
-            if (!monthVal) return 'All Time';
-            const [y, m] = monthVal.split('-');
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return months[parseInt(m) - 1] + '-' + y;
-        }
+        function formatMonthLabel(monthVal) { if (!monthVal) return 'All Time'; var parts = monthVal.split('-'); var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return months[parseInt(parts[1]) - 1] + '-' + parts[0]; }
 
         function setGlobalMonth(monthVal) {
             globalFilterMonth = monthVal || '';
@@ -795,11 +836,7 @@
             if (document.getElementById('summaryTab').classList.contains('show')) { generateSummary(); }
         }
 
-        function isDateInMonth(dateStr, monthVal) {
-            if (!monthVal) return true;
-            if (!dateStr) return false;
-            return dateStr.startsWith(monthVal);
-        }
+        function isDateInMonth(dateStr, monthVal) { if (!monthVal) return true; if (!dateStr) return false; return dateStr.startsWith(monthVal); }
 
         // ================= INPUT TOGGLE LOGIC =================
         function toggleRowInputs(selectElement) {
@@ -922,12 +959,7 @@
             }
         }
 
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            if (dateStr.indexOf('-') !== 4) return dateStr;
-            var parts = dateStr.split('-');
-            return parts[2] + '-' + parts[1] + '-' + parts[0];
-        }
+        function formatDate(dateStr) { if (!dateStr) return ''; if (dateStr.indexOf('-') !== 4) return dateStr; var parts = dateStr.split('-'); return parts[2] + '-' + parts[1] + '-' + parts[0]; }
 
         // ================= LOGIN LOGIC =================
         function handleLogin() {
@@ -1083,7 +1115,6 @@
             });
         }
 
-        // ================= loadDashboardStats =================
         function loadDashboardStats() {
             var monthFilter = globalFilterMonth;
             database.ref('IOU_List').once('value', function(iouSnap) {
@@ -1136,8 +1167,6 @@
             });
         }
 
-        // ================= APPROVED BILL vs IOU SUMMARY =================
-        // FIX: Total IOU = সব টাইপের যোগফল, Appr. Bill = শুধু RSM Approved (green)
         function loadApprovedBillSummary() {
             database.ref('IOU_List').once('value', function(iouSnap) {
                 var iouData = {};
@@ -1146,7 +1175,6 @@
                         var iou = child.val();
                         if (globalFilterMonth && !isDateInMonth(iou.date, globalFilterMonth)) return;
                         if (!iouData[iou.daId]) iouData[iou.daId] = { name: iou.daName, totalIou: 0 };
-                        // সব IOU Type যোগ হবে - Delivery, Collection, Return, General, Bill Payment
                         iouData[iou.daId].totalIou += iou.taka || 0;
                     });
                 }
@@ -1159,7 +1187,6 @@
                                 if (!billData[daId]) { var dName = (iouData[daId]) ? iouData[daId].name : getDAName(daId); billData[daId] = { name: dName, totalApproved: 0, totalBundleQty: 0 }; }
                                 daSnap.forEach(function(billChild) {
                                     var bill = billChild.val();
-                                    // শুধুমাত্র RSM Approved (green) বিল
                                     if (bill.status === 'green') {
                                         if (globalFilterMonth && !isDateInMonth(bill.submitDate || bill.depDate, globalFilterMonth)) return;
                                         billData[daId].totalApproved += bill.totalAmount || 0;
@@ -1177,7 +1204,6 @@
                         var iouInfo = iouData[id] || { name: getDAName(id), totalIou: 0 };
                         var billInfo = billData[id] || { name: iouInfo.name, totalApproved: 0, totalBundleQty: 0 };
                         var totalIou = iouInfo.totalIou || 0;
-                        // শুধু RSM Approved Bill — noBillAmount আর যোগ হচ্ছে না
                         var totalApp = billInfo.totalApproved || 0;
                         var totalBund = billInfo.totalBundleQty || 0;
                         var balance = totalApp - totalIou;
@@ -1197,7 +1223,6 @@
             });
         }
 
-        // ================= IMAGE HANDLING =================
         function previewUserPhoto(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function(e) { document.getElementById('photo_preview').src = e.target.result; document.getElementById('photo_preview').classList.remove('hidden'); userPhotoBase64 = e.target.result; }; reader.readAsDataURL(input.files[0]); } }
 
         // ================= BILL ENTRY LOGIC =================
@@ -1365,7 +1390,6 @@
             else { database.ref('Users').once('value', function(snap) { if (snap.exists()) { snap.forEach(function(child) { var u = child.val(); if (u.role !== 'admin' && u.role !== 'superadmin') { selectSummary.innerHTML += '<option value="' + child.key + '">' + u.name + '</option>'; } }); } }); }
         }
 
-        // ================= SAVE IOU =================
         function saveIOU() {
             var daId = document.getElementById('iou_da_name').value;
             if (!daId) { alert("Select DA"); return; }
@@ -1418,7 +1442,8 @@
             database.ref('IOU_List').once('value', function(snap) {
                 var tbody = document.getElementById('iou_admin_table_body'); tbody.innerHTML = '';
                 var tSales = 0, tRet = 0, tSold = 0, tQty = 0, tBQty = 0, tTaka = 0, count = 1;
-                if (!snap.exists()) tbody.innerHTML = '<tr><td colspan="15" class="text-center">No Data</td></tr>';
+                iouPrintCache = []; // Reset print cache
+                if (!snap.exists()) { tbody.innerHTML = '<tr><td colspan="15" class="text-center">No Data</td></tr>'; return; }
                 snap.forEach(function(child) {
                     var d = child.val(); var show = true;
                     if (fMonth && !isDateInMonth(d.date, fMonth)) show = false;
@@ -1435,7 +1460,10 @@
                             : '<span class="badge bg-success">Active</span>';
                         var typeBadge = type ? '<span class="badge bg-info">' + type + '</span>' : '';
                         var rowClass = (d.status === 'used' || isNoBillIOU(type)) ? 'table-secondary' : '';
-                        tbody.innerHTML += '<tr class="' + rowClass + '"><td>' + count++ + '</td><td>' + formatDate(d.date) + '</td><td>' + d.daName + '</td><td>' + typeBadge + '</td><td>' + d.territory + '</td><td>' + d.mpo + '</td><td>' + d.summary + '</td><td>' + (d.sales || 0) + '</td><td>' + (d.returnVal || 0) + '</td><td>' + iSold + '</td><td>' + d.qty + '</td><td>' + (d.bundleQty || 0) + '</td><td>' + d.taka + '</td><td>' + d.percent + '%</td><td>' + badge + ' <button class="btn btn-sm btn-warning" onclick="editIOU(\'' + child.key + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\'' + child.key + '\')">X</button></td></tr>';
+                        tbody.innerHTML += '<tr class="' + rowClass + '"><td>' + count + '</td><td>' + formatDate(d.date) + '</td><td>' + d.daName + '</td><td>' + typeBadge + '</td><td>' + d.territory + '</td><td>' + d.mpo + '</td><td>' + d.summary + '</td><td>' + (d.sales || 0) + '</td><td>' + (d.returnVal || 0) + '</td><td>' + iSold + '</td><td>' + d.qty + '</td><td>' + (d.bundleQty || 0) + '</td><td>' + d.taka + '</td><td>' + d.percent + '%</td><td>' + badge + ' <button class="btn btn-sm btn-warning" onclick="editIOU(\'' + child.key + '\')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\'' + child.key + '\')">X</button></td></tr>';
+                        // Store for print
+                        iouPrintCache.push({ date: formatDate(d.date), daName: d.daName, type: type, territory: d.territory, mpo: d.mpo, summary: d.summary, sales: d.sales || 0, ret: d.returnVal || 0, sold: iSold, qty: d.qty || 0, bundleQty: d.bundleQty || 0, taka: d.taka || 0, percent: d.percent || '0' });
+                        count++;
                     }
                 });
                 document.getElementById('iou_tot_sales').innerText = tSales; document.getElementById('iou_tot_ret').innerText = tRet;
@@ -1463,6 +1491,64 @@
                 document.querySelectorAll('.nav-link').forEach(function(l) { l.classList.remove('active'); }); document.getElementById('entry-tab').classList.add('active');
                 alert("Form Auto-filled! Please add expense rows manually or use Excel Import.");
             });
+        }
+
+        // ================= IOU LIST PRINT =================
+        function printIOUList() {
+            if (iouPrintCache.length === 0) { alert("No IOU data to print. Apply filters first."); return; }
+            // Set period label
+            var fStart = document.getElementById('iou_filter_start').value;
+            var fEnd = document.getElementById('iou_filter_end').value;
+            var fMonth = globalFilterMonth;
+            var periodText = formatMonthLabel(fMonth);
+            if (fStart || fEnd) {
+                periodText = formatDate(fStart) + ' to ' + formatDate(fEnd);
+            }
+            document.getElementById('print_iou_period').innerText = periodText;
+
+            // Set filter info
+            var fDa = document.getElementById('filter_iou_da').value;
+            var fDaName = fDa ? (daListCache[fDa] || 'Unknown') : 'All DA';
+            document.getElementById('print_iou_filter_info').innerText = fDaName;
+
+            // Populate table
+            var tbody = document.getElementById('print_iou_tbody');
+            tbody.innerHTML = '';
+            var tSales = 0, tRet = 0, tSold = 0, tQty = 0, tBQty = 0, tTaka = 0;
+
+            iouPrintCache.forEach(function(item, index) {
+                tSales += item.sales; tRet += item.ret; tSold += item.sold;
+                tQty += item.qty; tBQty += item.bundleQty; tTaka += item.taka;
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td style="padding:3px;text-align:center;">' + (index + 1) + '</td>' +
+                    '<td style="padding:3px;text-align:left;">' + item.date + '</td>' +
+                    '<td style="padding:3px;text-align:left;">' + item.daName + '</td>' +
+                    '<td style="padding:3px;text-align:center;">' + item.type + '</td>' +
+                    '<td style="padding:3px;text-align:left;">' + item.territory + '</td>' +
+                    '<td style="padding:3px;text-align:left;">' + item.mpo + '</td>' +
+                    '<td style="padding:3px;text-align:center;">' + item.summary + '</td>' +
+                    '<td style="padding:3px;text-align:right;">' + item.sales.toFixed(2) + '</td>' +
+                    '<td style="padding:3px;text-align:right;">' + item.ret.toFixed(2) + '</td>' +
+                    '<td style="padding:3px;text-align:right;">' + item.sold.toFixed(2) + '</td>' +
+                    '<td style="padding:3px;text-align:center;">' + item.qty + '</td>' +
+                    '<td style="padding:3px;text-align:center;">' + item.bundleQty + '</td>' +
+                    '<td style="padding:3px;text-align:right;">' + item.taka.toFixed(2) + '</td>' +
+                    '<td style="padding:3px;text-align:right;">' + item.percent + '%</td>';
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('print_iou_foot_sales').innerText = tSales.toFixed(2);
+            document.getElementById('print_iou_foot_ret').innerText = tRet.toFixed(2);
+            document.getElementById('print_iou_foot_sold').innerText = tSold.toFixed(2);
+            document.getElementById('print_iou_foot_qty').innerText = tQty;
+            document.getElementById('print_iou_foot_bqty').innerText = tBQty;
+            document.getElementById('print_iou_foot_taka').innerText = tTaka.toFixed(2);
+
+            // Activate print
+            document.getElementById('print_iou_area').classList.add('active-print');
+            document.getElementById('print_area').classList.remove('active-print');
+            document.getElementById('print_summary_area').classList.remove('active-print');
+            window.print();
         }
 
         // ================= BILL HISTORY LOGIC =================
@@ -1519,7 +1605,7 @@
                                 if (bill.status === 'red') statusText = "PENDING";
                                 if (bill.status === 'orange') statusText = "CHECKED";
                                 if (bill.status === 'green') statusText = "APPROVED";
-                                tr.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + bill.depot + '</td><td>' + (bill.route || 'N/A') + '</td><td class="fw-bold">' + originalAmount.toFixed(2) + '</td><td><b>' + statusText + '</b></td>';
+                                tr.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + bill.depot + '</td><td>' + (bill.route || 'N/A') + '</td><td class="fw-bold">' + originalAmount.toFixed(2) + '</td><td><b>' + statusText+'</b></td>';
                                 tableBody.appendChild(tr);
                             } else if (currentUser.role === 'admin') {
                                 if (historyDA && bill.daId !== historyDA) return;
@@ -1543,7 +1629,7 @@
                                     var trS = document.createElement('tr'); trS.classList.add('status-orange');
                                     var sActionBtns = '<button class="btn btn-info btn-sm text-white" onclick="printBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Print</button> ';
                                     sActionBtns += '<button class="btn btn-warning btn-sm" onclick="openCutModal(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Recheck</button> ';
-                                    sActionBtns += '<button class="btn btn-success btn-sm" onclick="approveBill(\''+billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Approve</button>';
+                                    sActionBtns += '<button class="btn btn-success btn-sm" onclick="approveBill(\'' + billId + '\', \'' + bill.depot + '\', \'' + daId + '\')">Approve</button>';
                                     var sPayDisplay = deduction > 0 ? '<span class="cut-amount">' + originalAmount.toFixed(2) + '</span> <span class="payable-amount">' + approvedAmount.toFixed(2) + '</span>' : approvedAmount.toFixed(2);
                                     trS.innerHTML = '<td>' + formatDate(bill.submitDate || bill.depDate) + '</td><td>' + bill.daName + '</td><td>' + (bill.route || 'N/A') + '</td><td class="text-end">' + iou.toFixed(2) + '</td><td class="text-end">' + sales.toFixed(2) + '</td><td class="text-end">' + originalAmount.toFixed(2) + '</td><td class="text-end">' + userBillPer + '%</td><td class="text-end fw-bold">' + sPayDisplay + '</td><td class="text-end">' + payPer + '%</td><td><b>CHECKED</b></td><td class="text-nowrap">' + sActionBtns + '</td>';
                                     tableBody.appendChild(trS);
@@ -1661,6 +1747,7 @@
             document.getElementById('print_sum_words').innerText = numberToEnglish(tNet) + " Taka Only";
             document.getElementById('print_summary_area').classList.add('active-print');
             document.getElementById('print_area').classList.remove('active-print');
+            document.getElementById('print_iou_area').classList.remove('active-print');
             window.print();
         }
 
@@ -1789,6 +1876,7 @@
                 document.getElementById('p_total_amount').innerText = totNet;
                 document.getElementById('print_area').classList.add('active-print');
                 document.getElementById('print_summary_area').classList.remove('active-print');
+                document.getElementById('print_iou_area').classList.remove('active-print');
                 window.print();
             });
         }
