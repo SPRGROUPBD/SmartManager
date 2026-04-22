@@ -105,6 +105,9 @@
         .status-msg { font-size: 12px; margin-top: 5px; }
         .error { color: red; } .success { color: green; }
         .auto-save-indicator { font-size: 10px; color: #666; margin-left: 8px; font-style: italic; }
+        .sync-status { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
+        .sync-online { background: #d4edda; color: #155724; }
+        .sync-offline { background: #f8d7da; color: #721c24; }
 
         /* ===== SIGNATURE ===== */
         .signature-area { display: flex; justify-content: space-between; margin-top: 25px; width: 100%; flex-wrap: wrap; gap: 10px; }
@@ -201,7 +204,10 @@
             <div class="top-bar no-print">
                 <button class="btn btn-primary menu-toggle" onclick="toggleSidebar()" style="padding:5px 10px;"><i class="fas fa-bars"></i></button>
                 <span id="topBarDate" style="font-size:12px;color:#555;"></span>
-                <button id="printBtn" onclick="window.print()" class="btn btn-sm btn-primary no-print" style="display:none;"><i class="fas fa-print"></i> Print</button>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="syncStatus" class="sync-status sync-online">Online</span>
+                    <button id="printBtn" onclick="window.print()" class="btn btn-sm btn-primary no-print" style="display:none;"><i class="fas fa-print"></i> Print</button>
+                </div>
             </div>
             
             <div class="content-area">
@@ -213,6 +219,7 @@
                             <div class="widget"><div class="widget-info"><h3 id="stat-pending">0</h3><p>Pending</p></div><div class="widget-icon bg-warning"><i class="fas fa-clock"></i></div></div>
                             <div class="widget"><div class="widget-info"><h3 id="stat-rejected">0</h3><p>Rejected</p></div><div class="widget-icon bg-danger"><i class="fas fa-times-circle"></i></div></div>
                             <div class="widget"><div class="widget-info"><h3 id="stat-approved">0</h3><p>Approved</p></div><div class="widget-icon bg-success"><i class="fas fa-check-circle"></i></div></div>
+                            <div class="widget"><div class="widget-info"><h3 id="stat-unsynced">0</h3><p>Unsynced</p></div><div class="widget-icon bg-primary"><i class="fas fa-database"></i></div></div>
                         </div>
                         <p style="color:#666;font-size:13px;">Welcome, <strong id="welcomeName"></strong>!</p>
                     </div>
@@ -328,8 +335,119 @@
         let autoSaveTimer = null;
         let areaToTerritories = {};
         let morningOptions = [];
+        let isOnline = navigator.onLine;
+        
+        // এডিট মোড ট্র্যাক করার জন্য নতুন ভ্যারিয়েবল
+        let currentEditSignatures = { prepared: "", am: "", rsm: "", approved: "" };
 
-        // ===================== HELPERS =====================
+        // ==========================================
+        // ===== OFFLINE DATABASE (INDEXED DB) =====
+        // ==========================================
+        const DB_NAME = 'MonicoPharmaDB';
+        const DB_VERSION = 2;
+        let idb = null;
+
+        function openIDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('tourPlans')) db.createObjectStore('tourPlans', { keyPath: 'id' });
+                    if (!db.objectStoreNames.contains('syncQueue')) {
+                        const sq = db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
+                        sq.createIndex('type', 'type', { unique: false });
+                    }
+                    if (!db.objectStoreNames.contains('cachedUsers')) db.createObjectStore('cachedUsers', { keyPath: 'username' });
+                };
+                request.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        async function idbPut(storeName, data) {
+            if (!idb) await openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(storeName, 'readwrite');
+                tx.objectStore(storeName).put(data);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e);
+            });
+        }
+
+        async function idbGet(storeName, key) {
+            if (!idb) await openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(storeName, 'readonly');
+                const req = tx.objectStore(storeName).get(key);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        async function idbGetAll(storeName) {
+            if (!idb) await openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(storeName, 'readonly');
+                const req = tx.objectStore(storeName).getAll();
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = (e) => reject(e);
+            });
+        }
+
+        async function idbDelete(storeName, key) {
+            if (!idb) await openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = idb.transaction(storeName, 'readwrite');
+                tx.objectStore(storeName).delete(key);
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e);
+            });
+        }
+
+        async function addToSyncQueue(type, data) {
+            await idbPut('syncQueue', { type, data, timestamp: Date.now() });
+            updateUnsyncedCount();
+        }
+
+        // ==========================================
+        // ===== NETWORK STATUS & SYNC LOGIC ========
+        // ==========================================
+        function updateNetworkUI() {
+            const el = document.getElementById('syncStatus');
+            if (!el) return;
+            if (isOnline) { el.className = 'sync-status sync-online'; el.innerText = 'Online'; }
+            else { el.className = 'sync-status sync-offline'; el.innerText = 'Offline'; }
+        }
+
+        window.addEventListener('online', () => { isOnline = true; updateNetworkUI(); processSyncQueue(); });
+        window.addEventListener('offline', () => { isOnline = false; updateNetworkUI(); });
+
+        async function processSyncQueue() {
+            const queue = await idbGetAll('syncQueue');
+            if (queue.length === 0) return;
+            for (const item of queue) {
+                try {
+                    if (item.type === 'saveTourPlan') { await set(ref(db, 'tourPlans/' + item.data.id), item.data.payload); await idbDelete('syncQueue', item.id); }
+                    else if (item.type === 'updateStatus') { await update(ref(db, 'tourPlans/' + item.data.key), item.data.updates); await idbDelete('syncQueue', item.id); }
+                    else if (item.type === 'deleteTourPlan') { await remove(ref(db, 'tourPlans/' + item.data.key)); await idbDelete('syncQueue', item.id); }
+                    else if (item.type === 'saveUser') { await set(ref(db, 'Users/' + item.data.safeKey), item.data.payload); await idbDelete('syncQueue', item.id); }
+                    else if (item.type === 'deleteUser') { await remove(ref(db, 'Users/' + item.data.key)); await idbDelete('syncQueue', item.id); }
+                } catch (err) { console.error("Sync failed:", err); break; }
+            }
+            updateUnsyncedCount();
+            if (!document.getElementById('sectionTourHistory').classList.contains('hidden')) loadTourHistory();
+            if (!document.getElementById('sectionUserMgmt').classList.contains('hidden')) loadUsers();
+        }
+
+        async function updateUnsyncedCount() {
+            const queue = await idbGetAll('syncQueue');
+            const el = document.getElementById('stat-unsynced');
+            if (el) el.innerText = queue.length;
+        }
+
+        // ==========================================
+        // ===== HELPERS ============================
+        // ==========================================
         function getHolidayName(d) {
             const m=d.getMonth()+1,dy=d.getDate(),y=d.getFullYear();
             const f={"2-21":"Shaheed Day","3-17":"Birthday","3-26":"Independence Day","4-14":"Pohela Boishakh","5-1":"May Day","8-15":"Mourning Day","12-16":"Victory Day"};
@@ -351,20 +469,31 @@
             for(let i=1;i<=31;i++){tb.innerHTML+=`<tr id="row_${i}" style="display:none;"><td>${i}</td><td id="dayName_${i}" class="day-name"></td><td><select name="hq_${i}" class="hq-select" style="width:100%;" onchange="handleHqChange(${i})"><option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option></select></td><td id="mwp_${i}"></td><td id="mtr_${i}"></td><td id="ewp_${i}"></td><td id="etr_${i}"></td></tr>`;}
         }
 
-        // ===================== LOAD MAPPINGS =====================
         async function loadWorkPlaceOptions(){
             morningOptions=[];areaToTerritories={};
             try{
-                const snap=await get(ref(db,'Users'));
-                if(snap.exists()){
+                // অফলাইনে থাকলে cachedUsers থেকে লোড করবে
+                let usersSnap = null;
+                if(isOnline) {
+                    usersSnap = await get(ref(db,'Users'));
+                    // ক্যাশ আপডেট করে রাখি
+                    if(usersSnap.exists()) {
+                        usersSnap.forEach(c => idbPut('cachedUsers', c.val()));
+                    }
+                } else {
+                    const cachedUsers = await idbGetAll('cachedUsers');
+                    usersSnap = { exists: () => cachedUsers.length > 0, forEach: (fn) => cachedUsers.forEach(u => fn({ val: () => u })) };
+                }
+
+                if(usersSnap.exists()){
                     if(currentUser.role==='admin'){
                         const amMap={};
-                        snap.forEach(c=>{const u=c.val();if(u.role==='user'&&u.rsmId===currentUser.username&&u.area){amMap[u.username]=u.area;if(!areaToTerritories[u.area])areaToTerritories[u.area]=[];}});
-                        snap.forEach(c=>{const u=c.val();if(u.role==='mpo'&&u.rsmId===currentUser.username&&u.territory&&u.amId){const pa=amMap[u.amId];if(pa&&areaToTerritories[pa])areaToTerritories[pa].push(u.territory);}});
+                        usersSnap.forEach(c=>{const u=c.val();if(u.role==='user'&&u.rsmId===currentUser.username&&u.area){amMap[u.username]=u.area;if(!areaToTerritories[u.area])areaToTerritories[u.area]=[];}});
+                        usersSnap.forEach(c=>{const u=c.val();if(u.role==='mpo'&&u.rsmId===currentUser.username&&u.territory&&u.amId){const pa=amMap[u.amId];if(pa&&areaToTerritories[pa])areaToTerritories[pa].push(u.territory);}});
                         for(let a in areaToTerritories)areaToTerritories[a]=[...new Set(areaToTerritories[a])];
                         morningOptions=Object.keys(areaToTerritories);
                     }else if(currentUser.role==='user'){
-                        snap.forEach(c=>{const u=c.val();if(u.role==='mpo'&&u.amId===currentUser.username&&u.territory)morningOptions.push(u.territory);});
+                        usersSnap.forEach(c=>{const u=c.val();if(u.role==='mpo'&&u.amId===currentUser.username&&u.territory)morningOptions.push(u.territory);});
                         morningOptions=[...new Set(morningOptions)];
                     }
                 }
@@ -389,20 +518,10 @@
             const wpSel=document.querySelector(`[name="${phase}_wp_${i}"]`);if(!wpSel)return;
             const val=wpSel.value,optDiv=document.getElementById(`options_${phase}_${i}`),trigger=document.getElementById(`trigger_${phase}_${i}`),textSpan=document.getElementById(`trigger_text_${phase}_${i}`),hiddenInp=document.getElementById(`hidden_${phase}_${i}`);
             optDiv.classList.remove('open');
-
-            if(val==="Holiday"){
-                trigger.classList.add('locked-trigger');textSpan.innerText="Holiday";hiddenInp.value="Holiday";
-                if(phase==='morning'){const hq=document.querySelector(`[name="hq_${i}"]`);if(hq)hq.value="Holiday";}
-                return;
-            }
-            if(!val){
-                trigger.classList.add('locked-trigger');textSpan.innerText=`← Select ${phase==='morning'?'Morning':'Evening'} Area`;hiddenInp.value="";
-                if(phase==='morning'){const hq=document.querySelector(`[name="hq_${i}"]`);if(hq&&hq.value==="Holiday")hq.value="";}
-                return;
-            }
+            if(val==="Holiday"){trigger.classList.add('locked-trigger');textSpan.innerText="Holiday";hiddenInp.value="Holiday";if(phase==='morning'){const hq=document.querySelector(`[name="hq_${i}"]`);if(hq)hq.value="Holiday";}return;}
+            if(!val){trigger.classList.add('locked-trigger');textSpan.innerText=`← Select ${phase==='morning'?'Morning':'Evening'} Area`;hiddenInp.value="";if(phase==='morning'){const hq=document.querySelector(`[name="hq_${i}"]`);if(hq&&hq.value==="Holiday")hq.value="";}return;}
             trigger.classList.remove('locked-trigger');
-            const territories=areaToTerritories[val]||[];
-            let html="";
+            const territories=areaToTerritories[val]||[];let html="";
             if(territories.length===0){html="<div style='padding:8px;color:red;font-size:11px;'>⚠ No MPO Found</div>";}
             else{territories.forEach(t=>{html+=`<label><input type="checkbox" value="${t}" onchange="updateTerritorySelection(${i},'${phase}')"> ${t}</label>`;});}
             optDiv.innerHTML=html;textSpan.innerText="-- Select Territory --";hiddenInp.value="";
@@ -416,7 +535,6 @@
 
         function triggerAutoSave(){clearTimeout(autoSaveTimer);document.getElementById('autoSaveStatus').innerText="Typing...";autoSaveTimer=setTimeout(()=>{validateAndSave(true);},2000);}
 
-        // ===================== HQ CHANGE =====================
         window.handleHqChange=function(i){
             const hqSel=document.querySelector(`[name="hq_${i}"]`);
             if(hqSel.value==="Holiday"){
@@ -425,39 +543,22 @@
                 if(eWp){eWp.value="Holiday";handleWorkPlaceChange(i,'evening');}
             }
         };
-
-        // ===================== AM INPUT CHANGE TRACKER =====================
         window.amInputChanged=function(){triggerAutoSave();};
 
-        // ===================== MONTH CHANGE =====================
         window.handleMonthChange=async function(){
             for(let i=1;i<=31;i++){const r=document.getElementById(`row_${i}`);if(r)r.style.display="none";}
             const mv=document.getElementById('tp_month').value;if(!mv)return;
             const p=mv.split("-"),mn=p[0],ys=p[1],y=2000+parseInt(ys),mi=["January","February","March","April","May","June","July","August","September","October","November","December"].indexOf(mn),dim=new Date(y,mi+1,0).getDate(),dn=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
             const isRsm=currentUser.role==='admin',isAm=currentUser.role==='user';
-
             let areaHtml="<option value=''>-- Select --</option>";
             if(isRsm&&morningOptions.length>0)morningOptions.forEach(o=>areaHtml+=`<option value="${o}">${o}</option>`);
             if(isRsm)areaHtml+="<option value='Holiday'>Holiday</option>";
-
-            // AM uses same MPO territory list for both Morning WP and Evening WP selects
             let amSelectHtml="<option value=''>-- Select --</option>";
             if(isAm&&morningOptions.length>0)morningOptions.forEach(o=>amSelectHtml+=`<option value="${o}">${o}</option>`);
 
-            if(isRsm){
-                document.getElementById('th_mwp').innerHTML='Morning WP<span class="col-hint">(AM Area)</span>';
-                document.getElementById('th_mtr').innerHTML='Morning Tr.<span class="col-hint">(Multi-Select)</span>';
-                document.getElementById('th_ewp').innerHTML='Evening WP<span class="col-hint">(AM Area)</span>';
-                document.getElementById('th_etr').innerHTML='Evening Tr.<span class="col-hint">(Multi-Select)</span>';
-            }else if(isAm){
-                document.getElementById('th_mwp').innerHTML='Morning WP<span class="col-hint">(MPO Select)</span>';
-                document.getElementById('th_mtr').innerHTML='Morning Tr.<span class="col-hint">(Input)</span>';
-                document.getElementById('th_ewp').innerHTML='Evening WP<span class="col-hint">(MPO Select)</span>';
-                document.getElementById('th_etr').innerHTML='Evening Tr.<span class="col-hint">(Input)</span>';
-            }else{
-                document.getElementById('th_mwp').innerHTML='Morning WP';document.getElementById('th_mtr').innerHTML='Morning Tr.';
-                document.getElementById('th_ewp').innerHTML='Evening WP';document.getElementById('th_etr').innerHTML='Evening Tr.';
-            }
+            if(isRsm){document.getElementById('th_mwp').innerHTML='Morning WP<span class="col-hint">(AM Area)</span>';document.getElementById('th_mtr').innerHTML='Morning Tr.<span class="col-hint">(Multi-Select)</span>';document.getElementById('th_ewp').innerHTML='Evening WP<span class="col-hint">(AM Area)</span>';document.getElementById('th_etr').innerHTML='Evening Tr.<span class="col-hint">(Multi-Select)</span>';}
+            else if(isAm){document.getElementById('th_mwp').innerHTML='Morning WP<span class="col-hint">(MPO Select)</span>';document.getElementById('th_mtr').innerHTML='Morning Tr.<span class="col-hint">(Input)</span>';document.getElementById('th_ewp').innerHTML='Evening WP<span class="col-hint">(MPO Select)</span>';document.getElementById('th_etr').innerHTML='Evening Tr.<span class="col-hint">(Input)</span>';}
+            else{document.getElementById('th_mwp').innerHTML='Morning WP';document.getElementById('th_mtr').innerHTML='Morning Tr.';document.getElementById('th_ewp').innerHTML='Evening WP';document.getElementById('th_etr').innerHTML='Evening Tr.';}
 
             for(let i=1;i<=dim;i++){
                 const row=document.getElementById(`row_${i}`);row.style.display="";
@@ -465,7 +566,6 @@
                 const hqSel=document.querySelector(`[name="hq_${i}"]`),dayC=document.getElementById(`dayName_${i}`);
                 const mW=document.getElementById(`mwp_${i}`),mT=document.getElementById(`mtr_${i}`),eW=document.getElementById(`ewp_${i}`),eT=document.getElementById(`etr_${i}`);
                 dayC.innerText=dayN;
-
                 if(dw===5||hol){
                     let dn2=hol||"Weekend";
                     mW.innerHTML=`<input type="text" name="morning_wp_${i}" value="${dn2}" readonly style="border:none;width:100%;text-align:center;font-size:11px;color:#666;">`;
@@ -475,23 +575,9 @@
                     hqSel.innerHTML='<option value="Holiday">Holiday</option>';hqSel.value="Holiday";
                 }else{
                     hqSel.innerHTML=`<option value="">Select</option><option value="HQ">HQ</option><option value="EX.HQ">EX.HQ</option><option value="Holiday">Holiday</option>`;hqSel.value="";
-                    if(isRsm){
-                        mW.innerHTML=`<select name="morning_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="handleWorkPlaceChange(${i},'morning')">${areaHtml}</select>`;
-                        mT.innerHTML=getMultiSelectHtml('morning',i);
-                        eW.innerHTML=`<select name="evening_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="handleWorkPlaceChange(${i},'evening')">${areaHtml}</select>`;
-                        eT.innerHTML=getMultiSelectHtml('evening',i);
-                    }else if(isAm){
-                        // AM: Morning WP = SELECT, Morning Tr. = INPUT, Evening WP = SELECT, Evening Tr. = INPUT
-                        mW.innerHTML=`<select name="morning_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="amInputChanged()">${amSelectHtml}</select>`;
-                        mT.innerHTML=`<input type="text" name="morning_territory_${i}" style="border:none;width:100%;text-align:center;font-size:11px;" placeholder="Type here" oninput="amInputChanged()">`;
-                        eW.innerHTML=`<select name="evening_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="amInputChanged()">${amSelectHtml}</select>`;
-                        eT.innerHTML=`<input type="text" name="evening_territory_${i}" style="border:none;width:100%;text-align:center;font-size:11px;" placeholder="Type here" oninput="amInputChanged()">`;
-                    }else{
-                        mW.innerHTML=`<input type="text" name="morning_wp_${i}" style="border:none;width:100%;text-align:center;font-size:11px;">`;
-                        mT.innerHTML=`<input type="text" value="N/A" readonly style="border:none;width:100%;text-align:center;color:#aaa;font-size:10px;">`;
-                        eW.innerHTML=`<input type="text" name="evening_wp_${i}" style="border:none;width:100%;text-align:center;font-size:11px;">`;
-                        eT.innerHTML=`<input type="text" value="N/A" readonly style="border:none;width:100%;text-align:center;color:#aaa;font-size:10px;">`;
-                    }
+                    if(isRsm){mW.innerHTML=`<select name="morning_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="handleWorkPlaceChange(${i},'morning')">${areaHtml}</select>`;mT.innerHTML=getMultiSelectHtml('morning',i);eW.innerHTML=`<select name="evening_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="handleWorkPlaceChange(${i},'evening')">${areaHtml}</select>`;eT.innerHTML=getMultiSelectHtml('evening',i);}
+                    else if(isAm){mW.innerHTML=`<select name="morning_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="amInputChanged()">${amSelectHtml}</select>`;mT.innerHTML=`<input type="text" name="morning_territory_${i}" style="border:none;width:100%;text-align:center;font-size:11px;" placeholder="Type here" oninput="amInputChanged()">`;eW.innerHTML=`<select name="evening_wp_${i}" style="width:100%;border:none;font-size:11px;" onchange="amInputChanged()">${amSelectHtml}</select>`;eT.innerHTML=`<input type="text" name="evening_territory_${i}" style="border:none;width:100%;text-align:center;font-size:11px;" placeholder="Type here" oninput="amInputChanged()">`;}
+                    else{mW.innerHTML=`<input type="text" name="morning_wp_${i}" style="border:none;width:100%;text-align:center;font-size:11px;">`;mT.innerHTML=`<input type="text" value="N/A" readonly style="border:none;width:100%;text-align:center;color:#aaa;font-size:10px;">`;eW.innerHTML=`<input type="text" name="evening_wp_${i}" style="border:none;width:100%;text-align:center;font-size:11px;">`;eT.innerHTML=`<input type="text" value="N/A" readonly style="border:none;width:100%;text-align:center;color:#aaa;font-size:10px;">`;}
                 }
             }
         };
@@ -505,8 +591,21 @@
             const u=document.getElementById('loginUsername').value.trim(),p=document.getElementById('loginPassword').value,err=document.getElementById('loginError');err.textContent="";
             if(!u||!p){err.textContent="Input required";return;}
             if((u==='systemadmin'||u==='KS')&&p==='Monico@Ku007'){currentUser={name:'System Admin',role:'superadmin',id:'superadmin_001',username:'systemadmin',designation:'SuperAdmin'};showDashboard();return;}
-            get(query(ref(db,'Users'),orderByChild('username'),equalTo(u))).then(snap=>{if(snap.exists()){snap.forEach(c=>{const d=c.val();if(d.password===p){currentUser={...d,id:c.key};showDashboard();}else err.textContent="Password Incorrect";});}else err.textContent="User not found";}).catch(()=>{err.textContent="DB Error";});
+            if(isOnline) {
+                get(query(ref(db,'Users'),orderByChild('username'),equalTo(u))).then(snap=>{
+                    if(snap.exists()){snap.forEach(c=>{const d=c.val();if(d.password===p){currentUser={...d,id:c.key};showDashboard();}else err.textContent="Password Incorrect";});}
+                    else { tryOfflineLogin(u, p, err); }
+                }).catch(()=>{ tryOfflineLogin(u, p, err); });
+            } else { tryOfflineLogin(u, p, err); }
         };
+
+        async function tryOfflineLogin(u, p, errEl) {
+            const allUsers = await idbGetAll('cachedUsers');
+            const user = allUsers.find(x => x.username === u);
+            if (user && user.password === p) { currentUser = user; showDashboard(); }
+            else { errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
+        }
+
         window.logout=function(){location.reload();};
 
         // ===================== SHOW SECTION =====================
@@ -514,6 +613,7 @@
             document.getElementById('loginScreen').classList.add('hidden');document.getElementById('dashboardScreen').classList.remove('hidden');
             document.getElementById('sidebarName').innerText=currentUser.name;document.getElementById('sidebarRole').innerText=`Role: ${getRoleName(currentUser.role)}`;document.getElementById('welcomeName').innerText=currentUser.name;
             if(['superadmin','admin','user'].includes(currentUser.role))document.getElementById('menuUserMgmt').classList.remove('hidden');else document.getElementById('menuUserMgmt').classList.add('hidden');
+            if(isOnline) { try { const snap = await get(ref(db, 'Users')); if(snap.exists()) { snap.forEach(c => idbPut('cachedUsers', c.val())); } } catch(e) {} }
             await loadWorkPlaceOptions();showSection('home');
         }
 
@@ -527,7 +627,10 @@
             if(id==='userMgmt')initUserMgmt();
             if(id==='tourHistory')loadTourHistory();
             if(id==='tourPlan'){
-                document.getElementById('sig_prepared').innerText=currentUser.name;document.getElementById('sig_am').innerText="";document.getElementById('sig_rsm').innerText="";document.getElementById('sig_approved').innerText="";
+                // নতুন এন্ট্রি হলে শুধু বর্তমান ইউজারের নাম দেখাবে, বাকি ফাঁকা থাকবে
+                currentEditSignatures = { prepared: currentUser.name, am: "", rsm: "", approved: "" };
+                updateSignatureUI();
+                
                 document.getElementById('tp_empId').value=currentUser.empId||currentUser.username;document.getElementById('tp_name').value=currentUser.name;
                 document.getElementById('tp_designation').value=currentUser.designation||getRoleName(currentUser.role);document.getElementById('tp_territory').value=currentUser.territory||'';
                 document.getElementById('tp_area').value=currentUser.area||'';document.getElementById('tp_region').value=currentUser.region||'';
@@ -538,14 +641,30 @@
             }
         };
 
-        // ===================== DASHBOARD STATS =====================
-        function loadDashboardStats(){
-            document.getElementById('stat-pending').innerText="0";document.getElementById('stat-rejected').innerText="0";document.getElementById('stat-approved').innerText="0";
-            const ms=["January","February","March","April","May","June","July","August","September","October","November","December"],d=new Date(),cm=`${ms[d.getMonth()]}-${d.getFullYear().toString().slice(-2)}`;
-            get(ref(db,'tourPlans')).then(snap=>{let pe=0,re=0,ap=0;if(snap.exists()){snap.forEach(c=>{const p=c.val();let v=false;if(p.info.month===cm){if(currentUser.role==='superadmin')v=true;else if(currentUser.role==='admin'&&p.info.approvalFlow?.rsmId===currentUser.username)v=true;else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;else if(p.info.empId===currentUser.empId)v=true;if(v){if(p.info.status.includes('Pending'))pe++;if(p.info.status==='Rejected')re++;if(p.info.status==='Approved')ap++;}}});}document.getElementById('stat-pending').innerText=pe;document.getElementById('stat-rejected').innerText=re;document.getElementById('stat-approved').innerText=ap;});
+        // সিগনেচার UI আপডেট করার জন্য আলাদা ফাংশন
+        function updateSignatureUI() {
+            document.getElementById('sig_prepared').innerText = currentEditSignatures.prepared || "";
+            document.getElementById('sig_am').innerText = currentEditSignatures.am || "";
+            document.getElementById('sig_rsm').innerText = currentEditSignatures.rsm || "";
+            document.getElementById('sig_approved').innerText = currentEditSignatures.approved || "";
         }
 
-        // ===================== SAVE PLAN =====================
+        // ===================== DASHBOARD STATS =====================
+        async function loadDashboardStats(){
+            document.getElementById('stat-pending').innerText="0";document.getElementById('stat-rejected').innerText="0";document.getElementById('stat-approved').innerText="0";
+            const ms=["January","February","March","April","May","June","July","August","September","October","November","December"],d=new Date(),cm=`${ms[d.getMonth()]}-${d.getFullYear().toString().slice(-2)}`;
+            if(isOnline) {
+                get(ref(db,'tourPlans')).then(snap=>{let pe=0,re=0,ap=0;if(snap.exists()){snap.forEach(c=>{const p=c.val();let v=false;if(p.info.month===cm){if(currentUser.role==='superadmin')v=true;else if(currentUser.role==='admin'&&p.info.approvalFlow?.rsmId===currentUser.username)v=true;else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;else if(p.info.empId===currentUser.empId)v=true;if(v){if(p.info.status.includes('Pending'))pe++;if(p.info.status==='Rejected')re++;if(p.info.status==='Approved')ap++;}}});}document.getElementById('stat-pending').innerText=pe;document.getElementById('stat-rejected').innerText=re;document.getElementById('stat-approved').innerText=ap;});
+            } else {
+                const localPlans = await idbGetAll('tourPlans');
+                let pe=0,re=0,ap=0;
+                localPlans.forEach(p => { if(p.payload?.info?.month === cm) { let v=false; if(currentUser.role==='superadmin')v=true; else if(currentUser.role==='admin'&&p.payload.info.approvalFlow?.rsmId===currentUser.username)v=true; else if(currentUser.role==='user'&&p.payload.info.approvalFlow?.amId===currentUser.username)v=true; else if(p.payload.info.empId===currentUser.empId)v=true; if(v){if(p.payload.info.status.includes('Pending'))pe++;if(p.payload.info.status==='Rejected')re++;if(p.payload.info.status==='Approved')ap++;} } });
+                document.getElementById('stat-pending').innerText=pe;document.getElementById('stat-rejected').innerText=re;document.getElementById('stat-approved').innerText=ap;
+            }
+            updateUnsyncedCount();
+        }
+
+        // ===================== SAVE PLAN (UNIFIED) =====================
         window.validateAndSave=function(isAuto=false){
             const empId=document.getElementById('tp_empId').value,month=document.getElementById('tp_month').value,sDiv=document.getElementById('tp_status'),aDiv=document.getElementById('autoSaveStatus');
             let planData=[],rows=document.querySelectorAll('#tourPlanTableBody tr'),ok=true;
@@ -554,38 +673,64 @@
             if(currentUser.role==='admin'&&hq.value!=="Holiday"&&(!mt||!mt.value||!et||!et.value))ok=false;
             planData.push({date:i,hq:hq.value,morning_wp:mw?mw.value:"",morning_territory:mt?mt.value:"",evening_wp:ew?ew.value:"",evening_territory:et?et.value:""});}});
             if(!ok){if(!isAuto)sDiv.innerHTML="<span class='error'>Fill all required fields.</span>";else aDiv.innerText="Incomplete...";return;}
-            let st="Pending",sig={prepared:currentUser.name},af={};
+            
+            let st="Pending",af={};
             if(currentUser.role==='mpo'){st="Pending_AM";af={amId:currentUser.amId,rsmId:currentUser.rsmId};}
             else if(currentUser.role==='user'){st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};}
             else if(currentUser.role==='admin'){st="Approved";}
-            else if(currentUser.role==='superadmin'){st="Approved";sig.rsm=currentUser.name;}
-            set(ref(db,'tourPlans/'+`${empId}_${month.replace(/\s/g,'_')}`),{info:{empId,month,name:document.getElementById('tp_name').value,designation:document.getElementById('tp_designation').value,areaManager:document.getElementById('tp_areaManager').value,rsm:document.getElementById('tp_rsm').value,territory:document.getElementById('tp_territory').value,area:document.getElementById('tp_area').value,region:document.getElementById('tp_region').value,timestamp:Date.now(),status:st,approvalFlow:af,signatures:sig},plan:planData}).then(()=>{if(isAuto){aDiv.innerText="Saved";aDiv.style.color="green";}else{alert("Tour Plan Submitted Successfully!");sDiv.innerHTML="<span class='success'>Successfully Saved!</span>";handleMonthChange();}});
+            else if(currentUser.role==='superadmin'){st="Approved"; currentEditSignatures.rsm = currentUser.name;}
+            
+            const recordId = `${empId}_${month.replace(/\s/g,'_')}`;
+            const payload = {
+                info:{empId,month,name:document.getElementById('tp_name').value,designation:document.getElementById('tp_designation').value,areaManager:document.getElementById('tp_areaManager').value,rsm:document.getElementById('tp_rsm').value,territory:document.getElementById('tp_territory').value,area:document.getElementById('tp_area').value,region:document.getElementById('tp_region').value,timestamp:Date.now(),status:st,approvalFlow:af,signatures: currentEditSignatures}, 
+                plan:planData
+            };
+
+            idbPut('tourPlans', { id: recordId, payload }).then(() => {
+                if(isAuto){aDiv.innerText="Saved Locally";aDiv.style.color="green";}
+                else{sDiv.innerHTML="<span class='success'>Saved Locally!</span>";handleMonthChange();}
+            });
+
+            if(isOnline) {
+                set(ref(db,'tourPlans/'+recordId), payload).then(()=>{
+                    if(isAuto){aDiv.innerText="Saved & Synced";aDiv.style.color="green";}
+                    else{alert("Tour Plan Submitted Successfully!");sDiv.innerHTML="<span class='success'>Successfully Saved & Synced!</span>";handleMonthChange();}
+                }).catch(err => {
+                    addToSyncQueue('saveTourPlan', { id: recordId, payload });
+                    if(!isAuto) alert("Saved locally. Will sync when online.");
+                });
+            } else {
+                addToSyncQueue('saveTourPlan', { id: recordId, payload });
+                if(!isAuto) alert("You are offline. Plan saved locally and will sync automatically.");
+            }
         };
 
         // ===================== TOUR HISTORY =====================
-        function loadTourHistory(){
+        async function loadTourHistory(){
             const container=document.getElementById('tourHistoryContent');container.innerHTML='<div style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
             const selectedMonth=document.getElementById('historyMonthFilter').value;
-            get(ref(db,'tourPlans')).then(snap=>{
-                let records=[];
-                if(snap.exists()){
-                    snap.forEach(c=>{const d=c.val();const isMonth=d.info.month===selectedMonth;let canView=false;
-                        if(d.info.empId===currentUser.empId||d.info.empId===currentUser.username)canView=true;
-                        if(currentUser.role==='superadmin')canView=true;
-                        if(currentUser.role==='admin'&&d.info.approvalFlow?.rsmId===currentUser.username)canView=true;
-                        if(currentUser.role==='user'&&d.info.approvalFlow?.amId===currentUser.username)canView=true;
-                        if(canView&&isMonth)records.push({key:c.key,data:d});});
-                }
-                let html="";
-                if(records.length===0)html='<div style="text-align:center;padding:20px;color:#888;">No records found for this month.</div>';
-                else{
-                    if(currentUser.role==='admin'||currentUser.role==='superadmin'){
-                        const grouped={};records.forEach(r=>{const area=r.data.info.area||"Unknown";if(!grouped[area])grouped[area]=[];grouped[area].push(r);});
-                        for(const area in grouped){html+=`<div class="area-group-header"><i class="fas fa-map-marker-alt"></i> Area: ${area}</div>`;grouped[area].forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}
-                    }else{records.forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}
-                }
-                container.innerHTML=html;
-            }).catch(()=>{container.innerHTML='<div style="text-align:center;padding:20px;color:red;">Error loading data</div>';});
+            let fbRecords = {};
+            if(isOnline) {
+                try { const snap = await get(ref(db,'tourPlans')); if(snap.exists()) { snap.forEach(c => { fbRecords[c.key] = c.val(); idbPut('tourPlans', { id: c.key, payload: c.val() }); }); } } catch(e) {}
+            }
+            const localRecords = await idbGetAll('tourPlans');
+            localRecords.forEach(r => { if (!fbRecords[r.id] || (r.payload.info.timestamp > (fbRecords[r.id].info?.timestamp || 0))) { fbRecords[r.id] = r.payload; } });
+            let records=[];
+            for(let key in fbRecords) {
+                const d = fbRecords[key]; const isMonth = d.info.month === selectedMonth; let canView = false;
+                if(d.info.empId===currentUser.empId||d.info.empId===currentUser.username)canView=true;
+                if(currentUser.role==='superadmin')canView=true;
+                if(currentUser.role==='admin'&&d.info.approvalFlow?.rsmId===currentUser.username)canView=true;
+                if(currentUser.role==='user'&&d.info.approvalFlow?.amId===currentUser.username)canView=true;
+                if(canView && isMonth) records.push({key, data: d});
+            }
+            let html="";
+            if(records.length===0)html='<div style="text-align:center;padding:20px;color:#888;">No records found for this month.</div>';
+            else{
+                if(currentUser.role==='admin'||currentUser.role==='superadmin'){const grouped={};records.forEach(r=>{const area=r.data.info.area||"Unknown";if(!grouped[area])grouped[area]=[];grouped[area].push(r);});for(const area in grouped){html+=`<div class="area-group-header"><i class="fas fa-map-marker-alt"></i> Area: ${area}</div>`;grouped[area].forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}}
+                else{records.forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}
+            }
+            container.innerHTML=html;
         }
 
         function buildHistoryRow(d,key){
@@ -593,41 +738,60 @@
             if(statusBadge.includes('Pending'))statusBadge=`<span class="badge badge-pending">${statusBadge.replace('_',' ')}</span>`;
             else if(statusBadge==='Approved')statusBadge="<span class='badge badge-approved'>Approved</span>";
             else if(statusBadge==='Rejected')statusBadge="<span class='badge badge-rejected'>Rejected</span>";
-
             let btns=`<button class="btn btn-sm btn-info" onclick="viewTourPlan('${key}')"><i class="fas fa-eye"></i> View</button>`;
             const isOwner=(d.info.empId===currentUser.empId||d.info.empId===currentUser.username);
             const isPAM=d.info.status==='Pending_AM',isPRSM=d.info.status==='Pending_RSM',isRej=d.info.status==='Rejected',isApp=d.info.status==='Approved';
-
             if((currentUser.role==='user'&&isPAM)||(currentUser.role==='admin'&&isPRSM)||(currentUser.role==='superadmin'&&(isPAM||isPRSM)))btns+=`<button class="btn btn-sm btn-success" onclick="approvePlan('${key}')"><i class="fas fa-check"></i> Approve</button>`;
             if((currentUser.role==='user'&&isPAM)||(currentUser.role==='admin'&&isPRSM)||(currentUser.role==='superadmin')&&!isApp&&!isRej)btns+=`<button class="btn btn-sm btn-danger" onclick="rejectPlan('${key}')"><i class="fas fa-times"></i> Reject</button>`;
             if(currentUser.role==='admin'||currentUser.role==='superadmin')btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
             let canEdit=false;if(isOwner&&!isApp)canEdit=true;if(currentUser.role==='user'&&isPAM)canEdit=true;if(currentUser.role==='admin'&&isPRSM)canEdit=true;if(currentUser.role==='superadmin'&&!isApp)canEdit=true;if(isRej&&isOwner)canEdit=true;
             if(canEdit)btns+=`<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')"><i class="fas fa-edit"></i> Edit</button>`;
             if((isOwner||currentUser.role==='superadmin')&&!isApp)btns+=`<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')"><i class="fas fa-trash"></i></button>`;
-
             return `<div class="hist-row"><div style="min-width:180px;"><strong style="font-size:13px;">${d.info.name}</strong> <span style="color:#888;font-size:11px;">(${d.info.empId})</span><br>${statusBadge} <span style="color:#aaa;font-size:10px;">| ${d.info.designation||''}</span></div><div class="hist-actions">${btns}</div></div>`;
         }
 
         // ===================== APPROVE / REJECT =====================
         window.approvePlan=function(key){
-            get(ref(db,'tourPlans/'+key)).then(snap=>{if(!snap.exists())return;const d=snap.val();let upd={},sigUpd={};
-            if(currentUser.role==='user'){upd['info/status']='Pending_RSM';sigUpd['am']=currentUser.name;}
-            else{upd['info/status']='Approved';sigUpd['rsm']=currentUser.name;}
-            const newSigs={...(d.info.signatures||{}),...sigUpd};upd['info/signatures']=newSigs;
-            update(ref(db,'tourPlans/'+key),upd).then(()=>{alert("Approved!");loadTourHistory();});});
-        };
-        window.rejectPlan=function(key){if(confirm("Reject this plan?"))update(ref(db,'tourPlans/'+key),{'info/status':'Rejected'}).then(()=>{alert("Rejected!");loadTourHistory();});};
-        window.deleteTourPlan=function(key){if(confirm("Delete this plan permanently?"))remove(ref(db,'tourPlans/'+key)).then(()=>loadTourHistory());};
-
-        // ===================== VIEW TOUR PLAN (MODAL) =====================
-        window.viewTourPlan=function(key){
-            get(ref(db,'tourPlans/'+key)).then(snap=>{if(!snap.exists())return;const d=snap.val();
-                const html=buildViewTable(d.info,d.plan);
-                const modal=document.createElement('div');modal.className='modal-bg';
-                modal.innerHTML=`<div class="modal-content"><button onclick="this.closest('.modal-bg').remove()" class="btn btn-danger btn-sm no-print" style="position:absolute;top:10px;right:10px;z-index:10;"><i class="fas fa-times"></i></button><button onclick="printHistoryRecord('${key}')" class="btn btn-primary btn-sm no-print" style="position:absolute;top:10px;right:55px;z-index:10;"><i class="fas fa-print"></i></button>${html}</div>`;
-                document.body.appendChild(modal);
-                modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});
+            getPlanData(key).then(d=>{
+                if(!d)return;let upd={},sigUpd={};
+                if(currentUser.role==='user'){upd['info/status']='Pending_RSM';sigUpd['am']=currentUser.name;}
+                else{upd['info/status']='Approved';sigUpd['rsm']=currentUser.name;}
+                const oldSigs = d.info.signatures || {};
+                const newSigs={...oldSigs,...sigUpd};upd['info/signatures']=newSigs;
+                const mergedData = { ...d, info: { ...d.info, ...upd['info'] } };
+                idbPut('tourPlans', { id: key, payload: mergedData });
+                if(isOnline) { update(ref(db,'tourPlans/'+key),upd).then(()=>{alert("Approved!");loadTourHistory();}); }
+                else { addToSyncQueue('updateStatus', { key, updates: upd }); alert("Approved locally!");loadTourHistory(); }
             });
+        };
+
+        window.rejectPlan=function(key){
+            if(confirm("Reject this plan?")){
+                getPlanData(key).then(d=>{if(!d) return;const upd = {'info/status':'Rejected'};const mergedData = { ...d, info: { ...d.info, ...upd['info'] } };idbPut('tourPlans', { id: key, payload: mergedData });
+                if(isOnline) { update(ref(db,'tourPlans/'+key),upd).then(()=>{alert("Rejected!");loadTourHistory();}); }
+                else { addToSyncQueue('updateStatus', { key, updates: upd }); alert("Rejected locally!");loadTourHistory(); }});
+            }
+        };
+
+        window.deleteTourPlan=function(key){
+            if(confirm("Delete this plan permanently?")){idbDelete('tourPlans', key);
+            if(isOnline) { remove(ref(db,'tourPlans/'+key)).then(()=>loadTourHistory()); }
+            else { addToSyncQueue('deleteTourPlan', { key }); loadTourHistory(); }}
+        };
+
+        async function getPlanData(key) {
+            let local = await idbGet('tourPlans', key);
+            if (local) return local.payload;
+            if (isOnline) { const snap = await get(ref(db, 'tourPlans/' + key)); if (snap.exists()) return snap.val(); }
+            return null;
+        }
+
+        // ===================== VIEW TOUR PLAN =====================
+        window.viewTourPlan=function(key){
+            getPlanData(key).then(d=>{if(!d)return;const html=buildViewTable(d.info,d.plan);
+            const modal=document.createElement('div');modal.className='modal-bg';
+            modal.innerHTML=`<div class="modal-content"><button onclick="this.closest('.modal-bg').remove()" class="btn btn-danger btn-sm no-print" style="position:absolute;top:10px;right:10px;z-index:10;"><i class="fas fa-times"></i></button><button onclick="printHistoryRecord('${key}')" class="btn btn-primary btn-sm no-print" style="position:absolute;top:10px;right:55px;z-index:10;"><i class="fas fa-print"></i></button>${html}</div>`;
+            document.body.appendChild(modal);modal.addEventListener('click',function(e){if(e.target===modal)modal.remove();});});
         };
 
         function buildViewTable(info,plan){
@@ -638,7 +802,17 @@
 
         // ===================== EDIT TOUR PLAN =====================
         window.editTourPlan=async function(key){
-            const snap=await get(ref(db,'tourPlans/'+key));if(!snap.exists())return;const d=snap.val();
+            const d = await getPlanData(key);
+            if(!d) return;
+            
+            // এডিট করার সময় আগের সিগনেচারগুলো ঠিকভাবে পুনরায় সেট করা হচ্ছে
+            currentEditSignatures = {
+                prepared: d.info.signatures?.prepared || d.info.name || "",
+                am: d.info.signatures?.am || "",
+                rsm: d.info.signatures?.rsm || "",
+                approved: d.info.signatures?.approved || ""
+            };
+            
             const editRole=d.info.designation?.toLowerCase().includes('rsm')?'admin':d.info.designation?.toLowerCase().includes('am')?'user':'mpo';
             const origRole=currentUser.role;currentUser.role=editRole;await loadWorkPlaceOptions();
             if(window.innerWidth<=768)toggleSidebar();
@@ -646,26 +820,18 @@
             document.getElementById('tp_month').value=d.info.month;document.getElementById('tp_empId').value=d.info.empId;document.getElementById('tp_name').value=d.info.name;
             document.getElementById('tp_designation').value=d.info.designation;document.getElementById('tp_areaManager').value=d.info.areaManager;document.getElementById('tp_rsm').value=d.info.rsm;
             document.getElementById('tp_territory').value=d.info.territory||'';document.getElementById('tp_area').value=d.info.area||'';document.getElementById('tp_region').value=d.info.region||'';
-            const sigs=d.info.signatures||{};document.getElementById('sig_prepared').innerText=sigs.prepared||d.info.name;document.getElementById('sig_am').innerText=sigs.am||'';document.getElementById('sig_rsm').innerText=sigs.rsm||'';document.getElementById('sig_approved').innerText=sigs.approved||'';
+            
+            // এখানে updateSignatureUI() কল করা হচ্ছে যাতে আগের নামগুলো বসে যায়
+            updateSignatureUI();
+            
             await handleMonthChange();
 
             d.plan.forEach(p=>{
                 const hq=document.querySelector(`[name="hq_${p.date}"]`);if(hq)hq.value=p.hq;
                 const mWp=document.querySelector(`[name="morning_wp_${p.date}"]`);if(mWp)mWp.value=p.morning_wp||p.morning||'';
                 const eWp=document.querySelector(`[name="evening_wp_${p.date}"]`);if(eWp)eWp.value=p.evening_wp||p.evening||'';
-
-                // Restore AM input fields
-                if(editRole==='user'){
-                    const mTr=document.querySelector(`[name="morning_territory_${p.date}"]`);
-                    if(mTr && !mTr.readOnly) mTr.value=p.morning_territory||'';
-                    const eTr=document.querySelector(`[name="evening_territory_${p.date}"]`);
-                    if(eTr && !eTr.readOnly) eTr.value=p.evening_territory||'';
-                }
-
-                if(editRole==='admin'){
-                    if(p.morning_wp&&p.morning_wp!=="Holiday"&&p.morning_wp!=="Weekend")handleWorkPlaceChange(p.date,'morning');
-                    if(p.evening_wp&&p.evening_wp!=="Holiday"&&p.evening_wp!=="Weekend")handleWorkPlaceChange(p.date,'evening');
-                }
+                if(editRole==='user'){const mTr=document.querySelector(`[name="morning_territory_${p.date}"]`);if(mTr && !mTr.readOnly) mTr.value=p.morning_territory||'';const eTr=document.querySelector(`[name="evening_territory_${p.date}"]`);if(eTr && !eTr.readOnly) eTr.value=p.evening_territory||'';}
+                if(editRole==='admin'){if(p.morning_wp&&p.morning_wp!=="Holiday"&&p.morning_wp!=="Weekend")handleWorkPlaceChange(p.date,'morning');if(p.evening_wp&&p.evening_wp!=="Holiday"&&p.evening_wp!=="Weekend")handleWorkPlaceChange(p.date,'evening');}
             });
 
             setTimeout(()=>{d.plan.forEach(p=>{if(editRole==='admin'){checkTerritories(p.date,'morning',p.morning_territory);checkTerritories(p.date,'evening',p.evening_territory);}});},150);
@@ -683,7 +849,7 @@
 
         // ===================== PRINT RECORD =====================
         window.printHistoryRecord=function(key){
-            get(ref(db,'tourPlans/'+key)).then(snap=>{if(!snap.exists())return;const d=snap.val(),sigs=d.info.signatures||{};
+            getPlanData(key).then(d=>{if(!d) return;const sigs=d.info.signatures||{};
             let rows="";d.plan.forEach(p=>{const dn=getDayNameByDate(p.date,d.info.month);rows+=`<tr><td style="border:1px solid #000;padding:2px;">${p.date}</td><td style="border:1px solid #000;padding:2px;">${dn}</td><td style="border:1px solid #000;padding:2px;">${p.hq}</td><td style="border:1px solid #000;padding:2px;">${p.morning_wp||p.morning||''}</td><td style="border:1px solid #000;padding:2px;">${p.morning_territory||'-'}</td><td style="border:1px solid #000;padding:2px;">${p.evening_wp||p.evening||''}</td><td style="border:1px solid #000;padding:2px;">${p.evening_territory||'-'}</td></tr>`;});
             const isR=d.info.designation?.toLowerCase().includes('rsm'),amV=isR?'-':(d.info.areaManager||'-'),rsV=isR?'-':(d.info.rsm||'-');
             const c=`<div class="header-print"><h2 style="margin:0;color:#0056b3;">MONICO PHARMA LTD</h2><p style="margin:3px 0 0;">7, Gausnagar, New Eskaton, Ramna, Dhaka 1205</p><h3 style="margin:8px 0;">MONTHLY TOUR PLAN</h3></div>
@@ -704,19 +870,34 @@
         function loadAllRSMs(){const s=document.getElementById('m_parent_rsm');s.innerHTML="<option value=''>Select RSM</option>";get(query(ref(db,'Users'),orderByChild('role'),equalTo('admin'))).then(snap=>{if(snap.exists())snap.forEach(c=>{const u=c.val();s.innerHTML+=`<option value="${u.username}">${u.name}</option>`;});});}
         window.handleRoleChange=function(){const r=document.getElementById('m_role').value;if(currentUser.role==='superadmin'){document.getElementById('m_parent_rsm').disabled=(r==='admin');document.getElementById('m_parent_am').disabled=(r!=='mpo');}if(currentUser.role==='admin'&&r==='mpo')handleParentRSMChange();};
         window.handleParentRSMChange=function(){const rid=document.getElementById('m_parent_rsm').value,as=document.getElementById('m_parent_am');as.innerHTML="<option value=''>Select AM</option>";if(!rid)return;get(query(ref(db,'Users'),orderByChild('rsmId'),equalTo(rid))).then(snap=>{if(snap.exists())snap.forEach(c=>{const u=c.val();if(u.role==='user')as.innerHTML+=`<option value="${u.username}">${u.name}</option>`;});});};
+        
         window.saveUser=function(){
             const r=document.getElementById('m_role').value,pR=document.getElementById('m_parent_rsm'),pA=document.getElementById('m_parent_am'),d={empId:document.getElementById('m_empId').value.trim(),name:document.getElementById('m_name').value.trim(),designation:document.getElementById('m_designation').value.trim(),territory:document.getElementById('m_territory').value.trim(),area:document.getElementById('m_area').value.trim(),region:document.getElementById('m_region').value.trim(),username:document.getElementById('m_username').value.trim(),password:document.getElementById('m_password').value,role:r,rsmId:pR.value||"",rsmName:pR.options[pR.selectedIndex]?.text||"",amId:pA.value||"",areaManagerName:pA.options[pA.selectedIndex]?.text||""};
             if(!d.username||!d.password||!d.name){document.getElementById('m_status').innerHTML="<span class='error'>Missing required fields</span>";return;}
-            set(ref(db,'Users/'+d.username.replace(/[.#$\[\]]/g,'_')),d).then(()=>{document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved!</span>";document.getElementById('userForm').reset();prepareUserForm();loadUsers();});
+            const safeKey = d.username.replace(/[.#$\[\]]/g,'_');
+            idbPut('cachedUsers', d);
+            if(isOnline) { set(ref(db,'Users/'+safeKey),d).then(()=>{document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved & Synced!</span>";document.getElementById('userForm').reset();prepareUserForm();loadUsers();}); }
+            else { addToSyncQueue('saveUser', { safeKey, payload: d }); document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved Locally!</span>"; document.getElementById('userForm').reset();prepareUserForm();loadUsers(); }
         };
-        function loadUsers(){
-            const tb=document.getElementById('userTableBody');tb.innerHTML='<tr><td colspan="6" style="padding:15px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
-            onValue(ref(db,'Users'),snap=>{tb.innerHTML="";if(snap.exists()){snap.forEach(c=>{const u=c.val();let s=false;if(currentUser.role==='superadmin')s=true;else if(currentUser.role==='admin'&&u.rsmId===currentUser.username)s=true;else if(currentUser.role==='user'&&u.amId===currentUser.username)s=true;
-            if(s)tb.innerHTML+=`<tr><td>${u.empId||'-'}</td><td>${u.name}</td><td>${getRoleName(u.role)}</td><td style="font-size:10px;">${u.rsmName||'-'} / ${u.areaManagerName||'-'}</td><td>${u.username}</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-warning" onclick='editUser(${JSON.stringify(u)})'><i class="fas fa-edit"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteUser('${c.key}')"><i class="fas fa-trash"></i></button></td></tr>`;});}else tb.innerHTML="<tr><td colspan='6'>No users</td></tr>";});
-        }
-        window.editUser=function(u){document.getElementById('m_empId').value=u.empId||'';document.getElementById('m_name').value=u.name||'';document.getElementById('m_designation').value=u.designation||'';document.getElementById('m_territory').value=u.territory||'';document.getElementById('m_area').value=u.area||'';document.getElementById('m_region').value=u.region||'';document.getElementById('m_username').value=u.username||'';document.getElementById('m_password').value=u.password||'';document.getElementById('m_role').value=u.role||'mpo';window.scrollTo(0,0);handleRoleChange();};
-        window.deleteUser=function(k){if(confirm("Delete this user permanently?"))remove(ref(db,'Users/'+k));};
 
+        async function loadUsers(){
+            const tb=document.getElementById('userTableBody');tb.innerHTML='<tr><td colspan="6" style="padding:15px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            let usersData = {};
+            if(isOnline) { try { const snap = await get(ref(db,'Users')); if(snap.exists()){ snap.forEach(c=>{ usersData[c.key] = c.val(); idbPut('cachedUsers', c.val()); }); } } catch(e) {} }
+            const localUsers = await idbGetAll('cachedUsers');
+            localUsers.forEach(u => { const k = u.username.replace(/[.#$\[\]]/g,'_'); if(!usersData[k]) usersData[k] = u; });
+            tb.innerHTML="";let hasData = false;
+            for(let k in usersData) { const u = usersData[k]; let s=false;if(currentUser.role==='superadmin')s=true;else if(currentUser.role==='admin'&&u.rsmId===currentUser.username)s=true;else if(currentUser.role==='user'&&u.amId===currentUser.username)s=true;
+            if(s) { hasData = true; tb.innerHTML+=`<tr><td>${u.empId||'-'}</td><td>${u.name}</td><td>${getRoleName(u.role)}</td><td style="font-size:10px;">${u.rsmName||'-'} / ${u.areaManagerName||'-'}</td><td>${u.username}</td><td style="white-space:nowrap;"><button class="btn btn-sm btn-warning" onclick='editUser(${JSON.stringify(u).replace(/'/g,"&#39;")})'><i class="fas fa-edit"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteUser('${k}')"><i class="fas fa-trash"></i></button></td></tr>`; } }
+            if(!hasData) tb.innerHTML="<tr><td colspan='6'>No users</td></tr>";
+        }
+
+        window.editUser=function(u){document.getElementById('m_empId').value=u.empId||'';document.getElementById('m_name').value=u.name||'';document.getElementById('m_designation').value=u.designation||'';document.getElementById('m_territory').value=u.territory||'';document.getElementById('m_area').value=u.area||'';document.getElementById('m_region').value=u.region||'';document.getElementById('m_username').value=u.username||'';document.getElementById('m_password').value=u.password||'';document.getElementById('m_role').value=u.role||'mpo';window.scrollTo(0,0);handleRoleChange();};
+        window.deleteUser=function(k){if(confirm("Delete this user permanently?")){idbDelete('cachedUsers', k);if(isOnline) { remove(ref(db,'Users/'+k)); } else { addToSyncQueue('deleteUser', { key: k }); } loadUsers();}};
+
+        // ===================== INITIALIZATION =====================
+        await openIDB();
+        updateNetworkUI();
     </script>
 </body>
 </html>
