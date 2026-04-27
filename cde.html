@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cash Denomination Entry</title>
+    <style>
+        body{
+            font-family: Arial;
+            background:#d4d0c8;
+            margin:20px;
+        }
+
+        .container{
+            width:650px;
+            margin:auto;
+            background:#c0c0c0;
+            border:2px solid #808080;
+            padding:10px;
+            box-shadow: inset -2px -2px #fff,
+                        inset 2px 2px #808080;
+        }
+
+        h2{
+            text-align:center;
+            background:navy;
+            color:white;
+            padding:8px;
+            margin:0 0 10px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            background:white;
+        }
+
+        th, td{
+            border:1px solid black;
+            padding:8px;
+            text-align:center;
+        }
+
+        th{
+            background:#e0e0e0;
+        }
+
+        input{
+            width:80px;
+            text-align:center;
+            padding:5px;
+        }
+
+        .total-box{
+            margin-top:15px;
+            text-align:right;
+            font-size:18px;
+            font-weight:bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Cash Denomination Entry</h2>
+
+    <table>
+        <tr>
+            <th>Denomination</th>
+            <th>Quantity</th>
+            <th>Total Amount</th>
+        </tr>
+
+        <tbody id="denominationTable"></tbody>
+    </table>
+
+    <div class="total-box">
+        Grand Total: ৳ <span id="grandTotal">0</span>
+    </div>
+</div>
+
+<script>
+const denominations = [2,5,10,20,50,100,200,500,1000];
+const tableBody = document.getElementById("denominationTable");
+
+denominations.forEach((value,index) => {
+    tableBody.innerHTML += `
+        <tr>
+            <td>৳${value}</td>
+            <td>
+                <input 
+                    type="number" 
+                    class="qty" 
+                    data-value="${value}" 
+                    min="0"
+                    oninput="calculateTotal()"
+                    onkeydown="moveNext(event, ${index})"
+                >
+            </td>
+            <td class="amount">0</td>
+        </tr>
+    `;
+});
+
+function calculateTotal(){
+    let grandTotal = 0;
+
+    document.querySelectorAll(".qty").forEach((input,index)=>{
+        let qty = parseInt(input.value) || 0;
+        let value = parseInt(input.dataset.value);
+        let total = qty * value;
+
+        document.querySelectorAll(".amount")[index].innerText = total;
+        grandTotal += total;
+    });
+
+    document.getElementById("grandTotal").innerText = grandTotal;
+}
+
+function moveNext(event, index){
+    if(event.key === "Enter"){
+        event.preventDefault();
+
+        let inputs = document.querySelectorAll(".qty");
+
+        if(index < inputs.length - 1){
+            inputs[index + 1].focus();
+            inputs[index + 1].select();
+        }
+    }
+}
+</script>
+
+</body>
+</html>
