@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway Cost Calculator</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            
+            /* Brand Colors */
+            --nagad-primary: #f7931e;
+            --nagad-bg: #fff8ed;
+            
+            --bkash-primary: #e2136e;
+            --bkash-bg: #fff0f6;
+            
+            --rocket-primary: #673ab7;
+            --rocket-bg: #f3e5f5;
+            
+            --upay-primary: #0288d1;
+            --upay-bg: #e1f5fe;
+
+            --success-color: #00a651;
+            --border-radius: 12px;
+            --shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Input Area */
+        .input-section {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .input-wrapper {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            font-size: 1.5rem;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--upay-primary);
+        }
+
+        /* Savings Alert */
+        .savings-alert {
+            background: #e8f5e9;
+            color: var(--success-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .savings-alert.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Comparison Grid */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.2s;
+            border-top: 5px solid transparent;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Brand Specific Styles */
+        .card.nagad { border-top-color: var(--nagad-primary); }
+        .card.nagad .header-bg { background: var(--nagad-bg); }
+
+        .card.bkash { border-top-color: var(--bkash-primary); }
+        .card.bkash .header-bg { background: var(--bkash-bg); }
+
+        .card.rocket { border-top-color: var(--rocket-primary); }
+        .card.rocket .header-bg { background: var(--rocket-bg); }
+
+        .card.upay { border-top-color: var(--upay-primary); }
+        .card.upay .header-bg { background: var(--upay-bg); }
+
+        .card-header {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 45px;
+            height: 45px;
+            background: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 4px; /* Padding ensures logo doesn't touch edges */
+        }
+
+        .brand-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ensures logo aspect ratio is preserved */
+        }
+
+        .brand-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-transform: capitalize;
+        }
+
+        .rate-badge {
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            background: rgba(255,255,255,0.6);
+            border-radius: 4px;
+        }
+
+        .card-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .stat-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .total-row {
+            margin-top: 5px;
+            border-top: 2px dashed #eee;
+            padding-top: 15px;
+        }
+
+        .total-label {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .total-value {
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+
+        .cost-negative {
+            color: #d32f2f;
+        }
+
+        /* Winner Badge */
+        .winner-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--success-color);
+            color: white;
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-bottom-left-radius: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: none;
+            z-index: 2;
+        }
+
+        .card.is-winner {
+            box-shadow: 0 0 0 2px var(--success-color), var(--shadow);
+        }
+        .card.is-winner .winner-badge {
+            display: block;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Payment Gateway Cost</h1>
+            <p class="subtitle">Compare transaction fees using real-time calculation</p>
+        </header>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <label style="display:block; text-align:left; margin-bottom:8px; font-weight:600; color:#555;">Enter Amount</label>
+            <div class="input-wrapper">
+                <span class="currency-symbol">৳</span>
+                <input type="number" id="amount" placeholder="0.00" min="0" step="0.01">
+            </div>
+
+            <div id="savings-msg" class="savings-alert">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                <span id="savings-text">Save ৳0.00</span>
+            </div>
+        </div>
+
+        <!-- Comparison Grid -->
+        <div class="comparison-grid">
+            
+            <!-- Nagad Card -->
+            <div class="card nagad" id="card-nagad">
+                <div class="winner-badge">Best Rate</div>
+                <div class="card-header header-bg">
+                    <div class="brand-info">
+                        <div class="brand-logo">
+                            <img src="https://www.cashoutcharge.com/static/media/nagad.3a046b8a.webp" alt="Nagad">
+                        </div>
+                        <span class="brand-name">Nagad</span>
+                    </div>
+                    <div class="rate-badge">1.299%</div>
+                </div>
+                <div class="card-body">
+                    <div class="stat-group">
+                        <span class="stat-label">Fee</span>
+                        <span class="stat-value cost-negative">-৳<span class="calc-fee">0.00</span></span>
+                    </div>
+                    <div class="stat-group total-row">
+                        <span class="stat-label total-label">Net Received</span>
+                        <span class="stat-value total-value">৳<span class="calc-net">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bkash Card -->
+            <div class="card bkash" id="card-bkash">
+                <div class="winner-badge">Best Rate</div>
+                <div class="card-header header-bg">
+                    <div class="brand-info">
+                        <div class="brand-logo">
+                            <img src="https://www.cashoutcharge.com/static/media/bkash.cb5636a7.webp" alt="Bkash">
+                        </div>
+                        <span class="brand-name">bKash</span>
+                    </div>
+                    <div class="rate-badge">1.49%</div>
+                </div>
+                <div class="card-body">
+                    <div class="stat-group">
+                        <span class="stat-label">Fee</span>
+                        <span class="stat-value cost-negative">-৳<span class="calc-fee">0.00</span></span>
+                    </div>
+                    <div class="stat-group total-row">
+                        <span class="stat-label total-label">Net Received</span>
+                        <span class="stat-value total-value">৳<span class="calc-net">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rocket Card -->
+            <div class="card rocket" id="card-rocket">
+                <div class="winner-badge">Best Rate</div>
+                <div class="card-header header-bg">
+                    <div class="brand-info">
+                        <div class="brand-logo">
+                            <img src="https://www.cashoutcharge.com/static/media/rocket.f1829105.png" alt="Rocket">
+                        </div>
+                        <span class="brand-name">Rocket</span>
+                    </div>
+                    <div class="rate-badge">1.67%</div>
+                </div>
+                <div class="card-body">
+                    <div class="stat-group">
+                        <span class="stat-label">Fee</span>
+                        <span class="stat-value cost-negative">-৳<span class="calc-fee">0.00</span></span>
+                    </div>
+                    <div class="stat-group total-row">
+                        <span class="stat-label total-label">Net Received</span>
+                        <span class="stat-value total-value">৳<span class="calc-net">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upay Card -->
+            <div class="card upay" id="card-upay">
+                <div class="winner-badge">Best Rate</div>
+                <div class="card-header header-bg">
+                    <div class="brand-info">
+                        <div class="brand-logo">
+                            <img src="https://www.cashoutcharge.com/static/media/upay.62c7afa9.webp" alt="Upay">
+                        </div>
+                        <span class="brand-name">Upay</span>
+                    </div>
+                    <div class="rate-badge">1.40%</div>
+                </div>
+                <div class="card-body">
+                    <div class="stat-group">
+                        <span class="stat-label">Fee</span>
+                        <span class="stat-value cost-negative">-৳<span class="calc-fee">0.00</span></span>
+                    </div>
+                    <div class="stat-group total-row">
+                        <span class="stat-label total-label">Net Received</span>
+                        <span class="stat-value total-value">৳<span class="calc-net">0.00</span></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configuration
+            const services = {
+                nagad: { rate: 0.01299, name: 'Nagad' },
+                bkash:  { rate: 0.01490, name: 'bKash' },
+                rocket: { rate: 0.01670, name: 'Rocket' },
+                upay:   { rate: 0.01400, name: 'Upay' }
+            };
+
+            // DOM Elements
+            const amountInput = document.getElementById('amount');
+            const savingsMsg = document.getElementById('savings-msg');
+            const savingsText = document.getElementById('savings-text');
+
+            // Formatter
+            const formatter = new Intl.NumberFormat('en-BD', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+
+            function calculate() {
+                const amount = parseFloat(amountInput.value);
+
+                // Reset UI if invalid
+                if (isNaN(amount) || amount <= 0) {
+                    document.querySelectorAll('.card').forEach(card => card.classList.remove('is-winner'));
+                    document.querySelectorAll('.calc-fee').forEach(el => el.textContent = '0.00');
+                    document.querySelectorAll('.calc-net').forEach(el => el.textContent = '0.00');
+                    savingsMsg.classList.remove('visible');
+                    return;
+                }
+
+                let minFee = Infinity;
+                let winnerKey = null;
+                let maxFee = -Infinity;
+
+                // Calculate for each service
+                for (const [key, data] of Object.entries(services)) {
+                    const fee = amount * data.rate;
+                    const net = amount - fee;
+
+                    // Update DOM
+                    const card = document.getElementById(`card-${key}`);
+                    card.querySelector('.calc-fee').textContent = formatter.format(fee);
+                    card.querySelector('.calc-net').textContent = formatter.format(net);
+
+                    // Track Min and Max
+                    if (fee < minFee) {
+                        minFee = fee;
+                        winnerKey = key;
+                    }
+                    if (fee > maxFee) {
+                        maxFee = fee;
+                    }
+                }
+
+                // Highlight Winner
+                document.querySelectorAll('.card').forEach(card => card.classList.remove('is-winner'));
+                if (winnerKey) {
+                    const winnerCard = document.getElementById(`card-${winnerKey}`);
+                    winnerCard.classList.add('is-winner');
+
+                    // Calculate savings against the most expensive option to show value
+                    const saving = maxFee - minFee;
+                    if (saving > 0) {
+                        savingsText.textContent = `Save ৳${formatter.format(saving)} by using ${services[winnerKey].name}`;
+                        savingsMsg.classList.add('visible');
+                    } else {
+                        savingsMsg.classList.remove('visible');
+                    }
+                }
+            }
+
+            amountInput.addEventListener('input', calculate);
+        });
+    </script>
+</body>
+</html>
