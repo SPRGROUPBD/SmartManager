@@ -774,19 +774,19 @@
         }
 
         function reloadAllData() {
-            if (!currentUser) return;
-            // Load IOUs first (needed for bill display), then bills & dashboard
-            loadCurrentIOUs(function() {
-                if (currentUser.role === 'user') {
-                    loadUserDashboardData();
-                } else {
-                    loadAdminDashboardData();
-                    loadAdminIOU();
-                }
-                loadBills();
-                if (document.getElementById('summaryTab').classList.contains('show')) generateSummary();
-            });
+    if (!currentUser) return;
+    loadCurrentIOUs(function() {
+        if (currentUser.role === 'user') {
+            loadUserDashboardData();
+        } else {
+            loadAdminDashboardData();
+            loadAdminIOU();
+            loadDAListForSummary();
         }
+        loadBills();
+        if (document.getElementById('summaryTab').classList.contains('show')) generateSummary();
+    });
+}
 
         // ================= INPUT TOGGLE =================
         function toggleRowInputs(sel) {
@@ -1255,13 +1255,25 @@
 
         function loadDAListForSummary(){
             var sel=document.getElementById('summary_da');if(!sel)return;
-            sel.innerHTML='<option value="">-- Select DA --</option>';
-            // Add both from cache and from IOU daNames
-            var daNamesAdded={};
-            Object.keys(daListCache).forEach(function(k){var opt='<option value="'+k+'">'+daListCache[k]+'</option>';sel.innerHTML+=opt;daNamesAdded[daListCache[k]]=true;});
-            // Also add DA names found in IOU list
-            Object.keys(iouListGlobal).forEach(function(k){var dn=iouListGlobal[k]._daName||iouListGlobal[k].daName;if(dn&&!daNamesAdded[dn]){sel.innerHTML+='<option value="'+dn+'">'+dn+'</option>';daNamesAdded[dn]=true;}});
+    sel.innerHTML='<option value="">-- Select DA --</option>';
+    var daNamesAdded={};
+    // Cache থেকে DA name-ই value হিসেবে ব্যবহার করুন (Firebase key না)
+    Object.keys(daListCache).forEach(function(k){
+        var name=daListCache[k];
+        if(!daNamesAdded[name]){
+            sel.innerHTML+='<option value="'+name+'">'+name+'</option>';
+            daNamesAdded[name]=true;
         }
+    });
+    // IOU list থেকেও DA name যোগ করুন
+    Object.keys(iouListGlobal).forEach(function(k){
+        var dn=iouListGlobal[k]._daName||iouListGlobal[k].daName;
+        if(dn&&!daNamesAdded[dn]){
+            sel.innerHTML+='<option value="'+dn+'">'+dn+'</option>';
+            daNamesAdded[dn]=true;
+        }
+    });
+}
 
         function saveIOU(){
             var daId=document.getElementById('iou_da_name').value;
