@@ -3,551 +3,605 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monico Pharma - Lunch Bill System</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<title>Monico Pharma - Bill Management</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script>tailwind.config={theme:{extend:{fontFamily:{body:['Inter','sans-serif']}}}}</script>
 <style>
-:root{--sidebar:#0f172a;--accent:#0f766e;--bg:#f1f5f9;--card:#fff;--text:#1e293b;--muted:#64748b;--border:#e2e8f0;--danger:#dc2626}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text)}
-.wrapper{display:flex;min-height:100vh}
-.sidebar{width:250px;background:var(--sidebar);color:#e2e8f0;position:fixed;top:0;left:0;height:100vh;display:flex;flex-direction:column;z-index:50;box-shadow:4px 0 24px rgba(0,0,0,.15)}
-.sidebar-logo{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.06)}
-.sidebar-logo h2{font-size:16px;font-weight:700;color:#f8fafc;letter-spacing:-.3px}
-.sidebar-logo p{font-size:11px;color:#94a3b8;margin-top:2px}
-.sidebar-nav{padding:16px 12px;flex:1}
-.sidebar-nav button{width:100%;display:flex;align-items:center;gap:12px;padding:12px 16px;border:none;background:0 0;color:#94a3b8;font-size:13.5px;font-weight:500;cursor:pointer;border-radius:10px;transition:all .2s;margin-bottom:4px;text-align:left}
-.sidebar-nav button i{width:18px;text-align:center;font-size:14px}
-.sidebar-nav button:hover{background:#1e293b;color:#e2e8f0}
-.sidebar-nav button.active{background:linear-gradient(135deg,var(--accent),#0d9488);color:#fff;font-weight:600;box-shadow:0 4px 12px rgba(15,118,110,.3)}
-.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,.06);font-size:11px}
-.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
-.sync-dot.online{background:#22c55e;box-shadow:0 0 6px #22c55e}
-.sync-dot.offline{background:#ef4444;box-shadow:0 0 6px #ef4444}
-.content{margin-left:250px;flex:1;padding:32px;min-height:100vh}
-.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
-.page-header h1{font-size:24px;font-weight:800;letter-spacing:-.5px}
-.page-header .subtitle{font-size:13px;color:var(--muted);margin-top:2px}
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-bottom:32px}
-.stat-card{background:var(--card);border-radius:14px;padding:24px;border:1px solid var(--border);transition:transform .2s,box-shadow .2s;animation:fadeUp .4s ease both}
-.stat-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.06)}
-.stat-card:nth-child(2){animation-delay:.05s}
-.stat-card:nth-child(3){animation-delay:.1s}
-.stat-card:nth-child(4){animation-delay:.15s}
-.stat-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:16px}
-.stat-card .value{font-size:28px;font-weight:800;letter-spacing:-.5px}
-.stat-card .label{font-size:12.5px;color:var(--muted);margin-top:4px;font-weight:500}
-.data-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border)}
-.data-table thead th{background:#f8fafc;padding:14px 16px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:1px solid var(--border)}
-.data-table tbody td{padding:14px 16px;font-size:13.5px;border-bottom:1px solid #f1f5f9}
-.data-table tbody tr:last-child td{border-bottom:none}
-.data-table tbody tr:hover{background:#f8fafc}
-.form-table{width:100%;border-collapse:collapse;background:var(--card);border-radius:14px;overflow:hidden;border:1px solid var(--border)}
-.form-table td,.form-table th{padding:12px 14px;border:1px solid var(--border);font-size:13px}
-.form-table th{background:#f8fafc;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
-.form-table td:first-child{font-weight:600;color:var(--text);background:#f8fafc;width:150px;white-space:nowrap}
-.form-table input,.form-table select{width:100%;border:none;background:0 0;font-size:13px;font-family:inherit;text-align:center;padding:4px;outline:none;color:var(--text)}
-.form-table input:focus{background:#f0fdfa;border-radius:4px}
-.form-table input[readonly]{color:var(--muted);font-weight:500}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;border:none;border-radius:10px;font-size:13.5px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
-.btn-primary{background:linear-gradient(135deg,var(--accent),#0d9488);color:#fff;box-shadow:0 4px 12px rgba(15,118,110,.25)}
-.btn-primary:hover{box-shadow:0 6px 20px rgba(15,118,110,.35);transform:translateY(-1px)}
-.btn-danger{background:#fef2f2;color:var(--danger);border:1px solid #fecaca}
-.btn-danger:hover{background:#fee2e2}
-.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px}
-.btn-ghost{background:0 0;color:var(--accent);border:1px solid var(--border)}
-.btn-ghost:hover{background:#f0fdfa;border-color:#14b8a6}
-.holiday-banner{background:linear-gradient(135deg,#f0fdfa,#ccfbf1);border:1px solid #99f6e4;border-radius:12px;padding:16px 20px;margin-top:16px;animation:fadeUp .3s ease both}
-.holiday-banner .title{font-size:13px;font-weight:600;color:#0f766e;display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.holiday-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #99f6e4;border-radius:20px;padding:5px 12px;font-size:12px;color:#115e59;margin:3px 4px 3px 0}
-.holiday-chip .date{font-weight:700;color:var(--accent)}
-.toast-container{position:fixed;top:24px;right:24px;z-index:9999;display:flex;align-direction:column;gap:10px}
-.toast{display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:12px;font-size:13.5px;font-weight:500;transform:translateX(120%);transition:transform .35s cubic-bezier(.4,0,.2,1);box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:280px}
-.toast.show{transform:translateX(0)}
-.toast-success{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}
-.toast-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
-.toast-info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
-.modal-overlay.active{opacity:1;pointer-events:auto}
-.modal-box{background:var(--card);border-radius:16px;padding:28px;max-width:400px;width:90%;transform:scale(.95);transition:transform .2s;box-shadow:0 20px 60px rgba(0,0,0,.15)}
-.modal-overlay.active .modal-box{transform:scale(1)}
-.modal-box h3{font-size:18px;font-weight:700;margin-bottom:8px}
-.modal-box p{font-size:14px;color:var(--muted);margin-bottom:24px}
-.modal-actions{display:flex;gap:10px;justify-content:flex-end}
-@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+body{font-family:"MS Sans Serif","Tahoma","Arial",sans-serif;font-size:11px;background:#008080;overflow:hidden;height:100vh}
 
-/* ========== PRINT FORMAT — AUTO FIT ========== */
-.print-container{
-    width:900px;
-    margin:auto;
-    border:2px solid #000;
-    padding:0;
-}
-.print-container table{
-    width:100%;
-    border-collapse:collapse;
-    font-size:14px;
-}
-.print-container td,.print-container th{
-    border:1px solid #000;
-    padding:6px;
-}
-.print-container .center{text-align:center;}
-.print-container .right{text-align:right;}
-.print-container .bold{font-weight:bold;white-space:nowrap;}
-.print-container .header{font-size:26px;font-weight:bold;}
-.print-container .sub-header{font-size:16px;}
-.print-container .signature td{
-    height:70px;
-    vertical-align:bottom;
-    text-align:center;
-    font-weight:bold;
-}
+.w98-window{position:fixed;top:4px;left:4px;right:4px;bottom:34px;background:#c0c0c0;border-top:2px solid #dfdfdf;border-left:2px solid #dfdfdf;border-right:2px solid #404040;border-bottom:2px solid #404040;display:flex;flex-direction:column}
+.w98-titlebar{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:2px 3px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:20px}
+.w98-titlebar-left{display:flex;align-items:center;gap:3px;font-weight:bold;font-size:11px}
+.w98-tb-btn{width:16px;height:14px;background:#c0c0c0;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;font-size:9px;line-height:12px;text-align:center;cursor:pointer;padding:0;color:#000;font-weight:bold}
+.w98-tb-btn:active{border-top:1px solid #404040;border-left:1px solid #404040;border-right:1px solid #fff;border-bottom:1px solid #fff}
+.w98-tb-close{margin-left:2px}
+.w98-menubar{display:flex;gap:0;padding:1px 0;flex-shrink:0;border-bottom:1px solid #808080}
+.w98-menu-item{padding:2px 8px;cursor:pointer;user-select:none}
+.w98-menu-item:hover{background:#000080;color:#fff}
+
+.w98-body{display:flex;flex:1;overflow:hidden}
+
+.w98-tree{width:190px;background:#fff;border-right:2px solid #808080;overflow-y:auto;flex-shrink:0;padding:4px 0}
+.tree-item,.tree-parent{padding:2px 4px;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none;white-space:nowrap}
+.tree-item:hover,.tree-parent:hover,.tree-child:hover{background:#000080;color:#fff}
+.tree-item.active,.tree-child.active{background:#000080;color:#fff}
+.tree-toggle{width:11px;height:11px;border:1px solid #808080;background:#c0c0c0;font-size:9px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:9px}
+.tree-children{display:none;padding-left:16px}
+.tree-children.open{display:block}
+.tree-icon{font-size:13px;flex-shrink:0;width:16px;text-align:center}
+.tree-child{padding:1px 4px 1px 20px;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none;white-space:nowrap;position:relative}
+.tree-child::before{content:'';position:absolute;left:10px;top:0;bottom:50%;width:1px;background:#808080}
+.tree-child::after{content:'';position:absolute;left:10px;top:50%;width:6px;height:1px;background:#808080}
+.tree-sep{height:1px;background:#808080;margin:4px 8px}
+
+.w98-content{flex:1;overflow-y:auto;background:#c0c0c0;padding:8px}
+.page{display:none}
+.page.active{display:block}
+
+.w98-statusbar{display:flex;flex-shrink:0;border-top:2px solid #808080;height:20px}
+.w98-status-section{border-right:1px solid #808080;border-top:1px solid #fff;padding:1px 6px;display:flex;align-items:center;gap:4px;font-size:11px;flex-shrink:0}
+
+.w98-taskbar{position:fixed;bottom:0;left:0;right:0;height:30px;background:#c0c0c0;border-top:2px solid #fff;display:flex;align-items:center;padding:2px 4px;gap:4px;z-index:999}
+.w98-start{display:flex;align-items:center;gap:3px;padding:2px 6px;background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;font-weight:bold;font-size:11px;cursor:pointer;font-family:inherit;gap:4px}
+.w98-start:active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff}
+.w98-task-sep{width:2px;height:24px;border-left:1px solid #808080;border-right:1px solid #fff}
+.w98-task-item{padding:2px 8px;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;max-width:160px;overflow:hidden;white-space:nowrap}
+.w98-task-item.active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff;background:#c0c0c0}
+.w98-tray{margin-left:auto;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:1px 8px;height:22px;display:flex;align-items:center;font-size:11px}
+
+.w98-btn{background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;padding:2px 12px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.w98-btn:active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff}
+.w98-btn-primary{background:#c0c0c0;font-weight:bold}
+.w98-btn-danger{color:#c00}
+.w98-btn-sm{padding:1px 8px;font-size:11px}
+.w98-field{background:#fff;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:2px 4px;font-family:inherit;font-size:11px;outline:none;width:100%}
+.w98-field[readonly]{background:#c0c0c0;color:#404040}
+.w98-select{background:#fff;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:2px 2px;font-family:inherit;font-size:11px;outline:none;width:100%}
+.w98-groupbox{border:2px groove #c0c0c0;padding:10px;margin:6px 0}
+.w98-groupbox legend{background:#c0c0c0;padding:0 4px;font-size:11px;font-weight:bold}
+
+.w98-table{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+.w98-table th{background:#c0c0c0;border:1px solid #808080;padding:3px 6px;font-weight:bold;text-align:left;white-space:nowrap}
+.w98-table td{border:1px solid #c0c0c0;padding:3px 6px}
+.w98-table tr:hover td{background:#e0e0ff}
+.w98-formtable{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+.w98-formtable th{background:#c0c0c0;border:1px solid #808080;padding:3px 6px;font-weight:bold;text-align:center;white-space:nowrap}
+.w98-formtable td{border:1px solid #c0c0c0;padding:2px 4px}
+.w98-formtable .label-cell{background:#c0c0c0;font-weight:bold;width:120px;white-space:nowrap;text-align:right;padding-right:6px}
+
+.w98-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-bottom:12px}
+.w98-stat{border:2px groove #c0c0c0;padding:8px;background:#fff}
+.w98-stat .val{font-size:18px;font-weight:bold;color:#000080;margin:4px 0 2px}
+.w98-stat .lbl{font-size:10px;color:#404040}
+
+.w98-section{font-size:11px;font-weight:bold;color:#000080;margin:10px 0 6px;padding-bottom:2px;border-bottom:1px solid #808080;display:flex;align-items:center;gap:4px}
+
+.toast-box{position:fixed;top:40px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.w98-toast{border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;background:#c0c0c0;padding:6px 12px;font-size:11px;display:flex;align-items:center;gap:6px;transform:translateX(120%);transition:transform .3s;min-width:220px}
+.w98-toast.show{transform:translateX(0)}
+.w98-toast-ok{border-left:3px solid #008000}
+.w98-toast-err{border-left:3px solid #c00}
+.w98-toast-info{border-left:3px solid #000080}
+
+.w98-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.w98-modal-bg.active{opacity:1;pointer-events:auto}
+.w98-dialog{background:#c0c0c0;border-top:2px solid #dfdfdf;border-left:2px solid #dfdfdf;border-right:2px solid #404040;border-bottom:2px solid #404040;padding:0;min-width:320px;box-shadow:2px 2px 6px rgba(0,0,0,.3)}
+.w98-dialog-title{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:2px 4px;font-weight:bold;font-size:11px;display:flex;align-items:center;justify-content:space-between}
+.w98-dialog-body{padding:16px 20px;font-size:11px}
+.w98-dialog-btns{padding:0 20px 14px;display:flex;gap:8px;justify-content:center}
+
+.w98-info{border:2px groove #c0c0c0;padding:6px 8px;margin:4px 0;background:#ffffcc;font-size:11px}
+.w98-info b{color:#000080}
+
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
+.sync-dot.online{background:#008000}
+.sync-dot.offline{background:#c00}
+.sync-dot.checking{background:#c0c000;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* ===== PRINT STYLES ===== */
+.print-lunch{width:900px;margin:auto;border:2px solid #000}
+.print-lunch table{width:100%;border-collapse:collapse;font-size:14px;font-family:Arial,sans-serif}
+.print-lunch td,.print-lunch th{border:1px solid #000;padding:6px}
+.print-lunch .center{text-align:center}.print-lunch .right{text-align:right}
+.print-lunch .bold{font-weight:bold;white-space:nowrap}
+.print-lunch .header{font-size:26px;font-weight:bold}
+.print-lunch .sub-header{font-size:16px}
+.print-lunch .sig td{height:70px;vertical-align:bottom;text-align:center;font-weight:bold}
+.print-clean{width:800px;margin:auto;border:2px solid #000;padding:15px;font-family:Arial,sans-serif}
+.print-clean h1,.print-clean h2{text-align:center;margin:5px}
+.print-clean h2{text-decoration:underline}
+.print-clean table{width:100%;border-collapse:collapse;font-size:14px}
+.print-clean td,.print-clean th{border:1px solid #000;padding:6px}
+.print-clean .rl{text-align:right;font-weight:bold;width:20%}
+.print-clean .rv{text-align:right;width:30%}
+.print-clean .lb{width:20%}
+.print-clean .vl{width:30%}
+.print-clean .am{text-align:right}
+.print-clean .sig-row{margin-top:50px;display:flex;justify-content:space-between;text-align:center}
+.print-clean .sig-row div{width:30%}
+
+/* ===== PRINT MEDIA — শুধু active print page দেখাবে ===== */
 @media print{
-    .sidebar,.no-print,.toast-container,.modal-overlay{display:none!important}
-    .content{margin:0;padding:0}
-    body{margin:0;background:#fff}
-    @page{size:A4 portrait;margin:8mm}
-    .print-container{border:2px solid #000;width:100%}
+  body{background:#fff!important;overflow:visible!important;height:auto!important}
+  .w98-taskbar,.w98-tree,.w98-menubar,.w98-titlebar,.w98-statusbar,.toast-box,.w98-modal-bg,.no-print{display:none!important}
+  .w98-window{position:static!important;border:none!important;top:0!important;left:0!important;right:0!important;bottom:0!important;background:#fff!important}
+  .w98-body{overflow:visible!important;display:block!important}
+  .w98-content{overflow:visible!important;padding:0!important;background:#fff!important}
+  /* সব page লুকাও */
+  .page{display:none!important}
+  /* শুধু active page দেখাও (printLunch বা printClean যেটা active) */
+  .page.active{display:block!important}
+  @page{size:A4 portrait;margin:8mm}
+  .print-lunch,.print-clean{border:2px solid #000;width:100%!important;margin:0!important;max-width:100%!important}
 }
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:0 0}
-::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
-@media(max-width:768px){
-  .sidebar{width:60px}
-  .sidebar .sidebar-logo h2,.sidebar .sidebar-logo p,.sidebar-nav button span,.sidebar-footer span{display:none}
-  .sidebar-nav button{justify-content:center;padding:12px}
-  .content{margin-left:60px;padding:16px}
-  .stats-grid{grid-template-columns:1fr 1fr}
-}
+::-webkit-scrollbar{width:16px}
+::-webkit-scrollbar-track{background:#c0c0c0;border:1px inset #808080}
+::-webkit-scrollbar-thumb{background:#c0c0c0;border:2px outset #dfdfdf}
+::-webkit-scrollbar-button{background:#c0c0c0;border:2px outset #dfdfdf;height:16px}
 </style>
 </head>
 <body>
 
-<div class="wrapper">
-<aside class="sidebar">
-  <div class="sidebar-logo">
-    <h2><i class="fas fa-capsules" style="color:#14b8a6;margin-right:6px"></i>Monico Pharma</h2>
-    <p>Lunch Bill Management</p>
+<div class="w98-window">
+  <div class="w98-titlebar">
+    <div class="w98-titlebar-left">
+      <i class="fas fa-capsules" style="color:#0f8;font-size:13px"></i>
+      <span>Monico Pharma — Bill Management</span>
+    </div>
+    <div style="display:flex;gap:2px">
+      <button class="w98-tb-btn">_</button>
+      <button class="w98-tb-btn">□</button>
+      <button class="w98-tb-btn w98-tb-close">X</button>
+    </div>
   </div>
-  <nav class="sidebar-nav">
-    <button class="active" onclick="showPage('dashboard',this)"><i class="fas fa-chart-pie"></i><span>Dashboard</span></button>
-    <button onclick="showPage('entry',this)"><i class="fas fa-pen-to-square"></i><span>Lunch Entry</span></button>
-    <button onclick="showPage('history',this)"><i class="fas fa-clock-rotate-left"></i><span>Bill History</span></button>
-  </nav>
-  <div class="sidebar-footer">
-    <span class="sync-dot offline" id="syncDot"></span>
-    <span id="syncText">Checking connection...</span>
-  </div>
-</aside>
 
-<main class="content">
+  <div class="w98-menubar">
+    <div class="w98-menu-item">File</div>
+    <div class="w98-menu-item">Edit</div>
+    <div class="w98-menu-item">View</div>
+    <div class="w98-menu-item">Help</div>
+  </div>
+
+  <div class="w98-body">
+    <div class="w98-tree">
+      <div class="tree-item active" id="treeDash" onclick="showPage('dashboard',this)">
+        <span class="tree-icon"><i class="fas fa-chart-pie" style="color:#000080;font-size:12px"></i></span>
+        <span>Dashboard</span>
+      </div>
+      <div class="tree-sep"></div>
+      <div class="tree-parent" id="entryTreeParent" onclick="toggleTree('entryTree',this)">
+        <span class="tree-toggle">+</span>
+        <span class="tree-icon"><i class="fas fa-folder" style="color:#c0a000;font-size:12px" id="entryFolderIcon"></i></span>
+        <span>Bill Entry</span>
+      </div>
+      <div class="tree-children" id="entryTree">
+        <div class="tree-child" id="treeLunchEntry" onclick="showPage('lunchEntry',this)">
+          <span class="tree-icon"><i class="fas fa-utensils" style="color:#000080;font-size:11px"></i></span>
+          <span>Lunch Entry</span>
+        </div>
+        <div class="tree-child" id="treeCleanEntry" onclick="showPage('cleanEntry',this)">
+          <span class="tree-icon"><i class="fas fa-broom" style="color:#c06000;font-size:11px"></i></span>
+          <span>Office Cleaning Entry</span>
+        </div>
+      </div>
+      <div class="tree-parent" id="historyTreeParent" onclick="toggleTree('historyTree',this)">
+        <span class="tree-toggle">+</span>
+        <span class="tree-icon"><i class="fas fa-folder" style="color:#c0a000;font-size:12px" id="historyFolderIcon"></i></span>
+        <span>History</span>
+      </div>
+      <div class="tree-children" id="historyTree">
+        <div class="tree-child" id="treeLunchHist" onclick="showPage('lunchHistory',this)">
+          <span class="tree-icon"><i class="fas fa-file-lines" style="color:#000080;font-size:11px"></i></span>
+          <span>Lunch Bill History</span>
+        </div>
+        <div class="tree-child" id="treeCleanHist" onclick="showPage('cleanHistory',this)">
+          <span class="tree-icon"><i class="fas fa-file-lines" style="color:#c06000;font-size:11px"></i></span>
+          <span>Cleaning Bill History</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="w98-content">
 
 <!-- DASHBOARD -->
-<div id="dashboard">
-  <div class="page-header"><div><h1>Dashboard</h1><p class="subtitle">Overview of lunch bill records</p></div></div>
-  <div class="stats-grid">
-    <div class="stat-card"><div class="stat-icon" style="background:#f0fdf4;color:#16a34a"><i class="fas fa-file-invoice"></i></div><div class="value" id="statTotal">0</div><div class="label">Total Bills</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-bangladeshi-taka-sign"></i></div><div class="value" id="statAmount">0</div><div class="label">Total Amount (Tk)</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-calendar-check"></i></div><div class="value" id="statMonth">0</div><div class="label">This Month Bills</div></div>
-    <div class="stat-card"><div class="stat-icon" style="background:#fce7f3;color:#db2777"><i class="fas fa-users"></i></div><div class="value" id="statEmployees">0</div><div class="label">Active Employees</div></div>
+<div class="page active" id="dashboard">
+  <div class="w98-section"><i class="fas fa-utensils"></i> LUNCH BILL SUMMARY</div>
+  <div class="w98-stats">
+    <div class="w98-stat"><div class="val" id="sLunchTotal">0</div><div class="lbl">Total Lunch Bills</div></div>
+    <div class="w98-stat"><div class="val" id="sLunchAmt">0</div><div class="lbl">Total Amount (Tk)</div></div>
+    <div class="w98-stat"><div class="val" id="sLunchMonth">0</div><div class="lbl">This Month</div></div>
   </div>
-  <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:4px">
-    <table class="data-table"><thead><tr><th>Name</th><th>Month</th><th>Working Days</th><th>Rate</th><th>Amount</th><th>Date</th></tr></thead><tbody id="recentBills"></tbody></table>
-    <div id="noBillsMsg" style="padding:48px 20px;text-align:center;color:var(--muted);font-size:14px"><i class="fas fa-inbox" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3"></i>No bills recorded yet.</div>
+  <div class="w98-section"><i class="fas fa-broom"></i> OFFICE CLEANING BILL SUMMARY</div>
+  <div class="w98-stats">
+    <div class="w98-stat"><div class="val" id="sCleanTotal">0</div><div class="lbl">Total Cleaning Bills</div></div>
+    <div class="w98-stat"><div class="val" id="sCleanAmt">0</div><div class="lbl">Total Amount (Tk)</div></div>
+    <div class="w98-stat"><div class="val" id="sCleanMonth">0</div><div class="lbl">This Month</div></div>
   </div>
-</div>
-
-<!-- ENTRY -->
-<div id="entry" style="display:none">
-  <div class="page-header"><div><h1>Lunch Entry</h1><p class="subtitle">Create a new lunch bill with auto holiday detection</p></div></div>
-  <table class="form-table">
-    <tr>
-      <td>Name</td>
-      <td><select id="empName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td>
-      <td>Bill Month</td>
-      <td><input type="month" id="billMonth" onchange="calcMonth()"></td>
-    </tr>
-    <tr>
-      <td>Department</td>
-      <td>Distribution</td>
-      <td>Bill Date</td>
-      <td><input type="date" id="billDate"></td>
-    </tr>
-  </table>
-  <div style="height:20px"></div>
-  <div style="overflow-x:auto">
-  <table class="form-table">
-    <tr>
-      <th>Bill Month</th><th>Total Days</th><th>Friday</th>
-      <th>Govt Holiday</th><th>Others Holiday</th><th>Leave</th>
-      <th>Total Working Days</th><th>Per Day Allowance</th><th>Amount(Tk)</th><th>Remarks</th>
-    </tr>
-    <tr>
-      <td id="showMonth" style="text-align:center;font-weight:600;background:#fff"></td>
-      <td><input id="totalDays" readonly></td>
-      <td><input id="friday" readonly></td>
-      <td><input id="govtHoliday" value="0" onchange="calcWork()"></td>
-      <td><input id="othersHoliday" value="0" onchange="calcWork()" type="number" min="0"></td>
-      <td><input id="leave" value="0" onchange="calcWork()" type="number" min="0"></td>
-      <td><input id="working" readonly style="font-weight:700;color:var(--accent)"></td>
-      <td><input id="rate" value="60" onchange="calcWork()" type="number" min="0"></td>
-      <td><input id="amount" readonly style="font-weight:700;color:var(--accent)"></td>
-      <td><input id="remarks" placeholder="Optional"></td>
-    </tr>
-  </table>
-  </div>
-  <div style="margin-top:12px;padding:12px 16px;background:linear-gradient(135deg,#f0fdfa,#ecfdf5);border:1px solid #a7f3d0;border-radius:10px;font-size:13px;color:#065f46" class="no-print">
-    <i class="fas fa-calculator" style="margin-right:6px"></i>
-    <b>Formula:</b> Total Working Days = Total Days <span style="color:#dc2626;font-weight:700">−</span> Friday <span style="color:#dc2626;font-weight:700">−</span> Govt Holiday <span style="color:#dc2626;font-weight:700">−</span> Others Holiday <span style="color:#dc2626;font-weight:700">−</span> Leave
-    &nbsp;&nbsp;|&nbsp;&nbsp;<b>Amount</b> = Total Working Days × Per Day Allowance
-  </div>
-  <div id="holidayBanner" class="holiday-banner no-print" style="display:none">
-    <div class="title"><i class="fas fa-calendar-day"></i> Government Holidays Detected</div>
-    <div id="holidayChips"></div>
-  </div>
-  <div style="margin-top:8px" class="no-print">
-    <div style="font-size:12px;color:#64748b;display:flex;gap:20px;flex-wrap:wrap">
-      <span><i class="fas fa-info-circle" style="color:#0d9488"></i> <b>Govt Holiday</b> = Auto from BD Govt API (excl. Fridays)</span>
-      <span><i class="fas fa-info-circle" style="color:#d97706"></i> <b>Others Holiday</b> = Eid Fitr, Eid Azha etc. (manual)</span>
-    </div>
-  </div>
-  <div style="height:24px" class="no-print"></div>
-  <div class="no-print" style="display:flex;gap:12px">
-    <button class="btn btn-primary" onclick="saveBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
-    <button class="btn btn-ghost" onclick="resetEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
+  <div class="w98-section"><i class="fas fa-list"></i> RECENT BILLS</div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table"><thead><tr><th>Type</th><th>Name</th><th>Month</th><th>Details</th><th>Amount (Tk)</th><th>Date</th></tr></thead><tbody id="recentBills"></tbody></table>
+    <div id="noBillsMsg" style="padding:24px;text-align:center;color:#808080;font-size:11px"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px"></i>No bills recorded yet.</div>
   </div>
 </div>
 
-<!-- HISTORY -->
-<div id="history" style="display:none">
-  <div class="page-header">
-    <div><h1>Bill History</h1><p class="subtitle">All saved lunch bill records</p></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap" class="no-print">
-      <input type="text" id="searchInput" placeholder="Search by name..." style="padding:9px 16px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;width:200px;outline:none" oninput="loadHistory()">
-      <select id="filterMonth" onchange="loadHistory()" style="padding:9px 16px;border:1px solid var(--border);border-radius:10px;font-size:13px;font-family:inherit;outline:none"><option value="">All Months</option></select>
-      <button class="btn btn-danger btn-sm" onclick="confirmClearAll()"><i class="fas fa-trash"></i> Clear All</button>
-    </div>
-  </div>
-  <div style="background:var(--card);border-radius:14px;border:1px solid var(--border);padding:4px;overflow-x:auto">
-    <table class="data-table" style="min-width:800px">
-      <thead><tr><th>#</th><th>Name</th><th>Month</th><th>Working Days</th><th>Rate</th><th>Amount (Tk)</th><th>Date</th><th style="text-align:center">Actions</th></tr></thead>
-      <tbody id="historyBody"></tbody>
+<!-- LUNCH ENTRY -->
+<div class="page" id="lunchEntry">
+  <div class="w98-section"><i class="fas fa-utensils"></i> Lunch Entry</div>
+  <fieldset class="w98-groupbox"><legend>Employee Info</legend>
+    <table class="w98-formtable">
+      <tr><td class="label-cell">Name</td><td><select class="w98-select" id="empName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Bill Month</td><td><input type="month" class="w98-field" id="billMonth" onchange="calcMonth()"></td></tr>
+      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="billDate"></td></tr>
     </table>
-    <div id="noHistoryMsg" style="padding:48px 20px;text-align:center;color:var(--muted);font-size:14px;display:none"><i class="fas fa-folder-open" style="font-size:32px;display:block;margin-bottom:12px;opacity:.3"></i>No bills found.</div>
+  </fieldset>
+  <fieldset class="w98-groupbox"><legend>Bill Calculation</legend>
+    <div style="overflow-x:auto">
+    <table class="w98-formtable">
+      <tr><th>Bill Month</th><th>Total Days</th><th>Friday</th><th>Govt Holiday</th><th>Others</th><th>Leave</th><th>Working Days</th><th>Rate/Day</th><th>Amount(Tk)</th><th>Remarks</th></tr>
+      <tr>
+        <td id="showMonth" style="text-align:center;font-weight:bold;background:#fff"></td>
+        <td><input class="w98-field" id="totalDays" readonly></td>
+        <td><input class="w98-field" id="friday" readonly></td>
+        <td><input class="w98-field" id="govtHoliday" value="0" onchange="calcWork()"></td>
+        <td><input class="w98-field" id="othersHoliday" value="0" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="leave" value="0" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="working" readonly style="font-weight:bold;color:#000080"></td>
+        <td><input class="w98-field" id="rate" value="60" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="amount" readonly style="font-weight:bold;color:#000080"></td>
+        <td><input class="w98-field" id="remarks" placeholder="Optional"></td>
+      </tr>
+    </table>
+    </div>
+  </fieldset>
+  <div class="w98-info no-print"><b>Formula:</b> Working Days = Total − Friday − Govt Holiday − Others − Leave &nbsp;|&nbsp; Amount = Working Days × Rate</div>
+  <div id="holidayBanner" class="w98-info no-print" style="display:none"><b><i class="fas fa-calendar-day"></i> Holidays:</b> <span id="holidayChips"></span></div>
+  <div style="margin-top:8px" class="no-print">
+    <button class="w98-btn w98-btn-primary" onclick="saveLunchBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
+    <button class="w98-btn" onclick="resetLunchEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
   </div>
 </div>
 
-<!-- ========== PRINT PAGE — AUTO FIT ========== -->
-<div id="printPage" style="display:none">
-
-<div class="print-container" id="print_area">
-
-<table>
-<tr>
-    <td colspan="10" class="center header">Lunch Bill</td>
-</tr>
-<tr>
-    <td colspan="10" class="center sub-header">Kushtia Depot</td>
-</tr>
-<tr>
-    <td colspan="10" class="center">
-        0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000
-    </td>
-</tr>
-<tr>
-    <td class="bold">Name</td>
-    <td colspan="4" id="pName">Md Sajjad Ahmed</td>
-    <td class="bold">Bill Month</td>
-    <td colspan="4" id="pMonth">March-26</td>
-</tr>
-<tr>
-    <td class="bold">Department</td>
-    <td colspan="4">Distrubution</td>
-    <td class="bold">Bill Date</td>
-    <td colspan="4" id="pDate">7-Mar-2026</td>
-</tr>
-<tr class="center bold">
-    <td>Bill Month</td>
-    <td>Total Days</td>
-    <td>Friday</td>
-    <td>Govt Holyday</td>
-    <td>Others Holyday</td>
-    <td>Leave</td>
-    <td>Total Working Days</td>
-    <td>Per Day Allounch</td>
-    <td>Amount(Tk)</td>
-    <td>Remarks</td>
-</tr>
-<tr class="center">
-    <td id="pm">March-26</td>
-    <td id="ptd">31</td>
-    <td id="pf">0</td>
-    <td id="pgh">0</td>
-    <td id="poh">0</td>
-    <td id="pl"></td>
-    <td id="pw">31</td>
-    <td id="pr">60</td>
-    <td id="pa">1860.00</td>
-    <td id="prem"></td>
-</tr>
-<tr><td colspan="10" style="height:80px;"></td></tr>
-<tr><td colspan="10" style="height:20px;"></td></tr>
-<tr>
-    <td class="bold">In Words:</td>
-    <td colspan="7" id="words">Taka One Thousand Eight Hundred Sixty Only</td>
-    <td class="right bold">Total =</td>
-    <td class="center bold" id="pta">1860.00</td>
-</tr>
-<tr><td colspan="10" style="height:120px;"></td></tr>
-<tr class="signature">
-    <td colspan="3">Prepared By</td>
-    <td colspan="4">Chacked By RSM</td>
-    <td colspan="3">Approved By</td>
-</tr>
-</table>
-
+<!-- CLEANING ENTRY -->
+<div class="page" id="cleanEntry">
+  <div class="w98-section"><i class="fas fa-broom"></i> Office Cleaning Entry</div>
+  <fieldset class="w98-groupbox"><legend>Bill Info</legend>
+    <table class="w98-formtable">
+      <tr><td class="label-cell">Name</td><td><select class="w98-select" id="cleanName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Designation</td><td><select class="w98-select" id="cleanDesig"><option value="Depot In-charge">Depot In-charge</option><option value="SR">SR</option><option value="DSR">DSR</option></select></td></tr>
+      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="cleanDate"></td></tr>
+      <tr><td class="label-cell">Bill No</td><td><input class="w98-field" id="cleanBillNo" readonly style="color:#000080;font-weight:bold;font-size:10px"></td><td class="label-cell">Month</td><td><select class="w98-select" id="cleanMonth" onchange="updateCleanBillNo()"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></td></tr>
+    </table>
+  </fieldset>
+  <fieldset class="w98-groupbox"><legend>Amount</legend>
+    <table class="w98-formtable">
+      <tr><th>Particular</th><th style="text-align:right">Amount (Tk)</th><th>Remarks</th></tr>
+      <tr><td>Office Cleaning Bill</td><td><input class="w98-field" type="number" id="cleanAmount" value="1000" min="0" onchange="updateCleanWords()" style="text-align:right;font-weight:bold;color:#000080"></td><td><input class="w98-field" id="cleanRemarks" placeholder="Optional"></td></tr>
+    </table>
+  </fieldset>
+  <div class="w98-info"><b>In Words:</b> <span id="cleanWords" style="font-weight:bold">Taka One Thousand Only</span></div>
+  <div style="margin-top:8px" class="no-print">
+    <button class="w98-btn w98-btn-primary" style="color:#800000" onclick="saveCleanBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
+    <button class="w98-btn" onclick="resetCleanEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
+  </div>
 </div>
 
-<div style="text-align:center;margin-top:20px" class="no-print">
-  <button class="btn btn-ghost" onclick="showPage('history',document.querySelectorAll('.sidebar-nav button')[2])"><i class="fas fa-arrow-left"></i> Back to History</button>
-</div>
+<!-- LUNCH HISTORY -->
+<div class="page" id="lunchHistory">
+  <div class="w98-section"><i class="fas fa-utensils"></i> Lunch Bill History</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" class="no-print">
+    <input class="w98-field" type="text" id="lunchSearch" placeholder="Search name..." style="width:160px" oninput="loadLunchHistory()">
+    <select class="w98-select" id="lunchFilter" onchange="loadLunchHistory()" style="width:140px"><option value="">All Months</option></select>
+    <button class="w98-btn w98-btn-danger" onclick="confirmClear('lunch')"><i class="fas fa-trash"></i> Clear All</button>
+  </div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table" style="min-width:750px"><thead><tr><th>#</th><th>Name</th><th>Month</th><th>Working</th><th>Rate</th><th>Amount (Tk)</th><th>Date</th><th>Actions</th></tr></thead><tbody id="lunchHistBody"></tbody></table>
+    <div id="noLunchHist" style="padding:24px;text-align:center;color:#808080;font-size:11px;display:none"><i class="fas fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px"></i>No lunch bills found.</div>
+  </div>
 </div>
 
-</main>
+<!-- CLEANING HISTORY -->
+<div class="page" id="cleanHistory">
+  <div class="w98-section"><i class="fas fa-broom"></i> Cleaning Bill History</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" class="no-print">
+    <input class="w98-field" type="text" id="cleanSearch" placeholder="Search name..." style="width:160px" oninput="loadCleanHistory()">
+    <select class="w98-select" id="cleanFilter" onchange="loadCleanHistory()" style="width:140px"><option value="">All Months</option></select>
+    <button class="w98-btn w98-btn-danger" onclick="confirmClear('clean')"><i class="fas fa-trash"></i> Clear All</button>
+  </div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table" style="min-width:820px"><thead><tr><th>#</th><th>Bill No</th><th>Name</th><th>Designation</th><th>Month</th><th>Amount (Tk)</th><th>Date</th><th>Actions</th></tr></thead><tbody id="cleanHistBody"></tbody></table>
+    <div id="noCleanHist" style="padding:24px;text-align:center;color:#808080;font-size:11px;display:none"><i class="fas fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px"></i>No cleaning bills found.</div>
+  </div>
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
-<div class="modal-overlay" id="confirmModal">
-  <div class="modal-box">
-    <h3 id="modalTitle">Confirm Action</h3>
-    <p id="modalMsg">Are you sure?</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-danger btn-sm" id="modalConfirmBtn">Confirm</button>
+<!-- PRINT — LUNCH -->
+<div class="page" id="printLunch">
+  <div class="print-lunch">
+    <table>
+      <tr><td colspan="10" class="center header">Lunch Bill</td></tr>
+      <tr><td colspan="10" class="center sub-header">Kushtia Depot</td></tr>
+      <tr><td colspan="10" class="center">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</td></tr>
+      <tr><td class="bold">Name</td><td colspan="4" id="pName"></td><td class="bold">Bill Month</td><td colspan="4" id="pMonth"></td></tr>
+      <tr><td class="bold">Department</td><td colspan="4">Distribution</td><td class="bold">Bill Date</td><td colspan="4" id="pDate"></td></tr>
+      <tr class="center bold"><td>Bill Month</td><td>Total Days</td><td>Friday</td><td>Govt Holyday</td><td>Others Holyday</td><td>Leave</td><td>Total Working Days</td><td>Per Day Allounch</td><td>Amount(Tk)</td><td>Remarks</td></tr>
+      <tr class="center"><td id="pm"></td><td id="ptd"></td><td id="pf"></td><td id="pgh"></td><td id="poh"></td><td id="pl"></td><td id="pw"></td><td id="pr"></td><td id="pa"></td><td id="prem"></td></tr>
+      <tr><td colspan="10" style="height:80px"></td></tr><tr><td colspan="10" style="height:20px"></td></tr>
+      <tr><td class="bold">In Words:</td><td colspan="7" id="pWords"></td><td class="right bold">Total =</td><td class="center bold" id="pta"></td></tr>
+      <tr><td colspan="10" style="height:120px"></td></tr>
+      <tr class="sig"><td colspan="3">Prepared By</td><td colspan="4">Chacked By RSM</td><td colspan="3">Approved By</td></tr>
+    </table>
+  </div>
+  <div style="margin-top:12px;text-align:center" class="no-print"><button class="w98-btn" onclick="showPage('lunchHistory',document.getElementById('treeLunchHist'))"><i class="fas fa-arrow-left"></i> Back</button></div>
+</div>
+
+<!-- PRINT — CLEANING -->
+<div class="page" id="printClean">
+  <div class="print-clean">
+    <h1>Monico Pharma Ltd</h1><h2>Office Cleaning Bill</h2>
+    <table>
+      <tr><td class="lb"><b>Name</b></td><td class="vl" id="pcName"></td><td class="rl">Bill No</td><td class="rv" id="pcBillNo"></td></tr>
+      <tr><td class="lb"><b>Designation</b></td><td class="vl" id="pcDesig"></td><td class="rl">Bill Date</td><td class="rv" id="pcDate"></td></tr>
+      <tr><td class="lb"><b>Department</b></td><td class="vl">Distribution</td><td class="rl">Month</td><td class="rv" id="pcMonth"></td></tr>
+    </table><br>
+    <table>
+      <tr><th>Particular</th><th class="am">Amount (Tk)</th><th>Remarks</th></tr>
+      <tr><td>Office Cleaning Bill</td><td class="am" id="pcAmt"></td><td id="pcRem"></td></tr>
+      <tr><td class="am"><b>Total =</b></td><td class="am"><b id="pcTotal"></b></td><td></td></tr>
+    </table><br>
+    <p><b>In Words:</b> <span id="pcWords"></span></p>
+    <div class="sig-row"><div>___________________<br>Prepared By</div><div>___________________<br>Checked By RSM</div><div>___________________<br>Approved By</div></div>
+  </div>
+  <div style="margin-top:12px;text-align:center" class="no-print"><button class="w98-btn" onclick="showPage('cleanHistory',document.getElementById('treeCleanHist'))"><i class="fas fa-arrow-left"></i> Back</button></div>
+</div>
+
+    </div>
+  </div>
+
+  <div class="w98-statusbar">
+    <div class="w98-status-section" style="min-width:160px">
+      <span class="sync-dot checking" id="syncDot"></span>
+      <span id="syncText">Checking connection...</span>
+    </div>
+    <div class="w98-status-section" style="flex:1"><span id="statusMsg">Ready</span></div>
+  </div>
+</div>
+
+<div class="w98-taskbar">
+  <button class="w98-start"><i class="fab fa-windows" style="font-size:16px;color:#008080"></i><b>Start</b></button>
+  <div class="w98-task-sep"></div>
+  <div class="w98-task-item active"><i class="fas fa-capsules" style="color:#000080;font-size:11px"></i> Monico Pharma</div>
+  <div class="w98-tray"><span id="trayClock"></span></div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<div class="w98-modal-bg" id="confirmModal">
+  <div class="w98-dialog">
+    <div class="w98-dialog-title"><span id="modalTitle">Confirm</span></div>
+    <div class="w98-dialog-body"><span id="modalMsg">Are you sure?</span></div>
+    <div class="w98-dialog-btns">
+      <button class="w98-btn" onclick="closeModal()">Cancel</button>
+      <button class="w98-btn w98-btn-danger" id="modalConfirmBtn">OK</button>
     </div>
   </div>
 </div>
 
 <script>
-/* ===== FIREBASE ===== */
-const firebaseConfig={apiKey:"AIzaSyDeC8Bd3DH0wqC-Rfx-yAmyk2zeu5hgec4",authDomain:"whatapp-8d8ed.firebaseapp.com",databaseURL:"https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",projectId:"whatapp-8d8ed",storageBucket:"whatapp-8d8ed.firebasestorage.app",messagingSenderId:"618833956157",appId:"1:618833956157:web:ca46eb47b16b86bda7c954",measurementId:"G-27Q86VRGMZ"};
-let firebaseDB=null,isOnline=false;
-try{firebase.initializeApp(firebaseConfig);firebaseDB=firebase.database();firebaseDB.ref('.info/connected').on('value',s=>{isOnline=s.val()===true;updateSyncUI();if(isOnline)syncFromCloud()})}catch(e){isOnline=false;updateSyncUI()}
-function updateSyncUI(){const d=document.getElementById('syncDot'),t=document.getElementById('syncText');if(isOnline){d.className='sync-dot online';t.textContent='Cloud synced'}else{d.className='sync-dot offline';t.textContent='Offline mode'}}
-function syncFromCloud(){if(!firebaseDB)return;firebaseDB.ref('lunchBills').once('value',s=>{const c=s.val();if(!c)return;const ca=Object.values(c),la=getLocalBills(),ci=new Set(ca.map(b=>b.id)),m=[...ca];la.forEach(b=>{if(!ci.has(b.id))m.push(b)});m.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));localStorage.setItem('lunchBills',JSON.stringify(m));refreshAllViews()})}
-function pushToCloud(b){if(!firebaseDB||!isOnline)return;firebaseDB.ref('lunchBills/'+b.id).set(b).catch(()=>{})}
-function deleteFromCloud(id){if(!firebaseDB||!isOnline)return;firebaseDB.ref('lunchBills/'+id).remove().catch(()=>{})}
+function updateClock(){var d=new Date(),h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12;if(!h)h=12;document.getElementById('trayClock').textContent=h+':'+String(m).padStart(2,'0')+' '+ap}
+setInterval(updateClock,1000);updateClock();
 
-/* ===== LOCAL STORAGE ===== */
-function getLocalBills(){try{return JSON.parse(localStorage.getItem('lunchBills')||'[]')}catch{return[]}}
-function setLocalBills(a){localStorage.setItem('lunchBills',JSON.stringify(a))}
+var firebaseConfig={apiKey:"AIzaSyDeC8Bd3DH0wqC-Rfx-yAmyk2zeu5hgec4",authDomain:"whatapp-8d8ed.firebaseapp.com",databaseURL:"https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",projectId:"whatapp-8d8ed",storageBucket:"whatapp-8d8ed.firebasestorage.app",messagingSenderId:"618833956157",appId:"1:618833956157:web:ca46eb47b16b86bda7c954"};
+var firebaseDB=null,isOnline=false;
+var syncTimeout=setTimeout(function(){if(!isOnline){setSyncUI(false,'Offline (timeout)');refreshAllViews()}},5000);
+function setSyncUI(on,txt){var d=document.getElementById('syncDot'),t=document.getElementById('syncText');d.className='sync-dot '+(on?'online':'offline');t.textContent=txt;document.getElementById('statusMsg').textContent=txt}
+try{firebase.initializeApp(firebaseConfig);firebaseDB=firebase.database();firebaseDB.ref('.info/connected').on('value',function(s){clearTimeout(syncTimeout);isOnline=s.val()===true;setSyncUI(isOnline,isOnline?'Cloud synced':'Offline mode');if(isOnline)syncFromCloud()})}catch(e){clearTimeout(syncTimeout);isOnline=false;setSyncUI(false,'Offline mode');refreshAllViews()}
+function syncFromCloud(){if(!firebaseDB)return;['lunchBills','cleanBills'].forEach(function(p){firebaseDB.ref(p).once('value',function(s){var c=s.val();if(!c)return;var ca=Object.values(c),la=getLocal(p),ci=new Set(ca.map(function(b){return b.id})),m=ca.slice();la.forEach(function(b){if(!ci.has(b.id))m.push(b)});m.sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0)});localStorage.setItem(p,JSON.stringify(m));refreshAllViews()}).catch(function(){})})}
+function pushCloud(p,b){if(!firebaseDB||!isOnline)return;firebaseDB.ref(p+'/'+b.id).set(b).catch(function(){})}
+function delCloud(p,id){if(!firebaseDB||!isOnline)return;firebaseDB.ref(p+'/'+id).remove().catch(function(){})}
+function getLocal(p){try{return JSON.parse(localStorage.getItem(p)||'[]')}catch(e){return[]}}
+function setLocal(p,a){localStorage.setItem(p,JSON.stringify(a))}
 
-/* ===== BANGLADESH HOLIDAY API ===== */
-const HOLIDAY_API='https://date.nager.at/api/v3/PublicHolidays';
-const holidayCache={};
-async function fetchHolidays(year){
-  if(holidayCache[year])return holidayCache[year];
-  const c=localStorage.getItem('bdHolidays_'+year);
-  if(c){holidayCache[year]=JSON.parse(c);return holidayCache[year]}
-  try{const r=await fetch(HOLIDAY_API+'/'+year+'/BD');if(!r.ok)throw 0;const d=await r.json();holidayCache[year]=d;localStorage.setItem('bdHolidays_'+year,JSON.stringify(d));return d}
-  catch{const f=getFallbackHolidays(year);holidayCache[year]=f;return f}
-}
-function getFallbackHolidays(year){
-  const fixed=[{m:2,d:21,n:"International Mother Language Day"},{m:3,d:26,n:"Independence Day"},{m:4,d:14,n:"Bengali New Year"},{m:5,d:1,n:"May Day"},{m:12,d:16,n:"Victory Day"}];
-  const v={2024:[{m:3,d:11,n:"Eid-e-Miladunnabi"},{m:4,d:10,n:"Shab-e-Qadr"},{m:4,d:11,n:"Eid ul-Fitr"},{m:4,d:12,n:"Eid ul-Fitr (Day 2)"},{m:4,d:13,n:"Eid ul-Fitr (Day 3)"},{m:5,d:23,n:"Buddha Purnima"},{m:6,d:17,n:"Eid ul-Adha"},{m:6,d:18,n:"Eid ul-Adha (Day 2)"},{m:6,d:19,n:"Eid ul-Adha (Day 3)"},{m:7,d:8,n:"Shab-e-Barat"},{m:7,d:17,n:"Hijri New Year"},{m:10,d:12,n:"Ashura"},{m:10,d:15,n:"Durga Puja"},{m:11,d:7,n:"National Revolution Day"}],2025:[{m:2,d:28,n:"Shab-e-Meraj"},{m:3,d:1,n:"Eid-e-Miladunnabi"},{m:3,d:30,n:"Shab-e-Qadr"},{m:3,d:31,n:"Eid ul-Fitr"},{m:4,d:1,n:"Eid ul-Fitr (Day 2)"},{m:4,d:2,n:"Eid ul-Fitr (Day 3)"},{m:5,d:12,n:"Buddha Purnima"},{m:6,d:7,n:"Eid ul-Adha"},{m:6,d:8,n:"Eid ul-Adha (Day 2)"},{m:6,d:9,n:"Eid ul-Adha (Day 3)"},{m:6,d:27,n:"Hijri New Year"},{m:6,d:28,n:"Shab-e-Barat"},{m:7,d:6,n:"Ashura"},{m:10,d:3,n:"Durga Puja"},{m:11,d:7,n:"National Revolution Day"}]};
-  return[...fixed,...(v[year]||[])].map(h=>({date:year+'-'+String(h.m).padStart(2,'0')+'-'+String(h.d).padStart(2,'0'),name:h.n,localName:h.n}))
-}
+function toggleTree(id,el){var tree=document.getElementById(id),tog=el.querySelector('.tree-toggle'),ico=el.querySelector('.tree-icon i');if(tree.classList.contains('open')){tree.classList.remove('open');tog.textContent='+';ico.className='fas fa-folder';ico.style.color='#c0a000'}else{tree.classList.add('open');tog.textContent='−';ico.className='fas fa-folder-open';ico.style.color='#c0a000'}}
+function clearTreeActive(){document.querySelectorAll('.tree-item,.tree-child').forEach(function(e){e.classList.remove('active')})}
 
-/* ===== MONTH CALCULATION ===== */
+var currentCleanBillNo='';
+function genBillNo(mn){var y=new Date().getFullYear(),mi=mnameToNum(mn),pre='KSOCB'+y+String(mi).padStart(2,'0');var ex=getLocal('cleanBills'),ss=new Set();ex.forEach(function(b){if(b.billNo){b.billNo.slice(pre.length).split('+').forEach(function(s){var n=parseInt(s,10);if(!isNaN(n))ss.add(n)})}});var nx=1;while(ss.has(nx))nx++;var all=[...ss].sort(function(a,b){return a-b});all.push(nx);return{display:pre+all.map(function(s){return String(s).padStart(2,'0')}).join('+'),individual:pre+String(nx).padStart(2,'0')}}
+function mnameToNum(n){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];return m.indexOf(n)>=0?m.indexOf(n)+1:1}
+function updateCleanBillNo(){var r=genBillNo(document.getElementById('cleanMonth').value);document.getElementById('cleanBillNo').value=r.display;currentCleanBillNo=r.individual}
+
+var hCache={};
+async function fetchHol(yr){if(hCache[yr])return hCache[yr];var c=localStorage.getItem('bdH_'+yr);if(c){hCache[yr]=JSON.parse(c);return hCache[yr]}try{var r=await fetch('https://date.nager.at/api/v3/PublicHolidays/'+yr+'/BD');if(!r.ok)throw 0;var d=await r.json();hCache[yr]=d;localStorage.setItem('bdH_'+yr,JSON.stringify(d));return d}catch(e){var f=fbHol(yr);hCache[yr]=f;return f}}
+function fbHol(yr){var fx=[{m:2,d:21,n:"Mother Language Day"},{m:3,d:26,n:"Independence Day"},{m:4,d:14,n:"Bengali New Year"},{m:5,d:1,n:"May Day"},{m:12,d:16,n:"Victory Day"}];var v={2025:[{m:2,d:28,n:"Shab-e-Meraj"},{m:3,d:1,n:"Eid-e-Miladunnabi"},{m:3,d:30,n:"Shab-e-Qadr"},{m:3,d:31,n:"Eid ul-Fitr"},{m:4,d:1,n:"Eid ul-Fitr (Day 2)"},{m:4,d:2,n:"Eid ul-Fitr (Day 3)"},{m:5,d:12,n:"Buddha Purnima"},{m:6,d:7,n:"Eid ul-Adha"},{m:6,d:8,n:"Eid ul-Adha (Day 2)"},{m:6,d:9,n:"Eid ul-Adha (Day 3)"},{m:6,d:27,n:"Hijri New Year"},{m:6,d:28,n:"Shab-e-Barat"},{m:7,d:6,n:"Ashura"},{m:10,d:3,n:"Durga Puja"},{m:11,d:7,n:"Revolution Day"}]};return[...fx,...(v[yr]||[])].map(function(h){return{date:yr+'-'+String(h.m).padStart(2,'0')+'-'+String(h.d).padStart(2,'0'),name:h.n}})}
+
 async function calcMonth(){
-  const m=document.getElementById('billMonth').value;
-  if(!m)return;
-  const[y,mo]=m.split('-'),year=+y,month=+mo;
-  const total=new Date(year,month,0).getDate();
-  let fr=0;
-  for(let d=1;d<=total;d++){if(new Date(year,month-1,d).getDay()===5)fr++}
-  document.getElementById('totalDays').value=total;
-  document.getElementById('friday').value=fr;
-  document.getElementById('showMonth').textContent=formatMonth(year,month);
-  const holidays=await fetchHolidays(year);
-  const mh=holidays.filter(h=>{const hd=new Date(h.date);return hd.getFullYear()===year&&hd.getMonth()===month-1});
-  const nonFri=mh.filter(h=>new Date(h.date).getDay()!==5);
-  document.getElementById('govtHoliday').value=nonFri.length;
-  const banner=document.getElementById('holidayBanner'),chips=document.getElementById('holidayChips');
-  if(mh.length>0){banner.style.display='block';chips.innerHTML=mh.map(h=>{const dn=new Date(h.date).toLocaleString('en-US',{weekday:'short'});const onF=new Date(h.date).getDay()===5;return`<span class="holiday-chip" style="${onF?'opacity:.5;text-decoration:line-through':''}"><span class="date">${h.date.slice(5)}</span> ${h.name||h.localName}<span style="font-size:10px;color:#94a3b8">(${dn})</span>${onF?'<span style="font-size:10px;color:#dc2626">=Fri</span>':''}</span>`}).join('')}else{banner.style.display='none'}
+  var mv=document.getElementById('billMonth').value;if(!mv)return;
+  var p=mv.split('-'),yr=+p[0],mo=+p[1],tot=new Date(yr,mo,0).getDate(),fr=0;
+  for(var d=1;d<=tot;d++){if(new Date(yr,mo-1,d).getDay()===5)fr++}
+  document.getElementById('totalDays').value=tot;document.getElementById('friday').value=fr;
+  document.getElementById('showMonth').textContent=fmtMonth(yr,mo);
+  var hols=await fetchHol(yr);
+  var mh=hols.filter(function(h){var hd=new Date(h.date);return hd.getFullYear()===yr&&hd.getMonth()===mo-1});
+  var nf=mh.filter(function(h){return new Date(h.date).getDay()!==5});
+  document.getElementById('govtHoliday').value=nf.length;
+  var ban=document.getElementById('holidayBanner'),chips=document.getElementById('holidayChips');
+  if(mh.length>0){ban.style.display='block';chips.innerHTML=mh.map(function(h){var dn=new Date(h.date).toLocaleString('en-US',{weekday:'short'});var of=new Date(h.date).getDay()===5;return'<span style="margin-right:8px;font-size:10px;color:'+(of?'#808080':'#000')+'">'+(of?'<s>':'')+h.date.slice(5)+' '+h.name+' ('+dn+')'+(of?'</s>':'')+'</span>'}).join('')}else{ban.style.display='none'}
   calcWork();
 }
-function formatMonth(y,m){const ms=['January','February','March','April','May','June','July','August','September','October','November','December'];return ms[m-1]+'-'+String(y).slice(-2)}
-
-/* ===== CORE CALCULATION ===== */
+function fmtMonth(y,m){var ms=['January','February','March','April','May','June','July','August','September','October','November','December'];return ms[m-1]+'-'+String(y).slice(-2)}
 function calcWork(){
-  const t=parseInt(document.getElementById('totalDays').value)||0;
-  const f=parseInt(document.getElementById('friday').value)||0;
-  const g=parseInt(document.getElementById('govtHoliday').value)||0;
-  const o=parseInt(document.getElementById('othersHoliday').value)||0;
-  const l=parseInt(document.getElementById('leave').value)||0;
-  const r=parseFloat(document.getElementById('rate').value)||0;
-  let w=t-f-g-o-l;if(w<0)w=0;
-  document.getElementById('working').value=w;
-  document.getElementById('amount').value=(w*r).toFixed(2);
+  var t=parseInt(document.getElementById('totalDays').value)||0,f=parseInt(document.getElementById('friday').value)||0,
+  g=parseInt(document.getElementById('govtHoliday').value)||0,o=parseInt(document.getElementById('othersHoliday').value)||0,
+  l=parseInt(document.getElementById('leave').value)||0,r=parseFloat(document.getElementById('rate').value)||0;
+  var w=t-f-g-o-l;if(w<0)w=0;document.getElementById('working').value=w;document.getElementById('amount').value=(w*r).toFixed(2);
+}
+function updateCleanWords(){document.getElementById('cleanWords').textContent=numWords(parseFloat(document.getElementById('cleanAmount').value)||0)}
+function fmtDate(ds){if(!ds)return'-';var d=new Date(ds),ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return d.getDate()+'-'+ms[d.getMonth()]+'-'+d.getFullYear()}
+
+function saveLunchBill(){
+  var nm=document.getElementById('empName').value,mo=document.getElementById('showMonth').textContent,dt=document.getElementById('billDate').value;
+  if(!dt){toast('Select bill date','err');return}if(!mo){toast('Select bill month','err');return}
+  var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'lunch',name:nm,month:mo,date:dt,
+    total:document.getElementById('totalDays').value,friday:document.getElementById('friday').value,
+    govtHoliday:document.getElementById('govtHoliday').value,othersHoliday:document.getElementById('othersHoliday').value,
+    leave:document.getElementById('leave').value,working:document.getElementById('working').value,
+    rate:document.getElementById('rate').value,amount:document.getElementById('amount').value,
+    remarks:document.getElementById('remarks').value,timestamp:Date.now()};
+  var bl=getLocal('lunchBills');bl.unshift(b);setLocal('lunchBills',bl);pushCloud('lunchBills',b);refreshAllViews();resetLunchEntry();toast('Lunch bill saved')
+}
+function saveCleanBill(){
+  var nm=document.getElementById('cleanName').value,moSel=document.getElementById('cleanMonth').value,
+  dt=document.getElementById('cleanDate').value,amt=parseFloat(document.getElementById('cleanAmount').value)||0;
+  if(!dt){toast('Select bill date','err');return}if(amt<=0){toast('Enter valid amount','err');return}
+  var yrSuf=String(new Date(dt).getFullYear()).slice(-2);var mo=moSel+'-'+yrSuf;
+  var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'clean',name:nm,month:mo,date:dt,
+    billNo:currentCleanBillNo,designation:document.getElementById('cleanDesig').value,
+    amount:amt.toFixed(2),remarks:document.getElementById('cleanRemarks').value,timestamp:Date.now()};
+  var bl=getLocal('cleanBills');bl.unshift(b);setLocal('cleanBills',bl);pushCloud('cleanBills',b);refreshAllViews();resetCleanEntry();toast('Cleaning bill saved — '+currentCleanBillNo)
 }
 
-/* ===== FORMAT BILL DATE ===== */
-function formatBillDate(dateStr){
-  if(!dateStr)return'-';
-  const d=new Date(dateStr);
-  const day=d.getDate();
-  const mons=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return day+'-'+mons[d.getMonth()]+'-'+d.getFullYear();
-}
-
-/* ===== SAVE BILL ===== */
-function saveBill(){
-  const name=document.getElementById('empName').value;
-  const month=document.getElementById('showMonth').textContent;
-  const date=document.getElementById('billDate').value;
-  if(!date){showToast('Please select a bill date','error');return}
-  if(!month){showToast('Please select a bill month','error');return}
-  const bill={
-    id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),
-    name,month,date,
-    total:document.getElementById('totalDays').value,
-    friday:document.getElementById('friday').value,
-    govtHoliday:document.getElementById('govtHoliday').value,
-    othersHoliday:document.getElementById('othersHoliday').value,
-    leave:document.getElementById('leave').value,
-    working:document.getElementById('working').value,
-    rate:document.getElementById('rate').value,
-    amount:document.getElementById('amount').value,
-    remarks:document.getElementById('remarks').value,
-    timestamp:Date.now()
-  };
-  const bills=getLocalBills();bills.unshift(bill);setLocalBills(bills);
-  pushToCloud(bill);refreshAllViews();resetEntry();showToast('Bill saved successfully')
-}
-
-/* ===== DELETE ===== */
-function deleteBill(id){
-  document.getElementById('modalTitle').textContent='Delete Bill';
-  document.getElementById('modalMsg').textContent='This bill will be permanently deleted.';
-  const btn=document.getElementById('modalConfirmBtn');btn.textContent='Delete';btn.className='btn btn-danger btn-sm';
-  btn.onclick=()=>{setLocalBills(getLocalBills().filter(b=>b.id!==id));deleteFromCloud(id);refreshAllViews();closeModal();showToast('Bill deleted','info')};
+function delBill(tp,id){
+  var lb=tp==='lunch'?'lunch':'cleaning';
+  document.getElementById('modalTitle').textContent='Delete';document.getElementById('modalMsg').textContent='Delete this '+lb+' bill?';
+  var btn=document.getElementById('modalConfirmBtn');btn.textContent='OK';btn.className='w98-btn w98-btn-danger';
+  btn.onclick=function(){var p=tp==='lunch'?'lunchBills':'cleanBills';setLocal(p,getLocal(p).filter(function(b){return b.id!==id}));delCloud(p,id);refreshAllViews();closeModal();toast(lb+' bill deleted','info')};
   document.getElementById('confirmModal').classList.add('active')
 }
-function confirmClearAll(){
-  const b=getLocalBills();if(!b.length){showToast('No bills to clear','info');return}
-  document.getElementById('modalTitle').textContent='Clear All Bills';
-  document.getElementById('modalMsg').textContent=`Delete all ${b.length} bills?`;
-  const btn=document.getElementById('modalConfirmBtn');btn.textContent='Clear All';btn.className='btn btn-danger btn-sm';
-  btn.onclick=()=>{setLocalBills([]);if(firebaseDB&&isOnline)firebaseDB.ref('lunchBills').remove().catch(()=>{});refreshAllViews();closeModal();showToast('All bills cleared','info')};
+function confirmClear(tp){
+  var p=tp==='lunch'?'lunchBills':'cleanBills',lb=tp==='lunch'?'lunch':'cleaning';
+  var bl=getLocal(p);if(!bl.length){toast('Nothing to clear','info');return}
+  document.getElementById('modalTitle').textContent='Clear All';document.getElementById('modalMsg').textContent='Delete all '+bl.length+' '+lb+' bills?';
+  var btn=document.getElementById('modalConfirmBtn');btn.textContent='OK';btn.className='w98-btn w98-btn-danger';
+  btn.onclick=function(){setLocal(p,[]);if(firebaseDB&&isOnline)firebaseDB.ref(p).remove().catch(function(){});refreshAllViews();closeModal();toast('All cleared','info')};
   document.getElementById('confirmModal').classList.add('active')
 }
 function closeModal(){document.getElementById('confirmModal').classList.remove('active')}
 
-/* ===== LOAD VIEWS ===== */
-function refreshAllViews(){loadDashboard();loadHistory();loadMonthFilter()}
-function loadDashboard(){
-  const bills=getLocalBills();const ta=bills.reduce((s,b)=>s+parseFloat(b.amount||0),0);
-  const cm=new Date().toLocaleString('en-US',{month:'long',year:'numeric'});const mb=bills.filter(b=>b.month===cm);
-  const emp=new Set(bills.map(b=>b.name));
-  document.getElementById('statTotal').textContent=bills.length;
-  document.getElementById('statAmount').textContent=ta.toLocaleString('en-IN',{maximumFractionDigits:0});
-  document.getElementById('statMonth').textContent=mb.length;
-  document.getElementById('statEmployees').textContent=emp.size;
-  const tb=document.getElementById('recentBills'),nm=document.getElementById('noBillsMsg');
-  if(!bills.length){tb.innerHTML='';nm.style.display='block'}
-  else{nm.style.display='none';tb.innerHTML=bills.slice(0,10).map(b=>`<tr><td style="font-weight:600">${b.name}</td><td>${b.month}</td><td>${b.working} days</td><td>Tk ${b.rate}</td><td style="font-weight:700;color:var(--accent)">Tk ${parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="color:var(--muted);font-size:12px">${formatBillDate(b.date)}</td></tr>`).join('')}
+function refreshAllViews(){loadDash();loadLH();loadCH();loadFilters()}
+function loadDash(){
+  var lb=getLocal('lunchBills'),cb=getLocal('cleanBills');
+  var la=lb.reduce(function(s,b){return s+parseFloat(b.amount||0)},0),ca=cb.reduce(function(s,b){return s+parseFloat(b.amount||0)},0);
+  var cm=new Date().toLocaleString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('sLunchTotal').textContent=lb.length;document.getElementById('sLunchAmt').textContent=la.toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('sLunchMonth').textContent=lb.filter(function(b){return b.month===cm}).length;
+  document.getElementById('sCleanTotal').textContent=cb.length;document.getElementById('sCleanAmt').textContent=ca.toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('sCleanMonth').textContent=cb.filter(function(b){return b.month===cm}).length;
+  var all=[].concat(lb.map(function(b){return{tp:'Lunch',nm:b.name,mo:b.month,dt:b.working+'d × Tk'+b.rate,am:b.amount,da:b.date,ts:b.timestamp}}),
+    cb.map(function(b){return{tp:'Clean',nm:b.name,mo:b.month,dt:'Cleaning',am:b.amount,da:b.date,ts:b.timestamp}}));
+  all.sort(function(a,b){return(b.ts||0)-(a.ts||0)});
+  var tb=document.getElementById('recentBills'),nm=document.getElementById('noBillsMsg');
+  if(!all.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=all.slice(0,15).map(function(b){return'<tr><td style="font-weight:bold;color:'+(b.tp==='Lunch'?'#000080':'#800000')+'">'+b.tp+'</td><td>'+b.nm+'</td><td>'+b.mo+'</td><td style="color:#808080">'+b.dt+'</td><td style="font-weight:bold">Tk '+parseFloat(b.am).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.da)+'</td></tr>'}).join('')}
 }
-function loadHistory(){
-  let bills=getLocalBills();const s=(document.getElementById('searchInput')?.value||'').toLowerCase();const fm=document.getElementById('filterMonth')?.value||'';
-  if(s)bills=bills.filter(b=>b.name.toLowerCase().includes(s));if(fm)bills=bills.filter(b=>b.month===fm);
-  const tb=document.getElementById('historyBody'),nm=document.getElementById('noHistoryMsg');
-  if(!bills.length){tb.innerHTML='';nm.style.display='block'}
-  else{nm.style.display='none';tb.innerHTML=bills.map((b,i)=>`<tr><td style="color:var(--muted);font-size:12px">${i+1}</td><td style="font-weight:600">${b.name}</td><td>${b.month}</td><td>${b.working} days</td><td>Tk ${b.rate}</td><td style="font-weight:700;color:var(--accent)">Tk ${parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</td><td style="color:var(--muted);font-size:12px">${formatBillDate(b.date)}</td><td style="text-align:center"><button class="btn btn-ghost btn-sm" onclick="printBill('${b.id}')" style="margin-right:4px"><i class="fas fa-print"></i></button><button class="btn btn-danger btn-sm" onclick="deleteBill('${b.id}')"><i class="fas fa-trash-can"></i></button></td></tr>`).join('')}
+function loadLH(){
+  var bl=getLocal('lunchBills'),s=(document.getElementById('lunchSearch')?.value||'').toLowerCase(),fm=document.getElementById('lunchFilter')?.value||'';
+  if(s)bl=bl.filter(function(b){return b.name.toLowerCase().includes(s)});if(fm)bl=bl.filter(function(b){return b.month===fm});
+  var tb=document.getElementById('lunchHistBody'),nm=document.getElementById('noLunchHist');
+  if(!bl.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=bl.map(function(b,i){return'<tr><td>'+(i+1)+'</td><td>'+b.name+'</td><td>'+b.month+'</td><td>'+b.working+'d</td><td>Tk'+b.rate+'</td><td style="font-weight:bold">Tk'+parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.date)+'</td><td><button class="w98-btn w98-btn-sm" onclick="printLunch(\''+b.id+'\')" style="margin-right:2px"><i class="fas fa-print"></i></button><button class="w98-btn w98-btn-sm w98-btn-danger" onclick="delBill(\'lunch\',\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>'}).join('')}
 }
-function loadMonthFilter(){
-  const bills=getLocalBills(),ms=[...new Set(bills.map(b=>b.month))];
-  const sel=document.getElementById('filterMonth'),cv=sel.value;
-  sel.innerHTML='<option value="">All Months</option>'+ms.map(m=>`<option value="${m}"${m===cv?' selected':''}>${m}</option>`).join('')
+function loadCH(){
+  var bl=getLocal('cleanBills'),s=(document.getElementById('cleanSearch')?.value||'').toLowerCase(),fm=document.getElementById('cleanFilter')?.value||'';
+  if(s)bl=bl.filter(function(b){return b.name.toLowerCase().includes(s)});if(fm)bl=bl.filter(function(b){return b.month===fm});
+  var tb=document.getElementById('cleanHistBody'),nm=document.getElementById('noCleanHist');
+  if(!bl.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=bl.map(function(b,i){return'<tr><td>'+(i+1)+'</td><td style="font-weight:bold;color:#800000;font-size:10px">'+(b.billNo||'-')+'</td><td>'+b.name+'</td><td>'+(b.designation||'-')+'</td><td>'+b.month+'</td><td style="font-weight:bold">Tk'+parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.date)+'</td><td><button class="w98-btn w98-btn-sm" onclick="printClean(\''+b.id+'\')" style="margin-right:2px"><i class="fas fa-print"></i></button><button class="w98-btn w98-btn-sm w98-btn-danger" onclick="delBill(\'clean\',\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>'}).join('')}
+}
+function loadFilters(){
+  ['lunch','clean'].forEach(function(tp){
+    var p=tp==='lunch'?'lunchBills':'cleanBills',sel=document.getElementById(tp==='lunch'?'lunchFilter':'cleanFilter'),
+    cv=sel.value,ms=[...new Set(getLocal(p).map(function(b){return b.month}))];
+    sel.innerHTML='<option value="">All Months</option>'+ms.map(function(m){return'<option value="'+m+'"'+(m===cv?' selected':'')+'>'+m+'</option>'}).join('')
+  })
 }
 
-/* ===== PRINT ===== */
-function printBill(id){
-  const b=getLocalBills().find(x=>x.id===id);
-  if(!b){showToast('Bill not found','error');return}
-  document.getElementById('pName').textContent=b.name;
-  document.getElementById('pMonth').textContent=b.month;
-  document.getElementById('pDate').textContent=formatBillDate(b.date);
-  document.getElementById('pm').textContent=b.month;
-  document.getElementById('ptd').textContent=b.total;
-  document.getElementById('pf').textContent=b.friday;
-  document.getElementById('pgh').textContent=b.govtHoliday||0;
-  document.getElementById('poh').textContent=b.othersHoliday||0;
+/* ===== PRINT — শুধু বিল প্রিন্ট হবে ===== */
+function printLunch(id){
+  var b=getLocal('lunchBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  document.getElementById('pName').textContent=b.name;document.getElementById('pMonth').textContent=b.month;
+  document.getElementById('pDate').textContent=fmtDate(b.date);document.getElementById('pm').textContent=b.month;
+  document.getElementById('ptd').textContent=b.total;document.getElementById('pf').textContent=b.friday;
+  document.getElementById('pgh').textContent=b.govtHoliday||0;document.getElementById('poh').textContent=b.othersHoliday||0;
   document.getElementById('pl').textContent=(b.leave==='0'||b.leave===0)?'':b.leave;
-  document.getElementById('pw').textContent=b.working;
-  document.getElementById('pr').textContent=b.rate;
-  document.getElementById('pa').textContent=parseFloat(b.amount).toFixed(2);
-  document.getElementById('pta').textContent=parseFloat(b.amount).toFixed(2);
-  document.getElementById('prem').textContent=b.remarks||'';
-  document.getElementById('words').textContent=numberToWords(parseFloat(b.amount));
-  showPage('printPage',null);
-  setTimeout(()=>window.print(),400);
+  document.getElementById('pw').textContent=b.working;document.getElementById('pr').textContent=b.rate;
+  document.getElementById('pa').textContent=parseFloat(b.amount).toFixed(2);document.getElementById('pta').textContent=parseFloat(b.amount).toFixed(2);
+  document.getElementById('prem').textContent=b.remarks||'';document.getElementById('pWords').textContent=numWords(parseFloat(b.amount));
+  /* শুধু printLunch page active করি, বাকি সব লুকানো থাকবে */
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('printLunch').classList.add('active');
+  setTimeout(function(){window.print()},400)
+}
+function printClean(id){
+  var b=getLocal('cleanBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  document.getElementById('pcName').textContent=b.name;document.getElementById('pcDesig').textContent=b.designation||'-';
+  document.getElementById('pcBillNo').textContent=b.billNo||'-';document.getElementById('pcDate').textContent=fmtDate(b.date);
+  document.getElementById('pcMonth').textContent=b.month;document.getElementById('pcAmt').textContent=parseFloat(b.amount).toFixed(2);
+  document.getElementById('pcTotal').textContent=parseFloat(b.amount).toFixed(2);document.getElementById('pcRem').textContent=b.remarks||'';
+  document.getElementById('pcWords').textContent=numWords(parseFloat(b.amount));
+  /* শুধু printClean page active করি */
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('printClean').classList.add('active');
+  setTimeout(function(){window.print()},400)
 }
 
-/* ===== NUMBER TO WORDS ===== */
-function convertToWords(n){
-  if(n===0)return'Zero';if(n<0)return'Minus '+convertToWords(-n);
-  const o=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
-  const t=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+function ctw(n){
+  if(n===0)return'Zero';if(n<0)return'Minus '+ctw(-n);
+  var o=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var t=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
   if(n<20)return o[n];if(n<100)return t[Math.floor(n/10)]+(n%10?' '+o[n%10]:'');
-  if(n<1000)return o[Math.floor(n/100)]+' Hundred'+(n%100?' and '+convertToWords(n%100):'');
-  if(n<100000)return convertToWords(Math.floor(n/1000))+' Thousand'+(n%1000?' '+convertToWords(n%1000):'');
-  if(n<10000000)return convertToWords(Math.floor(n/100000))+' Lakh'+(n%100000?' '+convertToWords(n%100000):'');
-  if(n<1000000000)return convertToWords(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+convertToWords(n%10000000):'');
-  return convertToWords(Math.floor(n/1000000000))+' Arab'+(n%1000000000?' '+convertToWords(n%10000000):'')
+  if(n<1000)return o[Math.floor(n/100)]+' Hundred'+(n%100?' and '+ctw(n%100):'');
+  if(n<100000)return ctw(Math.floor(n/1000))+' Thousand'+(n%1000?' '+ctw(n%1000):'');
+  if(n<10000000)return ctw(Math.floor(n/100000))+' Lakh'+(n%100000?' '+ctw(n%100000):'');
+  if(n<1000000000)return ctw(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+ctw(n%10000000):'');
+  return ctw(Math.floor(n/1000000000))+' Arab'+(n%1000000000?' '+ctw(n%1000000000):'')
 }
-function numberToWords(num){
-  if(!num||num===0)return'Zero Taka Only';
-  const p=num.toFixed(2).split('.'),tk=parseInt(p[0]),ps=parseInt(p[1]);
-  let r=convertToWords(tk)+' Taka';if(ps>0)r+=' and '+convertToWords(ps)+' Paisa';return r+' Only'
+function numWords(n){if(!n||n===0)return'Zero Taka Only';var p=n.toFixed(2).split('.'),tk=parseInt(p[0]),ps=parseInt(p[1]);var r=ctw(tk)+' Taka';if(ps>0)r+=' and '+ctw(ps)+' Paisa';return r+' Only'}
+
+var pageTreeMap={dashboard:'treeDash',lunchEntry:'treeLunchEntry',cleanEntry:'treeCleanEntry',lunchHistory:'treeLunchHist',cleanHistory:'treeCleanHist'};
+var pageSubMap={lunchEntry:'entryTree',cleanEntry:'entryTree',lunchHistory:'historyTree',cleanHistory:'historyTree'};
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  clearTreeActive();
+  if(el){el.classList.add('active')}
+  else if(id==='dashboard'){document.getElementById('treeDash').classList.add('active')}
+  else{var te=document.getElementById(pageTreeMap[id]);if(te)te.classList.add('active')}
+  var sid=pageSubMap[id];
+  if(sid){document.getElementById(sid).classList.add('open');var pid=sid==='entryTree'?'entryTreeParent':'historyTreeParent';var pe=document.getElementById(pid);if(pe){pe.querySelector('.tree-toggle').textContent='−';pe.querySelector('.tree-icon i').className='fas fa-folder-open'}}
+  if(id==='dashboard')loadDash();if(id==='lunchHistory'){loadFilters();loadLH()}if(id==='cleanHistory'){loadFilters();loadCH()}
 }
 
-/* ===== NAVIGATION ===== */
-function showPage(id,btnEl){
-  document.querySelectorAll('.content > div').forEach(d=>d.style.display='none');
-  document.getElementById(id).style.display='block';
-  document.querySelectorAll('.sidebar-nav button').forEach(b=>b.classList.remove('active'));
-  if(btnEl)btnEl.classList.add('active');
-  else{const map={dashboard:0,entry:1,history:2,printPage:2};const i=map[id];if(i!==undefined)document.querySelectorAll('.sidebar-nav button')[i]?.classList.add('active')}
-  if(id==='dashboard')loadDashboard();if(id==='history'){loadMonthFilter();loadHistory()}
-}
-
-/* ===== RESET ===== */
-function resetEntry(){
-  ['billMonth','billDate','showMonth','totalDays','friday','amount','remarks'].forEach(id=>{document.getElementById(id).value=''});
+function resetLunchEntry(){
+  ['billMonth','showMonth','totalDays','friday','amount','remarks'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('govtHoliday').value='0';document.getElementById('othersHoliday').value='0';
   document.getElementById('leave').value='0';document.getElementById('rate').value='60';
   document.getElementById('working').value='';document.getElementById('holidayBanner').style.display='none';
+  document.getElementById('billDate').value=new Date().toISOString().split('T')[0];
+  var n=new Date();document.getElementById('billMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  calcMonth();
+}
+function resetCleanEntry(){
+  document.getElementById('cleanAmount').value='1000';document.getElementById('cleanRemarks').value='';
+  document.getElementById('cleanDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cleanMonth').selectedIndex=new Date().getMonth();
+  updateCleanBillNo();updateCleanWords();
 }
 
-/* ===== TOAST ===== */
-function showToast(msg,type='success'){
-  const c=document.getElementById('toastContainer'),t=document.createElement('div');
-  const ic={success:'check-circle',error:'exclamation-circle',info:'info-circle'};
-  t.className=`toast toast-${type}`;t.innerHTML=`<i class="fas fa-${ic[type]||'info-circle'}"></i><span>${msg}</span>`;
-  c.appendChild(t);requestAnimationFrame(()=>t.classList.add('show'));
-  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),350)},3200)
+function toast(msg,tp){
+  tp=tp||'ok';var c=document.getElementById('toastBox'),t=document.createElement('div');
+  t.className='w98-toast w98-toast-'+tp;
+  var ic={ok:'check-circle',err:'exclamation-circle',info:'info-circle'};
+  t.innerHTML='<i class="fas fa-'+(ic[tp]||'info-circle')+'"></i> '+msg;
+  c.appendChild(t);requestAnimationFrame(function(){t.classList.add('show')});
+  setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove()},300)},2800)
 }
 
-/* ===== INIT ===== */
-refreshAllViews();
-document.getElementById('billDate').value=new Date().toISOString().split('T')[0];
-const cy=new Date().getFullYear();fetchHolidays(cy);fetchHolidays(cy+1);
+var now=new Date();
+document.getElementById('billDate').value=now.toISOString().split('T')[0];
+document.getElementById('billMonth').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+document.getElementById('cleanDate').value=now.toISOString().split('T')[0];
+document.getElementById('cleanMonth').selectedIndex=now.getMonth();
+updateCleanBillNo();updateCleanWords();calcMonth();refreshAllViews();
+fetchHol(now.getFullYear());fetchHol(now.getFullYear()+1);
 </script>
 </body>
 </html>
