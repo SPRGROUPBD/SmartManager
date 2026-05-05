@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Deposit System</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--dk:#0b2e3d;--md:#145369;--ac:#c8a415;--bg:#e8e3d9;--cd:#fff;--tx:#1a1a1a;--mt:#777;--bd:#cec8bb;--dg:#b52a1c;--ok:#0a7c3e;--wn:#d4820a}
+body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);margin:16px;color:var(--tx);font-size:13px}
+.ctn{max-width:820px;margin:auto;background:var(--cd);border:1px solid var(--bd);border-radius:8px;box-shadow:0 3px 16px rgba(0,0,0,.1);overflow:hidden}
+.hdr{background:linear-gradient(135deg,var(--dk),var(--md));color:#fff;padding:16px 22px;display:flex;align-items:center;gap:12px}
+.hdr .ic{width:42px;height:42px;background:rgba(255,255,255,.12);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hdr h1{font-size:17px;font-weight:800}
+.hdr p{font-size:10px;opacity:.6;margin-top:1px}
+.tabs{display:flex;border-bottom:2px solid var(--bd);background:#faf8f4}
+.tb{flex:1;padding:11px 6px;border:none;background:0 0;font-size:12px;font-weight:700;color:var(--mt);cursor:pointer;position:relative;transition:.2s;display:flex;align-items:center;justify-content:center;gap:6px}
+.tb:hover{color:var(--tx);background:#f0ede5}
+.tb.on{color:var(--dk);background:#fff}
+.tb.on::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:3px;background:var(--ac);border-radius:3px 3px 0 0}
+.badge{background:var(--dg);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;font-weight:700;min-width:18px;text-align:center}
+.tp{display:none;padding:18px}.tp.on{display:block}
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.fi{display:flex;flex-direction:column}.fi.fl{grid-column:1/-1}
+.fi label{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mt);letter-spacing:.5px;margin-bottom:3px}
+.fi input,.fi select{padding:8px 10px;border:1.5px solid var(--bd);border-radius:4px;font-size:12px;font-weight:600;color:var(--tx);background:#fff;transition:.2s}
+.fi input:focus,.fi select:focus{outline:0;border-color:var(--md);box-shadow:0 0 0 3px rgba(20,83,105,.1)}
+.logo-row{display:flex;gap:10px;align-items:flex-end}
+.logo-row .fi{flex:1}
+.logo-prev{width:42px;height:42px;border:1.5px dashed var(--bd);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#f9f8f5;flex-shrink:0}
+.logo-prev img{width:100%;height:100%;object-fit:contain}
+.logo-prev i{color:#ccc;font-size:16px}
+.bt{padding:8px 16px;border:none;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.2s;text-transform:uppercase;letter-spacing:.2px}
+.bt-ac{background:var(--ac);color:#fff}.bt-ac:hover{background:#b09212}
+.bt-pr{background:var(--md);color:#fff}.bt-pr:hover{background:var(--dk)}
+.bt-dg{background:var(--dg);color:#fff}.bt-dg:hover{background:#961f14}
+.bt-ok{background:var(--ok);color:#fff;box-shadow:0 2px 6px rgba(10,124,62,.2)}.bt-ok:hover{background:#086633;transform:translateY(-1px)}
+.bt-gh{background:0 0;color:var(--mt);border:1.5px solid var(--bd)}.bt-gh:hover{background:#f5f3ef;color:var(--tx)}
+.bt-sm{padding:5px 8px;font-size:10px}
+.bg{display:flex;gap:6px;flex-wrap:wrap}
+.tl{width:100%;border-collapse:collapse;border:1px solid var(--bd);border-radius:5px;overflow:hidden;margin-top:10px}
+.tl th{background:var(--dk);color:#fff;padding:8px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.3px;text-align:left}
+.tl td{padding:7px 10px;border-bottom:1px solid #eee;font-size:11px;vertical-align:middle}
+.tl tr:last-child td{border-bottom:0}
+.tl tr:hover{background:#faf8f4}
+.bn{font-weight:700;color:var(--dk)}
+.em{text-align:center;padding:24px;color:var(--mt);font-size:12px}
+.em i{font-size:24px;display:block;margin-bottom:6px;opacity:.3}
+.bib{background:#f7f5f0;border:1px solid var(--bd);border-radius:5px;padding:12px 14px;margin-bottom:12px;display:none}
+.bib.sh{display:block}
+.bib .ig{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
+.bib .ii label{font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mt);letter-spacing:.3px;display:block;margin-bottom:1px}
+.bib .ii span{font-size:12px;font-weight:700;color:var(--tx)}
+.dt{width:100%;border-collapse:collapse;border:1px solid var(--bd);border-radius:5px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.dt th{background:linear-gradient(180deg,var(--dk),#091e29);color:#fff;padding:9px;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+.dt th:first-child{text-align:left;padding-left:14px}
+.dt td{padding:4px 6px;text-align:center;border-bottom:1px solid #eee;font-size:12px}
+.dt td:first-child{text-align:left;padding-left:14px}
+.dt tr:last-child td{border-bottom:0}
+.dt tr:hover{background:#faf8f4}
+.db{display:inline-block;background:#eef2f7;border:1px solid #c8d0da;border-radius:3px;padding:2px 10px;font-weight:700;color:var(--md);font-size:12px}
+input.qt{width:80px;text-align:center;padding:6px;border:2px solid var(--bd);border-radius:4px;font-size:13px;font-weight:600;background:#fefdfb;transition:.2s}
+input.qt:focus{outline:0;border-color:var(--md);box-shadow:0 0 0 3px rgba(20,83,105,.1)}
+.am{font-weight:700;min-width:80px}.am.on{color:var(--ok)}
+.tb2{margin-top:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.tbx{background:linear-gradient(135deg,var(--dk),var(--md));color:#fff;padding:11px 22px;border-radius:7px;display:flex;align-items:center;gap:10px;box-shadow:0 3px 10px rgba(11,46,61,.3)}
+.tbx .tl2{font-size:11px;opacity:.75}
+.tbx .tv2{font-size:22px;font-weight:800}
+.tbx .tv2 small{font-size:12px;opacity:.65;margin-right:1px}
+.ft{text-align:center;padding:8px;font-size:9px;color:#aaa;border-top:1px solid #eee;background:#faf8f4}
+.rpt-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.rpt-hd .fg{margin-bottom:0;align-items:flex-end}
+.rpt-total{background:#f7f5f0;border:1px solid var(--bd);border-radius:5px;padding:10px 16px;text-align:right}
+.rpt-total .rl{font-size:9px;text-transform:uppercase;color:var(--mt);font-weight:700}
+.rpt-total .rv{font-size:20px;font-weight:800;color:var(--dk)}
+.trx-inp{width:110px;padding:5px 6px;border:1.5px solid var(--bd);border-radius:3px;font-size:11px;font-weight:600;text-align:center}
+.trx-inp:focus{outline:0;border-color:var(--ok);box-shadow:0 0 0 2px rgba(10,124,62,.12)}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:none;align-items:center;justify-content:center}
+.mo.sh{display:flex}
+.mb{background:#fff;border-radius:7px;padding:20px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.mb h3{font-size:15px;margin-bottom:6px;color:var(--dk)}
+.mb p{font-size:12px;color:#555;margin-bottom:14px;line-height:1.5}
+.mb .bg{justify-content:flex-end}
+.tt{position:fixed;top:18px;right:18px;padding:10px 16px;border-radius:5px;color:#fff;font-size:12px;font-weight:600;z-index:9999;box-shadow:0 4px 14px rgba(0,0,0,.25);animation:tI .3s ease;display:flex;align-items:center;gap:7px}
+.tt.ok{background:var(--ok)}.tt.er{background:var(--dg)}.tt.wn{background:var(--wn)}
+@keyframes tI{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes tO{from{opacity:1}to{opacity:0;transform:translateX(30px)}}
+/* ===== PRINT ===== */
+@media print{
+body{background:#fff!important;margin:0!important;color:#000!important}
+.tabs,.tp,.ft,.mo,.tt,.no-print{display:none!important}
+.ctn{max-width:100%!important;box-shadow:none!important;border:none!important;border-radius:0!important;background:#fff!important}
+#sHdr{display:none!important}
+#pHdr{display:flex!important;background:#fff!important;color:#000!important;border-bottom:2px solid #000!important;padding:12px 18px!important}
+#pHdr .ic{background:#f0f0f0!important;border:1px solid #000!important;color:#000!important}
+#pHdr h1{color:#000!important;font-size:20px!important;text-align:center!important;width:100%!important;letter-spacing:.5px}
+.pz{display:block!important;padding:0 18px 18px}
+.p-wrap{border:2px solid #000;padding:0}
+.p-hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1.5px solid #000}
+.p-hdr-l{display:flex;align-items:center;gap:12px}
+.p-logo{height:48px;width:auto;object-fit:contain}
+.p-logo-fallback{width:48px;height:48px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:20px;color:#000}
+.p-bname{font-size:18px;font-weight:800;color:#000}
+.p-title{font-size:11px;font-weight:600;color:#000;letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.p-date{font-size:13px;font-weight:700;color:#000;text-align:right}
+.p-info{display:flex;padding:12px 16px;border-bottom:1.5px solid #000;gap:20px}
+.p-info-l,.p-info-r{flex:1}
+.p-rw{display:flex;gap:4px;font-size:12px;margin-bottom:3px;color:#000!important}
+.p-rw:last-child{margin-bottom:0}
+.p-lb{font-weight:700;min-width:95px;color:#000!important}
+.p-tbl{width:100%;border-collapse:collapse}
+.p-tbl th{background:#fff!important;color:#000!important;border:1px solid #000!important;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.p-tbl td{border:1px solid #000!important;padding:5px 10px;font-size:12px;color:#000!important;background:#fff!important;text-align:center}
+.p-tbl td:first-child{text-align:left}
+.p-tbl .p-gt td{font-weight:800!important;font-size:13px!important;border-top:2px solid #000!important}
+/* Report print */
+.rp-wrap{border:2px solid #000}
+.rp-hdr{padding:14px 16px;border-bottom:1.5px solid #000;text-align:center}
+.rp-hdr h2{font-size:16px;font-weight:800;color:#000}
+.rp-hdr p{font-size:11px;color:#000;margin-top:2px}
+.rp-tbl{width:100%;border-collapse:collapse}
+.rp-tbl th{background:#fff!important;color:#000!important;border:1px solid #000!important;padding:6px 8px;font-size:9px;font-weight:700;text-transform:uppercase}
+.rp-tbl td{border:1px solid #000!important;padding:5px 8px;font-size:11px;color:#000!important;background:#fff!important}
+.rp-ft{padding:10px 16px;border-top:1.5px solid #000;text-align:right;font-size:14px;font-weight:800;color:#000}
+}
+.pz{display:none}
+</style>
+</head>
+<body>
+
+<div class="mo" id="delMo">
+<div class="mb">
+<h3><i class="fas fa-trash-alt" style="color:var(--dg);margin-right:5px"></i> মুছে ফেলতে চান?</h3>
+<p id="delMs">এই তথ্য চিরতরে মুছে যাবে।</p>
+<div class="bg">
+<button class="bt bt-gh" onclick="clMo()">বাতিল</button>
+<button class="bt bt-dg" onclick="doDel()"><i class="fas fa-trash"></i> মুছুন</button>
+</div>
+</div>
+</div>
+
+<div class="ctn">
+<div class="hdr no-print" id="sHdr">
+<div class="ic"><i class="fas fa-university"></i></div>
+<div><h1>Cash Deposit System</h1><p>Bank Management & Deposit Slip Generator</p></div>
+</div>
+<div class="hdr" id="pHdr" style="display:none">
+<div class="ic"><i class="fas fa-university"></i></div>
+<h1 id="pHdrTitle">CASH DEPOSIT FORM</h1>
+</div>
+
+<div class="tabs no-print">
+<button class="tb on" onclick="goT('setup',0)"><i class="fas fa-piggy-bank"></i> Bank Setup</button>
+<button class="tb" onclick="goT('entry',1)"><i class="fas fa-money-bill-wave"></i> Cash Entry</button>
+<button class="tb" onclick="goT('pend',2)"><i class="fas fa-clock"></i> Pending <span class="badge" id="pnBg" style="display:none">0</span></button>
+<button class="tb" onclick="goT('rpt',3)"><i class="fas fa-chart-bar"></i> Report</button>
+</div>
+
+<!-- Bank Setup -->
+<div class="tp on" id="tpSetup">
+<div class="fg">
+<div class="fi fl"><label>Bank Name</label><input type="text" id="fBk" placeholder="e.g. Dutch-Bangla Bank"></div>
+<div class="fi fl">
+<label>Logo URL</label>
+<div class="logo-row">
+<div class="fi"><input type="text" id="fLogo" placeholder="https://example.com/logo.png" oninput="prevLogo()"></div>
+<div class="logo-prev" id="logoPv"><i class="fas fa-image"></i></div>
+</div>
+</div>
+<div class="fi"><label>Account Name</label><input type="text" id="fAc" placeholder="Account holder name"></div>
+<div class="fi"><label>AC Number</label><input type="text" id="fAcN" placeholder="Account number"></div>
+<div class="fi fl"><label>Branch</label><input type="text" id="fBr" placeholder="Branch name"></div>
+</div>
+<div class="bg">
+<button class="bt bt-ac" id="svBt" onclick="svBank()"><i class="fas fa-plus"></i> Add Bank</button>
+<button class="bt bt-gh" id="cnBt" onclick="cnEdit()" style="display:none"><i class="fas fa-times"></i> Cancel</button>
+</div>
+<div id="bkLs"><div class="em"><i class="fas fa-spinner fa-spin"></i>লোড হচ্ছে...</div></div>
+</div>
+
+<!-- Cash Entry -->
+<div class="tp" id="tpEntry">
+<div class="fi" style="margin-bottom:12px">
+<label>Select Bank</label>
+<select id="bkSl" onchange="onSel()"><option value="">-- ব্যাংক নির্বাচন করুন --</option></select>
+</div>
+<div class="bib" id="ibx">
+<div class="ig">
+<div class="ii"><label>Bank Name</label><span id="dBk">-</span></div>
+<div class="ii"><label>AC Number</label><span id="dAcN">-</span></div>
+<div class="ii"><label>Account Name</label><span id="dAc">-</span></div>
+<div class="ii"><label>Branch</label><span id="dBr">-</span></div>
+</div>
+</div>
+<table class="dt">
+<thead><tr><th>Denomination</th><th>Quantity</th><th>Total Amount</th></tr></thead>
+<tbody id="dBd"></tbody>
+</table>
+<div class="tb2 no-print">
+<div class="tbx"><div class="tl2">Grand Total</div><div class="tv2"><small>৳</small> <span id="gT">0</span></div></div>
+<div class="bg">
+<button class="bt bt-gh" onclick="rstQ()"><i class="fas fa-redo"></i> Reset</button>
+<button class="bt bt-ok" onclick="svDep()"><i class="fas fa-save"></i> Save Deposit</button>
+</div>
+</div>
+</div>
+
+<!-- Pending -->
+<div class="tp" id="tpPend">
+<div id="pnLs"><div class="em"><i class="fas fa-spinner fa-spin"></i>লোড হচ্ছে...</div></div>
+</div>
+
+<!-- Report -->
+<div class="tp" id="tpRpt">
+<div class="rpt-hd no-print">
+<div class="fg" style="grid-template-columns:auto auto 1fr">
+<div class="fi"><label>Date</label><input type="date" id="rpDt" onchange="ldRpt()"></div>
+<div class="fi" style="align-self:end"><button class="bt bt-gh bt-sm" onclick="setToday()"><i class="fas fa-calendar-day"></i> Today</button></div>
+<div class="fi" style="align-self:end;text-align:right">
+<button class="bt bt-pr bt-sm" onclick="prRpt()"><i class="fas fa-print"></i> Print Report</button>
+</div>
+</div>
+</div>
+<div class="rpt-total" id="rpTot" style="display:none;margin-bottom:12px">
+<div class="rl">Report Total</div>
+<div class="rv"><small>৳</small> <span id="rpTv">0</span></div>
+</div>
+<div id="rpLs"><div class="em"><i class="fas fa-spinner fa-spin"></i>লোড হচ্ছে...</div></div>
+</div>
+
+<!-- Print Zone: Slip -->
+<div class="pz" id="pzSlip"></div>
+<!-- Print Zone: Report -->
+<div class="pz" id="pzRpt"></div>
+
+<div class="ft no-print">Press <strong>Enter</strong> to move next &bull; Firebase Realtime DB &bull; Save → Add TRX → Report</div>
+</div>
+
+<script>
+/* ===== Firebase Config ===== */
+firebase.initializeApp({
+    apiKey:"AIzaSyDnRwKRvWqpWnLGvrg1UI1rWj0FIIRZa_o",
+    authDomain:"bank-4f819.firebaseapp.com",
+    databaseURL:"https://bank-4f819-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:"bank-4f819",
+    storageBucket:"bank-4f819.firebasestorage.app",
+    messagingSenderId:"1073473515740",
+    appId:"1:1073473515740:web:fd32c00b97524fb5074419",
+    measurementId:"G-03B7NST388"
+});
+const rtdb=firebase.database();
+const bkRef=rtdb.ref("banks");
+const dpRef=rtdb.ref("deposits");
+
+let banks=[],deps=[],editId=null,delType=null,delId=null,curTab='setup';
+const denoms=[2,5,10,20,50,100,200,500,1000];
+
+/* ===== Utility ===== */
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function fmtD(d){if(!d)return"—";const p=d.split("-");return p[2]+"-"+p[1]+"-"+p[0]}
+function today(){return new Date().toISOString().split("T")[0]}
+function setToday(){document.getElementById("rpDt").value=today();ldRpt()}
+
+/* ===== Toast ===== */
+function toast(m,t){
+    const o=document.querySelector(".tt");if(o)o.remove();
+    const ic={ok:"check-circle",er:"times-circle",wn:"exclamation-triangle"};
+    const e=document.createElement("div");e.className="tt "+(t||"ok");
+    e.innerHTML=`<i class="fas fa-${ic[t]||'info-circle'}"></i> ${m}`;
+    document.body.appendChild(e);
+    setTimeout(()=>{e.style.animation="tO .3s ease forwards";setTimeout(()=>e.remove(),300)},2500);
+}
+
+/* ===== Modal ===== */
+function opMo(type,id){delType=type;delId=id;
+    const nm=type==='bank'?(banks.find(b=>b.id===id)||{}).bankName:'এই ডিপোজিট';
+    document.getElementById("delMs").textContent=`"${nm}" এর তথ্য মুছে যাবে।`;
+    document.getElementById("delMo").classList.add("sh");
+}
+function clMo(){delType=null;delId=null;document.getElementById("delMo").classList.remove("sh")}
+function doDel(){
+    if(!delId)return;
+    const ref=delType==='bank'?bkRef.child(delId):dpRef.child(delId);
+    ref.remove().then(()=>{toast("মুছে ফেলা হয়েছে","ok");clMo()}).catch(e=>{toast(e.message,"er");clMo()});
+}
+
+/* ===== Tabs ===== */
+function goT(t,i){
+    curTab=t;
+    document.querySelectorAll(".tb").forEach((b,idx)=>b.classList.toggle("on",idx===i));
+    document.querySelectorAll(".tp").forEach((p,idx)=>p.classList.toggle("on",idx===i));
+    if(t==='entry')fillDD();
+    if(t==='pend')ldPend();
+    if(t==='rpt')ldRpt();
+}
+
+/* ===== Logo Preview ===== */
+function prevLogo(){
+    const u=document.getElementById("fLogo").value.trim();
+    const pv=document.getElementById("logoPv");
+    if(u){pv.innerHTML=`<img src="${esc(u)}" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-image\\'></i>'">`}
+    else{pv.innerHTML='<i class="fas fa-image"></i>'}
+}
+
+/* ===== Bank CRUD ===== */
+function svBank(){
+    const d={
+        bankName:document.getElementById("fBk").value.trim(),
+        logoUrl:document.getElementById("fLogo").value.trim(),
+        acName:document.getElementById("fAc").value.trim(),
+        acNo:document.getElementById("fAcN").value.trim(),
+        branch:document.getElementById("fBr").value.trim(),
+        ts:Date.now()
+    };
+    if(!d.bankName||!d.acName||!d.acNo){toast("Bank Name, AC Name, AC Number দিন","wn");return}
+    if(editId){
+        bkRef.child(editId).update({bankName:d.bankName,logoUrl:d.logoUrl,acName:d.acName,acNo:d.acNo,branch:d.branch})
+        .then(()=>{toast("আপডেট হয়েছে","ok");cnEdit()}).catch(e=>toast(e.message,"er"));
+    }else{
+        bkRef.push(d).then(()=>{toast("ব্যাংক যোগ হয়েছে","ok");cnEdit()}).catch(e=>toast(e.message,"er"));
+    }
+}
+function cnEdit(){
+    ["fBk","fLogo","fAc","fAcN","fBr"].forEach(id=>document.getElementById(id).value="");
+    editId=null;
+    document.getElementById("svBt").innerHTML='<i class="fas fa-plus"></i> Add Bank';
+    document.getElementById("cnBt").style.display="none";
+    document.getElementById("logoPv").innerHTML='<i class="fas fa-image"></i>';
+}
+function edBank(id){
+    const b=banks.find(x=>x.id===id);if(!b)return;
+    editId=id;
+    document.getElementById("fBk").value=b.bankName;
+    document.getElementById("fLogo").value=b.logoUrl||"";
+    document.getElementById("fAc").value=b.acName;
+    document.getElementById("fAcN").value=b.acNo;
+    document.getElementById("fBr").value=b.branch||"";
+    prevLogo();
+    document.getElementById("svBt").innerHTML='<i class="fas fa-save"></i> Update Bank';
+    document.getElementById("cnBt").style.display="inline-flex";
+    document.getElementById("fBk").focus();
+    window.scrollTo({top:0,behavior:"smooth"});
+}
+function bkLogoSmall(u){
+    if(!u)return'<i class="fas fa-university" style="color:#ccc"></i>';
+    return`<img src="${esc(u)}" style="height:28px;width:auto;object-fit:contain" onerror="this.outerHTML='<i class=\\'fas fa-university\\' style=\\'color:#ccc\\'></i>'">`;
+}
+function rBanks(){
+    const c=document.getElementById("bkLs");
+    if(!banks.length){c.innerHTML='<div class="em"><i class="fas fa-piggy-bank"></i>কোনো ব্যাংক যোগ করা হয়নি</div>';return}
+    let h='<table class="tl"><thead><tr><th style="width:40px"></th><th>Bank</th><th>Account Name</th><th>AC No.</th><th>Branch</th><th style="width:100px">Actions</th></tr></thead><tbody>';
+    banks.forEach(b=>{
+        h+=`<tr><td>${bkLogoSmall(b.logoUrl)}</td><td class="bn">${esc(b.bankName)}</td><td>${esc(b.acName)}</td><td>${esc(b.acNo)}</td><td>${esc(b.branch||"—")}</td>
+        <td><div class="bg"><button class="bt bt-pr bt-sm" onclick="edBank('${b.id}')"><i class="fas fa-pen"></i></button><button class="bt bt-dg bt-sm" onclick="opMo('bank','${b.id}')"><i class="fas fa-trash"></i></button></div></td></tr>`;
+    });
+    h+='</tbody></table>';c.innerHTML=h;
+}
+
+/* Listen Banks */
+bkRef.on("value",s=>{
+    banks=[];if(s.exists())s.forEach(c=>banks.push({id:c.key,...c.val()}));
+    banks.reverse();rBanks();
+});
+
+/* ===== Dropdown ===== */
+function fillDD(){
+    const sl=document.getElementById("bkSl");const cv=sl.value;
+    sl.innerHTML='<option value="">-- ব্যাংক নির্বাচন করুন --</option>';
+    banks.forEach(b=>{const o=document.createElement("option");o.value=b.id;o.textContent=b.bankName+" — "+b.acName+" ("+b.acNo+")";sl.appendChild(o)});
+    if(cv&&banks.find(x=>x.id===cv)){sl.value=cv;onSel()}
+}
+function onSel(){
+    const id=document.getElementById("bkSl").value;const bx=document.getElementById("ibx");
+    if(!id){bx.classList.remove("sh");return}
+    const b=banks.find(x=>x.id===id);if(!b)return;
+    document.getElementById("dBk").textContent=b.bankName;
+    document.getElementById("dAc").textContent=b.acName;
+    document.getElementById("dAcN").textContent=b.acNo;
+    document.getElementById("dBr").textContent=b.branch||"—";
+    bx.classList.add("sh");
+}
+
+/* ===== Denomination Table ===== */
+const dBd=document.getElementById("dBd");
+denoms.forEach((v,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><span class="db">৳ ${v.toLocaleString()}</span></td>
+    <td><input type="number" class="qt" data-v="${v}" min="0" value="" oninput="calc()" onkeydown="nxt(event,${i})"></td>
+    <td class="am" id="a${i}">0</td>`;
+    dBd.appendChild(tr);
+});
+function calc(){
+    let t=0;document.querySelectorAll(".qt").forEach((inp,i)=>{
+        const q=parseInt(inp.value)||0,v=parseInt(inp.dataset.v),s=q*v;
+        const c=document.getElementById("a"+i);c.innerText="৳ "+s.toLocaleString();c.classList.toggle("on",s>0);t+=s;
+    });document.getElementById("gT").innerText=t.toLocaleString();
+}
+function nxt(e,i){if(e.key==="Enter"){e.preventDefault();const inp=document.querySelectorAll(".qt");if(i<inp.length-1){inp[i+1].focus();inp[i+1].select()}}}
+function rstQ(){document.querySelectorAll(".qt").forEach(inp=>inp.value="");calc()}
+
+/* ===== Save Deposit ===== */
+function svDep(){
+    const bid=document.getElementById("bkSl").value;
+    const bk=banks.find(b=>b.id===bid);
+    if(!bk){toast("ব্যাংক নির্বাচন করুন","wn");return}
+    const dn={};let tot=0;
+    document.querySelectorAll(".qt").forEach(inp=>{const v=inp.dataset.v,q=parseInt(inp.value)||0;dn[v]=q;tot+=q*parseInt(v)});
+    if(tot===0){toast("কমপক্ষে একটি ডিনোমিনেশনে পরিমাণ দিন","wn");return}
+    dpRef.push({
+        bankId:bk.id,bankName:bk.bankName,logoUrl:bk.logoUrl||"",
+        acName:bk.acName,acNo:bk.acNo,branch:bk.branch||"",
+        denoms:dn,total:tot,trxNo:"",status:"pending",
+        date:today(),ts:Date.now()
+    }).then(()=>{toast("ডিপোজিট সেভ হয়েছে (Pending)","ok");rstQ()}).catch(e=>toast(e.message,"er"));
+}
+
+/* ===== Listen Deposits ===== */
+dpRef.on("value",s=>{
+    deps=[];if(s.exists())s.forEach(c=>deps.push({id:c.key,...c.val()}));
+    deps.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    updBadge();
+    if(curTab==='pend')ldPend();
+    if(curTab==='rpt')ldRpt();
+});
+function updBadge(){
+    const pn=deps.filter(d=>d.status==="pending").length;
+    const bg=document.getElementById("pnBg");
+    if(pn>0){bg.style.display="inline";bg.textContent=pn}else{bg.style.display="none"}
+}
+
+/* ===== Pending List ===== */
+function ldPend(){
+    const c=document.getElementById("pnLs");
+    const pn=deps.filter(d=>d.status==="pending");
+    if(!pn.length){c.innerHTML='<div class="em"><i class="fas fa-check-circle"></i>কোনো Pending ডিপোজিট নেই</div>';return}
+    let h=`<div style="margin-bottom:8px;font-size:11px;color:var(--mt)">${pn.length}টি Pending ডিপোজিট</div>`;
+    h+='<table class="tl"><thead><tr><th>Date</th><th>Bank</th><th>AC Name</th><th>Total</th><th>TRX No.</th><th>Actions</th></tr></thead><tbody>';
+    pn.forEach(d=>{
+        h+=`<tr>
+        <td>${fmtD(d.date)}</td>
+        <td class="bn">${esc(d.bankName)}</td>
+        <td>${esc(d.acName)}</td>
+        <td style="font-weight:700">৳ ${d.total.toLocaleString()}</td>
+        <td><input type="text" class="trx-inp" id="trx_${d.id}" placeholder="TRX নম্বর"></td>
+        <td><div class="bg">
+            <button class="bt bt-ok bt-sm" onclick="addTrx('${d.id}')"><i class="fas fa-check"></i></button>
+            <button class="bt bt-pr bt-sm" onclick="prSlip('${d.id}')"><i class="fas fa-print"></i></button>
+            <button class="bt bt-dg bt-sm" onclick="opMo('dep','${d.id}')"><i class="fas fa-trash"></i></button>
+        </div></td></tr>`;
+    });
+    h+='</tbody></table>';c.innerHTML=h;
+}
+function addTrx(id){
+    const inp=document.getElementById("trx_"+id);
+    const v=inp.value.trim();
+    if(!v){toast("TRX নম্বর দিন","wn");inp.focus();return}
+    dpRef.child(id).update({trxNo:v,status:"completed"}).then(()=>{toast("TRX যোগ হয়েছে — Report এ দেখাবে","ok")}).catch(e=>toast(e.message,"er"));
+}
+
+/* ===== Report ===== */
+function ldRpt(){
+    const dt=document.getElementById("rpDt").value;
+    let list=deps.filter(d=>d.status==="completed");
+    if(dt)list=list.filter(d=>d.date===dt);
+    list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    const totEl=document.getElementById("rpTot");
+    const c=document.getElementById("rpLs");
+    if(!list.length){
+        c.innerHTML='<div class="em"><i class="fas fa-chart-bar"></i>এই তারিখে কোনো রিপোর্ট নেই</div>';
+        totEl.style.display="none";return;
+    }
+    const grand=list.reduce((s,d)=>s+d.total,0);
+    totEl.style.display="block";document.getElementById("rpTv").innerText=grand.toLocaleString();
+    let h='<table class="tl"><thead><tr><th>Date</th><th>Bank</th><th>AC Name</th><th>AC No.</th><th>TRX No.</th><th>Total</th><th>Actions</th></tr></thead><tbody>';
+    list.forEach(d=>{
+        h+=`<tr>
+        <td>${fmtD(d.date)}</td>
+        <td class="bn">${esc(d.bankName)}</td>
+        <td>${esc(d.acName)}</td>
+        <td>${esc(d.acNo)}</td>
+        <td style="font-weight:700;color:var(--ok)">${esc(d.trxNo)}</td>
+        <td style="font-weight:700">৳ ${d.total.toLocaleString()}</td>
+        <td><div class="bg">
+            <button class="bt bt-pr bt-sm" onclick="prSlip('${d.id}')"><i class="fas fa-print"></i> Print</button>
+            <button class="bt bt-ac bt-sm" onclick="dlPdf('${d.id}')"><i class="fas fa-file-pdf"></i> PDF</button>
+            <button class="bt bt-dg bt-sm" onclick="opMo('dep','${d.id}')"><i class="fas fa-trash"></i></button>
+        </div></td></tr>`;
+    });
+    h+='</tbody></table>';c.innerHTML=h;
+}
+
+/* ===== Print Slip ===== */
+function slipHTML(d){
+    const logo=d.logoUrl?`<img class="p-logo" src="${esc(d.logoUrl)}" onerror="this.style.display='none'">`:'<div class="p-logo-fallback"><i class="fas fa-university"></i></div>';
+    let rows='';
+    Object.keys(d.denoms).forEach(v=>{const q=d.denoms[v];if(q>0){rows+=`<tr><td>৳ ${parseInt(v).toLocaleString()}</td><td>${q}</td><td>৳ ${(q*parseInt(v)).toLocaleString()}</td></tr>`}});
+    return`<div class="p-wrap">
+    <div class="p-hdr">
+        <div class="p-hdr-l">${logo}<div><div class="p-bname">${esc(d.bankName)}</div><div class="p-title">Cash Deposit Form</div></div></div>
+        <div class="p-date">Date: ${fmtD(d.date)}</div>
+    </div>
+    <div class="p-info">
+        <div class="p-info-l">
+            <div class="p-rw"><span class="p-lb">Account Name:</span> ${esc(d.acName)}</div>
+            <div class="p-rw"><span class="p-lb">TRX No:</span> ${esc(d.trxNo)||"—"}</div>
+        </div>
+        <div class="p-info-r">
+            <div class="p-rw"><span class="p-lb">AC Number:</span> ${esc(d.acNo)}</div>
+            <div class="p-rw"><span class="p-lb">Branch:</span> ${esc(d.branch||"—")}</div>
+        </div>
+    </div>
+    <table class="p-tbl">
+        <thead><tr><th style="text-align:left">Denomination</th><th>Quantity</th><th>Total Amount</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr class="p-gt"><td style="text-align:right" colspan="2">Grand Total</td><td>৳ ${d.total.toLocaleString()}</td></tr></tfoot>
+    </table>
+    </div>`;
+}
+function prSlip(id){
+    const d=deps.find(x=>x.id===id);if(!d)return;
+    document.getElementById("pHdrTitle").textContent=d.bankName+" — Cash Deposit Form";
+    document.getElementById("pzSlip").innerHTML=slipHTML(d);
+    document.getElementById("pzSlip").style.display="block";
+    document.getElementById("pzRpt").style.display="none";
+    window.print();
+    setTimeout(()=>{document.getElementById("pzSlip").style.display="none"},600);
+}
+
+/* ===== PDF Download (Print Window) ===== */
+function dlPdf(id){
+    const d=deps.find(x=>x.id===id);if(!d)return;
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Deposit Slip</title>
+    <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;padding:0;margin:0;color:#000}
+    .p-wrap{border:2px solid #000;max-width:700px;margin:0 auto}
+    .p-hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1.5px solid #000}
+    .p-hdr-l{display:flex;align-items:center;gap:12px}
+    .p-logo{height:48px;width:auto;object-fit:contain}
+    .p-logo-fallback{width:48px;height:48px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-size:20px}
+    .p-bname{font-size:18px;font-weight:800}
+    .p-title{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+    .p-date{font-size:13px;font-weight:700;text-align:right}
+    .p-info{display:flex;padding:12px 16px;border-bottom:1.5px solid #000;gap:20px}
+    .p-info-l,.p-info-r{flex:1}
+    .p-rw{display:flex;gap:4px;font-size:12px;margin-bottom:3px}
+    .p-rw:last-child{margin-bottom:0}
+    .p-lb{font-weight:700;min-width:95px}
+    .p-tbl{width:100%;border-collapse:collapse}
+    .p-tbl th{background:#fff;color:#000;border:1px solid #000;padding:6px 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .p-tbl td{border:1px solid #000;padding:5px 10px;font-size:12px;color:#000;background:#fff;text-align:center}
+    .p-tbl td:first-child{text-align:left}
+    .p-gt td{font-weight:800!important;font-size:13px!important;border-top:2px solid #000!important}
+    @media print{body{margin:0}@page{margin:10mm}}
+    </style></head><body>${slipHTML(d)}
+    <script>window.onload=function(){window.print()}<\/script></body></html>`;
+    const w=window.open("","_blank","width=800,height=600");
+    w.document.write(html);w.document.close();
+}
+
+/* ===== Print Report ===== */
+function prRpt(){
+    const dt=document.getElementById("rpDt").value;
+    let list=deps.filter(d=>d.status==="completed");
+    if(dt)list=list.filter(d=>d.date===dt);
+    list.sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(!list.length){toast("রিপোর্টে কোনো ডাটা নেই","wn");return}
+    const grand=list.reduce((s,d)=>s+d.total,0);
+    let rows='';list.forEach(d=>{
+        rows+=`<tr><td>${fmtD(d.date)}</td><td>${esc(d.bankName)}</td><td>${esc(d.acName)}</td><td>${esc(d.acNo)}</td><td style="font-weight:700">${esc(d.trxNo)}</td><td style="font-weight:700">৳ ${d.total.toLocaleString()}</td></tr>`;
+    });
+    const html=`<div class="rp-wrap">
+    <div class="rp-hdr"><h2>Deposit Report</h2><p>${dt?'Date: '+fmtD(dt):'All Dates'}</p></div>
+    <table class="rp-tbl">
+    <thead><tr><th>Date</th><th>Bank</th><th>AC Name</th><th>AC No.</th><th>TRX No.</th><th>Total</th></tr></thead>
+    <tbody>${rows}</tbody>
+    </table>
+    <div class="rp-ft">Grand Total: ৳ ${grand.toLocaleString()}</div>
+    </div>`;
+    document.getElementById("pHdrTitle").textContent="Deposit Report";
+    document.getElementById("pzRpt").innerHTML=html;
+    document.getElementById("pzRpt").style.display="block";
+    document.getElementById("pzSlip").style.display="none";
+    window.print();
+    setTimeout(()=>{document.getElementById("pzRpt").style.display="none"},600);
+}
+</script>
+</body>
+</html>
