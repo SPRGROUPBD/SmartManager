@@ -3,704 +3,1327 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ERP Attendance System - Kushtia</title>
+<title>Attendance Management - Kushtia Depot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-:root{--sb:#0f1419;--sb-h:#1a2332;--pri:#059669;--pri-l:#d1fae5;--pri-d:#047857;--acc:#d97706;--acc-l:#fef3c7;--bg:#f1f5f9;--card:#fff;--tx:#0f172a;--tx2:#64748b;--brd:#e2e8f0;--dng:#dc2626;--dng-l:#fee2e2;--inf:#0891b2;--inf-l:#cffafe;--r:10px;--sh:0 1px 3px rgba(0,0,0,.08);--gold:#b8860b;--gold-l:#fef9c3;--gold-d:#92400e}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);overflow-x:hidden}
-h1,h2,h3,h4,h5{font-family:'Outfit',sans-serif}
-.hidden{display:none!important}
-.lp{display:flex;min-height:100vh}
-.ll{flex:1.2;background:var(--sb);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px;position:relative;overflow:hidden}
-.ll::before{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(5,150,105,.15)0%,transparent 70%);top:-100px;right:-100px;animation:fb 8s ease-in-out infinite}
-.ll::after{content:'';position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(217,119,6,.1)0%,transparent 70%);bottom:-80px;left:-80px;animation:fb 10s ease-in-out infinite reverse}
-@keyframes fb{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.1)}}
-.lb{text-align:center;z-index:1}
-.lb h1{font-size:2.5rem;font-weight:900;color:#fff;letter-spacing:-1px}
-.lb h1 span{color:var(--pri)}
-.lb p{color:#94a3b8;margin-top:8px;font-size:.95rem}
-.lf{margin-top:50px;z-index:1;display:flex;flex-direction:column;gap:16px}
-.lfi{display:flex;align-items:center;gap:14px;color:#94a3b8;font-size:.9rem}
-.lfi i{width:36px;height:36px;background:rgba(5,150,105,.15);color:var(--pri);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem}
-.lr{flex:1;display:flex;align-items:center;justify-content:center;padding:40px;background:#fff}
-.lfm{width:100%;max-width:400px}
-.lfm h2{font-size:1.8rem;font-weight:800;margin-bottom:6px}
-.lfm .sub{color:var(--tx2);margin-bottom:32px;font-size:.9rem}
-.fg{margin-bottom:20px}
-.fg label{display:block;font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:var(--tx2);margin-bottom:6px}
-.fi{width:100%;padding:12px 14px;border:2px solid var(--brd);border-radius:8px;font-size:.95rem;font-family:inherit;transition:border-color .2s;background:#fafbfc}
-.fi:focus{outline:none;border-color:var(--pri);background:#fff}
-.bp{width:100%;padding:13px;background:var(--pri);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:600;font-family:inherit;cursor:pointer;transition:background .2s,transform .1s}
-.bp:hover{background:var(--pri-d)}
-.bp:active{transform:scale(.98)}
-.bp:disabled{opacity:.6;cursor:not-allowed}
-.le{color:var(--dng);font-size:.85rem;margin-top:12px;min-height:24px;line-height:1.4}
-.ap{display:flex;min-height:100vh}
-.sb{width:270px;background:var(--sb);color:#fff;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:transform .3s}
-.sbh{padding:20px;border-bottom:1px solid rgba(255,255,255,.06)}
-.sbh h3{font-size:1.1rem;font-weight:800}
-.sbh h3 span{color:var(--pri)}
-.sbh small{color:#64748b;font-size:.75rem}
-.sbu{padding:16px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.06)}
-.sbu .av{width:42px;height:42px;border-radius:50%;background:var(--pri);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;flex-shrink:0;overflow:hidden;border:2px solid rgba(255,255,255,.1)}
-.sbu .av img{width:100%;height:100%;object-fit:cover}
-.sbu .un{font-weight:600;font-size:.9rem}
-.sbu .ur{color:#64748b;font-size:.72rem;text-transform:uppercase;letter-spacing:.5px}
-.sbu .ur.sys{color:var(--gold);font-weight:700}
-.sbn{flex:1;padding:12px 10px;overflow-y:auto}
-.ni{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;color:#94a3b8;font-size:.88rem;cursor:pointer;transition:all .15s;margin-bottom:2px}
-.ni:hover{background:var(--sb-h);color:#e2e8f0}
-.ni.act{background:rgba(5,150,105,.15);color:var(--pri);font-weight:600}
-.ni.sysa{background:rgba(184,134,11,.15);color:var(--gold);font-weight:600}
-.ni i{width:20px;text-align:center;font-size:.9rem}
-.sbf{padding:14px 20px;border-top:1px solid rgba(255,255,255,.06)}
-.lo{display:flex;align-items:center;gap:10px;color:#ef4444;font-size:.85rem;cursor:pointer;padding:8px 0}
-.lo:hover{color:#f87171}
-.mc{flex:1;margin-left:270px;min-height:100vh}
-.tb{background:var(--card);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--brd);position:sticky;top:0;z-index:50}
-.tt{font-family:'Outfit';font-size:1.2rem;font-weight:700}
-.ta{display:flex;align-items:center;gap:12px}
-.hmb{display:none;background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--tx)}
-.pc{padding:24px 28px}
-.cd{background:var(--card);border-radius:var(--r);border:1px solid var(--brd);box-shadow:var(--sh);overflow:hidden}
-.ch{padding:16px 20px;border-bottom:1px solid var(--brd);font-weight:700;font-family:'Outfit';font-size:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.cb{padding:20px}
-.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
-.sc{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--brd);box-shadow:var(--sh);display:flex;align-items:center;gap:16px}
-.si{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
-.si.gn{background:var(--pri-l);color:var(--pri)}
-.si.am{background:var(--acc-l);color:var(--acc)}
-.si.rd{background:var(--dng-l);color:var(--dng)}
-.si.bl{background:var(--inf-l);color:var(--inf)}
-.si.gd{background:var(--gold-l);color:var(--gold-d);border:1px solid #fde68a}
-.sv{font-family:'Outfit';font-size:1.6rem;font-weight:800;line-height:1}
-.sl{font-size:.8rem;color:var(--tx2);margin-top:4px}
-.dt{width:100%;border-collapse:collapse;font-size:.85rem}
-.dt th,.dt td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--brd)}
-.dt th{background:#f8fafc;font-weight:600;color:var(--tx2);font-size:.78rem;text-transform:uppercase;letter-spacing:.5px}
-.dt tr:hover td{background:#f8fafc}
-.dt .act{display:flex;gap:6px}
-.bs{padding:5px 10px;border:none;border-radius:6px;font-size:.78rem;cursor:pointer;font-family:inherit;font-weight:600;transition:all .15s}
-.bs.apr{background:var(--pri-l);color:var(--pri-d)}.bs.apr:hover{background:var(--pri);color:#fff}
-.bs.rej{background:var(--dng-l);color:var(--dng)}.bs.rej:hover{background:var(--dng);color:#fff}
-.bs.edt{background:var(--acc-l);color:#92400e}.bs.edt:hover{background:var(--acc);color:#fff}
-.bs.gld{background:var(--gold-l);color:var(--gold-d);border:1px solid #fde68a}.bs.gld:hover{background:var(--gold);color:#fff}
-.gw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--brd);max-height:65vh}
-.gt{border-collapse:collapse;font-size:.75rem;min-width:100%}
-.gt th,.gt td{padding:6px 8px;text-align:center;border:1px solid var(--brd);min-width:38px;white-space:nowrap}
-.gt th{background:#f1f5f9;font-weight:600;position:sticky;top:0;z-index:5}
-.gt .sk{position:sticky;left:0;z-index:6;background:#fff;text-align:left;font-weight:500}
-.gt .sk2{left:90px}
-.gt td.sk,.gt td.sk2{background:#fff}
-.gc{cursor:pointer;transition:all .1s;font-weight:600;border-radius:3px;min-height:28px;display:flex;align-items:center;justify-content:center}
-.gc:hover{transform:scale(1.1);box-shadow:0 2px 8px rgba(0,0,0,.15)}
-.cp{background:var(--acc-l);color:var(--acc)}.ca{background:#dbeafe;color:#1e40af}
-.cd2{background:#ccfbf1;color:#065f46}.cf{background:var(--pri);color:#fff}
-.ce{color:#cbd5e1;cursor:default}.ce:hover{transform:none;box-shadow:none}
-.cpop{position:fixed;background:var(--card);border-radius:10px;box-shadow:0 10px 25px rgba(0,0,0,.15);padding:12px;z-index:200;min-width:180px;border:1px solid var(--brd);animation:pi .15s ease-out}
-@keyframes pi{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
-.cpr{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:.82rem;font-weight:500;transition:background .1s}
-.cpr:hover{background:#f1f5f9}.cpr i{width:16px;text-align:center}
-.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;margin-bottom:24px}
-.cbx{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--brd);box-shadow:var(--sh)}
-.cbx h4{font-size:.9rem;font-weight:700;margin-bottom:16px}
-.ai{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--brd)}
-.ai:last-child{border-bottom:none}
-.ad{width:8px;height:8px;border-radius:50%;margin-top:6px;flex-shrink:0}
-.atx{font-size:.85rem}.atm{font-size:.75rem;color:var(--tx2);margin-top:2px}
-.fr{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap}
-.fr .fg{flex:1;min-width:160px}
-.btn{padding:10px 20px;border:none;border-radius:8px;font-size:.88rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
-.bg{background:var(--pri);color:#fff}.bg:hover{background:var(--pri-d)}
-.bo{background:transparent;border:2px solid var(--brd);color:var(--tx)}.bo:hover{border-color:var(--pri);color:var(--pri)}
-.ba{background:var(--acc);color:#fff}.ba:hover{background:#b45309}
-.br{background:var(--dng);color:#fff}.br:hover{background:#b91c1c}
-.bgd{background:var(--gold-d);color:#fff}.bgd:hover{background:var(--gold)}
-.bdg{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-.bdg-p{background:var(--acc-l);color:var(--acc)}.bdg-a{background:#dbeafe;color:#1e40af}
-.bdg-d{background:#ccfbf1;color:#065f46}.bdg-f{background:var(--pri);color:#fff}
-.bdg-da{background:#f3e8ff;color:#7c3aed}.bdg-ad{background:#dbeafe;color:#1e40af}
-.bdg-dc{background:#ccfbf1;color:#065f46}.bdg-sa{background:#fce7f3;color:#be185d}
-.bdg-sys{background:var(--gold-l);color:var(--gold-d);border:1px solid #fde68a;font-weight:700}
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;animation:fi .15s}
-@keyframes fi{from{opacity:0}to{opacity:1}}
-.mx{background:var(--card);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:500px;max-height:85vh;overflow-y:auto;animation:su .2s ease-out}
-@keyframes su{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.mh{padding:20px 24px;border-bottom:1px solid var(--brd);display:flex;align-items:center;justify-content:space-between}
-.mh h3{font-size:1.1rem;font-weight:700}
-.mcl{background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--tx2);width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center}
-.mcl:hover{background:#f1f5f9}
-.mb{padding:24px}.mft{padding:16px 24px;border-top:1px solid var(--brd);display:flex;gap:10px;justify-content:flex-end}
-.tc{position:fixed;top:20px;right:20px;z-index:500;display:flex;flex-direction:column;gap:8px}
-.tst{padding:12px 18px;border-radius:10px;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:10px;box-shadow:0 10px 25px rgba(0,0,0,.15);animation:ti .3s ease-out;min-width:280px}
-@keyframes ti{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
-.ts{background:#065f46;color:#d1fae5}.te{background:#991b1b;color:#fee2e2}
-.ti2{background:#1e3a5f;color:#dbeafe}.tw{background:#92400e;color:#fef3c7}
-.to2{animation:to3 .3s ease-in forwards}@keyframes to3{to{opacity:0;transform:translateX(40px)}}
-.iu{width:80px;height:80px;border:2px dashed var(--brd);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;transition:all .2s;flex-shrink:0}
-.iu:hover{border-color:var(--pri);background:#f8fafc}
-.iu img{width:100%;height:100%;object-fit:cover}.iu i{color:var(--tx2);font-size:1.2rem}
-.lgd{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
-.lgi{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--tx2)}
-.lgd2{width:14px;height:14px;border-radius:4px}
-.lsp{display:flex;align-items:center;justify-content:center;padding:40px}
-.spn{width:36px;height:36px;border:3px solid var(--brd);border-top-color:var(--pri);border-radius:50%;animation:sp .8s linear infinite}
-@keyframes sp{to{transform:rotate(360deg)}}
-.fbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
-.fbar select,.fbar input{padding:8px 12px;border:2px solid var(--brd);border-radius:8px;font-size:.85rem;font-family:inherit;background:#fff}
-.ovbg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:90}
-.tm{color:var(--tx2)}.mt2{margin-top:8px}.mt4{margin-top:16px}.mb4{margin-bottom:16px}
-.fb2{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.es{text-align:center;padding:40px;color:var(--tx2)}.es i{font-size:2.5rem;margin-bottom:12px;color:var(--brd)}
-.sysban{background:linear-gradient(135deg,#92400e 0%,#b8860b 50%,#d4a017 100%);color:#fff;padding:16px 20px;border-radius:var(--r);margin-bottom:20px;display:flex;align-items:center;gap:14px}
-.sysban i{font-size:1.5rem}.sysban h4{font-size:1rem;margin-bottom:2px}.sysban p{font-size:.8rem;opacity:.85}
-.uc{background:#fff;border:1px solid var(--brd);border-radius:var(--r);padding:16px;display:flex;align-items:center;gap:14px;transition:box-shadow .15s}
-.uc:hover{box-shadow:var(--sh)}
-.uc .uca{width:48px;height:48px;border-radius:50%;overflow:hidden;background:var(--brd);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tx2)}
-.uc .uca img{width:100%;height:100%;object-fit:cover}
-.uc .uci{flex:1}.uc .ucn{font-weight:600;font-size:.9rem}.uc .ucm{font-size:.78rem;color:var(--tx2)}
-.uc .uca2{display:flex;gap:6px}
-.cntb{background:var(--pri-l);color:var(--pri);padding:2px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
-.seedmsg{padding:12px 16px;border-radius:8px;font-size:.85rem;margin-top:8px;line-height:1.5}
-.seedmsg.ok{background:var(--pri-l);color:var(--pri-d)}.seedmsg.err{background:var(--dng-l);color:var(--dng)}
-@media(max-width:768px){.sb{transform:translateX(-100%)}.sb.open{transform:translateX(0)}.mc{margin-left:0}.hmb{display:block}.pc{padding:16px}.tb{padding:12px 16px}.ll{display:none}.lr{flex:1}.fr{flex-direction:column;gap:0}.sg{grid-template-columns:1fr 1fr}.cg{grid-template-columns:1fr}}
-@media(max-width:480px){.sg{grid-template-columns:1fr}}
+:root{--bg:#0a0f1a;--bg2:#111827;--card:#151f30;--card2:#1a2740;--accent:#00d4aa;--accent2:#00f0c0;--accent-dim:#00a88a;--warn:#f59e0b;--danger:#ef4444;--text:#e8edf5;--text2:#8899b0;--muted:#4a5a72;--border:#1e2e44;--border2:#2a3d58}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--muted);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-dim)}
+.view{display:none;min-height:100vh}.view.active{display:flex}
+
+#loginView{align-items:center;justify-content:center;position:relative}
+.bg-blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(100px);opacity:.15;animation:blobMove 20s ease-in-out infinite}
+.blob:nth-child(1){width:500px;height:500px;background:var(--accent);top:-10%;left:-10%}
+.blob:nth-child(2){width:400px;height:400px;background:#f59e0b;bottom:-10%;right:-10%;animation-delay:-7s}
+.blob:nth-child(3){width:300px;height:300px;background:#ef4444;top:50%;left:50%;animation-delay:-14s}
+@keyframes blobMove{0%,100%{transform:translate(0,0) scale(1)}25%{transform:translate(50px,-80px) scale(1.1)}50%{transform:translate(-60px,40px) scale(.9)}75%{transform:translate(30px,60px) scale(1.05)}}
+
+.login-card{background:rgba(21,31,48,.85);backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:20px;padding:48px 40px;width:420px;max-width:92vw;position:relative;z-index:1;box-shadow:0 25px 60px rgba(0,0,0,.5)}
+.login-card h1{font-size:28px;font-weight:800;letter-spacing:-.5px}
+.login-card p{color:var(--text2);font-size:14px;margin-top:4px}
+.login-input{width:100%;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:border .3s}
+.login-input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--accent-dim),var(--accent));border:none;border-radius:12px;color:#0a0f1a;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;transition:all .3s;margin-top:8px}
+.login-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,212,170,.3)}
+.login-btn:active{transform:translateY(0)}
+
+.dash-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.dash-header .logo-text{font-size:18px;font-weight:700;color:var(--accent)}
+
+.sidebar{width:250px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;overflow-y:auto;min-height:calc(100vh - 60px)}
+.sidebar-item{display:flex;align-items:center;gap:12px;padding:12px 24px;color:var(--text2);cursor:pointer;transition:all .2s;font-size:14px;font-weight:500;border-left:3px solid transparent}
+.sidebar-item:hover{background:rgba(0,212,170,.05);color:var(--text)}
+.sidebar-item.active{background:rgba(0,212,170,.08);color:var(--accent);border-left-color:var(--accent)}
+.sidebar-item i{width:20px;text-align:center;font-size:15px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all .3s}
+.card:hover{border-color:var(--border2)}
+.stat-card{position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.08}
+.stat-card.green::after{background:var(--accent)}
+.stat-card.amber::after{background:var(--warn)}
+.stat-card.red::after{background:var(--danger)}
+.stat-card.blue::after{background:#3b82f6}
+
+.data-table{width:100%;border-collapse:separate;border-spacing:0}
+.data-table th{background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:12px 14px;text-align:left;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:2}
+.data-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;color:var(--text)}
+.data-table tr:hover td{background:rgba(0,212,170,.03)}
+
+.badge{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;font-size:12px;font-weight:700}
+.badge.P{background:rgba(0,212,170,.15);color:#00d4aa}
+.badge.A{background:rgba(239,68,68,.15);color:#ef4444}
+.badge.T{background:rgba(59,130,246,.15);color:#60a5fa}
+.badge.L{background:rgba(245,158,11,.15);color:#f59e0b}
+.badge.H{background:rgba(168,85,247,.15);color:#a855f7}
+.badge.small{width:26px;height:26px;font-size:11px;border-radius:6px}
+.badge.mini{width:22px;height:22px;font-size:10px;border-radius:5px}
+
+.btn{padding:10px 20px;border:none;border-radius:10px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:8px}
+.btn-primary{background:var(--accent);color:#0a0f1a}.btn-primary:hover{background:var(--accent2);transform:translateY(-1px)}
+.btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border)}.btn-secondary:hover{border-color:var(--accent)}
+.btn-danger{background:rgba(239,68,68,.15);color:#ef4444}.btn-danger:hover{background:rgba(239,68,68,.25)}
+.btn-warn{background:rgba(245,158,11,.15);color:#f59e0b}.btn-warn:hover{background:rgba(245,158,11,.25)}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px}
+.btn-xs{padding:5px 10px;font-size:11px;border-radius:6px}
+
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-input,.form-select{width:100%;padding:11px 14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border .3s}
+.form-input:focus,.form-select:focus{border-color:var(--accent)}
+.form-select option{background:var(--bg2);color:var(--text)}
+
+.status-btn{width:56px;height:56px;border-radius:14px;border:2px solid var(--border);background:var(--bg);color:var(--text2);font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.status-btn span{font-size:9px;font-weight:500;letter-spacing:.3px}
+.status-btn:hover{border-color:var(--muted);transform:translateY(-2px)}
+.status-btn.selected-P{border-color:#00d4aa;background:rgba(0,212,170,.1);color:#00d4aa}
+.status-btn.selected-A{border-color:#ef4444;background:rgba(239,68,68,.1);color:#ef4444}
+.status-btn.selected-T{border-color:#60a5fa;background:rgba(59,130,246,.1);color:#60a5fa}
+.status-btn.selected-L{border-color:#f59e0b;background:rgba(245,158,11,.1);color:#f59e0b}
+.status-btn.selected-H{border-color:#a855f7;background:rgba(168,85,247,.1);color:#a855f7}
+.status-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px}
+.toast{padding:14px 20px;border-radius:12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:10px;animation:toastIn .4s ease;min-width:280px;box-shadow:0 10px 30px rgba(0,0,0,.3)}
+.toast.success{background:rgba(0,212,170,.15);border:1px solid rgba(0,212,170,.3);color:#00f0c0}
+.toast.error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#fca5a5}
+.toast.info{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:#93bbfd}
+.toast.out{animation:toastOut .3s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(100px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateX(100px)}}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:32px;max-width:560px;width:100%;animation:modalIn .3s ease;max-height:90vh;overflow-y:auto}
+@keyframes modalIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
+
+.active-badge{background:rgba(0,212,170,.12);color:#00d4aa;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.inactive-badge{background:rgba(239,68,68,.12);color:#ef4444;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.holiday-badge{background:rgba(168,85,247,.12);color:#a855f7;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.pending-badge{background:rgba(245,158,11,.12);color:#f59e0b;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+.approved-badge{background:rgba(0,212,170,.12);color:#00d4aa;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600}
+
+#printArea{display:none}
+@media print{
+  body>*{display:none!important}
+  #printArea{display:block!important;padding:20px;font-family:'Outfit',sans-serif;color:#111}
+  #printArea table{width:100%;border-collapse:collapse;font-size:10px}
+  #printArea th,#printArea td{border:1px solid #333;padding:4px 6px;text-align:center}
+  #printArea th{background:#e5e7eb;font-weight:700;font-size:9px}
+  #printArea h2{text-align:center;font-size:15px;margin-bottom:4px}
+  #printArea h3{text-align:center;font-size:12px;color:#555;margin-bottom:12px}
+  @page{size:landscape;margin:8mm}
+}
+
+.fade-in{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.stagger>*{animation:fadeIn .4s ease both}
+.stagger>*:nth-child(1){animation-delay:.05s}
+.stagger>*:nth-child(2){animation-delay:.1s}
+.stagger>*:nth-child(3){animation-delay:.15s}
+.stagger>*:nth-child(4){animation-delay:.2s}
+.stagger>*:nth-child(5){animation-delay:.25s}
+.stagger>*:nth-child(6){animation-delay:.3s}
+
+@media(max-width:768px){
+  .sidebar{width:60px;padding:10px 0}
+  .sidebar-item{padding:12px 0;justify-content:center;border-left:none;border-bottom:2px solid transparent;font-size:0}
+  .sidebar-item i{font-size:18px}
+  .sidebar-item span{display:none}
+  .sidebar-item.active{border-bottom-color:var(--accent);border-left-color:transparent}
+  .login-card{padding:32px 24px}
+  .dash-header{padding:12px 16px}
+}
+
+.toggle-switch{position:relative;width:44px;height:24px;cursor:pointer;display:inline-block;vertical-align:middle}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--danger);border-radius:24px;transition:.3s}
+.toggle-slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:var(--accent)}
+.toggle-switch input:checked+.toggle-slider::before{transform:translateX(20px)}
 </style>
 </head>
 <body>
 
-<div id="loginPage" class="lp">
-  <div class="ll">
-    <div class="lb"><h1>ATTENDANCE <span>KUSHTIA</span></h1><p>Enterprise Resource Planning System</p></div>
-    <div class="lf">
-      <div class="lfi"><i class="fas fa-shield-halved"></i> Role-based secure access control</div>
-      <div class="lfi"><i class="fas fa-clock"></i> Real-time attendance tracking</div>
-      <div class="lfi"><i class="fas fa-chart-line"></i> Live analytics dashboard</div>
-      <div class="lfi"><i class="fas fa-file-excel"></i> Excel and PDF report export</div>
-      <div class="lfi"><i class="fas fa-crown"></i> System Admin with full control</div>
-    </div>
-  </div>
-  <div class="lr">
-    <div class="lfm">
-      <h2>Welcome Back</h2>
-      <p class="sub">Sign in to continue</p>
-      <form id="loginForm" onsubmit="handleLogin(event)">
-        <div class="fg"><label>Username</label><input type="text" id="loginUser" class="fi" placeholder="Enter username" required autocomplete="username"></div>
-        <div class="fg"><label>Password</label><input type="password" id="loginPass" class="fi" placeholder="Enter password" required autocomplete="current-password"></div>
-        <button type="submit" class="bp" id="loginBtn">Sign In <i class="fas fa-arrow-right" style="margin-left:6px"></i></button>
-        <div id="loginError" class="le"></div>
-      </form>
-      <div style="margin-top:20px;padding:14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:.78rem;color:#92400e">
-        <strong><i class="fas fa-key"></i> Default Credentials:</strong><br>
-        <span style="color:var(--gold-d);font-weight:700">System Admin:</span> KS / Monico@Ku007/<br>
-        <span style="color:var(--pri)">DA:</span> DA_A / da123 &middot; <span style="color:#1e40af">ADIC:</span> ADIC_A / adic123<br>
-        <span style="color:#065f46">DIC:</span> DIC_A / dic123 &middot; <span style="color:#be185d">Sales Admin:</span> SA / admin123
+<div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
+<div class="toast-container" id="toastBox"></div>
+<div id="modalOverlay" style="display:none"></div>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginView" class="view active">
+  <div class="login-card fade-in">
+    <div class="flex items-center gap-3 mb-1">
+      <div style="width:44px;height:44px;background:linear-gradient(135deg,var(--accent-dim),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center">
+        <i class="fa-solid fa-clipboard-check" style="color:#0a0f1a;font-size:20px"></i>
       </div>
-      <div style="margin-top:12px;text-align:center">
-        <button type="button" onclick="forceSeed()" style="background:none;border:1px dashed var(--brd);padding:6px 14px;border-radius:6px;font-size:.75rem;color:var(--tx2);cursor:pointer;font-family:inherit">
-          <i class="fas fa-database"></i> Reset / Initialize Database
-        </button>
-        <div id="seedMsg"></div>
-      </div>
+      <div><h1>Attendance System</h1><p>Kushtia Depot</p></div>
     </div>
+    <div style="height:1px;background:var(--border);margin:24px 0"></div>
+    <div class="form-group">
+      <label class="form-label">User ID</label>
+      <input class="login-input" id="loginId" placeholder="Enter your ID" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="login-input" id="loginPass" type="password" placeholder="Enter password">
+    </div>
+    <button class="login-btn" onclick="handleLogin()"><i class="fa-solid fa-right-to-bracket"></i> Login</button>
+    <p style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)"><i class="fa-solid fa-shield-halved"></i> Secure Attendance Management</p>
   </div>
 </div>
 
-<div id="appPage" class="ap hidden">
-  <aside id="sidebar" class="sb">
-    <div class="sbh"><h3>ATTENDANCE <span>KUSHTIA</span></h3><small>ERP System v2.0</small></div>
-    <div class="sbu" id="sidebarUser"></div>
-    <nav class="sbn" id="sidebarNav"></nav>
-    <div class="sbf"><div class="lo" onclick="handleLogout()"><i class="fas fa-right-from-bracket"></i> Sign Out</div></div>
-  </aside>
-  <div id="sidebarOverlay" class="ovbg hidden" onclick="toggleSidebar()"></div>
-  <div class="mc">
-    <header class="tb">
-      <div style="display:flex;align-items:center;gap:12px">
-        <button class="hmb" onclick="toggleSidebar()"><i class="fas fa-bars"></i></button>
-        <span class="tt" id="topbarTitle">Dashboard</span>
-      </div>
-      <div class="ta" id="topbarActions"></div>
-    </header>
-    <div class="pc" id="pageContent"><div class="lsp"><div class="spn"></div></div></div>
+<!-- ===== USER DASHBOARD ===== -->
+<div id="userView" class="view" style="flex-direction:column">
+  <header class="dash-header">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-clipboard-check" style="color:var(--accent);font-size:20px"></i>
+      <span class="logo-text">Attendance System</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="userDisplayId" style="font-size:14px;color:var(--text2)"></span>
+      <button class="btn btn-sm btn-secondary" onclick="handleLogout()"><i class="fa-solid fa-sign-out"></i> Logout</button>
+    </div>
+  </header>
+  <main id="userContent" style="flex:1;padding:28px;max-width:800px;margin:0 auto;width:100%"></main>
+</div>
+
+<!-- ===== DIC DASHBOARD ===== -->
+<div id="dicView" class="view" style="flex-direction:column">
+  <header class="dash-header">
+    <div class="flex items-center gap-3">
+      <i class="fa-solid fa-clipboard-check" style="color:var(--accent);font-size:20px"></i>
+      <span class="logo-text">DIC Panel</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="dicDisplayId" style="font-size:14px;color:var(--text2)"></span>
+      <button class="btn btn-sm btn-secondary" onclick="handleLogout()"><i class="fa-solid fa-sign-out"></i> Logout</button>
+    </div>
+  </header>
+  <div style="display:flex;flex:1;overflow:hidden">
+    <aside class="sidebar" id="dicSidebar"></aside>
+    <main id="dicContent" style="flex:1;padding:28px;overflow-y:auto;height:calc(100vh - 60px)"></main>
   </div>
 </div>
 
-<div id="modalOverlay" class="mo hidden" onclick="event.target===this&&closeModal()">
-  <div class="mx">
-    <div class="mh"><h3 id="modalTitle">Modal</h3><button class="mcl" onclick="closeModal()"><i class="fas fa-xmark"></i></button></div>
-    <div class="mb" id="modalBody"></div>
-    <div class="mft" id="modalFoot"></div>
-  </div>
-</div>
-<div class="tc" id="toastContainer"></div>
-<div id="cellPopup" class="cpop hidden"></div>
+<div id="printArea"></div>
 
 <script>
-firebase.initializeApp({
-  apiKey:"AIzaSyBEg0R0YOOsFgKiyTv3QkyQv0Vhpym1lms",
-  authDomain:"attendance-kushtia.firebaseapp.com",
-  databaseURL:"https://attendance-kushtia-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"attendance-kushtia",
-  storageBucket:"attendance-kushtia.firebasestorage.app",
-  messagingSenderId:"695383066612",
-  appId:"1:695383066612:web:0d9f5a6dc5d1bbd0a6dba1",
-  measurementId:"G-G21R0GPT2X"
-});
-const db=firebase.database();
-let CU=null,EC={},UC={},curPage='dashboard',cY,cM,charts={},listeners=[];
+/* ============================================================
+   CONFIG & FIREBASE
+   ============================================================ */
+const DIC_ID = 'KUS-11182401';
+const DIC_PASS = 'KUS-11182401';
+const DB_URL = 'https://attendance-kushtia-default-rtdb.europe-west1.firebasedatabase.app';
 
-// ===== SEED — সবসময় KS user আছে কিনা চেক করবে =====
-function forceSeed(){
-  const el=document.getElementById('seedMsg');
-  el.innerHTML='<div class="seedmsg" style="background:#f1f5f9;color:var(--tx2)"><i class="fas fa-spinner fa-spin"></i> Initializing database...</div>';
-  const u={};
-  u['users/KS']={name:'System Admin',role:'SYSTEM_ADMIN',depot:'ALL',password:'Monico@Ku007/',image:''};
-  u['users/DA_A']={name:'DA Depot A',role:'DA',depot:'A',password:'da123',image:''};
-  u['users/ADIC_A']={name:'ADIC Depot A',role:'ADIC',depot:'A',password:'adic123',image:''};
-  u['users/DIC_A']={name:'DIC Depot A',role:'DIC',depot:'A',password:'dic123',image:''};
-  u['users/SA']={name:'Sales Admin',role:'SALES_ADMIN',depot:'ALL',password:'admin123',image:''};
-  u['employees/EMP001']={name:'Rahim',salary:10000,depot:'A',designation:'Field Officer',image:''};
-  u['employees/EMP002']={name:'Karim',salary:12000,depot:'A',designation:'Sr. Officer',image:''};
-  u['employees/EMP003']={name:'Sajjad',salary:15000,depot:'A',designation:'Team Lead',image:''};
-  u['employees/EMP004']={name:'Jamal',salary:11000,depot:'B',designation:'Field Officer',image:''};
-  u['employees/EMP005']={name:'Kamal',salary:13000,depot:'B',designation:'Sr. Officer',image:''};
-  u['employees/EMP006']={name:'Habib',salary:14000,depot:'C',designation:'Field Officer',image:''};
-  u['employees/EMP007']={name:'Nasir',salary:16000,depot:'C',designation:'Team Lead',image:''};
-  u['depots/A']={name:'Depot A - Kushtia Sadar'};
-  u['depots/B']={name:'Depot B - Kumarkhali'};
-  u['depots/C']={name:'Depot C - Daulatpur'};
-  db.ref().update(u).then(()=>{
-    el.innerHTML='<div class="seedmsg ok"><i class="fas fa-check-circle"></i> Database initialized successfully! You can now login with <strong>KS / Monico@Ku007/</strong></div>';
-  }).catch(err=>{
-    el.innerHTML='<div class="seedmsg err"><i class="fas fa-times-circle"></i> Error: '+err.message+'</div>';
-  });
+const firebaseConfig = {
+  apiKey: "AIzaSyBEg0R0YOOsFgKiyTv3QkyQv0Vhpym1lms",
+  authDomain: "attendance-kushtia.firebaseapp.com",
+  databaseURL: DB_URL,
+  projectId: "attendance-kushtia",
+  storageBucket: "attendance-kushtia.firebasestorage.app",
+  messagingSenderId: "695383066612",
+  appId: "1:695383066612:web:0d9f5a6dc5d1bbd0a6dba1",
+  measurementId: "G-G21R0GPT2X"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ============================================================
+   GLOBAL STATE
+   ============================================================ */
+let currentUser = null;
+let allUsers = {};
+let allHolidays = {};
+let currentTab = 'overview';
+let selectedStatus = '';
+
+const DESIGNATIONS = [
+  'Depot In-Charge',
+  'Asst. Depot In-Charge',
+  'Delivery Assistant',
+  'Driver',
+  'Helper'
+];
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function todayStr() {
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function getDaysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function formatBD(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+function statusLabel(s) { return {P:'Present',A:'Absent',T:'Tour',L:'Leave',H:'Holiday'}[s] || s; }
+function statusColor(s) { return {P:'#00d4aa',A:'#ef4444',T:'#60a5fa',L:'#f59e0b',H:'#a855f7'}[s] || '#666'; }
+function monthName(m) { return ['January','February','March','April','May','June','July','August','September','October','November','December'][m]; }
+function isHoliday(dateStr) { return allHolidays.hasOwnProperty(dateStr); }
+
+/* Get effective attendance status - auto H for holidays */
+function getAttStatus(dateStr, uid, attData) {
+  if (attData && attData.status) return attData.status;
+  if (isHoliday(dateStr)) return 'H';
+  return '';
 }
 
-function ensureKS(){
-  db.ref('users/KS').once('value').then(snap=>{
-    if(!snap.val()){
-      db.ref('users/KS').set({name:'System Admin',role:'SYSTEM_ADMIN',depot:'ALL',password:'Monico@Ku007/',image:''}).then(()=>{
-        console.log('KS user created');
+function showToast(msg, type) {
+  type = type || 'info';
+  var box = document.getElementById('toastBox');
+  var icons = { success:'fa-check-circle', error:'fa-times-circle', info:'fa-info-circle' };
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = '<i class="fa-solid ' + (icons[type]||icons.info) + '"></i><span>' + msg + '</span>';
+  box.appendChild(t);
+  setTimeout(function() { t.classList.add('out'); setTimeout(function() { t.remove(); }, 300); }, 3500);
+}
+
+function showModal(title, bodyHTML, onConfirm) {
+  var ov = document.getElementById('modalOverlay');
+  ov.style.display = 'flex';
+  var btnHTML = onConfirm ? '<button class="btn btn-primary" id="modalConfirmBtn">Confirm</button>' : '';
+  ov.innerHTML = '<div class="modal-box">' +
+    '<h3 style="font-size:18px;font-weight:700;margin-bottom:16px">' + title + '</h3>' +
+    '<div>' + bodyHTML + '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px">' +
+      '<button class="btn btn-secondary" onclick="closeModal()">Cancel</button>' + btnHTML +
+    '</div></div>';
+  if (onConfirm) document.getElementById('modalConfirmBtn').onclick = function() { onConfirm(); closeModal(); };
+  ov.onclick = function(e) { if (e.target === ov) closeModal(); };
+}
+function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+function switchView(id) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+/* ============================================================
+   FIREBASE DATA LOAD
+   ============================================================ */
+async function loadUsers() {
+  try {
+    var snap = await db.ref('users').once('value');
+    allUsers = snap.val() || {};
+  } catch(e) { showToast('Failed to load users: ' + e.message, 'error'); }
+}
+async function loadHolidays() {
+  try {
+    var snap = await db.ref('holidays').once('value');
+    allHolidays = snap.val() || {};
+  } catch(e) { showToast('Failed to load holidays', 'error'); }
+}
+
+/* ============================================================
+   LOGIN / LOGOUT
+   ============================================================ */
+async function handleLogin() {
+  var id = document.getElementById('loginId').value.trim();
+  var pass = document.getElementById('loginPass').value.trim();
+  if (!id || !pass) { showToast('Please enter ID and Password', 'error'); return; }
+
+  /* DIC check */
+  if (id === DIC_ID && pass === DIC_PASS) {
+    var snap = await db.ref('users/' + DIC_ID).once('value');
+    if (!snap.exists()) {
+      await db.ref('users/' + DIC_ID).set({
+        id: DIC_ID, name: 'Depot Incharge', designation: 'Depot In-Charge',
+        depot: 'Kushtia', joinDate: todayStr(), salary: 0, mobile: '',
+        role: 'DIC', password: DIC_PASS, active: true, createdAt: Date.now()
       });
     }
-  });
-  // অন্য seed data ও চেক করি
-  db.ref('employees/EMP001').once('value').then(snap=>{
-    if(!snap.val()){
-      const u={};
-      u['users/DA_A']={name:'DA Depot A',role:'DA',depot:'A',password:'da123',image:''};
-      u['users/ADIC_A']={name:'ADIC Depot A',role:'ADIC',depot:'A',password:'adic123',image:''};
-      u['users/DIC_A']={name:'DIC Depot A',role:'DIC',depot:'A',password:'dic123',image:''};
-      u['users/SA']={name:'Sales Admin',role:'SALES_ADMIN',depot:'ALL',password:'admin123',image:''};
-      u['employees/EMP001']={name:'Rahim',salary:10000,depot:'A',designation:'Field Officer',image:''};
-      u['employees/EMP002']={name:'Karim',salary:12000,depot:'A',designation:'Sr. Officer',image:''};
-      u['employees/EMP003']={name:'Sajjad',salary:15000,depot:'A',designation:'Team Lead',image:''};
-      u['employees/EMP004']={name:'Jamal',salary:11000,depot:'B',designation:'Field Officer',image:''};
-      u['employees/EMP005']={name:'Kamal',salary:13000,depot:'B',designation:'Sr. Officer',image:''};
-      u['employees/EMP006']={name:'Habib',salary:14000,depot:'C',designation:'Field Officer',image:''};
-      u['employees/EMP007']={name:'Nasir',salary:16000,depot:'C',designation:'Team Lead',image:''};
-      u['depots/A']={name:'Depot A - Kushtia Sadar'};
-      u['depots/B']={name:'Depot B - Kumarkhali'};
-      u['depots/C']={name:'Depot C - Daulatpur'};
-      db.ref().update(u);
-    }
-  });
-}
-
-// ===== AUTH =====
-function handleLogin(e){
-  e.preventDefault();
-  const un=document.getElementById('loginUser').value.trim();
-  const pw=document.getElementById('loginPass').value;
-  const btn=document.getElementById('loginBtn');
-  if(!un||!pw){showLE('Please fill all fields');return;}
-  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Connecting...';
-  showLE('');
-  db.ref('users/'+un).once('value').then(snap=>{
-    const u=snap.val();
-    if(!u){
-      showLE('User "'+un+'" not found in database. Click "Reset / Initialize Database" below.');
-      btn.disabled=false;btn.innerHTML='Sign In <i class="fas fa-arrow-right" style="margin-left:6px"></i>';return;
-    }
-    if(u.password!==pw){
-      showLE('Wrong password. Expected: '+u.password.substring(0,3)+'***'+u.password.substring(u.password.length-2));
-      btn.disabled=false;btn.innerHTML='Sign In <i class="fas fa-arrow-right" style="margin-left:6px"></i>';return;
-    }
-    CU={username:un,...u};
-    localStorage.setItem('erp_s',JSON.stringify(CU));
-    enterApp();
-  }).catch(err=>{
-    showLE('Connection error: '+err.message);
-    btn.disabled=false;btn.innerHTML='Sign In <i class="fas fa-arrow-right" style="margin-left:6px"></i>';
-  });
-}
-function showLE(m){document.getElementById('loginError').textContent=m;}
-function handleLogout(){
-  listeners.forEach(l=>l.r.off(l.e,l.cb));listeners=[];
-  CU=null;localStorage.removeItem('erp_s');
-  document.getElementById('appPage').classList.add('hidden');
-  document.getElementById('loginPage').classList.remove('hidden');
-  document.getElementById('loginForm').reset();
-  document.getElementById('loginError').textContent='';
-  const btn=document.getElementById('loginBtn');btn.disabled=false;btn.innerHTML='Sign In <i class="fas fa-arrow-right" style="margin-left:6px"></i>';
-}
-function checkSession(){const s=localStorage.getItem('erp_s');if(s){CU=JSON.parse(s);enterApp();}}
-
-function enterApp(){
-  document.getElementById('loginPage').classList.add('hidden');
-  document.getElementById('appPage').classList.remove('hidden');
-  const n=new Date();cY=n.getFullYear();cM=n.getMonth();
-  loadEmps();renderSB();renderSBU();navTo('dashboard');
-}
-function isSys(){return CU&&CU.role==='SYSTEM_ADMIN';}
-
-// ===== SIDEBAR =====
-function getMenu(){
-  const r=CU.role,i=[];
-  if(r==='SYSTEM_ADMIN'){
-    i.push({id:'dashboard',ic:'fa-gauge-high',lb:'Dashboard'});
-    i.push({id:'sys_users',ic:'fa-user-shield',lb:'User Management'});
-    i.push({id:'empmgmt',ic:'fa-users',lb:'Employee Management'});
-    i.push({id:'entry',ic:'fa-pen-to-square',lb:'Attendance Entry'});
-    i.push({id:'approvals',ic:'fa-clipboard-check',lb:'Approvals'});
-    i.push({id:'grid',ic:'fa-table-cells-large',lb:'Grid View'});
-    i.push({id:'depot',ic:'fa-building',lb:'Depot Dashboard'});
-    i.push({id:'reports',ic:'fa-file-export',lb:'Reports'});
-    i.push({id:'profile',ic:'fa-user-circle',lb:'My Profile'});
-    return i;
+    currentUser = { id: DIC_ID, name: 'Depot Incharge', role: 'DIC' };
+    await loadUsers();
+    await loadHolidays();
+    document.getElementById('dicDisplayId').textContent = DIC_ID;
+    switchView('dicView');
+    renderSidebar();
+    showTab('overview');
+    showToast('Welcome, Depot Incharge', 'success');
+    return;
   }
-  i.push({id:'dashboard',ic:'fa-gauge-high',lb:'Dashboard'});
-  i.push({id:'entry',ic:'fa-pen-to-square',lb:'Attendance Entry'});
-  if(['ADIC','DIC','SALES_ADMIN'].includes(r))i.push({id:'approvals',ic:'fa-clipboard-check',lb:'Approvals'});
-  i.push({id:'grid',ic:'fa-table-cells-large',lb:'Grid View'});
-  if(['ADIC','DIC','SALES_ADMIN'].includes(r))i.push({id:'depot',ic:'fa-building',lb:'Depot Dashboard'});
-  if(r==='DIC'){i.push({id:'empmgmt',ic:'fa-users',lb:'Employee Mgmt'});i.push({id:'usermgmt',ic:'fa-user-gear',lb:'User Mgmt'});}
-  if(['DIC','SALES_ADMIN'].includes(r))i.push({id:'reports',ic:'fa-file-export',lb:'Reports'});
-  i.push({id:'profile',ic:'fa-user-circle',lb:'My Profile'});
-  return i;
-}
-function renderSB(){
-  document.getElementById('sidebarNav').innerHTML=getMenu().map(i=>{
-    const cls=i.id===curPage?(isSys()?'sysa':'act'):'';
-    return`<div class="ni ${cls}" onclick="navTo('${i.id}')"><i class="fas ${i.ic}"></i> ${i.lb}</div>`;
-  }).join('');
-}
-function renderSBU(){
-  const a=CU.image?`<img src="${CU.image}">`:CU.name.charAt(0).toUpperCase();
-  const sys=isSys();
-  document.getElementById('sidebarUser').innerHTML=`<div class="av" ${sys?'style="background:linear-gradient(135deg,#b8860b,#d4a017);border-color:rgba(255,215,0,.3)"':''}>${a}</div><div><div class="un">${CU.name}</div><div class="ur ${sys?'sys':''}">${sys?'<i class="fas fa-crown" style="margin-right:4px"></i>':''}${CU.role} &middot; Depot ${CU.depot}</div></div>`;
-}
-function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('hidden');}
 
-// ===== NAV =====
-function navTo(p){
-  curPage=p;listeners.forEach(l=>l.r.off(l.e,l.cb));listeners=[];
-  Object.values(charts).forEach(c=>c.destroy());charts={};
-  renderSB();document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.add('hidden');
-  const t={dashboard:'Dashboard',entry:'Attendance Entry',approvals:'Approvals',grid:'Grid View',depot:'Depot Dashboard',empmgmt:'Employee Management',usermgmt:'User Management',sys_users:'System User Management',reports:'Reports',profile:'My Profile'};
-  document.getElementById('topbarTitle').textContent=t[p]||'Dashboard';
-  document.getElementById('topbarActions').innerHTML='';
-  const c=document.getElementById('pageContent');c.innerHTML='<div class="lsp"><div class="spn"></div></div>';
-  switch(p){
-    case'dashboard':loadDash();break;case'entry':renderEntry();break;case'approvals':loadApprovals();break;
-    case'grid':loadGrid();break;case'depot':loadDepot();break;case'empmgmt':loadEmpMgmt();break;
-    case'usermgmt':loadUserMgmt();break;case'sys_users':loadSysUsers();break;
-    case'reports':renderReports();break;case'profile':renderProfile();break;
+  /* Normal user */
+  try {
+    var snap = await db.ref('users/' + id).once('value');
+    if (!snap.exists()) { showToast('User not found', 'error'); return; }
+    var data = snap.val();
+    if (data.password !== pass) { showToast('Wrong password', 'error'); return; }
+    if (data.active === false) { showToast('Account deactivated. Contact DIC.', 'error'); return; }
+    currentUser = data;
+    await loadHolidays();
+    document.getElementById('userDisplayId').textContent = id;
+    switchView('userView');
+    renderUserDashboard();
+    showToast('Welcome, ' + data.name, 'success');
+  } catch(e) { showToast('Login error: ' + e.message, 'error'); }
+}
+
+function handleLogout() {
+  currentUser = null;
+  allUsers = {};
+  allHolidays = {};
+  document.getElementById('loginId').value = '';
+  document.getElementById('loginPass').value = '';
+  switchView('loginView');
+  showToast('Logged out', 'info');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && document.getElementById('loginView').classList.contains('active')) handleLogin();
+});
+
+/* ============================================================
+   USER DASHBOARD
+   ============================================================ */
+function renderUserDashboard() {
+  var c = document.getElementById('userContent');
+  var today = todayStr();
+  var hol = isHoliday(today);
+
+  var holStyle = hol ? 'display:flex' : 'display:none';
+  var holClass = hol ? ' selected-H' : '';
+
+  c.innerHTML = '<div class="fade-in">' +
+    '<div class="card" style="margin-bottom:24px">' +
+      '<h2 style="font-size:20px;font-weight:700;margin-bottom:4px">Daily Attendance</h2>' +
+      '<p style="color:var(--text2);font-size:13px">Submit your attendance for the selected date</p>' +
+      '<div style="height:1px;background:var(--border);margin:20px 0"></div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">Select Date</label>' +
+        '<input type="date" class="form-input" id="userDate" value="' + today + '" max="' + today + '" onchange="onUserDateChange()">' +
+      '</div>' +
+      '<div id="holidayNotice" style="' + holStyle + ';background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:14px 18px;margin-bottom:16px;align-items:center;gap:12px">' +
+        '<i class="fa-solid fa-umbrella-beach" style="color:#a855f7;font-size:20px"></i>' +
+        '<div><div style="font-weight:600;color:#a855f7;font-size:14px">Holiday</div>' +
+        '<div style="font-size:12px;color:var(--text2)">' + (allHolidays[today]||'This date is a holiday') + '</div></div>' +
+      '</div>' +
+      '<label class="form-label">Select Status</label>' +
+      '<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap" id="userStatusBtns">' +
+        '<button class="status-btn' + (hol?'':(selectedStatus==='P'?' selected-P':'')) + '" data-s="P" onclick="selectUserStatus(\'P\')"' + (hol?' disabled':'') + '><div>P</div><span>Present</span></button>' +
+        '<button class="status-btn" data-s="A" onclick="selectUserStatus(\'A\')"' + (hol?' disabled':'') + '><div>A</div><span>Absent</span></button>' +
+        '<button class="status-btn" data-s="T" onclick="selectUserStatus(\'T\')"' + (hol?' disabled':'') + '><div>T</div><span>Tour</span></button>' +
+        '<button class="status-btn" data-s="L" onclick="selectUserStatus(\'L\')"' + (hol?' disabled':'') + '><div>L</div><span>Leave</span></button>' +
+        '<button class="status-btn' + holClass + '" data-s="H" onclick="selectUserStatus(\'H\')"' + (!hol?' disabled':'') + '><div>H</div><span>Holiday</span></button>' +
+      '</div>' +
+      '<button class="btn btn-primary" onclick="userSubmitAttendance()" style="width:100%"><i class="fa-solid fa-paper-plane"></i> Submit Attendance</button>' +
+      '<div id="userSubmitMsg" style="margin-top:12px;font-size:13px"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-calendar-days" style="color:var(--accent);margin-right:8px"></i>My Attendance History</h3>' +
+      '<div style="overflow-x:auto" id="userHistoryTable"></div>' +
+    '</div></div>';
+
+  if (hol) selectedStatus = 'H';
+  loadUserHistory();
+}
+
+function onUserDateChange() {
+  var date = document.getElementById('userDate').value;
+  var hol = isHoliday(date);
+  var notice = document.getElementById('holidayNotice');
+  notice.style.display = hol ? 'flex' : 'none';
+  var btns = document.querySelectorAll('#userStatusBtns .status-btn');
+  btns.forEach(function(b) {
+    var s = b.dataset.s;
+    b.disabled = (hol && s !== 'H') || (!hol && s === 'H');
+    b.className = 'status-btn' + (hol && s === 'H' ? ' selected-H' : '');
+  });
+  selectedStatus = hol ? 'H' : '';
+  loadUserHistory(date);
+}
+
+function selectUserStatus(s) {
+  selectedStatus = s;
+  document.querySelectorAll('#userStatusBtns .status-btn').forEach(function(b) {
+    b.className = 'status-btn' + (b.dataset.s === s ? ' selected-' + s : '');
+  });
+}
+
+async function userSubmitAttendance() {
+  var date = document.getElementById('userDate').value;
+  if (!date) { showToast('Select a date', 'error'); return; }
+  if (!selectedStatus) { showToast('Select attendance status', 'error'); return; }
+  if (date > todayStr()) { showToast('Cannot submit for future date', 'error'); return; }
+
+  var existing = await db.ref('attendance/' + date + '/' + currentUser.id).once('value');
+  if (existing.exists() && existing.val().approved) {
+    showToast('Already approved, contact DIC for changes', 'error'); return;
   }
+
+  var data = { status: selectedStatus, approved: false, submittedBy: currentUser.id, submittedAt: Date.now() };
+  await db.ref('attendance/' + date + '/' + currentUser.id).set(data);
+  document.getElementById('userSubmitMsg').innerHTML = '<span style="color:var(--warn)"><i class="fa-solid fa-clock"></i> Submitted - Pending DIC Approval</span>';
+  showToast('Attendance submitted', 'success');
+  loadUserHistory(date);
 }
 
-// ===== UTILS =====
-function addL(r,e,cb){r.on(e,cb);listeners.push({r,e,cb});}
-function toast(m,t){const c=document.getElementById('toastContainer'),d=document.createElement('div');d.className='tst '+(t==='success'?'ts':t==='error'?'te':t==='warn'?'tw':'ti2');const ic={success:'fa-check-circle',error:'fa-times-circle',info:'fa-info-circle',warn:'fa-exclamation-triangle'};d.innerHTML=`<i class="fas ${ic[t]||ic.info}"></i> ${m}`;c.appendChild(d);setTimeout(()=>{d.classList.add('to2');setTimeout(()=>d.remove(),300);},3500);}
-function openMod(t,b,f){document.getElementById('modalTitle').textContent=t;document.getElementById('modalBody').innerHTML=b;document.getElementById('modalFoot').innerHTML=f||'';document.getElementById('modalOverlay').classList.remove('hidden');}
-function closeModal(){document.getElementById('modalOverlay').classList.add('hidden');}
-function dim(y,m){return new Date(y,m+1,0).getDate();}
-function mn(m){return['January','February','March','April','May','June','July','August','September','October','November','December'][m];}
-function sCls(s){return s==='DA_SUBMITTED'?'cp':s==='ADIC_APPROVED'?'ca':s==='DIC_APPROVED'?'cd2':s==='FINAL'?'cf':'';}
-function bCls(s){return s==='DA_SUBMITTED'?'bdg-p':s==='ADIC_APPROVED'?'bdg-a':s==='DIC_APPROVED'?'bdg-d':s==='FINAL'?'bdg-f':'';}
-function rCls(r){return r==='DA'?'bdg-da':r==='ADIC'?'bdg-ad':r==='DIC'?'bdg-dc':r==='SALES_ADMIN'?'bdg-sa':r==='SYSTEM_ADMIN'?'bdg-sys':'';}
-function sLbl(s){return{DA_SUBMITTED:'DA Submitted',ADIC_APPROVED:'ADIC Approved',DIC_APPROVED:'DIC Approved',FINAL:'Final'}[s]||s;}
-function rLbl(r){return{DA:'DA',ADIC:'ADIC',DIC:'DIC',SALES_ADMIN:'Sales Admin',SYSTEM_ADMIN:'System Admin'}[r]||r;}
-function getEmps(dep){const r={};for(const i in EC)if(dep==='ALL'||EC[i].depot===dep)r[i]=EC[i];return r;}
-function fmtT(ts){if(!ts)return '';const d=new Date(ts);return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
-function logAct(t){db.ref('actLog').push({text:t,ts:Date.now(),user:CU.name,role:CU.role});}
-function resImg(f,mw,mh,cb){const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');let w=img.width,h=img.height;if(w>mw){h*=mw/w;w=mw;}if(h>mh){w*=mh/h;h=mh;}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);cb(c.toDataURL('image/jpeg',0.6));};img.src=e.target.result;};r.readAsDataURL(f);}
-function loadEmps(){db.ref('employees').on('value',s=>{EC=s.val()||{};});}
-
-// ===== DASHBOARD =====
-function loadDash(){
-  const emps=getEmps(CU.depot),eids=Object.keys(emps);
-  const td=new Date().getDate().toString().padStart(2,'0');
-  const y=new Date().getFullYear(),m=new Date().getMonth();
-  let extraHtml='';
-  if(isSys()){
-    addL(db.ref('users'),'value',snap=>{
-      UC=snap.val()||{};const uc=Object.keys(UC).length;
-      const el=document.getElementById('sysStats');if(el)el.innerHTML=`<div class="sc"><div class="si gd"><i class="fas fa-user-shield"></i></div><div><div class="sv">${uc}</div><div class="sl">Total Users</div></div></div><div class="sc"><div class="si gd"><i class="fas fa-building"></i></div><div><div class="sv">3</div><div class="sl">Depots</div></div></div>`;
-    });
-    extraHtml='<div class="sg" id="sysStats"><div class="lsp"><div class="spn"></div></div></div>';
+async function loadUserHistory(date) {
+  var d = date || todayStr();
+  var container = document.getElementById('userHistoryTable');
+  var parts = d.split('-');
+  var y = parseInt(parts[0]), m = parseInt(parts[1]) - 1;
+  var days = getDaysInMonth(y, m);
+  var rows = '';
+  for (var i = days; i >= 1; i--) {
+    var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(i).padStart(2,'0');
+    var snap = await db.ref('attendance/' + ds + '/' + currentUser.id).once('value');
+    var att = snap.val();
+    var hol = isHoliday(ds);
+    var s = getAttStatus(ds, currentUser.id, att);
+    var dayName = new Date(ds + 'T00:00:00').toLocaleDateString('en', { weekday: 'short' });
+    var holBadge = hol ? '<span class="holiday-badge">Holiday</span>' : '';
+    var sBadge = s ? '<span class="badge ' + s + '">' + s + '</span> ' + statusLabel(s) : '<span style="color:var(--muted);font-size:12px">--</span>';
+    var approval = att ? (att.approved ? '<span class="approved-badge">Approved</span>' : '<span class="pending-badge">Pending</span>') : (hol ? '<span class="approved-badge">Auto</span>' : '');
+    rows += '<tr><td>' + formatBD(ds) + '</td><td style="color:var(--text2);font-size:12px">' + dayName + '</td><td>' + holBadge + '</td><td>' + sBadge + '</td><td>' + approval + '</td></tr>';
   }
-  addL(db.ref('attendance/'+y+'/'+m),'value',snap=>{
-    const att=snap.val()||{};let pC=0,aC=0,tC=0,lC=0,penC=0,mP=0,mA=0,mT=0,mL=0;
-    eids.forEach(eid=>{const ea=att[eid]||{},dd=ea[td];if(dd){if(dd.code==='P')pC++;else if(dd.code==='A')aC++;else if(dd.code==='T')tC++;else if(dd.code==='L')lC++;if(dd.status!=='FINAL')penC++;}Object.values(ea).forEach(d=>{if(d.status==='FINAL'){if(d.code==='P')mP++;else if(d.code==='A')mA++;else if(d.code==='T')mT++;else if(d.code==='L')mL++;}});});
-    const c=document.getElementById('pageContent');
-    c.innerHTML=`${isSys()?'<div class="sysban"><i class="fas fa-crown"></i><div><h4>System Administrator Mode</h4><p>Full access to all depots, users, and settings</p></div></div>':''}${extraHtml}<div class="sg"><div class="sc"><div class="si gn"><i class="fas fa-users"></i></div><div><div class="sv">${eids.length}</div><div class="sl">Employees ${CU.depot!=='ALL'?'(Depot '+CU.depot+')':'(All Depots)'}</div></div></div><div class="sc"><div class="si gn"><i class="fas fa-user-check"></i></div><div><div class="sv">${pC}</div><div class="sl">Present Today</div></div></div><div class="sc"><div class="si rd"><i class="fas fa-user-xmark"></i></div><div><div class="sv">${aC}</div><div class="sl">Absent Today</div></div></div><div class="sc"><div class="si am"><i class="fas fa-hourglass-half"></i></div><div><div class="sv">${penC}</div><div class="sl">Pending</div></div></div></div><div class="cg"><div class="cbx"><h4><i class="fas fa-chart-pie" style="color:var(--pri);margin-right:6px"></i> Today</h4><canvas id="chT"></canvas></div><div class="cbx"><h4><i class="fas fa-chart-bar" style="color:var(--acc);margin-right:6px"></i> Monthly</h4><canvas id="chM"></canvas></div></div><div class="cd"><div class="ch">Recent Activity</div><div class="cb" id="actFeed"><div class="lsp"><div class="spn"></div></div></div></div>`;
-    if(document.getElementById('chT'))charts.t=new Chart(document.getElementById('chT'),{type:'doughnut',data:{labels:['Present','Absent','Transfer','Leave'],datasets:[{data:[pC,aC,tC,lC],backgroundColor:['#059669','#dc2626','#d97706','#0891b2'],borderWidth:0}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{padding:16,font:{family:'DM Sans'}}}}}});
-    if(document.getElementById('chM'))charts.m=new Chart(document.getElementById('chM'),{type:'bar',data:{labels:['Present','Absent','Transfer','Leave'],datasets:[{data:[mP,mA,mT,mL],backgroundColor:['#059669','#dc2626','#d97706','#0891b2'],borderRadius:6,borderSkipped:false}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+  container.innerHTML = '<table class="data-table"><thead><tr><th>Date</th><th>Day</th><th>Note</th><th>Status</th><th>Approval</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+/* ============================================================
+   DIC SIDEBAR
+   ============================================================ */
+var tabs = [
+  { id:'overview', icon:'fa-chart-pie', label:'Overview' },
+  { id:'entry', icon:'fa-pen-to-square', label:'Attendance Entry' },
+  { id:'approvals', icon:'fa-check-double', label:'Approvals' },
+  { id:'records', icon:'fa-table-list', label:'All Records' },
+  { id:'users', icon:'fa-users-gear', label:'Manage Users' },
+  { id:'reports', icon:'fa-file-lines', label:'Reports' },
+  { id:'salary', icon:'fa-money-bill-wave', label:'Salary Sheet' },
+  { id:'holidays', icon:'fa-umbrella-beach', label:'Holidays' },
+];
+
+function renderSidebar() {
+  var sb = document.getElementById('dicSidebar');
+  var html = '';
+  for (var i = 0; i < tabs.length; i++) {
+    var t = tabs[i];
+    html += '<div class="sidebar-item ' + (currentTab===t.id?'active':'') + '" onclick="showTab(\'' + t.id + '\')">' +
+      '<i class="fa-solid ' + t.icon + '"></i><span>' + t.label + '</span></div>';
+  }
+  sb.innerHTML = html;
+}
+
+function showTab(tabId) {
+  currentTab = tabId;
+  renderSidebar();
+  var c = document.getElementById('dicContent');
+  c.scrollTop = 0;
+  var renderers = { overview:renderOverview, entry:renderEntry, approvals:renderApprovals, records:renderRecords, users:renderUsers, reports:renderReports, salary:renderSalary, holidays:renderHolidays };
+  if (renderers[tabId]) renderers[tabId]();
+}
+
+/* ============================================================
+   DIC - OVERVIEW
+   ============================================================ */
+async function renderOverview() {
+  await loadUsers();
+  var today = todayStr();
+  var snap = await db.ref('attendance/' + today).once('value');
+  var todayAtt = snap.val() || {};
+  var activeUsers = Object.entries(allUsers).filter(function(e) { return e[1].role !== 'DIC' && e[1].active !== false; });
+  var totalUsers = activeUsers.length;
+  var presentCount=0, absentCount=0, pendingCount=0, tourLeave=0;
+
+  for (var i = 0; i < activeUsers.length; i++) {
+    var uid = activeUsers[i][0];
+    var a = todayAtt[uid];
+    var s = getAttStatus(today, uid, a);
+    if (s === 'P') presentCount++;
+    else if (s === 'A') absentCount++;
+    else if (s === 'T' || s === 'L') tourLeave++;
+    if (a && !a.approved) pendingCount++;
+  }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Dashboard Overview</h2>' +
+    '<div class="stagger" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px">' +
+      '<div class="card stat-card green"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Active Users</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:var(--accent)">' + totalUsers + '</div></div>' +
+      '<div class="card stat-card green"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Present Today</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#00d4aa">' + presentCount + '</div></div>' +
+      '<div class="card stat-card red"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Absent Today</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#ef4444">' + absentCount + '</div></div>' +
+      '<div class="card stat-card amber"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px">Pending Approval</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#f59e0b">' + pendingCount + '</div></div>' +
+    '</div>' +
+    '<div class="card"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);margin-right:8px"></i>Today\'s Submissions (' + formatBD(today) + ')</h3>' +
+    '<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Status</th><th>Approval</th></tr></thead><tbody id="overviewTableBody"></tbody></table></div></div></div>';
+
+  var tbody = document.getElementById('overviewTableBody');
+  var entries = Object.entries(todayAtt).filter(function(e) { return e[0] !== DIC_ID; });
+  if (entries.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px">No submissions today</td></tr>';
+    return;
+  }
+  entries.sort(function(a,b) {
+    var ua = allUsers[a[0]], ub = allUsers[b[0]];
+    return (ua?ua.name:'').localeCompare(ub?ub.name:'');
   });
-  addL(db.ref('actLog').orderByChild('ts').limitToLast(15),'value',snap=>{
-    const f=document.getElementById('actFeed');if(!f)return;const d=snap.val()||{},ent=Object.values(d).sort((a,b)=>b.ts-a.ts);
-    if(!ent.length){f.innerHTML='<div class="es"><i class="fas fa-inbox"></i><p>No activity</p></div>';return;}
-    const cols={DA:'#d97706',ADIC:'#2563eb',DIC:'#059669',SALES_ADMIN:'#be185d',SYSTEM_ADMIN:'#b8860b'};
-    f.innerHTML=ent.map(e=>`<div class="ai"><div class="ad" style="background:${cols[e.role]||'#64748b'}"></div><div><div class="atx">${e.text}</div><div class="atm">${fmtT(e.ts)} &middot; ${e.user}</div></div></div>`).join('');
+  var rowsHTML = '';
+  for (var j = 0; j < entries.length; j++) {
+    var uid2 = entries[j][0], a2 = entries[j][1];
+    var u2 = allUsers[uid2];
+    rowsHTML += '<tr><td style="font-weight:600">' + (u2?u2.name:uid2) + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u2?u2.designation:'--') + '</td>' +
+      '<td><span class="badge ' + a2.status + '">' + a2.status + '</span> ' + statusLabel(a2.status) + '</td>' +
+      '<td>' + (a2.approved ? '<span class="approved-badge">Approved</span>' : '<span class="pending-badge">Pending</span>') + '</td></tr>';
+  }
+  tbody.innerHTML = rowsHTML;
+}
+
+/* ============================================================
+   DIC - ATTENDANCE ENTRY
+   ============================================================ */
+var dicEntryStatus = '';
+async function renderEntry() {
+  await loadUsers();
+  var today = todayStr();
+  var userList = Object.entries(allUsers).filter(function(e) { return e[1].active !== false; }).sort(function(a,b) { return a[1].name.localeCompare(b[1].name); });
+
+  var optionsHTML = '<option value="">-- Select User --</option>';
+  for (var i = 0; i < userList.length; i++) {
+    var k = userList[i][0], v = userList[i][1];
+    optionsHTML += '<option value="' + k + '">' + v.name + ' (' + v.designation + ')</option>';
+  }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Attendance Entry</h2>' +
+    '<div class="card" style="margin-bottom:20px">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+        '<div class="form-group" style="margin:0"><label class="form-label">Select User</label><select class="form-select" id="dicEntryUser" onchange="onDicEntryChange()">' + optionsHTML + '</select></div>' +
+        '<div class="form-group" style="margin:0"><label class="form-label">Select Date</label><input type="date" class="form-input" id="dicEntryDate" value="' + today + '" max="' + today + '" onchange="onDicEntryChange()"></div>' +
+      '</div>' +
+      '<div id="dicHolidayNotice" style="display:none;background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:14px 18px;margin-top:16px;align-items:center;gap:12px">' +
+        '<i class="fa-solid fa-umbrella-beach" style="color:#a855f7;font-size:20px"></i>' +
+        '<div><div style="font-weight:600;color:#a855f7;font-size:14px">Holiday</div><div style="font-size:12px;color:var(--text2)" id="dicHolName"></div></div>' +
+      '</div>' +
+      '<div style="margin-top:16px"><label class="form-label">Select Status</label>' +
+        '<div style="display:flex;gap:12px;flex-wrap:wrap" id="dicStatusBtns">' +
+          '<button class="status-btn" data-s="P" onclick="selectDicStatus(\'P\')"><div>P</div><span>Present</span></button>' +
+          '<button class="status-btn" data-s="A" onclick="selectDicStatus(\'A\')"><div>A</div><span>Absent</span></button>' +
+          '<button class="status-btn" data-s="T" onclick="selectDicStatus(\'T\')"><div>T</div><span>Tour</span></button>' +
+          '<button class="status-btn" data-s="L" onclick="selectDicStatus(\'L\')"><div>L</div><span>Leave</span></button>' +
+          '<button class="status-btn" data-s="H" onclick="selectDicStatus(\'H\')" disabled><div>H</div><span>Holiday</span></button>' +
+        '</div>' +
+      '</div>' +
+      '<button class="btn btn-primary" onclick="dicSubmitEntry()" style="width:100%;margin-top:20px"><i class="fa-solid fa-paper-plane"></i> Submit Attendance</button>' +
+      '<div id="dicEntryMsg" style="margin-top:12px;font-size:13px"></div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<h3 style="font-size:16px;font-weight:700;margin-bottom:4px">Quick Bulk Entry</h3>' +
+      '<p style="font-size:12px;color:var(--text2);margin-bottom:16px">Set attendance for all active users at once</p>' +
+      '<div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">' +
+        '<div class="form-group" style="margin:0;flex:1;min-width:150px"><label class="form-label">Date</label><input type="date" class="form-input" id="bulkDate" value="' + today + '" max="' + today + '"></div>' +
+        '<div class="form-group" style="margin:0;min-width:120px"><label class="form-label">Status</label><select class="form-select" id="bulkStatus"><option value="P">Present</option><option value="A">Absent</option><option value="T">Tour</option><option value="L">Leave</option></select></div>' +
+        '<button class="btn btn-warn" onclick="bulkSubmit()"><i class="fa-solid fa-bolt"></i> Apply All</button>' +
+      '</div>' +
+    '</div></div>';
+  dicEntryStatus = '';
+}
+
+function onDicEntryChange() {
+  var date = document.getElementById('dicEntryDate').value;
+  var hol = isHoliday(date);
+  var notice = document.getElementById('dicHolidayNotice');
+  if (hol) {
+    notice.style.display = 'flex';
+    document.getElementById('dicHolName').textContent = allHolidays[date] || 'This date is a holiday';
+    dicEntryStatus = 'H';
+  } else {
+    notice.style.display = 'none';
+    dicEntryStatus = '';
+  }
+  document.querySelectorAll('#dicStatusBtns .status-btn').forEach(function(b) {
+    var s = b.dataset.s;
+    b.disabled = (hol && s !== 'H') || (!hol && s === 'H');
+    b.className = 'status-btn' + (dicEntryStatus === s ? ' selected-' + s : '');
   });
 }
 
-// ===== ENTRY =====
-function renderEntry(){
-  const emps=getEmps(CU.depot),opts=Object.entries(emps).map(([id,e])=>`<option value="${id}">${id} - ${e.name}</option>`).join('');
-  document.getElementById('pageContent').innerHTML=`<div class="cd"><div class="ch">Submit Attendance</div><div class="cb"><div class="fr"><div class="fg"><label>Employee</label><select id="eEmp" class="fi">${opts}</select></div><div class="fg"><label>Date</label><input type="date" id="eDate" class="fi" value="${new Date().toISOString().split('T')[0]}"></div><div class="fg"><label>Code</label><select id="eCode" class="fi"><option value="P">P</option><option value="T">T</option><option value="A">A</option><option value="L">L</option></select></div></div><button class="btn bg" onclick="submitEntry()"><i class="fas fa-paper-plane"></i> Submit</button></div></div><div class="cd mt4"><div class="ch">Recent</div><div class="cb" id="recentSub"><div class="es"><i class="fas fa-inbox"></i><p>No submissions</p></div></div></div>`;
-  const y=new Date().getFullYear(),m=new Date().getMonth();
-  addL(db.ref('attendance/'+y+'/'+m),'value',snap=>{
-    const att=snap.val()||{},ents=[];
-    Object.entries(att).forEach(([eid,days])=>{if(emps[eid])Object.entries(days).forEach(([day,data])=>{if(data.entryBy===CU.username)ents.push({eid,day,...data});});});
-    ents.sort((a,b)=>(b.timestamp||0)-(a.timestamp||0));
-    const f=document.getElementById('recentSub');if(!f)return;
-    if(!ents.length){f.innerHTML='<div class="es"><i class="fas fa-inbox"></i><p>No submissions</p></div>';return;}
-    f.innerHTML=`<table class="dt"><thead><tr><th>Employee</th><th>Day</th><th>Code</th><th>Status</th><th>Time</th></tr></thead><tbody>${ents.slice(0,20).map(e=>`<tr><td>${e.eid} - ${emps[e.eid]?.name||''}</td><td>${e.day}</td><td><strong>${e.code}</strong></td><td><span class="bdg ${bCls(e.status)}">${sLbl(e.status)}</span></td><td>${fmtT(e.timestamp)}</td></tr>`).join('')}</tbody></table>`;
-  });
-}
-function submitEntry(){
-  const eid=document.getElementById('eEmp').value,ds=document.getElementById('eDate').value,code=document.getElementById('eCode').value;
-  if(!eid||!ds){toast('Fill all fields','error');return;}
-  const d=new Date(ds),y=d.getFullYear(),m=d.getMonth(),day=d.getDate().toString().padStart(2,'0');
-  db.ref('attendance/'+y+'/'+m+'/'+eid+'/'+day).once('value').then(s=>{
-    if(s.val()){toast('Already exists','error');return;}
-    db.ref('attendance/'+y+'/'+m+'/'+eid+'/'+day).set({code,status:'DA_SUBMITTED',entryBy:CU.username,timestamp:Date.now()}).then(()=>{toast('Submitted','success');logAct('Submitted '+code+' for '+eid+' day '+day);});
+function selectDicStatus(s) {
+  dicEntryStatus = s;
+  document.querySelectorAll('#dicStatusBtns .status-btn').forEach(function(b) {
+    b.className = 'status-btn' + (b.dataset.s === s ? ' selected-' + s : '');
   });
 }
 
-// ===== APPROVALS =====
-function loadApprovals(){
-  const role=CU.role,depot=CU.depot,emps=getEmps(depot);
-  let req;
-  if(role==='ADIC')req='DA_SUBMITTED';else if(role==='DIC')req='ADIC_APPROVED';else if(role==='SALES_ADMIN')req='DIC_APPROVED';else if(role==='SYSTEM_ADMIN')req='ALL';else{navTo('dashboard');return;}
-  const nxt={DA_SUBMITTED:'ADIC_APPROVED',ADIC_APPROVED:'DIC_APPROVED',DIC_APPROVED:'FINAL'};
-  addL(db.ref('attendance/'+cY+'/'+cM),'value',snap=>{
-    const att=snap.val()||{},pen=[];
-    Object.entries(att).forEach(([eid,days])=>{if(emps[eid])Object.entries(days).forEach(([day,data])=>{if(req==='ALL'&&data.status!=='FINAL')pen.push({eid,day,...data});else if(data.status===req)pen.push({eid,day,...data});});});
-    const c=document.getElementById('pageContent');
-    const ab=(p)=>isSys()?`<select class="fi" style="padding:4px 8px;font-size:.78rem;width:auto" onchange="sysAppr('${p.eid}','${p.day}',this.value);this.value=''"><option value="">Set to...</option><option value="ADIC_APPROVED">ADIC</option><option value="DIC_APPROVED">DIC</option><option value="FINAL">Final</option></select>`:`<button class="bs apr" onclick="approveE('${p.eid}','${p.day}','${nxt[req]}')"><i class="fas fa-check"></i> Approve</button>`;
-    c.innerHTML=`${!pen.length?'<div class="cd"><div class="cb es"><i class="fas fa-check-double"></i><p>No pending approvals</p></div></div>':`<div class="cd"><div class="cb" style="padding:0;overflow-x:auto"><table class="dt"><thead><tr><th>Employee</th><th>Name</th><th>Day</th><th>Code</th><th>Status</th><th>By</th><th>Actions</th></tr></thead><tbody>${pen.map(p=>`<tr><td><strong>${p.eid}</strong></td><td>${emps[p.eid]?.name||''}</td><td>${p.day}</td><td><strong>${p.code}</strong></td><td><span class="bdg ${bCls(p.status)}">${sLbl(p.status)}</span></td><td>${p.entryBy}</td><td class="act">${ab(p)}</td></tr>`).join('')}</tbody></table></div></div>`}`;
-  });
-}
-function approveE(eid,day,ns){db.ref('attendance/'+cY+'/'+cM+'/'+eid+'/'+day+'/status').set(ns).then(()=>{toast('Approved: '+sLbl(ns),'success');logAct('Approved '+eid+' day '+day+' → '+sLbl(ns));});}
-function sysAppr(eid,day,ns){if(!ns)return;approveE(eid,day,ns);}
+async function dicSubmitEntry() {
+  var uid = document.getElementById('dicEntryUser').value;
+  var date = document.getElementById('dicEntryDate').value;
+  if (!uid) { showToast('Select a user', 'error'); return; }
+  if (!date) { showToast('Select a date', 'error'); return; }
+  if (!dicEntryStatus) { showToast('Select status', 'error'); return; }
+  if (date > todayStr()) { showToast('Cannot submit for future date', 'error'); return; }
 
-// ===== GRID =====
-function loadGrid(){
-  document.getElementById('pageContent').innerHTML=`<div class="fbar"><select id="gMon" class="fi" onchange="chgGrid()" style="width:auto">${Array.from({length:12},(_,i)=>`<option value="${i}" ${i===cM?'selected':''}>${mn(i)}</option>`).join('')}</select><select id="gYr" class="fi" onchange="chgGrid()" style="width:auto">${[2024,2025,2026].map(y=>`<option value="${y}" ${y===cY?'selected':''}>${y}</option>`).join('')}</select><select id="gDep" class="fi" onchange="chgGrid()" style="width:auto"><option value="ALL">All Depots</option><option value="A">Depot A</option><option value="B">Depot B</option><option value="C">Depot C</option></select></div><div class="lgd"><div class="lgi"><div class="lgd2" style="background:var(--acc-l);border:1px solid #f59e0b"></div> DA</div><div class="lgi"><div class="lgd2" style="background:#dbeafe;border:1px solid #3b82f6"></div> ADIC</div><div class="lgi"><div class="lgd2" style="background:#ccfbf1;border:1px solid #14b8a6"></div> DIC</div><div class="lgi"><div class="lgd2" style="background:var(--pri)"></div> Final</div></div><div class="gw"><table class="gt" id="gTbl"><thead><tr><th class="sk">ID</th><th class="sk sk2">Name</th></tr></thead><tbody></tbody></table></div>`;
-  attachGridL();
-}
-function chgGrid(){cM=+document.getElementById('gMon').value;cY=+document.getElementById('gYr').value;listeners.forEach(l=>l.r.off(l.e,l.cb));listeners=[];attachGridL();}
-function attachGridL(){
-  const df=document.getElementById('gDep')?.value||'ALL',emps=getEmps(df),days=dim(cY,cM),tbl=document.getElementById('gTbl');if(!tbl)return;
-  let h='<tr><th class="sk">ID</th><th class="sk sk2">Name</th>';for(let d=1;d<=days;d++)h+=`<th>${d}</th>`;h+='</tr>';tbl.querySelector('thead').innerHTML=h;
-  addL(db.ref('attendance/'+cY+'/'+cM),'value',snap=>{
-    const att=snap.val()||{};let b='';
-    Object.entries(emps).forEach(([eid,emp])=>{b+=`<tr><td class="sk"><strong>${eid}</strong></td><td class="sk sk2">${emp.name}</td>`;for(let d=1;d<=days;d++){const dy=d.toString().padStart(2,'0'),data=att[eid]?.[dy];b+=data?`<td><div class="gc ${sCls(data.status)}" onclick="cellClick(event,'${eid}','${dy}')">${data.code}</div></td>`:`<td><div class="gc ce">-</div></td>`;}b+='</tr>';});
-    tbl.querySelector('tbody').innerHTML=b;
+  await db.ref('attendance/' + date + '/' + uid).set({
+    status: dicEntryStatus, approved: true, submittedBy: DIC_ID, submittedAt: Date.now()
   });
+  document.getElementById('dicEntryMsg').innerHTML = '<span style="color:var(--accent)"><i class="fa-solid fa-check-circle"></i> Submitted & Auto-Approved</span>';
+  showToast('Attendance submitted', 'success');
 }
 
-// ===== CELL CLICK =====
-function cellClick(ev,eid,day){
-  ev.stopPropagation();const pop=document.getElementById('cellPopup');
-  db.ref('attendance/'+cY+'/'+cM+'/'+eid+'/'+day).once('value').then(s=>{
-    const d=s.val();if(!d)return;let h=`<div style="font-size:.78rem;color:var(--tx2);margin-bottom:8px">${eid} · Day ${day} · <strong>${d.code}</strong><br><span class="bdg ${bCls(d.status)}">${sLbl(d.status)}</span></div>`;
-    if(isSys()){
-      h+=`<div class="cpr" onclick="appCell('${eid}','${day}','ADIC_APPROVED')"><i class="fas fa-check" style="color:#1e40af"></i> ADIC Approved</div>`;
-      h+=`<div class="cpr" onclick="appCell('${eid}','${day}','DIC_APPROVED')"><i class="fas fa-check" style="color:#065f46"></i> DIC Approved</div>`;
-      h+=`<div class="cpr" onclick="appCell('${eid}','${day}','FINAL')"><i class="fas fa-check-double" style="color:var(--pri)"></i> Final</div>`;
-      h+=`<div class="cpr" onclick="openEditMod('${eid}','${day}')"><i class="fas fa-pen" style="color:var(--acc)"></i> Edit Code</div>`;
-    }else{
-      const r=CU.role;
-      if(r==='ADIC'&&d.status==='DA_SUBMITTED')h+=`<div class="cpr" onclick="appCell('${eid}','${day}','ADIC_APPROVED')"><i class="fas fa-check" style="color:var(--pri)"></i> Approve</div>`;
-      if(r==='DIC'&&d.status==='ADIC_APPROVED')h+=`<div class="cpr" onclick="appCell('${eid}','${day}','DIC_APPROVED')"><i class="fas fa-check" style="color:var(--pri)"></i> Approve</div>`;
-      if(r==='SALES_ADMIN'&&d.status==='DIC_APPROVED')h+=`<div class="cpr" onclick="appCell('${eid}','${day}','FINAL')"><i class="fas fa-check" style="color:var(--pri)"></i> Final</div>`;
-      if(r==='DIC'&&d.status!=='FINAL')h+=`<div class="cpr" onclick="openEditMod('${eid}','${day}')"><i class="fas fa-pen" style="color:var(--acc)"></i> Edit</div>`;
+async function bulkSubmit() {
+  var date = document.getElementById('bulkDate').value;
+  var status = document.getElementById('bulkStatus').value;
+  if (!date) { showToast('Select a date', 'error'); return; }
+  if (isHoliday(date) && status !== 'H') { showToast('Holiday date - only H allowed', 'error'); return; }
+
+  showModal('Confirm Bulk Entry',
+    '<p style="color:var(--text2);font-size:14px">Apply <strong>' + statusLabel(status) + '</strong> for ALL active users on <strong>' + formatBD(date) + '</strong>?</p>' +
+    '<p style="color:var(--warn);font-size:12px;margin-top:8px">This will overwrite unapproved entries.</p>',
+    async function() {
+      var actualStatus = isHoliday(date) ? 'H' : status;
+      var updates = {};
+      Object.entries(allUsers).filter(function(e) { return e[1].active !== false; }).forEach(function(e) {
+        updates[e[0]] = { status: actualStatus, approved: true, submittedBy: DIC_ID, submittedAt: Date.now() };
+      });
+      await db.ref('attendance/' + date).update(updates);
+      showToast('Bulk attendance submitted for ' + Object.keys(updates).length + ' users', 'success');
     }
-    if(!h.includes('cpr'))h+=`<div class="cpr"><i class="fas fa-lock" style="color:var(--tx2)"></i> No actions</div>`;
-    pop.innerHTML=h;pop.classList.remove('hidden');
-    const rc=ev.target.getBoundingClientRect();let top=rc.bottom+6,left=rc.left;if(top+180>window.innerHeight)top=rc.top-180;if(left+190>window.innerWidth)left=window.innerWidth-200;pop.style.top=top+'px';pop.style.left=left+'px';
-  });
-}
-function appCell(eid,day,ns){document.getElementById('cellPopup').classList.add('hidden');db.ref('attendance/'+cY+'/'+cM+'/'+eid+'/'+day+'/status').set(ns).then(()=>{toast('→ '+sLbl(ns),'success');logAct('Set '+eid+' day '+day+' → '+sLbl(ns));});}
-function openEditMod(eid,day){
-  document.getElementById('cellPopup').classList.add('hidden');
-  db.ref('attendance/'+cY+'/'+cM+'/'+eid+'/'+day).once('value').then(s=>{
-    const d=s.val();if(!d)return;const isS=isSys();
-    openMod('Edit'+(isS?' (Admin)':' (DIC)'),`<div style="background:${isS?'linear-gradient(135deg,#92400e,#b8860b)':'var(--acc-l)'};padding:12px;border-radius:8px;margin-bottom:16px;font-size:.85rem;color:${isS?'#fff':'#92400e'}"><i class="fas fa-${isS?'crown':'exclamation-triangle'}"></i> ${isS?'Admin':'DIC'} override</div><div class="fr"><div class="fg"><label>Employee</label><input class="fi" value="${eid} - ${EC[eid]?.name||''}" readonly></div><div class="fg"><label>Day</label><input class="fi" value="${day}" readonly></div></div><div class="fr"><div class="fg"><label>Code</label><select id="edCode" class="fi"><option value="P" ${d.code==='P'?'selected':''}>P</option><option value="T" ${d.code==='T'?'selected':''}>T</option><option value="A" ${d.code==='A'?'selected':''}>A</option><option value="L" ${d.code==='L'?'selected':''}>L</option></select></div><div class="fg"><label>Status</label><select id="edStat" class="fi">${isS?'<option value="DA_SUBMITTED" '+(''+d.status==='DA_SUBMITTED'?'selected':'')+'>DA</option><option value="ADIC_APPROVED" '+(''+d.status==='ADIC_APPROVED'?'selected':'')+'>ADIC</option>':''}<option value="DIC_APPROVED" ${d.status==='DIC_APPROVED'?'selected':''}>DIC</option><option value="FINAL" ${d.status==='FINAL'?'selected':''}>Final</option></select></div></div><div class="fg"><label>Remark</label><input id="edRmk" class="fi" placeholder="Optional"></div>`,`<button class="btn ${isS?'bgd':'ba'}" onclick="saveEdit('${eid}','${day}')"><i class="fas fa-save"></i> Save</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);
-  });
-}
-function saveEdit(eid,day){
-  const code=document.getElementById('edCode').value,stat=document.getElementById('edStat').value,rmk=document.getElementById('edRmk').value;
-  db.ref('attendance/'+cY+'/'+cM+'/'+eid+'/'+day).update({code,status:stat,editedBy:CU.username,editTimestamp:Date.now(),remark:rmk||(isSys()?'Admin Edit':'DIC Edit')}).then(()=>{toast('Updated','success');logAct((isSys()?'Admin':'DIC')+' edited '+eid+' day '+day);closeModal();});
-}
-document.addEventListener('click',e=>{const p=document.getElementById('cellPopup');if(!p.classList.contains('hidden')&&!p.contains(e.target))p.classList.add('hidden');});
-
-// ===== DEPOT DASHBOARD =====
-function loadDepot(){
-  const emps=getEmps(CU.depot),days=dim(cY,cM);
-  addL(db.ref('attendance/'+cY+'/'+cM),'value',snap=>{
-    const att=snap.val()||{},st=[];
-    Object.entries(emps).forEach(([eid,emp])=>{const ea=att[eid]||{};let p=0,a=0,t=0,l=0,fP=0,fT=0,fL=0;Object.values(ea).forEach(d=>{if(d.code==='P')p++;else if(d.code==='A')a++;else if(d.code==='T')t++;else if(d.code==='L')l++;if(d.status==='FINAL'){if(d.code==='P')fP++;else if(d.code==='T')fT++;else if(d.code==='L')fL++;}});const pay=fP+fT+fL,amt=(pay*(emp.salary/days)).toFixed(0);st.push({eid,name:emp.name,salary:emp.salary,p,a,t,l,final:fP+fT+fL,pay,pct:days>0?((pay)/days*100).toFixed(1):'0.0',amt});});
-    const c=document.getElementById('pageContent');
-    c.innerHTML=`<div class="sg"><div class="sc"><div class="si gn"><i class="fas fa-users"></i></div><div><div class="sv">${st.length}</div><div class="sl">Employees</div></div></div><div class="sc"><div class="si bl"><i class="fas fa-calendar-check"></i></div><div><div class="sv">${st.reduce((s,e)=>s+e.final,0)}</div><div class="sl">Finalized</div></div></div><div class="sc"><div class="si am"><i class="fas fa-spinner"></i></div><div><div class="sv">${st.reduce((s,e)=>s+(e.p+e.a+e.t+e.l-e.final),0)}</div><div class="sl">Pending</div></div></div><div class="sc"><div class="si gn"><i class="fas fa-percent"></i></div><div><div class="sv">${st.length?(st.reduce((s,e)=>s+parseFloat(e.pct),0)/st.length).toFixed(1):'0'}%</div><div class="sl">Avg Rate</div></div></div></div><div class="cd"><div class="ch">Summary — ${mn(cM)} ${cY}</div><div class="cb" style="padding:0;overflow-x:auto"><table class="dt"><thead><tr><th>ID</th><th>Name</th><th>Salary</th><th>P</th><th>T</th><th>L</th><th>A</th><th>Payable</th><th>Rate</th><th>Amount</th></tr></thead><tbody>${st.map(e=>`<tr><td><strong>${e.eid}</strong></td><td>${e.name}</td><td>${e.salary?.toLocaleString()}</td><td style="color:var(--pri);font-weight:700">${e.p}</td><td style="color:var(--acc);font-weight:700">${e.t}</td><td style="color:var(--inf);font-weight:700">${e.l}</td><td style="color:var(--dng);font-weight:700">${e.a}</td><td><strong>${e.pay}</strong></td><td>${e.pct}%</td><td><strong>${parseInt(e.amt).toLocaleString()}</strong></td></tr>`).join('')}</tbody></table></div></div><div class="cg mt4"><div class="cbx"><h4>By Employee</h4><canvas id="chDep"></canvas></div></div>`;
-    if(document.getElementById('chDep'))charts.dep=new Chart(document.getElementById('chDep'),{type:'bar',data:{labels:st.map(e=>e.name),datasets:[{label:'P',data:st.map(e=>e.p),backgroundColor:'#059669',borderRadius:4},{label:'T',data:st.map(e=>e.t),backgroundColor:'#d97706',borderRadius:4},{label:'L',data:st.map(e=>e.l),backgroundColor:'#0891b2',borderRadius:4},{label:'A',data:st.map(e=>e.a),backgroundColor:'#dc2626',borderRadius:4}]},options:{responsive:true,scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}},plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11}}}}}});
-  });
+  );
 }
 
-// ===== EMPLOYEE MGMT =====
-function loadEmpMgmt(){
-  addL(db.ref('employees'),'value',snap=>{
-    EC=snap.val()||{};const ee=Object.entries(EC);const c=document.getElementById('pageContent');if(!c)return;
-    c.innerHTML=`<div class="fb2 mb4"><div><strong>${ee.length}</strong> employees</div><button class="btn bg" onclick="openEmpMod()"><i class="fas fa-plus"></i> Add Employee</button></div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">${ee.map(([id,e])=>`<div class="uc"><div class="uca">${e.image?`<img src="${e.image}">`:id.slice(-2)}</div><div class="uci"><div class="ucn">${id} — ${e.name}</div><div class="ucm">${e.designation||'—'} · Depot ${e.depot} · ${e.salary?.toLocaleString()||'—'} BDT</div></div><div class="uca2"><button class="bs edt" onclick="openEmpMod('${id}')"><i class="fas fa-pen"></i></button><button class="bs rej" onclick="delEmp('${id}')"><i class="fas fa-trash"></i></button></div></div>`).join('')}</div>`;
-  });
-}
-let tmpEI='';
-function openEmpMod(editId){
-  const ex=editId?EC[editId]:null;tmpEI='';
-  openMod(ex?'Edit Employee':'Add Employee',`<div style="display:flex;gap:20px;align-items:flex-start"><div><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:4px">Photo</label><div class="iu" id="eIU" onclick="document.getElementById('eIF').click()">${ex?.image?`<img src="${ex.image}">`:'<i class="fas fa-camera"></i>'}</div><input type="file" id="eIF" accept="image/*" style="display:none" onchange="prevEI(this)"></div><div style="flex:1"><div class="fg"><label>ID</label><input id="eID" class="fi" value="${editId||''}" ${editId?'readonly':''} placeholder="EMP008"></div><div class="fg"><label>Name</label><input id="eNM" class="fi" value="${ex?.name||''}" placeholder="Full name"></div><div class="fr"><div class="fg"><label>Designation</label><input id="eDS" class="fi" value="${ex?.designation||''}" placeholder="Field Officer"></div><div class="fg"><label>Salary</label><input id="eSL" class="fi" type="number" value="${ex?.salary||''}" placeholder="10000"></div></div><div class="fg"><label>Depot</label><select id="eDP" class="fi" ${editId&&!isSys()?'disabled':''}><option value="A" ${ex?.depot==='A'?'selected':''}>Depot A</option><option value="B" ${ex?.depot==='B'?'selected':''}>Depot B</option><option value="C" ${ex?.depot==='C'?'selected':''}>Depot C</option></select></div></div></div>`,`<button class="btn bg" onclick="saveEmp('${editId||''}')"><i class="fas fa-save"></i> ${editId?'Update':'Create'}</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);
-}
-function prevEI(inp){if(inp.files[0])resImg(inp.files[0],200,200,b=>{tmpEI=b;document.getElementById('eIU').innerHTML=`<img src="${b}">`;});}
-function saveEmp(editId){
-  const id=document.getElementById('eID').value.trim(),nm=document.getElementById('eNM').value.trim(),ds=document.getElementById('eDS').value.trim(),sl=parseInt(document.getElementById('eSL').value)||0,dp=document.getElementById('eDP').value;
-  if(!id||!nm){toast('ID and Name required','error');return;}const ex=editId?EC[editId]:{};
-  db.ref('employees/'+id).set({name:nm,designation:ds,salary:sl,depot:dp,image:tmpEI||(ex.image||'')}).then(()=>{toast(editId?'Updated':'Created','success');logAct((editId?'Updated':'Created')+' employee '+id);tmpEI='';closeModal();});
-}
-function delEmp(id){openMod('Confirm Delete',`<p>Delete <strong>${id} - ${EC[id]?.name}</strong>?</p>`,`<button class="btn br" onclick="db.ref('employees/${id}').remove();logAct('Deleted ${id}');closeModal();toast('Deleted','success')"><i class="fas fa-trash"></i> Delete</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);}
-
-// ===== SYSTEM ADMIN USER MGMT =====
-function loadSysUsers(){
-  addL(db.ref('users'),'value',snap=>{
-    UC=snap.val()||{};const us=Object.entries(UC);const c=document.getElementById('pageContent');if(!c)return;
-    const rc={};us.forEach(([_,u])=>{rc[u.role]=(rc[u.role]||0)+1;});
-    c.innerHTML=`<div class="sysban"><i class="fas fa-crown"></i><div><h4>System User Management</h4><p>Create and manage users for all depots and roles</p></div></div><div class="sg"><div class="sc"><div class="si gd"><i class="fas fa-users"></i></div><div><div class="sv">${us.length}</div><div class="sl">Total Users</div></div></div><div class="sc"><div class="si" style="background:#f3e8ff;color:#7c3aed"><i class="fas fa-user"></i></div><div><div class="sv">${rc.DA||0}</div><div class="sl">DA</div></div></div><div class="sc"><div class="si" style="background:#dbeafe;color:#1e40af"><i class="fas fa-user-tie"></i></div><div><div class="sv">${rc.ADIC||0}</div><div class="sl">ADIC</div></div></div><div class="sc"><div class="si" style="background:#ccfbf1;color:#065f46"><i class="fas fa-user-shield"></i></div><div><div class="sv">${rc.DIC||0}</div><div class="sl">DIC</div></div></div><div class="sc"><div class="si" style="background:#fce7f3;color:#be185d"><i class="fas fa-user-gear"></i></div><div><div class="sv">${rc.SALES_ADMIN||0}</div><div class="sl">Sales Admin</div></div></div><div class="sc"><div class="si gd"><i class="fas fa-crown"></i></div><div><div class="sv">${rc.SYSTEM_ADMIN||0}</div><div class="sl">Sys Admin</div></div></div></div><div class="fb2 mb4"><span></span><button class="btn bgd" onclick="openSysUserMod()"><i class="fas fa-user-plus"></i> Create New User</button></div><div class="cd"><div class="ch">All Users</div><div class="cb" style="padding:0;overflow-x:auto"><table class="dt"><thead><tr><th>Photo</th><th>Username</th><th>Name</th><th>Role</th><th>Depot</th><th>Password</th><th>Actions</th></tr></thead><tbody>${us.map(([un,u])=>`<tr style="${u.role==='SYSTEM_ADMIN'?'background:#fffbeb':''}"><td><div style="width:36px;height:36px;border-radius:50%;overflow:hidden;background:var(--brd)">${u.image?`<img src="${u.image}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--tx2);font-size:.7rem">${u.name.charAt(0)}</div>`}</div></td><td><strong>${un}</strong></td><td>${u.name}</td><td><span class="bdg ${rCls(u.role)}">${rLbl(u.role)}</span></td><td>${u.depot}</td><td><code style="font-size:.78rem;background:#f1f5f9;padding:2px 6px;border-radius:4px">${u.password}</code></td><td class="act"><button class="bs gld" onclick="openSysUserMod('${un}')"><i class="fas fa-pen"></i></button>${u.role==='SYSTEM_ADMIN'&&un===CU.username?'<span class="tm" style="font-size:.75rem">(you)</span>':`<button class="bs rej" onclick="delSysUser('${un}')"><i class="fas fa-trash"></i></button>`}</td></tr>`).join('')}</tbody></table></div></div>`;
-  });
-}
-let tmpSUI='';
-function openSysUserMod(editUn){
-  const ex=editUn?UC[editUn]:null;tmpSUI='';
-  const roles=['DA','ADIC','DIC','SALES_ADMIN','SYSTEM_ADMIN'];
-  openMod(ex?'Edit User':'Create New User',`<div style="display:flex;gap:20px;align-items:flex-start"><div><label style="font-size:.75rem;color:var(--tx2);display:block;margin-bottom:4px">Photo</label><div class="iu" id="sIU" onclick="document.getElementById('sIF').click()">${ex?.image?`<img src="${ex.image}">`:'<i class="fas fa-camera"></i>'}</div><input type="file" id="sIF" accept="image/*" style="display:none" onchange="prevSUI(this)"></div><div style="flex:1"><div class="fg"><label>Username</label><input id="sUN" class="fi" value="${editUn||''}" ${editUn?'readonly':''} placeholder="DA_B"></div><div class="fg"><label>Name</label><input id="sNM" class="fi" value="${ex?.name||''}" placeholder="Full name"></div><div class="fg"><label>Password ${edit?'(blank=keep)':''}</label><input id="sPW" class="fi" type="text" placeholder="${edit?'Keep current':'Set password'}"></div><div class="fr"><div class="fg"><label>Role</label><select id="sRL" class="fi" style="font-weight:700">${roles.map(r=>`<option value="${r}" ${ex?.role===r?'selected':''}>${rLbl(r)}</option>`).join('')}</select></div><div class="fg"><label>Depot</label><select id="sDP" class="fi"><option value="ALL" ${ex?.depot==='ALL'?'selected':''}>ALL</option><option value="A" ${ex?.depot==='A'?'selected':''}>Depot A</option><option value="B" ${ex?.depot==='B'?'selected':''}>Depot B</option><option value="C" ${ex?.depot==='C'?'selected':''}>Depot C</option></select></div></div><div id="roleHint" style="padding:10px;border-radius:8px;font-size:.8rem;margin-top:4px"></div></div></div>`,`<button class="btn bgd" onclick="saveSysUser('${editUn||''}')"><i class="fas fa-save"></i> ${edit?'Update':'Create'}</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);
-  const hints={DA:'DA can submit attendance only.',ADIC:'ADIC approves DA submissions.',DIC:'DIC approves, edits, manages employees & users.',SALES_ADMIN:'Sales Admin final-approves and views reports.',SYSTEM_ADMIN:'Full system access — manage everything.'};
-  const colors={DA:'#f3e8ff',ADIC:'#dbeafe',DIC:'#ccfbf1',SALES_ADMIN:'#fce7f3',SYSTEM_ADMIN:'#fffbeb'};
-  function upd(){const r=document.getElementById('sRL').value,h=document.getElementById('roleHint');h.style.background=colors[r];h.style.color={DA:'#7c3aed',ADIC:'#1e40af',DIC:'#065f46',SALES_ADMIN:'#be185d',SYSTEM_ADMIN:'#92400e'}[r];h.innerHTML='<i class="fas fa-info-circle"></i> '+hints[r];if(r==='SYSTEM_ADMIN')document.getElementById('sDP').value='ALL';}
-  document.getElementById('sRL').addEventListener('change',upd);upd();
-}
-function prevSUI(inp){if(inp.files[0])resImg(inp.files[0],200,200,b=>{tmpSUI=b;document.getElementById('sIU').innerHTML=`<img src="${b}">`;});}
-function saveSysUser(editUn){
-  const un=document.getElementById('sUN').value.trim(),nm=document.getElementById('sNM').value.trim(),pw=document.getElementById('sPW').value,rl=document.getElementById('sRL').value,dp=document.getElementById('sDP').value;
-  if(!un||!nm){toast('Username and Name required','error');return;}
-  if(!editUn&&!pw){toast('Password required','error');return;}
-  if(editUn&&editUn===CU.username&&rl!==CU.role){toast('Cannot change own role','error');return;}
-  const ex=editUn?UC[editUn]:{};
-  db.ref('users/'+un).set({name:nm,role:rl,depot:dp,image:tmpSUI||(ex.image||''),password:pw||ex.password}).then(()=>{toast(editUn?'Updated':'Created: '+un,'success');logAct((editUn?'Updated':'Created')+' user '+un+' — '+rLbl(rl));tmpSUI='';closeModal();});
-}
-function delSysUser(un){
-  if(un===CU.username){toast('Cannot delete yourself','warn');return;}
-  openMod('Delete User',`<div style="text-align:center;padding:10px 0"><i class="fas fa-exclamation-triangle" style="font-size:2.5rem;color:var(--dng);margin-bottom:12px"></i><p><strong>${un}</strong> — ${UC[un]?.name}</p><p class="tm mt2">${rLbl(UC[un]?.role)} · Depot ${UC[un]?.depot}</p></div>`,`<button class="btn br" onclick="db.ref('users/${un}').remove();logAct('Deleted ${un}');closeModal();toast('Deleted','success')"><i class="fas fa-trash"></i> Delete</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);
+/* ============================================================
+   DIC - APPROVALS
+   ============================================================ */
+async function renderApprovals() {
+  var today = todayStr();
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Pending Approvals</h2>' +
+    '<div class="form-group" style="max-width:250px;margin-bottom:20px"><label class="form-label">Filter by Date</label><input type="date" class="form-input" id="approvalDate" value="' + today + '" onchange="loadApprovals()"></div>' +
+    '<div class="card"><div style="overflow-x:auto" id="approvalTable"></div></div></div>';
+  loadApprovals();
 }
 
-// ===== DIC USER MGMT =====
-function loadUserMgmt(){
-  addL(db.ref('users'),'value',snap=>{
-    UC=snap.val()||{};const us=Object.entries(UC).filter(([_,u])=>u.depot===CU.depot);const c=document.getElementById('pageContent');if(!c)return;
-    c.innerHTML=`<div class="fb2 mb4"><div><strong>${us.length}</strong> users in Depot ${CU.depot}</div><button class="btn bg" onclick="openUserMod()"><i class="fas fa-user-plus"></i> Create</button></div><div class="cd"><div class="cb" style="padding:0;overflow-x:auto"><table class="dt"><thead><tr><th>Username</th><th>Name</th><th>Role</th><th>Actions</th></tr></thead><tbody>${us.map(([un,u])=>`<tr><td><strong>${un}</strong></td><td>${u.name}</td><td><span class="bdg ${rCls(u.role)}">${u.role}</span></td><td class="act"><button class="bs edt" onclick="openUserMod('${un}')"><i class="fas fa-pen"></i></button><button class="bs rej" onclick="delUser('${un}')"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`;
-  });
-}
-let tmpUI='';
-function openUserMod(editUn){
-  const ex=editUn?UC[editUn]:null;tmpUI='';
-  openMod(ex?'Edit':'Create',`<div class="fg"><label>Username</label><input id="uUN" class="fi" value="${editUn||''}" ${editUn?'readonly':''} placeholder="DA_B"></div><div class="fg"><label>Name</label><input id="uNM" class="fi" value="${ex?.name||''}" placeholder="Name"></div><div class="fg"><label>Password ${edit?'(blank=keep)':''}</label><input id="uPW" class="fi" type="password" placeholder="${edit?'••••••':'Password'}"></div><div class="fr"><div class="fg"><label>Role</label><select id="uRL" class="fi"><option value="DA" ${ex?.role==='DA'?'selected':''}>DA</option><option value="ADIC" ${ex?.role==='ADIC'?'selected':''}>ADIC</option><option value="DIC" ${ex?.role==='DIC'?'selected':''}>DIC</option></select></div><div class="fg"><label>Depot</label><select id="uDP" class="fi" ${edit?'disabled':''}><option value="A" ${ex?.depot==='A'?'selected':''}>A</option><option value="B" ${ex?.depot==='B'?'selected':''}>B</option><option value="C" ${ex?.depot==='C'?'selected':''}>C</option></select></div></div>`,`<button class="btn bg" onclick="saveUser('${editUn||''}')"><i class="fas fa-save"></i> ${edit?'Update':'Create'}</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);
-}
-function prevUI(inp){if(inp.files[0])resImg(inp.files[0],200,200,b=>{tmpUI=b;});}
-function saveUser(editUn){
-  const un=document.getElementById('uUN').value.trim(),nm=document.getElementById('uNM').value.trim(),pw=document.getElementById('uPW').value,rl=document.getElementById('uRL').value,dp=document.getElementById('uDP').value;
-  if(!un||!nm){toast('Required','error');return;}if(!editUn&&!pw){toast('Password required','error');return;}
-  const ex=editUn?UC[editUn]:{};
-  db.ref('users/'+un).set({name:nm,role:rl,depot:dp,image:tmpUI||(ex.image||''),password:pw||ex.password}).then(()=>{toast(editUn?'Updated':'Created','success');tmpUI='';closeModal();});
-}
-function delUser(un){openMod('Delete',`<p>Delete <strong>${un}</strong>?</p>`,`<button class="btn br" onclick="db.ref('users/${un}').remove();closeModal();toast('Deleted','success')"><i class="fas fa-trash"></i> Delete</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);}
+async function loadApprovals() {
+  var date = document.getElementById('approvalDate').value;
+  if (!date) return;
+  var snap = await db.ref('attendance/' + date).once('value');
+  var att = snap.val() || {};
+  var container = document.getElementById('approvalTable');
+  var pending = Object.entries(att).filter(function(e) { return !e[1].approved && e[0] !== DIC_ID; });
 
-// ===== REPORTS =====
-function renderReports(){
-  const emps=getEmps(CU.depot),opts=Object.entries(emps).map(([id,e])=>`<option value="${id}">${id} - ${e.name}</option>`).join('');
-  document.getElementById('pageContent').innerHTML=`<div class="cd mb4"><div class="ch">Report Settings</div><div class="cb"><div class="fr"><div class="fg"><label>Employee</label><select id="rEmp" class="fi"><option value="ALL">All</option>${opts}</select></div><div class="fg"><label>Month</label><select id="rMon" class="fi">${Array.from({length:12},(_,i)=>`<option value="${i}" ${i===cM?'selected':''}>${mn(i)}</option>`).join('')}</select></div><div class="fg"><label>Year</label><select id="rYr" class="fi">${[2024,2025,2026].map(y=>`<option value="${y}" ${y===cY?'selected':''}>${y}</option>`).join('')}</select></div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn bg" onclick="expExcel()"><i class="fas fa-file-excel"></i> Excel</button><button class="btn ba" onclick="expPDF()"><i class="fas fa-file-pdf"></i> PDF</button><button class="btn bo" onclick="prevReport()"><i class="fas fa-eye"></i> Preview</button></div></div></div><div id="rPrev"></div>`;
-}
-function getRData(){const eid=document.getElementById('rEmp').value,m=+document.getElementById('rMon').value,y=+document.getElementById('rYr').value,emps=getEmps(CU.depot),days=dim(y,m);if(eid!=='ALL'){if(!emps[eid])return null;return{y,m,days,employees:{[eid]:emps[eid]}};}return{y,m,days,employees:emps};}
-function prevReport(){
-  const rp=getRData();if(!rp){toast('Invalid','error');return;}
-  db.ref('attendance/'+rp.y+'/'+rp.m).once('value').then(snap=>{
-    const att=snap.val()||{};document.getElementById('rPrev').innerHTML=Object.entries(rp.employees).map(([eid,emp])=>{
-      const ea=att[eid]||{};let p=0,t=0,a=0,l=0,fP=0,fT=0,fL=0,cells='';
-      for(let d=1;d<=rp.days;d++){const dy=d.toString().padStart(2,'0'),data=ea[dy];if(data){cells+=`<td><div class="gc ${sCls(data.status)}">${data.code}</div></td>`;if(data.code==='P')p++;else if(data.code==='T')t++;else if(data.code==='A')a++;else if(data.code==='L')l++;if(data.status==='FINAL'){if(data.code==='P')fP++;else if(data.code==='T')fT++;else if(data.code==='L')fL++;}}else cells+='<td><div class="gc ce">-</div></td>';}
-      const pay=fP+fT+fL,amt=(pay*(emp.salary/rp.days)).toFixed(2);
-      return`<div class="cd mb4"><div class="ch">${eid} — ${emp.name}</div><div class="cb" style="padding:0;overflow-x:auto"><table class="gt"><thead><tr><th class="sk">Day</th>${Array.from({length:rp.days},(_,i)=>`<th>${i+1}</th>`).join('')}</tr></thead><tbody><tr><td class="sk"><strong>Code</strong></td>${cells}</tr></tbody></table></div><div class="cb" style="background:#f8fafc"><div style="display:flex;gap:20px;flex-wrap:wrap;font-size:.88rem"><span><strong style="color:var(--pri)">P:</strong> ${p}(F:${fP})</span><span><strong style="color:var(--acc)">T:</strong> ${t}(F:${fT})</span><span><strong style="color:var(--inf)">L:</strong> ${l}(F:${fL})</span><span><strong style="color:var(--dng)">A:</strong> ${a}</span><span><strong>Payable:</strong> ${pay}</span><span><strong style="color:var(--pri);font-size:1.1rem">${parseFloat(amt).toLocaleString()} BDT</strong></span></div></div></div>`;
-    }).join('');
+  if (pending.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><i class="fa-solid fa-check-double" style="font-size:32px;margin-bottom:12px;display:block;color:var(--accent)"></i>No pending approvals for this date</div>';
+    return;
+  }
+
+  pending.sort(function(a,b) {
+    var ua = allUsers[a[0]], ub = allUsers[b[0]];
+    return (ua?ua.name:'').localeCompare(ub?ub.name:'');
   });
-}
-function expExcel(){
-  const rp=getRData();if(!rp){toast('Invalid','error');return;}
-  db.ref('attendance/'+rp.y+'/'+rp.m).once('value').then(snap=>{
-    const att=snap.val()||{},wb=XLSX.utils.book_new();
-    Object.entries(rp.employees).forEach(([eid,emp])=>{
-      const ea=att[eid]||{};const rows=[];rows.push(['ATTENDANCE KUSHTIA']);rows.push(['Employee:',eid,'Name:',emp.name,'Depot:',emp.depot,'Month:',mn(rp.m),'Year:',rp.y]);rows.push([]);
-      const hdr=['Day'];for(let d=1;d<=rp.days;d++)hdr.push(d);hdr.push('P','T','L','A','Payable','Amount');rows.push(hdr);
-      const dr=['Code'];let pC=0,tC=0,lC=0,aC=0;for(let d=1;d<=rp.days;d++){const dy=d.toString().padStart(2,'0'),data=ea[dy];if(data&&data.status==='FINAL'){dr.push(data.code);if(data.code==='P')pC++;else if(data.code==='T')tC++;else if(data.code==='L')lC++;else aC++;}else dr.push('-');}
-      dr.push(pC,tC,lC,aC,pC+tC+lC,((pC+tC+lC)*(emp.salary/rp.days)).toFixed(2));rows.push(dr);
-      const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[{wch:8}];for(let i=1;i<=rp.days;i++)ws['!cols'].push({wch:5});XLSX.utils.book_append_sheet(wb,ws,eid);
-    });XLSX.writeFile(wb,'Attendance_'+mn(rp.m)+'_'+rp.y+'.xlsx');toast('Excel downloaded','success');
-  });
-}
-function expPDF(){
-  const rp=getRData();if(!rp){toast('Invalid','error');return;}
-  db.ref('attendance/'+rp.y+'/'+rp.m).once('value').then(snap=>{
-    const att=snap.val()||{};const{jsPDF}=window.jspdf;const doc=new jsPDF('l','mm','a4');
-    Object.entries(rp.employees).forEach(([eid,emp],idx)=>{
-      if(idx>0)doc.addPage();const ea=att[eid]||{};let pC=0,tC=0,lC=0,aC=0;
-      doc.setFontSize(16);doc.setFont(undefined,'bold');doc.text('ATTENDANCE KUSHTIA',14,15);doc.setFontSize(10);doc.setFont(undefined,'normal');doc.text('Employee: '+eid+' - '+emp.name+' | Depot: '+emp.depot+' | Salary: '+(emp.salary||'-'),14,23);doc.text('Month: '+mn(rp.m)+' '+rp.y,14,29);
-      const tb=[['Code']];for(let d=1;d<=rp.days;d++){const dy=d.toString().padStart(2,'0'),data=ea[dy];if(data&&data.status==='FINAL'){tb.push([data.code]);if(data.code==='P')pC++;else if(data.code==='T')tC++;else if(data.code==='L')lC++;else aC++;}else tb.push(['-']);}
-      doc.autoTable({head:[['Day'],...Array.from({length:rp.days},(_,i)=>[(i+1).toString()])],body:tb,startY:35,theme:'grid',styles:{fontSize:7,halign:'center',cellPadding:2},headStyles:{fillColor:[5,150,105],textColor:255,fontSize:7}});
-      const fy=doc.lastAutoTable.finalY+8;doc.setFontSize(10);doc.setFont(undefined,'bold');doc.text('P:'+pC+' T:'+tC+' L:'+lC+' A:'+aC+' | Payable:'+(pC+tC+lC)+' | Amount:'+(parseFloat(((pC+tC+lC)*(emp.salary/rp.days)).toFixed(2))).toLocaleString()+' BDT',14,fy);
-      doc.setFontSize(9);doc.setFont(undefined,'normal');doc.text('DA: _____________ ADIC: _____________ DIC: _____________ SA: _____________',14,fy+16);
-    });doc.save('Attendance_'+mn(rp.m)+'_'+rp.y+'.pdf');toast('PDF downloaded','success');
-  });
+
+  var rows = '';
+  for (var i = 0; i < pending.length; i++) {
+    var uid = pending[i][0], a = pending[i][1];
+    var u = allUsers[uid];
+    rows += '<tr><td style="font-weight:600">' + (u?u.name:uid) + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u?u.designation:'--') + '</td>' +
+      '<td><span class="badge ' + a.status + '">' + a.status + '</span> ' + statusLabel(a.status) + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-xs btn-primary" onclick="approveSingle(\'' + date + '\',\'' + uid + '\')"><i class="fa-solid fa-check"></i> Approve</button>' +
+        '<button class="btn btn-xs btn-danger" onclick="rejectSingle(\'' + date + '\',\'' + uid + '\')" style="margin-left:4px"><i class="fa-solid fa-trash"></i></button>' +
+      '</td></tr>';
+  }
+  container.innerHTML = '<table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Status</th><th>Action</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    '<div style="margin-top:16px"><button class="btn btn-primary" onclick="approveAll(\'' + date + '\')"><i class="fa-solid fa-check-double"></i> Approve All Pending</button></div>';
 }
 
-// ===== PROFILE =====
-function renderProfile(){
-  const u=CU,sys=isSys();
-  document.getElementById('pageContent').innerHTML=`<div class="cd" style="max-width:600px;margin:auto"><div class="cb" style="text-align:center;padding:40px 20px;${sys?'background:linear-gradient(135deg,#fffbeb,#fef3c7)':''}"><div style="width:110px;height:110px;border-radius:50%;overflow:hidden;border:${sys?'4px solid var(--gold)':'3px solid var(--pri)'};margin:0 auto 16px;background:var(--brd)">${u.image?`<img src="${u.image}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;font-weight:800;color:${sys?'var(--gold)':'var(--pri)'}">${u.name.charAt(0)}</div>`}</div>${sys?'<div style="display:inline-flex;align-items:center;gap:6px;background:var(--gold-d);color:#fff;padding:4px 14px;border-radius:20px;font-size:.78rem;font-weight:700;margin-bottom:8px"><i class="fas fa-crown"></i> SYSTEM ADMIN</div>':''}<h3>${u.name}</h3><p class="tm">${rLbl(u.role)} · Depot ${u.depot}</p><button class="btn bo mt4" onclick="openProfMod()"><i class="fas fa-camera"></i> Change Photo</button></div><div style="border-top:1px solid var(--brd);padding:20px"><div style="display:grid;gap:12px;font-size:.9rem"><div style="display:flex;justify-content:space-between"><span class="tm">Username</span><strong>${u.username}</strong></div><div style="display:flex;justify-content:space-between"><span class="tm">Role</span><span class="bdg ${rCls(u.role)}">${rLbl(u.role)}</span></div><div style="display:flex;justify-content:space-between"><span class="tm">Depot</span><strong>${u.depot}</strong></div><div style="display:flex;justify-content:space-between"><span class="tm">Access</span><strong style="color:${sys?'var(--gold-d)':'var(--pri)'}">${sys?'Full System':'Depot Level'}</strong></div></div></div></div>`;
+async function approveSingle(date, uid) {
+  await db.ref('attendance/' + date + '/' + uid + '/approved').set(true);
+  showToast('Approved', 'success'); loadApprovals();
 }
-let tmpPI='';
-function openProfMod(){tmpPI='';openMod('Change Photo',`<div style="text-align:center"><div class="iu" id="pIU" style="width:120px;height:120px;margin:0 auto" onclick="document.getElementById('pIF').click()">${CU.image?`<img src="${CU.image}">`:'<i class="fas fa-camera" style="font-size:2rem"></i>'}</div><input type="file" id="pIF" accept="image/*" style="display:none" onchange="prevPI(this)"></div>`,`<button class="btn bg" onclick="saveProf()"><i class="fas fa-save"></i> Save</button><button class="btn bo" onclick="closeModal()">Cancel</button>`);}
-function prevPI(inp){if(inp.files[0])resImg(inp.files[0],200,200,b=>{tmpPI=b;document.getElementById('pIU').innerHTML=`<img src="${b}">`;});}
-function saveProf(){db.ref('users/'+CU.username+'/image').set(tmpPI||CU.image).then(()=>{CU.image=tmpPI||CU.image;localStorage.setItem('erp_s',JSON.stringify(CU));renderSBU();renderProfile();tmpPI='';closeModal();toast('Photo updated','success');});}
+async function rejectSingle(date, uid) {
+  await db.ref('attendance/' + date + '/' + uid).remove();
+  showToast('Entry removed', 'info'); loadApprovals();
+}
+async function approveAll(date) {
+  var snap = await db.ref('attendance/' + date).once('value');
+  var att = snap.val() || {};
+  var updates = {};
+  Object.entries(att).forEach(function(e) { if (!e[1].approved && e[0] !== DIC_ID) updates[e[0] + '/approved'] = true; });
+  if (Object.keys(updates).length === 0) { showToast('Nothing to approve', 'info'); return; }
+  await db.ref('attendance/' + date).update(updates);
+  showToast('All pending entries approved', 'success'); loadApprovals();
+}
 
-// ===== INIT =====
-ensureKS();
-checkSession();
+/* ============================================================
+   DIC - ALL RECORDS
+   ============================================================ */
+async function renderRecords() {
+  await loadUsers();
+  var today = todayStr();
+  var optsHTML = '<option value="">All Users</option>';
+  Object.entries(allUsers).sort(function(a,b) { return a[1].name.localeCompare(b[1].name); }).forEach(function(e) {
+    optsHTML += '<option value="' + e[0] + '">' + e[1].name + ' (' + e[1].designation + ')</option>';
+  });
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">All Attendance Records</h2>' +
+    '<div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:20px">' +
+      '<div class="form-group" style="margin:0;min-width:180px"><label class="form-label">Date</label><input type="date" class="form-input" id="recordDate" value="' + today + '" onchange="loadRecords()"></div>' +
+      '<div class="form-group" style="margin:0;min-width:200px"><label class="form-label">Filter User</label><select class="form-select" id="recordUser" onchange="loadRecords()">' + optsHTML + '</select></div>' +
+    '</div>' +
+    '<div class="card"><div style="overflow-x:auto" id="recordsTable"></div></div></div>';
+  loadRecords();
+}
+
+async function loadRecords() {
+  var date = document.getElementById('recordDate').value;
+  var filterUser = document.getElementById('recordUser').value;
+  if (!date) return;
+  var snap = await db.ref('attendance/' + date).once('value');
+  var att = snap.val() || {};
+  var hol = isHoliday(date);
+
+  var entries = Object.entries(att);
+  if (filterUser) entries = entries.filter(function(e) { return e[0] === filterUser; });
+  entries.sort(function(a,b) {
+    var ua = allUsers[a[0]], ub = allUsers[b[0]];
+    return (ua?ua.name:'').localeCompare(ub?ub.name:'');
+  });
+
+  var container = document.getElementById('recordsTable');
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No records found' + (hol ? ' <span class="holiday-badge">Holiday</span>' : '') + '</div>';
+    return;
+  }
+
+  var rows = '';
+  for (var i = 0; i < entries.length; i++) {
+    var uid = entries[i][0], a = entries[i][1];
+    var u = allUsers[uid];
+    var s = getAttStatus(date, uid, a);
+    rows += '<tr><td style="font-weight:600">' + (u?u.name:uid) + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u?u.designation:'--') + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u?u.depot:'--') + '</td>' +
+      '<td>' + (s==='H' ? '<span class="holiday-badge">Holiday</span>' : '<span class="badge ' + s + '">' + s + '</span> ' + statusLabel(s)) + '</td>' +
+      '<td>' + (a.approved ? '<span class="approved-badge">Approved</span>' : '<span class="pending-badge">Pending</span>') + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="btn btn-xs btn-warn" onclick="editAttModal(\'' + date + '\',\'' + uid + '\',\'' + s + '\')"><i class="fa-solid fa-pen"></i></button>' +
+        '<button class="btn btn-xs btn-danger" onclick="deleteAtt(\'' + date + '\',\'' + uid + '\')" style="margin-left:4px"><i class="fa-solid fa-trash"></i></button>' +
+      '</td></tr>';
+  }
+  container.innerHTML = '<table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Depot</th><th>Status</th><th>Approval</th><th>Action</th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function editAttModal(date, uid, current) {
+  var u = allUsers[uid];
+  var hol = isHoliday(date);
+  var options = hol ? ['H'] : ['P','A','T','L'];
+  var optHTML = '';
+  for (var i = 0; i < options.length; i++) {
+    optHTML += '<option value="' + options[i] + '"' + (options[i]===current?' selected':'') + '>' + options[i] + ' - ' + statusLabel(options[i]) + '</option>';
+  }
+  showModal('Edit Attendance',
+    '<p style="margin-bottom:12px"><strong>' + (u?u.name:uid) + '</strong> <span style="font-size:11px;color:var(--text2)">' + (u?u.designation:'') + '</span></p>' +
+    '<p style="color:var(--text2);font-size:13px;margin-bottom:16px">Date: ' + formatBD(date) + (hol ? ' <span class="holiday-badge">Holiday</span>' : '') + '</p>' +
+    '<label class="form-label">New Status</label><select class="form-select" id="editAttStatus">' + optHTML + '</select>',
+    async function() {
+      var newStatus = document.getElementById('editAttStatus').value;
+      await db.ref('attendance/' + date + '/' + uid).update({ status: newStatus, approved: true, submittedBy: DIC_ID, submittedAt: Date.now() });
+      showToast('Attendance updated', 'success'); loadRecords();
+    }
+  );
+}
+
+function deleteAtt(date, uid) {
+  var u = allUsers[uid];
+  showModal('Delete Entry',
+    '<p style="color:var(--text2)">Delete attendance for <strong>' + (u?u.name:uid) + '</strong> on <strong>' + formatBD(date) + '</strong>?</p>',
+    async function() {
+      await db.ref('attendance/' + date + '/' + uid).remove();
+      showToast('Entry deleted', 'info'); loadRecords();
+    }
+  );
+}
+
+/* ============================================================
+   DIC - MANAGE USERS (Add/Edit/Delete/Active/Deactive)
+   ============================================================ */
+async function renderUsers() {
+  await loadUsers();
+  var userList = Object.entries(allUsers).sort(function(a,b) { return a[1].name.localeCompare(b[1].name); });
+
+  var rowsHTML = '';
+  for (var i = 0; i < userList.length; i++) {
+    var k = userList[i][0], v = userList[i][1];
+    var isActive = v.active !== false;
+    var statusBadge = isActive ? '<span class="active-badge">Active</span>' : '<span class="inactive-badge">Inactive</span>';
+    var actionHTML = '';
+    if (k === DIC_ID) {
+      actionHTML = '<span style="color:var(--muted);font-size:11px">DIC</span>';
+    } else {
+      actionHTML = '<button class="btn btn-xs btn-secondary" onclick="showEditUserForm(\'' + k + '\')"><i class="fa-solid fa-pen"></i></button>' +
+        '<label class="toggle-switch" style="margin-left:6px" title="' + (isActive?'Deactivate':'Activate') + '">' +
+          '<input type="checkbox" ' + (isActive?'checked':'') + ' onchange="toggleUserActive(\'' + k + '\',this.checked)">' +
+          '<span class="toggle-slider"></span></label>' +
+        '<button class="btn btn-xs btn-danger" onclick="deleteUser(\'' + k + '\')" style="margin-left:4px"><i class="fa-solid fa-trash"></i></button>';
+    }
+    rowsHTML += '<tr><td style="font-weight:600">' + v.name + '<br><span style="font-size:10px;color:var(--muted)">' + k + '</span></td>' +
+      '<td><span style="color:var(--accent);font-size:11px;font-weight:600">' + (v.designation||'--') + '</span></td>' +
+      '<td>' + (v.depot||'--') + '</td><td>' + (v.mobile||'--') + '</td>' +
+      '<td>' + (v.salary ? '৳'+Number(v.salary).toLocaleString() : '--') + '</td>' +
+      '<td>' + (v.joinDate ? formatBD(v.joinDate) : '--') + '</td>' +
+      '<td>' + statusBadge + '</td><td style="white-space:nowrap">' + actionHTML + '</td></tr>';
+  }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">' +
+      '<h2 style="font-size:22px;font-weight:800">Manage Users</h2>' +
+      '<button class="btn btn-primary" onclick="showAddUserForm()"><i class="fa-solid fa-user-plus"></i> Add New User</button>' +
+    '</div>' +
+    '<div id="addUserFormArea"></div>' +
+    '<div class="card"><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Depot</th><th>Mobile</th><th>Salary</th><th>Join Date</th><th>Status</th><th>Action</th></tr></thead><tbody>' + rowsHTML + '</tbody></table></div></div></div>';
+}
+
+async function toggleUserActive(uid, checked) {
+  await db.ref('users/' + uid + '/active').set(checked);
+  allUsers[uid].active = checked;
+  showToast(checked ? 'User activated' : 'User deactivated', checked ? 'success' : 'info');
+  renderUsers();
+}
+
+function showAddUserForm() {
+  var desigOpts = '';
+  for (var i = 0; i < DESIGNATIONS.length; i++) {
+    desigOpts += '<option value="' + DESIGNATIONS[i] + '">' + DESIGNATIONS[i] + '</option>';
+  }
+  document.getElementById('addUserFormArea').innerHTML = '<div class="card fade-in" style="margin-bottom:20px;border-color:var(--accent-dim)">' +
+    '<h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-user-plus" style="color:var(--accent);margin-right:8px"></i>Add New User</h3>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">' +
+      '<div class="form-group"><label class="form-label">User ID *</label><input class="form-input" id="nuId" placeholder="e.g. KUS-001"></div>' +
+      '<div class="form-group"><label class="form-label">Password *</label><input class="form-input" id="nuPass" placeholder="Set password"></div>' +
+      '<div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="nuName" placeholder="Full name"></div>' +
+      '<div class="form-group"><label class="form-label">Designation *</label><select class="form-select" id="nuDesig">' + desigOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Depot *</label><input class="form-input" id="nuDepot" value="Kushtia"></div>' +
+      '<div class="form-group"><label class="form-label">Mobile No</label><input class="form-input" id="nuMobile" placeholder="01XXXXXXXXX"></div>' +
+      '<div class="form-group"><label class="form-label">Salary (BDT)</label><input class="form-input" id="nuSalary" type="number" placeholder="0"></div>' +
+      '<div class="form-group"><label class="form-label">Join Date</label><input class="form-input" id="nuJoin" type="date" value="' + todayStr() + '"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;margin-top:8px">' +
+      '<button class="btn btn-primary" onclick="createUser()"><i class="fa-solid fa-save"></i> Save User</button>' +
+      '<button class="btn btn-secondary" onclick="document.getElementById(\'addUserFormArea\').innerHTML=\'\'"><i class="fa-solid fa-times"></i> Cancel</button>' +
+    '</div></div>';
+  document.getElementById('addUserFormArea').scrollIntoView({ behavior:'smooth' });
+}
+
+async function createUser() {
+  var id = document.getElementById('nuId').value.trim();
+  var pass = document.getElementById('nuPass').value.trim();
+  var name = document.getElementById('nuName').value.trim();
+  var desig = document.getElementById('nuDesig').value;
+  var depot = document.getElementById('nuDepot').value.trim();
+  var mobile = document.getElementById('nuMobile').value.trim();
+  var salary = parseFloat(document.getElementById('nuSalary').value) || 0;
+  var joinDate = document.getElementById('nuJoin').value;
+
+  if (!id || !pass || !name || !depot) { showToast('ID, Password, Name and Depot are required', 'error'); return; }
+  if (id === DIC_ID) { showToast('This ID is reserved for DIC', 'error'); return; }
+
+  var existing = await db.ref('users/' + id).once('value');
+  if (existing.exists()) { showToast('User ID already exists', 'error'); return; }
+
+  var userData = { id:id, name:name, designation:desig, depot:depot, joinDate:joinDate, salary:salary, mobile:mobile, role:desig, password:pass, active:true, createdAt:Date.now() };
+  await db.ref('users/' + id).set(userData);
+  allUsers[id] = userData;
+  showToast('User created: ' + name, 'success');
+  renderUsers();
+}
+
+function showEditUserForm(uid) {
+  var u = allUsers[uid];
+  if (!u) return;
+  var desigOpts = '';
+  for (var i = 0; i < DESIGNATIONS.length; i++) {
+    desigOpts += '<option value="' + DESIGNATIONS[i] + '"' + (DESIGNATIONS[i]===u.designation?' selected':'') + '>' + DESIGNATIONS[i] + '</option>';
+  }
+  document.getElementById('addUserFormArea').innerHTML = '<div class="card fade-in" style="margin-bottom:20px;border-color:var(--warn)">' +
+    '<h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-user-pen" style="color:var(--warn);margin-right:8px"></i>Edit User - ' + u.name + '</h3>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">' +
+      '<div class="form-group"><label class="form-label">User ID</label><input class="form-input" value="' + uid + '" disabled style="opacity:.6"></div>' +
+      '<div class="form-group"><label class="form-label">Password</label><input class="form-input" id="euPass" value="' + (u.password||'') + '" placeholder="New password"></div>' +
+      '<div class="form-group"><label class="form-label">Full Name *</label><input class="form-input" id="euName" value="' + (u.name||'') + '"></div>' +
+      '<div class="form-group"><label class="form-label">Designation *</label><select class="form-select" id="euDesig">' + desigOpts + '</select></div>' +
+      '<div class="form-group"><label class="form-label">Depot *</label><input class="form-input" id="euDepot" value="' + (u.depot||'') + '"></div>' +
+      '<div class="form-group"><label class="form-label">Mobile No</label><input class="form-input" id="euMobile" value="' + (u.mobile||'') + '"></div>' +
+      '<div class="form-group"><label class="form-label">Salary (BDT)</label><input class="form-input" id="euSalary" type="number" value="' + (u.salary||0) + '"></div>' +
+      '<div class="form-group"><label class="form-label">Join Date</label><input class="form-input" id="euJoin" type="date" value="' + (u.joinDate||'') + '"></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;margin-top:8px">' +
+      '<button class="btn btn-primary" onclick="updateUser(\'' + uid + '\')"><i class="fa-solid fa-save"></i> Update</button>' +
+      '<button class="btn btn-secondary" onclick="document.getElementById(\'addUserFormArea\').innerHTML=\'\'"><i class="fa-solid fa-times"></i> Cancel</button>' +
+    '</div></div>';
+  document.getElementById('addUserFormArea').scrollIntoView({ behavior:'smooth' });
+}
+
+async function updateUser(uid) {
+  var name = document.getElementById('euName').value.trim();
+  var pass = document.getElementById('euPass').value.trim();
+  var desig = document.getElementById('euDesig').value;
+  var depot = document.getElementById('euDepot').value.trim();
+  var mobile = document.getElementById('euMobile').value.trim();
+  var salary = parseFloat(document.getElementById('euSalary').value) || 0;
+  var joinDate = document.getElementById('euJoin').value;
+
+  if (!name || !depot) { showToast('Name and Depot are required', 'error'); return; }
+
+  var updates = { name:name, designation:desig, depot:depot, mobile:mobile, salary:salary, joinDate:joinDate, role:desig };
+  if (pass) updates.password = pass;
+
+  await db.ref('users/' + uid).update(updates);
+  allUsers[uid] = Object.assign({}, allUsers[uid], updates);
+  showToast('User updated: ' + name, 'success');
+  document.getElementById('addUserFormArea').innerHTML = '';
+  renderUsers();
+}
+
+function deleteUser(uid) {
+  var u = allUsers[uid];
+  showModal('Delete User',
+    '<p style="color:var(--text2)">Delete <strong>' + (u?u.name:uid) + '</strong>?</p><p style="color:var(--danger);font-size:12px;margin-top:8px">Attendance records will NOT be deleted.</p>',
+    async function() {
+      await db.ref('users/' + uid).remove();
+      delete allUsers[uid];
+      showToast('User deleted', 'info');
+      renderUsers();
+    }
+  );
+}
+
+/* ============================================================
+   DIC - MONTHLY REPORT (A-Z, No ID, Depot, Holiday Auto)
+   ============================================================ */
+async function renderReports() {
+  await loadUsers();
+  var now = new Date();
+  var monthOpts = '';
+  for (var i = 0; i < 12; i++) monthOpts += '<option value="' + i + '"' + (i===now.getMonth()?' selected':'') + '>' + monthName(i) + '</option>';
+  var yearOpts = '';
+  for (var i = 0; i < 5; i++) { var yr = now.getFullYear()-2+i; yearOpts += '<option value="' + yr + '"' + (yr===now.getFullYear()?' selected':'') + '>' + yr + '</option>'; }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Monthly Attendance Report</h2>' +
+    '<div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:20px">' +
+      '<div class="form-group" style="margin:0;min-width:150px"><label class="form-label">Month</label><select class="form-select" id="repMonth">' + monthOpts + '</select></div>' +
+      '<div class="form-group" style="margin:0;min-width:120px"><label class="form-label">Year</label><select class="form-select" id="repYear">' + yearOpts + '</select></div>' +
+      '<button class="btn btn-primary" onclick="generateReport()"><i class="fa-solid fa-table"></i> Generate</button>' +
+      '<button class="btn btn-secondary" id="printReportBtn" onclick="printReport()" style="display:none"><i class="fa-solid fa-print"></i> Print</button>' +
+    '</div>' +
+    '<div class="card"><div style="overflow-x:auto" id="reportArea"><div style="text-align:center;padding:40px;color:var(--muted)">Select month & year and click Generate</div></div></div></div>';
+}
+
+var lastReportHTML = '';
+async function generateReport() {
+  var m = parseInt(document.getElementById('repMonth').value);
+  var y = parseInt(document.getElementById('repYear').value);
+  var days = getDaysInMonth(y, m);
+  var users = Object.entries(allUsers).filter(function(e) { return e[1].role !== 'DIC' && e[1].active !== false; }).sort(function(a,b) { return a[1].name.localeCompare(b[1].name); });
+
+  if (users.length === 0) { showToast('No active users found', 'error'); return; }
+
+  /* Load full month attendance */
+  var allAtt = {};
+  for (var d = 1; d <= days; d++) {
+    var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var snap = await db.ref('attendance/' + ds).once('value');
+    allAtt[ds] = snap.val() || {};
+  }
+
+  /* Build table header */
+  var headerCells = '<th style="min-width:140px;text-align:left">Name</th><th style="min-width:85px;text-align:left;font-size:10px">Designation</th><th style="min-width:70px;text-align:left;font-size:10px">Depot</th>';
+  for (var d = 1; d <= days; d++) {
+    var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var hol = isHoliday(ds);
+    var holStyle = hol ? 'background:rgba(168,85,247,.1);color:#a855f7' : '';
+    headerCells += '<th style="min-width:28px;' + holStyle + '" title="' + formatBD(ds) + '">' + d + '</th>';
+  }
+  headerCells += '<th>P</th><th>A</th><th>T</th><th>L</th><th>H</th>';
+
+  var bodyRows = '';
+  for (var i = 0; i < users.length; i++) {
+    var uid = users[i][0], u = users[i][1];
+    var cells = '<td style="font-weight:600;text-align:left">' + u.name + '</td>' +
+      '<td style="text-align:left;font-size:10px;color:var(--text2)">' + (u.designation||'') + '</td>' +
+      '<td style="text-align:left;font-size:10px;color:var(--text2)">' + (u.depot||'') + '</td>';
+    var counts = { P:0, A:0, T:0, L:0, H:0 };
+    for (var d = 1; d <= days; d++) {
+      var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var attData = allAtt[ds][uid];
+      var s = getAttStatus(ds, uid, attData);
+      if (s && counts.hasOwnProperty(s)) counts[s]++;
+      var hol = isHoliday(ds);
+      var holBg = hol ? 'background:rgba(168,85,247,.04)' : '';
+      cells += '<td style="' + holBg + '">' + (s ? '<span class="badge mini ' + s + '">' + s + '</span>' : '') + '</td>';
+    }
+    cells += '<td style="font-weight:700;color:#00d4aa;font-size:12px">' + counts.P + '</td>' +
+      '<td style="font-weight:700;color:#ef4444;font-size:12px">' + counts.A + '</td>' +
+      '<td style="font-weight:700;color:#60a5fa;font-size:12px">' + counts.T + '</td>' +
+      '<td style="font-weight:700;color:#f59e0b;font-size:12px">' + counts.L + '</td>' +
+      '<td style="font-weight:700;color:#a855f7;font-size:12px">' + counts.H + '</td>';
+    bodyRows += '<tr>' + cells + '</tr>';
+  }
+
+  /* Holiday legend */
+  var holidayList = '';
+  for (var d = 1; d <= days; d++) {
+    var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    if (isHoliday(ds)) holidayList += '<span class="holiday-badge" style="margin:2px">' + d + ': ' + allHolidays[ds] + '</span> ';
+  }
+
+  var tableHTML = (holidayList ? '<div style="margin-bottom:12px">' + holidayList + '</div>' : '') +
+    '<table class="data-table" id="reportTable"><thead><tr>' + headerCells + '</tr></thead><tbody>' + bodyRows + '</tbody></table>';
+
+  document.getElementById('reportArea').innerHTML = tableHTML;
+  document.getElementById('printReportBtn').style.display = 'inline-flex';
+
+  /* Print HTML */
+  var phCells = '<th>Name</th><th>Desig.</th><th>Depot</th>';
+  for (var d = 1; d <= days; d++) phCells += '<th>' + d + '</th>';
+  phCells += '<th>P</th><th>A</th><th>T</th><th>L</th><th>H</th>';
+
+  var pbRows = '';
+  for (var i = 0; i < users.length; i++) {
+    var uid = users[i][0], u = users[i][1];
+    var cells = '<td style="text-align:left">' + u.name + '</td><td>' + (u.designation||'') + '</td><td>' + (u.depot||'') + '</td>';
+    var counts = { P:0, A:0, T:0, L:0, H:0 };
+    for (var d = 1; d <= days; d++) {
+      var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var attData = allAtt[ds][uid];
+      var s = getAttStatus(ds, uid, attData);
+      if (s && counts.hasOwnProperty(s)) counts[s]++;
+      cells += '<td style="color:' + statusColor(s) + ';font-weight:700">' + (s||'') + '</td>';
+    }
+    cells += '<td>' + counts.P + '</td><td>' + counts.A + '</td><td>' + counts.T + '</td><td>' + counts.L + '</td><td>' + counts.H + '</td>';
+    pbRows += '<tr>' + cells + '</tr>';
+  }
+
+  lastReportHTML = '<h2>ATTENDANCE REPORT - ' + monthName(m).toUpperCase() + ' ' + y + '</h2>' +
+    '<h3>Kushtia Depot</h3>' +
+    '<table><thead><tr>' + phCells + '</tr></thead><tbody>' + pbRows + '</tbody></table>' +
+    '<p style="margin-top:10px;font-size:9px;color:#888">Generated: ' + new Date().toLocaleString() + '</p>';
+}
+
+function printReport() {
+  if (!lastReportHTML) { showToast('Generate report first', 'error'); return; }
+  document.getElementById('printArea').innerHTML = lastReportHTML;
+  setTimeout(function() { window.print(); }, 200);
+}
+
+/* ============================================================
+   DIC - SALARY SHEET (Fixed, Holiday Auto, A-Z)
+   ============================================================ */
+async function renderSalary() {
+  await loadUsers();
+  var now = new Date();
+  var monthOpts = '';
+  for (var i = 0; i < 12; i++) monthOpts += '<option value="' + i + '"' + (i===now.getMonth()?' selected':'') + '>' + monthName(i) + '</option>';
+  var yearOpts = '';
+  for (var i = 0; i < 5; i++) { var yr = now.getFullYear()-2+i; yearOpts += '<option value="' + yr + '"' + (yr===now.getFullYear()?' selected':'') + '>' + yr + '</option>'; }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Salary Sheet</h2>' +
+    '<div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:20px">' +
+      '<div class="form-group" style="margin:0;min-width:150px"><label class="form-label">Month</label><select class="form-select" id="salMonth">' + monthOpts + '</select></div>' +
+      '<div class="form-group" style="margin:0;min-width:120px"><label class="form-label">Year</label><select class="form-select" id="salYear">' + yearOpts + '</select></div>' +
+      '<button class="btn btn-primary" onclick="generateSalarySheet()"><i class="fa-solid fa-calculator"></i> Generate</button>' +
+      '<button class="btn btn-secondary" id="printSalBtn" onclick="printSalary()" style="display:none"><i class="fa-solid fa-print"></i> Print</button>' +
+    '</div>' +
+    '<div class="card"><div style="overflow-x:auto" id="salaryArea"><div style="text-align:center;padding:40px;color:var(--muted)">Select month & year and click Generate</div></div></div></div>';
+}
+
+var lastSalaryHTML = '';
+async function generateSalarySheet() {
+  var m = parseInt(document.getElementById('salMonth').value);
+  var y = parseInt(document.getElementById('salYear').value);
+  var days = getDaysInMonth(y, m);
+  var users = Object.entries(allUsers).filter(function(e) { return e[1].active !== false && e[1].salary > 0; }).sort(function(a,b) { return a[1].name.localeCompare(b[1].name); });
+
+  if (users.length === 0) {
+    document.getElementById('salaryArea').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No active users with salary found. Set salary in Manage Users first.</div>';
+    showToast('No users with salary', 'error');
+    return;
+  }
+
+  /* Load full month attendance */
+  var allAtt = {};
+  for (var d = 1; d <= days; d++) {
+    var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var snap = await db.ref('attendance/' + ds).once('value');
+    allAtt[ds] = snap.val() || {};
+  }
+
+  var rows = '';
+  var totalBasic=0, totalDeduct=0, totalNet=0;
+
+  for (var i = 0; i < users.length; i++) {
+    var uid = users[i][0], u = users[i][1];
+    var counts = { P:0, A:0, T:0, L:0, H:0 };
+    for (var d = 1; d <= days; d++) {
+      var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var attData = allAtt[ds][uid];
+      var s = getAttStatus(ds, uid, attData);
+      if (s && counts.hasOwnProperty(s)) counts[s]++;
+    }
+
+    var basic = u.salary;
+    var perDay = basic / days;
+    var deduct = Math.round(perDay * counts.A);
+    var net = basic - deduct;
+    totalBasic += basic;
+    totalDeduct += deduct;
+    totalNet += net;
+
+    rows += '<tr>' +
+      '<td style="font-weight:600">' + u.name + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u.designation||'') + '</td>' +
+      '<td style="font-size:11px;color:var(--text2)">' + (u.depot||'') + '</td>' +
+      '<td style="font-weight:600;color:var(--accent)">৳' + basic.toLocaleString() + '</td>' +
+      '<td style="color:#00d4aa;font-weight:700">' + counts.P + '</td>' +
+      '<td style="color:#ef4444;font-weight:700">' + counts.A + '</td>' +
+      '<td style="color:#60a5fa;font-weight:700">' + counts.T + '</td>' +
+      '<td style="color:#f59e0b;font-weight:700">' + counts.L + '</td>' +
+      '<td style="color:#a855f7;font-weight:700">' + counts.H + '</td>' +
+      '<td style="font-weight:600">' + days + '</td>' +
+      '<td style="color:#ef4444;font-weight:700">৳' + deduct.toLocaleString() + '</td>' +
+      '<td style="color:var(--accent);font-weight:800;font-size:14px">৳' + net.toLocaleString() + '</td>' +
+    '</tr>';
+  }
+
+  var tableHTML = '<table class="data-table" id="salaryTable">' +
+    '<thead><tr><th>Name</th><th>Designation</th><th>Depot</th><th>Basic (৳)</th><th>Present</th><th>Absent</th><th>Tour</th><th>Leave</th><th>Holiday</th><th>Total Days</th><th>Deduction (৳)</th><th>Net Salary (৳)</th></tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+    '<tfoot><tr style="font-weight:800;border-top:2px solid var(--border2)">' +
+      '<td colspan="3" style="text-align:right;color:var(--text2)">TOTAL</td>' +
+      '<td style="color:var(--accent)">৳' + totalBasic.toLocaleString() + '</td>' +
+      '<td></td><td></td><td></td><td></td><td></td><td></td>' +
+      '<td style="color:#ef4444">৳' + totalDeduct.toLocaleString() + '</td>' +
+      '<td style="color:var(--accent);font-size:15px">৳' + totalNet.toLocaleString() + '</td>' +
+    '</tr></tfoot></table>' +
+    '<p style="margin-top:16px;font-size:12px;color:var(--text2)"><i class="fa-solid fa-info-circle" style="color:var(--accent)"></i> Deduction = (Basic / ' + days + ' days) &times; Absent days. Tour, Leave &amp; Holiday are paid. Holidays auto-counted.</p>';
+
+  document.getElementById('salaryArea').innerHTML = tableHTML;
+  document.getElementById('printSalBtn').style.display = 'inline-flex';
+
+  /* Print version */
+  var printRows = '';
+  for (var i = 0; i < users.length; i++) {
+    var uid = users[i][0], u = users[i][1];
+    var counts = { P:0, A:0, T:0, L:0, H:0 };
+    for (var d = 1; d <= days; d++) {
+      var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var attData = allAtt[ds][uid];
+      var s = getAttStatus(ds, uid, attData);
+      if (s && counts.hasOwnProperty(s)) counts[s]++;
+    }
+    var basic = u.salary;
+    var deduct = Math.round((basic/days) * counts.A);
+    var net = basic - deduct;
+    printRows += '<tr><td style="text-align:left">' + u.name + '</td><td>' + (u.designation||'') + '</td><td>' + (u.depot||'') + '</td>' +
+      '<td>' + basic.toLocaleString() + '</td>' +
+      '<td>' + counts.P + '</td><td>' + counts.A + '</td><td>' + counts.T + '</td><td>' + counts.L + '</td><td>' + counts.H + '</td>' +
+      '<td>' + days + '</td><td>' + deduct.toLocaleString() + '</td><td>' + net.toLocaleString() + '</td></tr>';
+  }
+
+  lastSalaryHTML = '<h2>SALARY SHEET - ' + monthName(m).toUpperCase() + ' ' + y + '</h2>' +
+    '<h3>Kushtia Depot | Total Days: ' + days + '</h3>' +
+    '<table><thead><tr><th>Name</th><th>Desig.</th><th>Depot</th><th>Basic</th><th>P</th><th>A</th><th>T</th><th>L</th><th>H</th><th>Days</th><th>Deduct</th><th>Net</th></tr></thead>' +
+    '<tbody>' + printRows + '</tbody>' +
+    '<tfoot><tr style="font-weight:bold;border-top:2px solid #333"><td colspan="3" style="text-align:right">TOTAL</td>' +
+    '<td>' + totalBasic.toLocaleString() + '</td><td></td><td></td><td></td><td></td><td></td><td></td>' +
+    '<td>' + totalDeduct.toLocaleString() + '</td><td>' + totalNet.toLocaleString() + '</td></tr></tfoot></table>' +
+    '<p style="margin-top:10px;font-size:9px;color:#666">Deduction = (Basic / ' + days + ') x Absent. Tour, Leave & Holiday paid. | Generated: ' + new Date().toLocaleString() + '</p>';
+}
+
+function printSalary() {
+  if (!lastSalaryHTML) { showToast('Generate salary sheet first', 'error'); return; }
+  document.getElementById('printArea').innerHTML = lastSalaryHTML;
+  setTimeout(function() { window.print(); }, 200);
+}
+
+/* ============================================================
+   DIC - HOLIDAYS
+   ============================================================ */
+async function renderHolidays() {
+  await loadHolidays();
+  var sorted = Object.entries(allHolidays).sort(function(a,b) { return a[0].localeCompare(b[0]); });
+
+  var listHTML = '';
+  if (sorted.length === 0) {
+    listHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">No holidays added yet</div>';
+  } else {
+    var rowsHTML = '';
+    for (var i = 0; i < sorted.length; i++) {
+      var d = sorted[i][0], n = sorted[i][1];
+      var dayName = new Date(d+'T00:00:00').toLocaleDateString('en',{weekday:'long'});
+      rowsHTML += '<tr><td style="font-weight:600">' + formatBD(d) + '</td><td style="color:var(--text2);font-size:12px">' + dayName + '</td><td><span class="holiday-badge">' + n + '</span></td><td><button class="btn btn-xs btn-danger" onclick="removeHoliday(\'' + d + '\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+    }
+    listHTML = '<div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Date</th><th>Day</th><th>Holiday Name</th><th>Action</th></tr></thead><tbody>' + rowsHTML + '</tbody></table></div>';
+  }
+
+  document.getElementById('dicContent').innerHTML = '<div class="fade-in">' +
+    '<h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Manage Holidays</h2>' +
+    '<div class="card" style="margin-bottom:20px">' +
+      '<h3 style="font-size:16px;font-weight:700;margin-bottom:16px">Add Holiday</h3>' +
+      '<div style="display:flex;gap:14px;align-items:end;flex-wrap:wrap">' +
+        '<div class="form-group" style="margin:0;min-width:180px"><label class="form-label">Date</label><input type="date" class="form-input" id="holDate"></div>' +
+        '<div class="form-group" style="margin:0;min-width:250px"><label class="form-label">Holiday Name</label><input class="form-input" id="holName" placeholder="e.g. Independence Day"></div>' +
+        '<button class="btn btn-primary" onclick="addHoliday()"><i class="fa-solid fa-plus"></i> Add</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">' +
+        '<h3 style="font-size:16px;font-weight:700">Holiday List (' + sorted.length + ')</h3>' +
+        '<button class="btn btn-sm btn-danger" onclick="clearAllHolidays()"' + (sorted.length===0?' disabled':'') + '><i class="fa-solid fa-trash"></i> Clear All</button>' +
+      '</div>' + listHTML +
+    '</div></div>';
+}
+
+async function addHoliday() {
+  var date = document.getElementById('holDate').value;
+  var name = document.getElementById('holName').value.trim();
+  if (!date || !name) { showToast('Date and name are required', 'error'); return; }
+  await db.ref('holidays/' + date).set(name);
+  allHolidays[date] = name;
+  showToast('Holiday added', 'success');
+  renderHolidays();
+}
+
+async function removeHoliday(date) {
+  await db.ref('holidays/' + date).remove();
+  delete allHolidays[date];
+  showToast('Holiday removed', 'info');
+  renderHolidays();
+}
+
+function clearAllHolidays() {
+  showModal('Clear All Holidays',
+    '<p style="color:var(--text2)">Remove ALL holidays? This cannot be undone.</p>',
+    async function() {
+      await db.ref('holidays').remove();
+      allHolidays = {};
+      showToast('All holidays cleared', 'info');
+      renderHolidays();
+    }
+  );
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('loginId').focus();
+});
 </script>
 </body>
 </html>
