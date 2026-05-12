@@ -187,7 +187,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 </div>
 
 <script>
-/* ===== CONFIG - FIXED SYNTAX ===== */
+/* ===== CONFIG ===== */
 var DIC_ID='KS',DIC_PASS='Monico@Ku007';
 var DB_URL='https://attendance-kushtia-default-rtdb.europe-west1.firebasedatabase.app';
 var firebaseConfig={apiKey:"AIzaSyBEg0YOOsFgKiyTv3QkyQv0Vhpym1lms",authDomain:"attendance-kushtia.firebaseapp.com",databaseURL:DB_URL,projectId:"attendance-kushtia",storageBucket:"attendance-kushtia.firebasestorage.app",messagingSenderId:"695383066612",appId:"1:695383066612:web:0d9f5a6dc5d1bbd0a6dba1",measurementId:"G-G21R0GPT2X"};
@@ -217,7 +217,6 @@ function desigOrder(d){var i=DESIG_ORDER.indexOf(d);return i===-1?99:i}
 function getRoleFromDesig(d){if(d==='Depot In-Charge')return'DIC';if(d==='Asst. Depot In-Charge')return'ADIC';return'DA'}
 function roleBadge(r){if(r==='DIC')return'<span class="role-badge-dic">DIC</span>';if(r==='ADIC')return'<span class="role-badge-adic">ADIC</span>';return'<span class="role-badge-da">DA</span>'}
 function dateRange(fromStr,toStr){var dates=[];var cur=new Date(fromStr+'T00:00:00'),end=new Date(toStr+'T00:00:00');while(cur<=end){dates.push(cur.getFullYear()+'-'+String(cur.getMonth()+1).padStart(2,'0')+'-'+String(cur.getDate()).padStart(2,'0'));cur.setDate(cur.getDate()+1)}return dates}
-/* সব রিপোর্টে admin account (DIC_ID) বাদে বাকি সব ইউজার দেখাবে */
 function isReportableUser(uid){return uid!==DIC_ID}
 
 /* ===== TIME UTILITIES ===== */
@@ -309,22 +308,79 @@ async function loadUsers(){try{var snap=await db.ref('users').once('value');allU
 async function loadHolidays(){try{var snap=await db.ref('holidays').once('value');allHolidays=snap.val()||{}}catch(e){showToast('Failed to load holidays','error')}}
 async function loadMonthAttendance(y,m){var days=getDaysInMonth(y,m),dateStrings=[],promises=[];for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');dateStrings.push(ds);promises.push(db.ref('attendance/'+ds).once('value'))}var snaps=await Promise.all(promises);var allAtt={};for(var d=0;d<days;d++)allAtt[dateStrings[d]]=snaps[d].val()||{};return allAtt}
 
-/* ===== PDF ===== */
+/* ===== PDF & PRINT — ALL BLACK TEXT, AUTO-FIT ===== */
 function showPDFLoading(){var ov=document.createElement('div');ov.className='pdf-loading';ov.id='pdfLoadingOv';ov.innerHTML='<div class="spinner"></div><div style="font-size:16px;font-weight:600;color:#00d4aa">Generating PDF...</div><div style="font-size:13px;color:var(--text2)">Please wait</div>';document.body.appendChild(ov)}
 function hidePDFLoading(){var ov=document.getElementById('pdfLoadingOv');if(ov)ov.remove()}
-async function generatePDFFromHTML(pdfContent,filename,orientation){showPDFLoading();var wrapper=document.createElement('div');wrapper.style.cssText='position:absolute;left:-9999px;top:0;z-index:99998;overflow:visible;';var inner=document.createElement('div');inner.innerHTML=pdfContent;inner.style.cssText='width:1500px;background:#fff;color:#111;font-family:Arial,Helvetica,sans-serif;padding:5mm;';wrapper.appendChild(inner);document.body.appendChild(wrapper);await new Promise(function(r){setTimeout(r,1200)});try{var opt={margin:[4,4,4,4],filename:filename,image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,logging:false,scrollY:0,scrollX:0,windowWidth:1520,width:1520},jsPDF:{unit:'mm',format:'a4',orientation:orientation||'landscape'},pagebreak:{mode:['avoid-all','css','legacy']}};await html2pdf().set(opt).from(inner).save();showToast('PDF downloaded: '+filename,'success')}catch(e){showToast('PDF error: '+e.message,'error')}document.body.removeChild(wrapper);hidePDFLoading()}
-function printContent(htmlContent,title){var w=window.open('','_blank','width=1200,height=800');if(!w){showToast('Popup blocked','error');return}w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+(title||'Print')+'</title><style>@page{size:A4 landscape;margin:5mm;}body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff;margin:5mm;}table{border-collapse:collapse;width:100%;}th,td{border:1px solid #333;padding:3px 4px;text-align:center;font-size:10px;height:26px;}th{background:#d1d5db;font-weight:bold;}h2,h3{text-align:center;margin:2px 0;}@media print{@page{size:A4 landscape;margin:4mm;}body{margin:3mm;}th,td{font-size:9px;padding:2px 3px;}}</style></head><body>');w.document.write(htmlContent);w.document.write('</body></html>');w.document.close();setTimeout(function(){w.focus();w.print()},600)}
+
+/* Common black-text auto-fit print CSS */
+function getPrintCSS(){
+  return '<style>'+
+    '*{color:#000!important;}'+
+    'body{font-family:Arial,Helvetica,sans-serif;color:#000!important;background:#fff!important;margin:3mm;}'+
+    'table{border-collapse:collapse;width:100%;table-layout:auto;}'+
+    'th,td{border:1px solid #000!important;padding:1px 2px!important;text-align:center!important;font-size:8px!important;height:auto!important;white-space:nowrap!important;vertical-align:middle!important;color:#000!important;}'+
+    'th{background:#bbb!important;font-weight:bold!important;color:#000!important;}'+
+    'td{text-align:center!important;}'+
+    'h2,h3,h4,p,span,div,b,strong{color:#000!important;}'+
+    '@page{size:A4 landscape;margin:4mm;}'+
+    '@media print{body{margin:2mm!important;}th,td{font-size:7px!important;padding:1px 1px!important;}}'+
+  '</style>';
+}
+
+async function generatePDFFromHTML(pdfContent,filename,orientation){
+  showPDFLoading();
+  var wrapper=document.createElement('div');
+  wrapper.style.cssText='position:absolute;left:-9999px;top:0;z-index:99998;overflow:visible;';
+  var inner=document.createElement('div');
+  inner.innerHTML=pdfContent;
+  /* Auto-fit: no fixed width, let content define width */
+  inner.style.cssText='background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;padding:4mm;';
+  wrapper.appendChild(inner);
+  document.body.appendChild(wrapper);
+  await new Promise(function(r){setTimeout(r,1200)});
+  /* Measure actual content width */
+  var contentWidth=Math.max(inner.scrollWidth,inner.offsetWidth)+20;
+  try{
+    var opt={
+      margin:[3,3,3,3],
+      filename:filename,
+      image:{type:'jpeg',quality:0.98},
+      html2canvas:{scale:2,useCORS:true,logging:false,scrollY:0,scrollX:0,windowWidth:contentWidth,width:contentWidth},
+      jsPDF:{unit:'mm',format:'a4',orientation:orientation||'landscape'},
+      pagebreak:{mode:['avoid-all','css','legacy']}
+    };
+    await html2pdf().set(opt).from(inner).save();
+    showToast('PDF downloaded: '+filename,'success');
+  }catch(e){showToast('PDF error: '+e.message,'error')}
+  document.body.removeChild(wrapper);
+  hidePDFLoading();
+}
+
+function printContent(htmlContent,title){
+  var w=window.open('','_blank','width=1200,height=800');
+  if(!w){showToast('Popup blocked','error');return}
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+(title||'Print')+'</title>');
+  w.document.write(getPrintCSS());
+  w.document.write('</head><body>');
+  w.document.write(htmlContent);
+  w.document.write('</body></html>');
+  w.document.close();
+  setTimeout(function(){w.focus();w.print()},600);
+}
+
 function buildPDFFooter(){
-  return'<div style="width:100%;margin-top:50px;padding-top:10px;"><table style="width:100%;border:none;border-collapse:collapse"><tr>'+
-  '<td style="width:25%;text-align:center;vertical-align:top;border:none;padding:0 8px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px"></div><div style="font-size:10px;color:#555;margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">Prepared by Depot In-Charge</div></td>'+
-  '<td style="width:25%;text-align:center;vertical-align:top;border:none;padding:0 8px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px"></div><div style="font-size:10px;color:#555;margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">Rechecked by RSM/Sr.RSM</div></td>'+
-  '<td style="width:25%;text-align:center;vertical-align:top;border:none;padding:0 8px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px"></div><div style="font-size:10px;color:#555;margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">Recommended by</div></td>'+
-  '<td style="width:25%;text-align:center;vertical-align:top;border:none;padding:0 8px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px"></div><div style="font-size:10px;color:#555;margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">Approved by</div></td>'+
-  '</tr></table></div>';
+  return'<div style="width:100%;margin-top:40px;padding-top:8px;">'+
+    '<table style="width:100%;border:none;border-collapse:collapse">'+
+    '<tr>'+
+    '<td style="width:25%;text-align:center;vertical-align:top;border:none!important;padding:0 8px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000!important">&nbsp;</div><div style="font-size:10px;margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;padding-top:2px;color:#000!important">Prepared by Depot In-Charge</div></td>'+
+    '<td style="width:25%;text-align:center;vertical-align:top;border:none!important;padding:0 8px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000!important">&nbsp;</div><div style="font-size:10px;margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;padding-top:2px;color:#000!important">Rechecked by RSM/Sr.RSM</div></td>'+
+    '<td style="width:25%;text-align:center;vertical-align:top;border:none!important;padding:0 8px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000!important">&nbsp;</div><div style="font-size:10px;margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;padding-top:2px;color:#000!important">Recommended by</div></td>'+
+    '<td style="width:25%;text-align:center;vertical-align:top;border:none!important;padding:0 8px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000!important">&nbsp;</div><div style="font-size:10px;margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;padding-top:2px;color:#000!important">Approved by</div></td>'+
+    '</tr></table></div>';
 }
 
 /* ===== LOGIN ===== */
-async function handleLogin(){var id=document.getElementById('loginId').value.trim(),pass=document.getElementById('loginPass').value.trim();if(!id||!pass){showToast('Enter ID and Password','error');return}if(id===DIC_ID&&pass===DIC_PASS){var snap=await db.ref('users/'+DIC_ID).once('value');if(!snap.exists())await db.ref('users/'+DIC_ID).set({id:DIC_ID,name:'Depot In-Charge',designation:'Depot In-Charge',depot:'Kushtia',joinDate:todayStr(),salary:0,mobile:'',role:'DIC',password:DIC_PASS,active:true,createdAt:Date.now()});currentUser={id:DIC_ID,name:'Depot In-Charge',role:'DIC',designation:'Depot In-Charge'};await loadUsers();await loadHolidays();document.getElementById('dicDisplayId').textContent=DIC_ID+' | Admin (DIC)';switchView('dicView');renderSidebar();showTab('overview');showToast('Welcome, Admin','success');return}try{var snap=await db.ref('users/'+id).once('value');if(!snap.exists()){showToast('User not found','error');return}var data=snap.val();if(data.password!==pass){showToast('Wrong password','error');return}if(data.active===false){showToast('Account deactivated','error');return}currentUser=data;await loadUsers();await loadHolidays();/* সব নন-অ্যাডমিন ইউজার userView তে যাবে */document.getElementById('userDisplayInfo').textContent=id+' | '+(data.designation||'');switchView('userView');renderUserDashboard();showToast('Welcome, '+data.name,'success')}catch(e){showToast('Login error: '+e.message,'error')}}
+async function handleLogin(){var id=document.getElementById('loginId').value.trim(),pass=document.getElementById('loginPass').value.trim();if(!id||!pass){showToast('Enter ID and Password','error');return}if(id===DIC_ID&&pass===DIC_PASS){var snap=await db.ref('users/'+DIC_ID).once('value');if(!snap.exists())await db.ref('users/'+DIC_ID).set({id:DIC_ID,name:'Depot In-Charge',designation:'Depot In-Charge',depot:'Kushtia',joinDate:todayStr(),salary:0,mobile:'',role:'DIC',password:DIC_PASS,active:true,createdAt:Date.now()});currentUser={id:DIC_ID,name:'Depot In-Charge',role:'DIC',designation:'Depot In-Charge'};await loadUsers();await loadHolidays();document.getElementById('dicDisplayId').textContent=DIC_ID+' | Admin (DIC)';switchView('dicView');renderSidebar();showTab('overview');showToast('Welcome, Admin','success');return}try{var snap=await db.ref('users/'+id).once('value');if(!snap.exists()){showToast('User not found','error');return}var data=snap.val();if(data.password!==pass){showToast('Wrong password','error');return}if(data.active===false){showToast('Account deactivated','error');return}currentUser=data;await loadUsers();await loadHolidays();document.getElementById('userDisplayInfo').textContent=id+' | '+(data.designation||'');switchView('userView');renderUserDashboard();showToast('Welcome, '+data.name,'success')}catch(e){showToast('Login error: '+e.message,'error')}}
 function handleLogout(){currentUser=null;allUsers={};allHolidays={};tourImageData=null;imgCache={};document.getElementById('loginId').value='';document.getElementById('loginPass').value='';switchView('loginView');showToast('Logged out','info')}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('loginView').classList.contains('active'))handleLogin()});
 
@@ -344,7 +400,51 @@ async function userSubmitAttendance(){var date=document.getElementById('userDate
 var lastUserHistData=null;
 async function loadUserHistoryGrid(){var m=parseInt(document.getElementById('userHistMonth').value),y=parseInt(document.getElementById('userHistYear').value),days=getDaysInMonth(y,m);var container=document.getElementById('userHistoryGrid');container.innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)"><i class="fa-solid fa-spinner fa-spin" style="font-size:20px"></i> Loading...</div>';var allAtt=await loadMonthAttendance(y,m);var headerCells='<th style="min-width:50px;text-align:center">Day</th>';for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var hol2=isHoliday(ds),fri=isFriday(ds);var dayName=new Date(ds+'T00:00:00').toLocaleDateString('en',{weekday:'short'});headerCells+='<th style="min-width:38px;text-align:center;'+(fri?'background:rgba(245,158,11,.08);color:#f59e0b':(hol2?'background:rgba(168,85,247,.1);color:#a855f7':''))+'" title="'+formatBD(ds)+'">'+d+'<br><span style="font-size:8px;font-weight:400">'+dayName+'</span></th>'}headerCells+='<th style="min-width:30px;text-align:center;color:#00d4aa">P</th><th style="min-width:30px;text-align:center;color:#ef4444">A</th><th style="min-width:30px;text-align:center;color:#60a5fa">T</th><th style="min-width:30px;text-align:center;color:#f59e0b">L</th><th style="min-width:30px;text-align:center;color:#f59e0b">LET</th><th style="min-width:30px;text-align:center;color:#a855f7">H</th>';var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;var cells='<td style="font-weight:700;text-align:center;font-size:12px">Status</td>';for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var attData=allAtt[ds]?allAtt[ds][currentUser.id]:null;var s=getAttStatus(ds,currentUser.id,attData);if(s&&counts.hasOwnProperty(s))counts[s]++;var hol2=isHoliday(ds),fri=isFriday(ds);var approved=attData&&attData.approved;var appIcon=approved?'<i class="fa-solid fa-check" style="color:#00d4aa;font-size:7px;margin-left:1px"></i>':(attData?'<i class="fa-solid fa-clock" style="color:#f59e0b;font-size:7px;margin-left:1px"></i>':'');if(attData&&attData.image)imgCache[ds+'_'+currentUser.id]=attData.image;var camIcon=(s==='T'&&attData&&attData.image)?'<i class="fa-solid fa-camera" style="color:#60a5fa;font-size:6px;margin-left:1px;cursor:pointer" onclick="viewImage(\''+ds+'_'+currentUser.id+'\')"></i>':'';var lateIcn=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))?lateIcon():'';if(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;var inTimeTip=(attData&&attData.inTime)?' title="IN: '+formatTime12(attData.inTime)+(attData.outTime?' | OUT: '+formatTime12(attData.outTime):'')+'"':'';cells+='<td style="text-align:center;'+(fri?'background:rgba(245,158,11,.04)':(hol2?'background:rgba(168,85,247,.04)':''))+'"'+inTimeTip+'>'+(s?'<span class="badge mini '+s+'">'+s+'</span>'+appIcon+camIcon+lateIcn:'')+'</td>'}cells+='<td style="text-align:center;font-weight:800;color:#00d4aa;font-size:13px">'+counts.P+'</td><td style="text-align:center;font-weight:800;color:#ef4444;font-size:13px">'+counts.A+'</td><td style="text-align:center;font-weight:800;color:#60a5fa;font-size:13px">'+counts.T+'</td><td style="text-align:center;font-weight:800;color:#f59e0b;font-size:13px">'+counts.L+'</td><td style="text-align:center;font-weight:800;color:#f59e0b;font-size:13px">'+letCount+'</td><td style="text-align:center;font-weight:800;color:#a855f7;font-size:13px">'+counts.H+'</td>';var holidayList='';for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var hn=getHolidayName(ds);if(hn){holidayList+='<span class="'+(isFriday(ds)?'pending-badge':'holiday-badge')+'" style="margin:2px">'+d+': '+hn+'</span> '}}var legend='<div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text2)"><span><i class="fa-solid fa-check" style="color:#00d4aa;font-size:9px"></i> = Approved</span><span><i class="fa-solid fa-clock" style="color:#f59e0b;font-size:9px"></i> = Pending</span><span><i class="fa-solid fa-camera" style="color:#60a5fa;font-size:9px"></i> = Tour Photo</span><span><span class="late-dot" style="display:inline-block"></span> = Late Entry (after 9:10 AM)</span></div>';container.innerHTML=(holidayList?'<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">'+holidayList+'</div>':'')+'<table class="data-table"><thead><tr>'+headerCells+'</tr></thead><tbody><tr>'+cells+'</tr></tbody></table>'+legend;lastUserHistData={m:m,y:y,days:days,allAtt:allAtt,counts:counts,letCount:letCount}}
 
-function buildUserHistPDFHTML(){if(!lastUserHistData)return'';var d=lastUserHistData,m=d.m,y=d.y,days=d.days,allAtt=d.allAtt,counts=d.counts,letCount=d.letCount;var fs='9px',rh='26px';var phCells='<th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';background:#d1d5db;color:#111;height:'+rh+'">Day</th>';for(var i=1;i<=days;i++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');var fri=isFriday(ds);phCells+='<th style="border:1px solid #333;padding:2px 2px;text-align:center;font-size:'+fs+';'+(fri?'background:#fef3c7;color:#92400e':'background:#d1d5db;color:#111')+';height:'+rh+'">'+i+'</th>'}phCells+='<th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#008866;background:#d1d5db;height:'+rh+'">P</th><th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#cc3333;background:#d1d5db;height:'+rh+'">A</th><th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#3366cc;background:#d1d5db;height:'+rh+'">T</th><th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#cc8800;background:#d1d5db;height:'+rh+'">L</th><th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#cc8800;background:#fef3c7;height:'+rh+'">LET</th><th style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';color:#8844cc;background:#d1d5db;height:'+rh+'">H</th>';var cells='<td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:bold;color:#111;height:'+rh+'">Status</td>';for(var i=1;i<=days;i++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');var attData=allAtt[ds]?allAtt[ds][currentUser.id]:null;var s=getAttStatus(ds,currentUser.id,attData);var fri=isFriday(ds);var lateMark=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))?'*':'';cells+='<td style="border:1px solid #333;padding:2px 2px;text-align:center;font-size:'+fs+';font-weight:700;color:'+statusColor(s)+';'+(fri?'background:#fef9e7':'')+';height:'+rh+'">'+(s||'')+lateMark+'</td>'}cells+='<td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#008866;height:'+rh+'">'+counts.P+'</td><td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#cc3333;height:'+rh+'">'+counts.A+'</td><td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#3366cc;height:'+rh+'">'+counts.T+'</td><td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#cc8800;height:'+rh+'">'+counts.L+'</td><td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#cc8800;background:#fef3c7;height:'+rh+'">'+letCount+'</td><td style="border:1px solid #333;padding:2px 3px;text-align:center;font-size:'+fs+';font-weight:800;color:#8844cc;height:'+rh+'">'+counts.H+'</td>';var footer='<div style="width:100%;margin-top:40px;padding-top:8px;border-top:1px solid #999"><table style="width:100%;border:none;border-collapse:collapse"><tr><td style="width:50%;text-align:center;vertical-align:top;border:none;padding:0 20px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px">Employee Signature</div><div style="margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">'+currentUser.name+'</div></td><td style="width:50%;text-align:center;vertical-align:top;border:none;padding:0 20px"><div style="font-weight:bold;font-size:11px;margin-bottom:3px">Approved by (DIC)</div><div style="margin-bottom:55px">&nbsp;</div><div style="border-top:1px solid #333;width:80%;margin:0 auto;font-size:9px;color:#555;padding-top:2px">Depot In-Charge</div></td></tr></table></div>';return'<div style="font-family:Arial,Helvetica,sans-serif;color:#111;padding:5mm;background:#fff"><h2 style="text-align:center;font-size:16px;margin:0 0 3px 0;color:#111">MONTHLY ATTENDANCE RECORD</h2><h3 style="text-align:center;font-size:12px;color:#555;margin:0 0 2px 0">Kushtia Depot</h3><div style="text-align:center;font-size:12px;color:#333;margin:0 0 6px 0"><strong>'+currentUser.name+'</strong> | '+currentUser.designation+' | '+monthName(m).toUpperCase()+' '+y+'</div><table style="width:100%;border-collapse:collapse"><thead><tr>'+phCells+'</tr></thead><tbody><tr>'+cells+'</tr></tbody></table><div style="margin-top:6px;font-size:10px;display:flex;gap:12px"><span><b style="color:#008866">P</b>=Present</span><span><b style="color:#cc3333">A</b>=Absent</span><span><b style="color:#3366cc">T</b>=Tour</span><span><b style="color:#cc8800">L</b>=Leave</span><span><b style="color:#cc8800">*</b>=Late Entry (LET)</span><span><b style="color:#8844cc">H</b>=Holiday</span></div><div style="margin-top:4px;font-size:9px;color:#666">LET = Entry after 9:10 AM | 3 LET = 1 Day Salary Deduction | LET Count: '+letCount+' = '+Math.floor(letCount/3)+' day(s) deduction</div>'+footer+'</div>'}
+/* ===== User History PDF — ALL BLACK, AUTO-FIT ===== */
+function buildUserHistPDFHTML(){
+  if(!lastUserHistData)return'';
+  var d=lastUserHistData,m=d.m,y=d.y,days=d.days,allAtt=d.allAtt,counts=d.counts,letCount=d.letCount;
+  var hCells='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">Day</th>';
+  for(var i=1;i<=days;i++){
+    var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+    var fri=isFriday(ds);
+    hCells+='<th style="border:1px solid #000;padding:1px 1px;text-align:center;font-size:7px;background:'+(fri?'#ddd':'#bbb')+';color:#000;white-space:nowrap">'+i+'</th>';
+  }
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">P</th>';
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">A</th>';
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">T</th>';
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">L</th>';
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#ccc;color:#000;white-space:nowrap">LET</th>';
+  hCells+='<th style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;background:#bbb;color:#000;white-space:nowrap">H</th>';
+
+  var cells='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:bold;color:#000;white-space:nowrap">Status</td>';
+  for(var i=1;i<=days;i++){
+    var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+    var attData=allAtt[ds]?allAtt[ds][currentUser.id]:null;
+    var s=getAttStatus(ds,currentUser.id,attData);
+    var fri=isFriday(ds);
+    var lateMark=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))?'*':'';
+    cells+='<td style="border:1px solid #000;padding:1px 1px;text-align:center;font-size:7px;font-weight:700;color:#000;background:'+(fri?'#eee':'#fff')+';white-space:nowrap">'+(s||'')+lateMark+'</td>';
+  }
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;white-space:nowrap">'+counts.P+'</td>';
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;white-space:nowrap">'+counts.A+'</td>';
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;white-space:nowrap">'+counts.T+'</td>';
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;white-space:nowrap">'+counts.L+'</td>';
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;background:#eee;white-space:nowrap">'+letCount+'</td>';
+  cells+='<td style="border:1px solid #000;padding:1px 2px;text-align:center;font-size:7px;font-weight:800;color:#000;white-space:nowrap">'+counts.H+'</td>';
+
+  var footer='<div style="width:100%;margin-top:40px;padding-top:8px;"><table style="width:100%;border:none;border-collapse:collapse"><tr><td style="width:50%;text-align:center;vertical-align:top;border:none;padding:0 20px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000">Employee Signature</div><div style="margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;color:#000;padding-top:2px">'+currentUser.name+'</div></td><td style="width:50%;text-align:center;vertical-align:top;border:none;padding:0 20px"><div style="font-weight:bold;font-size:10px;margin-bottom:3px;color:#000">Approved by (DIC)</div><div style="margin-bottom:50px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;color:#000;padding-top:2px">Depot In-Charge</div></td></tr></table></div>';
+
+  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff">'+
+    '<h2 style="text-align:center;font-size:14px;margin:0 0 2px 0;color:#000">MONTHLY ATTENDANCE RECORD</h2>'+
+    '<h3 style="text-align:center;font-size:11px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3>'+
+    '<div style="text-align:center;font-size:10px;color:#000;margin:0 0 4px 0"><b>'+currentUser.name+'</b> | '+currentUser.designation+' | '+monthName(m).toUpperCase()+' '+y+'</div>'+
+    '<table style="width:100%;border-collapse:collapse;table-layout:auto"><thead><tr>'+hCells+'</tr></thead><tbody><tr>'+cells+'</tr></tbody></table>'+
+    '<div style="margin-top:4px;font-size:8px;display:flex;gap:8px;color:#000"><span><b>P</b>=Present</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=Late Entry (LET)</span><span><b>H</b>=Holiday</span></div>'+
+    '<div style="margin-top:2px;font-size:7px;color:#000">LET = Entry after 9:10 AM | 3 LET = 1 Day Salary Deduction | LET Count: '+letCount+' = '+Math.floor(letCount/3)+' day(s) deduction</div>'+
+    footer+'</div>';
+}
+
 async function downloadUserHistoryPDF(){if(!lastUserHistData){showToast('Load history first','error');return}var d=lastUserHistData,m=d.m,y=d.y;await generatePDFFromHTML(buildUserHistPDFHTML(),'My-Attendance-'+monthShort(m)+'-'+String(y).slice(-2)+'.pdf','landscape')}
 function printUserHistory(){if(!lastUserHistData){showToast('Load history first','error');return}printContent(buildUserHistPDFHTML(),'My Attendance - '+monthName(lastUserHistData.m)+' '+lastUserHistData.y)}
 
@@ -353,7 +453,7 @@ var tabs=[{id:'overview',icon:'fa-chart-pie',label:'Overview'},{id:'entry',icon:
 function renderSidebar(){var sb=document.getElementById('dicSidebar'),html='';for(var i=0;i<tabs.length;i++){var t=tabs[i];html+='<div class="sidebar-item '+(currentTab===t.id?'active':'')+'" onclick="showTab(\''+t.id+'\')"><i class="fa-solid '+t.icon+'"></i><span>'+t.label+'</span></div>'}sb.innerHTML=html}
 function showTab(tabId){currentTab=tabId;renderSidebar();document.getElementById('dicContent').scrollTop=0;var r={overview:renderOverview,entry:renderEntry,approvals:renderApprovals,records:renderRecords,users:renderUsers,reports:renderReports,salary:renderSalary,holidays:renderHolidays};if(r[tabId])r[tabId]()}
 
-/* ===== DIC OVERVIEW - সব ইউজার (admin ছাড়া) ===== */
+/* ===== DIC OVERVIEW ===== */
 async function renderOverview(){await loadUsers();await loadHolidays();var today=todayStr(),snap=await db.ref('attendance/'+today).once('value'),todayAtt=snap.val()||{};var activeUsers=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false});var totalUsers=activeUsers.length,presentCount=0,absentCount=0,tourCount=0,leaveCount=0,pendingCount=0,letCount=0;for(var i=0;i<activeUsers.length;i++){var uid=activeUsers[i][0],a=todayAtt[uid],s=getAttStatus(today,uid,a);if(s==='P')presentCount++;else if(s==='A')absentCount++;else if(s==='T')tourCount++;else if(s==='L')leaveCount++;if(a&&!a.approved)pendingCount++;if(a&&a.image)imgCache[today+'_'+uid]=a.image;if(s==='P'&&a&&a.inTime&&isLate(a.inTime))letCount++}document.getElementById('dicContent').innerHTML='<div class="fade-in"><h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Dashboard Overview</h2><div class="stagger" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin-bottom:28px"><div class="card stat-card green"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Active Staff</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:var(--accent)">'+totalUsers+'</div></div><div class="card stat-card green"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Present</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#00d4aa">'+presentCount+'</div></div><div class="card stat-card red"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Absent</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#ef4444">'+absentCount+'</div></div><div class="card stat-card blue"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Tour</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#60a5fa">'+tourCount+'</div></div><div class="card stat-card amber"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Late (LET)</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#f59e0b">'+letCount+'</div></div><div class="card stat-card amber"><div style="font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase">Pending</div><div style="font-size:36px;font-weight:900;margin-top:4px;color:#f59e0b">'+pendingCount+'</div></div></div><div class="card"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-clock-rotate-left" style="color:var(--accent);margin-right:8px"></i>Today ('+formatBD(today)+')</h3><div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Role</th><th>Status</th><th>IN Time</th><th>OUT Time</th><th>Location</th><th>Approval</th></tr></thead><tbody id="overviewTableBody"></tbody></table></div></div></div>';var tbody=document.getElementById('overviewTableBody');activeUsers.sort(function(a,b){return desigOrder(a[1].designation)-desigOrder(b[1].designation)||a[1].name.localeCompare(b[1].name)});var rh='';for(var j=0;j<activeUsers.length;j++){var uid2=activeUsers[j][0],u2=activeUsers[j][1],a2=todayAtt[uid2],s2=getAttStatus(today,uid2,a2);var lateIcn=(s2==='P'&&a2&&a2.inTime&&isLate(a2.inTime))?lateIcon():'';rh+='<tr><td style="font-weight:600">'+u2.name+'</td><td style="font-size:11px;color:var(--text2)">'+u2.designation+'</td><td>'+roleBadge(u2.role)+'</td><td>'+(s2?'<span class="badge '+s2+'">'+s2+'</span> '+statusLabel(s2)+lateIcn+imgBtn(today+'_'+uid2):'<span style="color:var(--muted)">--</span>')+'</td><td style="font-size:12px;color:'+(a2&&a2.inTime&&isLate(a2.inTime)?'#f59e0b':'var(--accent)')+'">'+(a2&&a2.inTime?formatTime12(a2.inTime):'--')+'</td><td style="font-size:12px;color:#60a5fa">'+(a2&&a2.outTime?formatTime12(a2.outTime):'--')+'</td><td>'+locHTML(a2?a2.location:null)+'</td><td>'+(a2?(a2.approved?'<span class="approved-badge">Approved</span>':'<span class="pending-badge">Pending</span>'):'<span style="color:var(--muted)">--</span>')+'</td></tr>'}if(activeUsers.length===0)rh='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:30px">No active users</td></tr>';tbody.innerHTML=rh}
 
 /* ===== DIC ATTENDANCE ENTRY ===== */
@@ -385,11 +485,11 @@ function showEditUserForm(uid){var u=allUsers[uid];if(!u)return;var dopts='';for
 async function updateUser(uid){var name=document.getElementById('euName').value.trim(),pass=document.getElementById('euPass').value.trim(),desig=document.getElementById('euDesig').value,depot=document.getElementById('euDepot').value.trim(),mobile=document.getElementById('euMobile').value.trim(),salary=parseFloat(document.getElementById('euSalary').value)||0,joinDate=document.getElementById('euJoin').value,role=getRoleFromDesig(desig);if(!name||!depot){showToast('Name and Depot required','error');return}var updates={name:name,designation:desig,depot:depot,mobile:mobile,salary:salary,joinDate:joinDate,role:role};if(pass)updates.password=pass;await db.ref('users/'+uid).update(updates);allUsers[uid]=Object.assign({},allUsers[uid],updates);showToast('Updated: '+name,'success');document.getElementById('addUserFormArea').innerHTML='';renderUsers()}
 function deleteUser(uid){var u=allUsers[uid];showModal('Delete User','<p style="color:var(--text2)">Delete <strong>'+(u?u.name:uid)+'</strong>?</p><p style="color:var(--danger);font-size:12px;margin-top:8px">Attendance records will be kept.</p>',async function(){await db.ref('users/'+uid).remove();delete allUsers[uid];showToast('Deleted','info');renderUsers()})}
 
-/* ===== DIC MONTHLY REPORT - সব ইউজার (admin ছাড়া) ===== */
+/* ===== DIC MONTHLY REPORT ===== */
 async function renderReports(){await loadUsers();await loadHolidays();var now=new Date(),monthOpts='',yearOpts='';for(var i=0;i<12;i++)monthOpts+='<option value="'+i+'"'+(i===now.getMonth()?' selected':'')+'>'+monthName(i)+'</option>';for(var i=0;i<5;i++){var yr=now.getFullYear()-2+i;yearOpts+='<option value="'+yr+'"'+(yr===now.getFullYear()?' selected':'')+'>'+yr+'</option>'}document.getElementById('dicContent').innerHTML='<div class="fade-in"><h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Monthly Attendance Report</h2><div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:20px"><div class="form-group" style="margin:0;min-width:150px"><label class="form-label">Month</label><select class="form-select" id="repMonth">'+monthOpts+'</select></div><div class="form-group" style="margin:0;min-width:120px"><label class="form-label">Year</label><select class="form-select" id="repYear">'+yearOpts+'</select></div><button class="btn btn-primary" id="genReportBtn" onclick="generateReport()"><i class="fa-solid fa-table"></i> Generate</button><button class="btn btn-secondary" id="downloadReportBtn" onclick="downloadReportPDF()" style="display:none"><i class="fa-solid fa-file-pdf"></i> PDF</button><button class="btn btn-secondary" id="printReportBtn" onclick="printReport()" style="display:none"><i class="fa-solid fa-print"></i> Print</button></div><div id="reportGridArea" class="card" style="margin-bottom:20px"><div style="overflow-x:auto" id="reportArea"><div style="text-align:center;padding:40px;color:var(--muted)">Select month & year and click Generate</div></div></div><div id="reportApprovedArea" style="display:none"><div class="card"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-circle-check" style="color:var(--accent);margin-right:8px"></i>Approved Attendance List</h3><div style="overflow-x:auto" id="approvedListArea"></div></div></div></div>'}
 
 var lastReportData=null;
-async function generateReport(){var m=parseInt(document.getElementById('repMonth').value),y=parseInt(document.getElementById('repYear').value),days=getDaysInMonth(y,m);/* শুধু admin account বাদ, বাকি সব ইউজার */var users=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false}).sort(function(a,b){return desigOrder(a[1].designation)-desigOrder(b[1].designation)||a[1].name.localeCompare(b[1].name)});if(users.length===0){showToast('No active users','error');return}var btn=document.getElementById('genReportBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...';var allAtt=await loadMonthAttendance(y,m);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-table"></i> Generate';
+async function generateReport(){var m=parseInt(document.getElementById('repMonth').value),y=parseInt(document.getElementById('repYear').value),days=getDaysInMonth(y,m);var users=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false}).sort(function(a,b){return desigOrder(a[1].designation)-desigOrder(b[1].designation)||a[1].name.localeCompare(b[1].name)});if(users.length===0){showToast('No active users','error');return}var btn=document.getElementById('genReportBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...';var allAtt=await loadMonthAttendance(y,m);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-table"></i> Generate';
 
 var headerCells='<th style="min-width:45px">Sl</th><th style="min-width:150px;text-align:left">Name</th><th style="min-width:110px;text-align:left">Designation</th><th style="min-width:80px">Attendance</th>';
 for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var hol=isHoliday(ds),fri=isFriday(ds);headerCells+='<th style="min-width:34px;'+(hol?'background:'+(fri?'rgba(245,158,11,.08)':'rgba(168,85,247,.1)')+';color:'+(fri?'#f59e0b':'#a855f7'):'')+'" title="'+formatBD(ds)+(fri?' (Fri)':'')+'">'+d+'</th>'}
@@ -452,50 +552,60 @@ var approvedRows='';for(var i=0;i<approvedList.length;i++){var p=approvedList[i]
 if(approvedList.length>0){document.getElementById('reportApprovedArea').style.display='block';document.getElementById('approvedListArea').innerHTML='<div style="margin-bottom:12px;font-size:13px;color:var(--text2)">Total Approved: <strong style="color:var(--accent)">'+approvedList.length+'</strong></div><table class="data-table"><thead><tr><th>Sl</th><th>Date</th><th>Name</th><th>Designation</th><th>Depot</th><th>Status</th><th>IN Time</th><th>OUT Time</th><th>Location</th><th>Approval</th></tr></thead><tbody>'+approvedRows+'</tbody></table>'}else{document.getElementById('reportApprovedArea').style.display='block';document.getElementById('approvedListArea').innerHTML='<div style="text-align:center;padding:30px;color:var(--muted)">No approved entries</div>'}
 lastReportData={m:m,y:y,days:days,users:users,allAtt:allAtt,approvedList:approvedList}}
 
-/* ===== PDF Report ===== */
-function buildReportPDFHTML(){if(!lastReportData)return'';var d=lastReportData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;var fs='8px',rh='22px';var thS='border:1px solid #333;padding:2px 2px;font-size:'+fs+';background:#d1d5db;color:#111;height:'+rh+';text-align:center;white-space:nowrap;';
+/* ===== PDF Report — ALL BLACK, AUTO-FIT ===== */
+function buildReportPDFHTML(){
+  if(!lastReportData)return'';
+  var d=lastReportData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;
+  var thS='border:1px solid #000;padding:1px 1px;font-size:6px;background:#bbb;color#000;text-align:center;white-space:nowrap;';
 
-var phCells='<th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig.</th><th style="'+thS+'">Att.</th>';
-for(var i=1;i<=days;i++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');var fri=isFriday(ds);phCells+='<th style="border:1px solid #333;padding:2px 1px;font-size:'+fs+';'+(fri?'background:#fef3c7;color:#92400e':'background:#d1d5db;color:#111')+';height:'+rh+';text-align:center;white-space:nowrap;">'+i+'</th>'}
-phCells+='<th style="'+thS+'color:#008866">P</th><th style="'+thS+'color:#cc3333">A</th><th style="'+thS+'color:#3366cc">T</th><th style="'+thS+'color:#cc8800">L</th><th style="'+thS+'color:#cc8800;background:#fef3c7">LET</th><th style="'+thS+'color:#8844cc">H</th>';
-
-var pbRows='';
-for(var ui=0;ui<users.length;ui++){
-  var uid=users[ui][0],u=users[ui][1];
-  var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;
-  var tdS='border:1px solid #333;padding:2px 2px;font-size:'+fs+';height:'+rh+';text-align:center;white-space:nowrap;';
-
-  var inCells='<td rowspan="3" style="'+tdS+'font-weight:700;color:#111;vertical-align:middle;">'+(ui+1)+'</td><td rowspan="3" style="'+tdS+'font-weight:600;color:#111;text-align:left;vertical-align:middle;">'+u.name+'</td><td rowspan="3" style="'+tdS+'color:#555;text-align:left;vertical-align:middle;">'+(u.designation||'')+'</td><td style="'+tdS+'color:#008866;font-weight:700;">IN</td>';
-  var outCells='<td style="'+tdS+'color:#3366cc;font-weight:700;">OUT</td>';
-  var attCells='<td style="'+tdS+'color:#555;font-weight:700;">ATT</td>';
-
+  var phCells='<th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig</th><th style="'+thS+'">Att</th>';
   for(var i=1;i<=days;i++){
     var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
-    var attData=allAtt[ds]?allAtt[ds][uid]:null;
-    var s=getAttStatus(ds,uid,attData);
-    if(s&&counts.hasOwnProperty(s))counts[s]++;
     var fri=isFriday(ds);
-    var isLateEntry=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime));
-    if(isLateEntry)letCount++;
-    var inT=(attData&&attData.inTime)?formatTimeShort(attData.inTime):'';
-    var outT=(attData&&attData.outTime)?formatTimeShort(attData.outTime):'';
-    var friBg=fri?'background:#fef9e7;':'';
+    phCells+='<th style="border:1px solid #000;padding:1px 0px;font-size:6px;background:'+(fri?'#ddd':'#bbb')+';color:#000;text-align:center;white-space:nowrap;">'+i+'</th>';
+  }
+  phCells+='<th style="'+thS+'">P</th><th style="'+thS+'">A</th><th style="'+thS+'">T</th><th style="'+thS+'">L</th><th style="'+thS+'background:#ddd;">LET</th><th style="'+thS+'">H</th>';
 
-    inCells+='<td style="border:1px solid #333;padding:1px 1px;font-size:7px;color:'+(isLateEntry?'#cc6600':'#006644')+';font-weight:'+(isLateEntry?'700':'400')+';'+friBg+'height:'+rh+';text-align:center;white-space:nowrap;">'+inT+'</td>';
-    outCells+='<td style="border:1px solid #333;padding:1px 1px;font-size:7px;color:#3366cc;'+friBg+'height:'+rh+';text-align:center;white-space:nowrap;">'+outT+'</td>';
-    var lateMark=isLateEntry?'*':'';
-    attCells+='<td style="border:1px solid #333;padding:1px 1px;font-size:'+fs+';color:'+statusColor(s)+';font-weight:700;'+friBg+'height:'+rh+';text-align:center;white-space:nowrap;">'+(s||'')+lateMark+'</td>'
+  var pbRows='';
+  for(var ui=0;ui<users.length;ui++){
+    var uid=users[ui][0],u=users[ui][1];
+    var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;
+
+    var tdS='border:1px solid #000;padding:1px 1px;font-size:6px;color:#000;text-align:center;white-space:nowrap;';
+
+    var inCells='<td rowspan="3" style="'+tdS+'font-weight:700;vertical-align:middle;">'+(ui+1)+'</td><td rowspan="3" style="'+tdS+'font-weight:600;text-align:left;vertical-align:middle;">'+u.name+'</td><td rowspan="3" style="'+tdS+'text-align:left;vertical-align:middle;">'+(u.designation||'')+'</td><td style="'+tdS+'font-weight:700;">IN</td>';
+    var outCells='<td style="'+tdS+'font-weight:700;">OUT</td>';
+    var attCells='<td style="'+tdS+'font-weight:700;">ATT</td>';
+
+    for(var i=1;i<=days;i++){
+      var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(i).padStart(2,'0');
+      var attData=allAtt[ds]?allAtt[ds][uid]:null;
+      var s=getAttStatus(ds,uid,attData);
+      if(s&&counts.hasOwnProperty(s))counts[s]++;
+      var fri=isFriday(ds);
+      var isLateEntry=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime));
+      if(isLateEntry)letCount++;
+      var inT=(attData&&attData.inTime)?formatTimeShort(attData.inTime):'';
+      var outT=(attData&&attData.outTime)?formatTimeShort(attData.outTime):'';
+      var friBg=fri?'background:#eee;':'';
+      var letBg=isLateEntry?'background:#eee;':'';
+
+      inCells+='<td style="border:1px solid #000;padding:0px 1px;font-size:5px;color:#000;'+friBg+letBg+'text-align:center;white-space:nowrap;">'+inT+'</td>';
+      outCells+='<td style="border:1px solid #000;padding:0px 1px;font-size:5px;color:#000;'+friBg+'text-align:center;white-space:nowrap;">'+outT+'</td>';
+      var lateMark=isLateEntry?'*':'';
+      attCells+='<td style="border:1px solid #000;padding:0px 1px;font-size:6px;color:#000;font-weight:700;'+friBg+'text-align:center;white-space:nowrap;">'+(s||'')+lateMark+'</td>';
+    }
+
+    inCells+='<td colspan="6" style="border:1px solid #000;padding:1px;font-size:6px;color:#000;"></td>';
+    outCells+='<td colspan="6" style="border:1px solid #000;padding:1px;font-size:6px;color:#000;"></td>';
+    attCells+='<td style="'+tdS+'font-weight:700;">'+counts.P+'</td><td style="'+tdS+'font-weight:700;">'+counts.A+'</td><td style="'+tdS+'font-weight:700;">'+counts.T+'</td><td style="'+tdS+'font-weight:700;">'+counts.L+'</td><td style="border:1px solid #000;padding:1px;font-size:6px;color:#000;font-weight:800;background:#eee;text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'font-weight:700;">'+counts.H+'</td>';
+
+    pbRows+='<tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr>';
+    users[ui]._letCount=letCount;users[ui]._counts=counts;
   }
 
-  inCells+='<td colspan="6" style="border:1px solid #333;padding:1px 2px;font-size:'+fs+';height:'+rh+';"></td>';
-  outCells+='<td colspan="6" style="border:1px solid #333;padding:1px 2px;font-size:'+fs+';height:'+rh+';"></td>';
-  attCells+='<td style="'+tdS+'color:#008866;font-weight:700;">'+counts.P+'</td><td style="'+tdS+'color:#cc3333;font-weight:700;">'+counts.A+'</td><td style="'+tdS+'color:#3366cc;font-weight:700;">'+counts.T+'</td><td style="'+tdS+'color:#cc8800;font-weight:700;">'+counts.L+'</td><td style="border:1px solid #333;padding:2px 2px;font-size:'+fs+';color:#cc8800;font-weight:800;background:#fef3c7;height:'+rh+';text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'color:#8844cc;font-weight:700;">'+counts.H+'</td>';
-
-  pbRows+='<tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr>';
-  users[ui]._letCount=letCount;users[ui]._counts=counts;
+  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h1 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">MONICO PHARMA LTD</h1><h3 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">ATTENDANCE REPORT</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr>'+phCells+'</tr></thead><tbody>'+pbRows+'</tbody></table><div style="margin-top:4px;font-size:7px;display:flex;gap:6px;color:#000"><span><b>P</b>=Present</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=Late (LET)</span><span><b>H</b>=Holiday</span></div><div style="margin-top:2px;font-size:6px;color:#000">IN Time after 9:10 AM = Late Entry (LET) | 3 LET = 1 Day Salary Deduction</div>'+buildPDFFooter()+'</div>';
 }
-
-return'<div style="font-family:Arial,Helvetica,sans-serif;color:#111;padding:5mm;background:#fff"><h2 style="text-align:center;font-size:16px;margin:0 0 2px 0;color:#111">ATTENDANCE REPORT</h2><h3 style="text-align:center;font-size:12px;color:#555;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:12px;color:#333;margin:0 0 6px 0">'+monthName(m).toUpperCase()+' '+y+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr>'+phCells+'</tr></thead><tbody>'+pbRows+'</tbody></table><div style="margin-top:6px;font-size:10px;display:flex;gap:10px"><span><b style="color:#008866">P</b>=Present</span><span><b style="color:#cc3333">A</b>=Absent</span><span><b style="color:#3366cc">T</b>=Tour</span><span><b style="color:#cc8800">L</b>=Leave</span><span><b style="color:#cc8800">*</b>=Late (LET)</span><span><b style="color:#8844cc">H</b>=Holiday</span></div><div style="margin-top:4px;font-size:9px;color:#666">IN Time after 9:10 AM = Late Entry (LET) | 3 LET = 1 Day Salary Deduction</div>'+buildPDFFooter()+'</div>'}
 
 async function downloadReportPDF(){if(!lastReportData){showToast('Generate report first','error');return}var m=lastReportData.m,y=lastReportData.y;await generatePDFFromHTML(buildReportPDFHTML(),monthShort(m)+'-'+String(y).slice(-2)+'-Attendance.pdf','landscape')}
 function printReport(){if(!lastReportData){showToast('Generate report first','error');return}printContent(buildReportPDFHTML(),'Attendance Report - '+monthName(lastReportData.m)+' '+lastReportData.y)}
@@ -504,7 +614,7 @@ function printReport(){if(!lastReportData){showToast('Generate report first','er
 async function renderSalary(){await loadUsers();await loadHolidays();var now=new Date(),monthOpts='',yearOpts='';for(var i=0;i<12;i++)monthOpts+='<option value="'+i+'"'+(i===now.getMonth()?' selected':'')+'>'+monthName(i)+'</option>';for(var i=0;i<5;i++){var yr=now.getFullYear()-2+i;yearOpts+='<option value="'+yr+'"'+(yr===now.getFullYear()?' selected':'')+'>'+yr+'</option>'}document.getElementById('dicContent').innerHTML='<div class="fade-in"><h2 style="font-size:22px;font-weight:800;margin-bottom:20px">Salary Sheet</h2><div style="display:flex;gap:16px;align-items:end;flex-wrap:wrap;margin-bottom:20px"><div class="form-group" style="margin:0;min-width:150px"><label class="form-label">Month</label><select class="form-select" id="salMonth">'+monthOpts+'</select></div><div class="form-group" style="margin:0;min-width:120px"><label class="form-label">Year</label><select class="form-select" id="salYear">'+yearOpts+'</select></div><button class="btn btn-primary" id="genSalBtn" onclick="generateSalarySheet()"><i class="fa-solid fa-calculator"></i> Generate</button><button class="btn btn-secondary" id="downloadSalBtn" onclick="downloadSalaryPDF()" style="display:none"><i class="fa-solid fa-file-pdf"></i> PDF</button><button class="btn btn-secondary" id="printSalBtn" onclick="printSalary()" style="display:none"><i class="fa-solid fa-print"></i> Print</button></div><div class="card"><div style="overflow-x:auto" id="salaryArea"><div style="text-align:center;padding:40px;color:var(--muted)">Select month & year and click Generate</div></div></div></div>'}
 
 var lastSalaryData=null;
-async function generateSalarySheet(){var m=parseInt(document.getElementById('salMonth').value),y=parseInt(document.getElementById('salYear').value),days=getDaysInMonth(y,m);/* Admin বাদে বাকি সব ইউজার */var users=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false&&e[1].salary>0}).sort(function(a,b){return desigOrder(a[1].designation)-desigOrder(b[1].designation)||a[1].name.localeCompare(b[1].name)});if(users.length===0){document.getElementById('salaryArea').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No users with salary. Set salary in Manage Users.</div>';showToast('No salary data','error');return}var btn=document.getElementById('genSalBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...';var allAtt=await loadMonthAttendance(y,m);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-calculator"></i> Generate';
+async function generateSalarySheet(){var m=parseInt(document.getElementById('salMonth').value),y=parseInt(document.getElementById('salYear').value),days=getDaysInMonth(y,m);var users=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false&&e[1].salary>0}).sort(function(a,b){return desigOrder(a[1].designation)-desigOrder(b[1].designation)||a[1].name.localeCompare(b[1].name)});if(users.length===0){document.getElementById('salaryArea').innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">No users with salary. Set salary in Manage Users.</div>';showToast('No salary data','error');return}var btn=document.getElementById('genSalBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Loading...';var allAtt=await loadMonthAttendance(y,m);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-calculator"></i> Generate';
 
 var rows='',totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;
 
@@ -537,34 +647,38 @@ document.getElementById('downloadSalBtn').style.display='inline-flex';
 document.getElementById('printSalBtn').style.display='inline-flex';
 lastSalaryData={m:m,y:y,days:days,users:users,allAtt:allAtt,totalBasic:totalBasic,totalAbsentDeduct:totalAbsentDeduct,totalLetDeduct:totalLetDeduct,totalNet:totalNet}}
 
-/* ===== Salary PDF ===== */
-function buildSalaryPDFHTML(){if(!lastSalaryData)return'';var d=lastSalaryData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;var fs='8px',rh='40px';var thS='border:1px solid #333;padding:3px 2px;font-size:'+fs+';background:#d1d5db;color:#111;height:'+rh+';text-align:center;white-space:nowrap;';
+/* ===== Salary PDF — ALL BLACK, AUTO-FIT ===== */
+function buildSalaryPDFHTML(){
+  if(!lastSalaryData)return'';
+  var d=lastSalaryData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;
+  var thS='border:1px solid #000;padding:2px 1px;font-size:7px;background:#bbb;color:#000;text-align:center;white-space:nowrap;';
+  var tdS='border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:center;white-space:nowrap;';
 
-var printRows='';var totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;
+  var printRows='';var totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;
 
-for(var i=0;i<users.length;i++){
-  var uid=users[i][0],u=users[i][1];
-  var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;
-  for(var dd=1;dd<=days;dd++){
-    var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
-    var attData=allAtt[ds]?allAtt[ds][uid]:null;
-    var s=getAttStatus(ds,uid,attData);
-    if(s&&counts.hasOwnProperty(s))counts[s]++;
-    if(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;
+  for(var i=0;i<users.length;i++){
+    var uid=users[i][0],u=users[i][1];
+    var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;
+    for(var dd=1;dd<=days;dd++){
+      var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+      var attData=allAtt[ds]?allAtt[ds][uid]:null;
+      var s=getAttStatus(ds,uid,attData);
+      if(s&&counts.hasOwnProperty(s))counts[s]++;
+      if(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;
+    }
+    var basic=u.salary,dailyRate=Math.round(basic/days);
+    var absentDeduct=Math.round(dailyRate*counts.A);
+    var letDeductDays=Math.floor(letCount/3);
+    var letDeductAmount=Math.round(dailyRate*letDeductDays);
+    var totalDeduct=absentDeduct+letDeductAmount;
+    var net=basic-totalDeduct;
+    totalBasic+=basic;totalAbsentDeduct+=absentDeduct;totalLetDeduct+=letDeductAmount;totalNet+=net;
+
+    printRows+='<tr><td style="'+tdS+'font-weight:700;">'+(i+1)+'</td><td style="'+tdS+'font-weight:600;text-align:left;">'+u.name+'</td><td style="'+tdS+'text-align:left;">'+(u.designation||'')+'</td><td style="'+tdS+'text-align:left;">'+(u.depot||'')+'</td><td style="'+tdS+'text-align:right;">'+basic.toLocaleString()+'</td><td style="'+tdS+'text-align:right;">'+dailyRate.toLocaleString()+'</td><td style="'+tdS+'font-weight:700;">'+counts.P+'</td><td style="'+tdS+'font-weight:700;">'+counts.A+'</td><td style="'+tdS+'font-weight:700;">'+counts.T+'</td><td style="'+tdS+'font-weight:700;">'+counts.L+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;font-weight:800;background:#eee;text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'font-weight:700;">'+counts.H+'</td><td style="'+tdS+'">'+days+'</td><td style="'+tdS+'text-align:right;">'+absentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:right;background:#eee;white-space:nowrap;">'+letDeductAmount+'<div style="font-size:6px;color:#000;">'+letDeductDays+'d</div></td><td style="border:1px solid #000;padding:2px 1px;font-size:8px;color:#000;font-weight:800;text-align:right;white-space:nowrap;">'+net.toLocaleString()+'</td><td style="'+tdS+'min-width:30px;">&nbsp;</td><td style="'+tdS+'min-width:40px;">&nbsp;</td></tr>';
   }
-  var basic=u.salary,dailyRate=Math.round(basic/days);
-  var absentDeduct=Math.round(dailyRate*counts.A);
-  var letDeductDays=Math.floor(letCount/3);
-  var letDeductAmount=Math.round(dailyRate*letDeductDays);
-  var totalDeduct=absentDeduct+letDeductAmount;
-  var net=basic-totalDeduct;
-  totalBasic+=basic;totalAbsentDeduct+=absentDeduct;totalLetDeduct+=letDeductAmount;totalNet+=net;
 
-  var tdS='border:1px solid #333;padding:3px 2px;font-size:'+fs+';height:'+rh+';text-align:center;white-space:nowrap;';
-  printRows+='<tr><td style="'+tdS+'font-weight:700;color:#111;">'+(i+1)+'</td><td style="'+tdS+'font-weight:600;color:#111;text-align:left;">'+u.name+'</td><td style="'+tdS+'color:#555;text-align:left;">'+(u.designation||'')+'</td><td style="'+tdS+'color:#555;text-align:left;">'+(u.depot||'')+'</td><td style="'+tdS+'color:#111;text-align:right;">'+basic.toLocaleString()+'</td><td style="'+tdS+'color:#555;text-align:right;">'+dailyRate.toLocaleString()+'</td><td style="'+tdS+'color:#008866;font-weight:700;">'+counts.P+'</td><td style="'+tdS+'color:#cc3333;font-weight:700;">'+counts.A+'</td><td style="'+tdS+'color:#3366cc;font-weight:700;">'+counts.T+'</td><td style="'+tdS+'color:#cc8800;font-weight:700;">'+counts.L+'</td><td style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';color:#cc8800;font-weight:800;background:#fef3c7;height:'+rh+';text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'color:#8844cc;font-weight:700;">'+counts.H+'</td><td style="'+tdS+'color:#111;">'+days+'</td><td style="'+tdS+'color:#cc3333;text-align:right;">'+absentDeduct.toLocaleString()+'</td><td style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';color:#cc8800;text-align:right;background:#fef3c7;height:'+rh+';white-space:nowrap;">'+letDeductAmount.toLocaleString()+'<div style="font-size:7px;color:#999;">'+letDeductDays+'d</div></td><td style="border:1px solid #333;padding:3px 2px;font-size:9px;font-weight:800;color:#006644;text-align:right;height:'+rh+';white-space:nowrap;">'+net.toLocaleString()+'</td><td style="'+tdS+'min-width:40px;">&nbsp;</td><td style="'+tdS+'min-width:60px;">&nbsp;</td></tr>'
+  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">SALARY SHEET</h2><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+' | Days: '+days+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr><th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig</th><th style="'+thS+'text-align:left;">Depot</th><th style="'+thS+'">Basic</th><th style="'+thS+'">Rate</th><th style="'+thS+'">P</th><th style="'+thS+'">A</th><th style="'+thS+'">T</th><th style="'+thS+'">L</th><th style="'+thS+'background:#eee;">LET</th><th style="'+thS+'">H</th><th style="'+thS+'">Days</th><th style="'+thS+'">Abs Ded</th><th style="'+thS+'background:#eee;">LET Ded</th><th style="'+thS+'">Net Pay</th><th style="'+thS+'">Recv</th><th style="'+thS+'">Sign</th></tr></thead><tbody>'+printRows+'</tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">TOTAL</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalBasic.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td colspan="6" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalAbsentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#eee;color:#000;">'+totalLetDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:9px;font-weight:800;background:#ddd;color:#000;">'+totalNet.toLocaleString()+'</td><td colspan="2" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td></tr></tfoot></table><div style="margin-top:4px;font-size:7px;color:#000">Daily Rate = Basic / '+days+' | Absent Ded. = Rate × Absent | LET Ded. = Rate × Floor(LET/3) | 3 Late Entries = 1 Day Deduction | Net = Basic − Absent Ded. − LET Ded.</div>'+buildPDFFooter()+'</div>';
 }
-
-return'<div style="font-family:Arial,Helvetica,sans-serif;color:#111;padding:5mm;background:#fff"><h2 style="text-align:center;font-size:16px;margin:0 0 2px 0;color:#111">SALARY SHEET</h2><h3 style="text-align:center;font-size:12px;color:#555;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:12px;color:#333;margin:0 0 6px 0">'+monthName(m).toUpperCase()+' '+y+' | Days: '+days+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig.</th><th style="'+thS+'text-align:left;">Depot</th><th style="'+thS+'">Basic</th><th style="'+thS+'">Rate</th><th style="'+thS+'color:#008866">P</th><th style="'+thS+'color:#cc3333">A</th><th style="'+thS+'color:#3366cc">T</th><th style="'+thS+'color:#cc8800">L</th><th style="'+thS+'color:#cc8800;background:#fef3c7">LET</th><th style="'+thS+'color:#8844cc">H</th><th style="'+thS+'">Days</th><th style="'+thS+'">Absent Ded.</th><th style="'+thS+'background:#fef3c7">LET Ded.</th><th style="'+thS+'">Net Pay</th><th style="'+thS+'">Recv</th><th style="'+thS+'">Sign</th></tr></thead><tbody>'+printRows+'</tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="border:1px solid #333;padding:3px 2px;text-align:right;font-size:'+fs+';background:#f3f4f6;color:#111;height:'+rh+';">TOTAL</td><td style="border:1px solid #333;padding:3px 2px;text-align:right;font-size:'+fs+';background:#f3f4f6;color:#111;height:'+rh+';">'+totalBasic.toLocaleString()+'</td><td style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';background:#f3f4f6;height:'+rh+';"></td><td colspan="6" style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';background:#f3f4f6;height:'+rh+';"></td><td style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';background:#f3f4f6;height:'+rh+';"></td><td style="border:1px solid #333;padding:3px 2px;text-align:right;font-size:'+fs+';color:#cc3333;background:#f3f4f6;height:'+rh+';">'+totalAbsentDeduct.toLocaleString()+'</td><td style="border:1px solid #333;padding:3px 2px;text-align:right;font-size:'+fs+';color:#cc8800;background:#fef3c7;height:'+rh+';">'+totalLetDeduct.toLocaleString()+'</td><td style="border:1px solid #333;padding:3px 2px;text-align:right;font-size:12px;font-weight:800;color:#006644;background:#f3f4f6;height:'+rh+';">'+totalNet.toLocaleString()+'</td><td colspan="2" style="border:1px solid #333;padding:3px 2px;font-size:'+fs+';background:#f3f4f6;height:'+rh+';"></td></tr></tfoot></table><div style="margin-top:4px;font-size:9px;color:#666">Daily Rate = Basic / '+days+' | Absent Ded. = Rate × Absent | LET Ded. = Rate × Floor(LET/3) | 3 Late Entries = 1 Day Deduction | Net = Basic − Absent Ded. − LET Ded.</div>'+buildPDFFooter()+'</div>'}
 
 async function downloadSalaryPDF(){if(!lastSalaryData){showToast('Generate salary sheet first','error');return}var d=lastSalaryData,m=d.m,y=d.y;await generatePDFFromHTML(buildSalaryPDFHTML(),'Salary-'+monthShort(m)+'-'+String(y).slice(-2)+'.pdf','landscape')}
 function printSalary(){if(!lastSalaryData){showToast('Generate salary sheet first','error');return}printContent(buildSalaryPDFHTML(),'Salary Sheet - '+monthName(lastSalaryData.m)+' '+lastSalaryData.y)}
