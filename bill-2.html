@@ -9,7 +9,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body{background:#e8eaed;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px}
-        /* ★ FIX: CSS-based role visibility — no inline style conflicts with Bootstrap tabs */
         body:not(.role-admin):not(.role-superadmin) .admin-only,
         body:not(.role-admin):not(.role-superadmin) .admin-superadmin-only{display:none!important}
         body.role-user .admin-only,
@@ -167,11 +166,6 @@
         .user-iou-card .table{margin-bottom:0}
         .user-iou-card .table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;background:#f8f9fa}
         .user-iou-card .table td{font-size:13px;padding:8px 10px;vertical-align:middle}
-        .user-summary-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;background:linear-gradient(135deg,#f8f9fa,#e9ecef)}
-        .user-summary-card .sum-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)}
-        .user-summary-card .sum-row:last-child{border-bottom:none}
-        .user-summary-card .sum-label{font-size:13px;color:#495057;font-weight:500}
-        .user-summary-card .sum-value{font-size:15px;font-weight:700}
         .user-online-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
         .user-online-card .online-user-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f0f0f0;transition:background .15s}
         .user-online-card .online-user-item:hover{background:#f0f7ff}
@@ -280,24 +274,14 @@
                     <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d3"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="bi bi-pencil-square"></i></div><div class="stat-value" style="color:#0ea5e9" id="user_stat_checked">0</div><div class="stat-label">Checked</div></div></div></div>
                     <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d4"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="bi bi-check-circle"></i></div><div class="stat-value" style="color:#10b981" id="user_stat_verified">0</div><div class="stat-label">Verified</div></div></div></div>
                 </div>
+                <!-- ★ CHANGE: Monthly Summary removed, Active IOU now full width -->
                 <div class="row g-2 mb-3 no-print">
-                    <div class="col-md-7">
+                    <div class="col-12">
                         <div class="card user-iou-card animate-in animate-in-d5">
                             <div class="card-header text-white" style="background:linear-gradient(135deg,#0d6efd,#0b5ed7)">
                                 <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>My Active IOU <small style="opacity:.7" id="user_active_iou_month_label"></small></span><span class="badge bg-light text-primary" id="user_active_iou_count">0</span></div>
                             </div>
                             <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th></th></tr></thead><tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Active IOU</td></tr></tbody></table></div>
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="card user-summary-card animate-in animate-in-d6" style="height:100%">
-                            <div class="card-header border-0 py-2" style="background:transparent"><h6 class="mb-0 fw-bold text-dark"><i class="bi bi-pie-chart me-2"></i>Monthly Summary <small class="text-muted" id="user_sum_month_label"></small></h6></div>
-                            <div class="card-body p-0">
-                                <div class="sum-row"><span class="sum-label"><i class="bi bi-receipt me-2 text-info"></i>Total IOU</span><span class="sum-value text-info" id="user_sum_iou">0</span></div>
-                                <div class="sum-row"><span class="sum-label"><i class="bi bi-file-earmark-text me-2" style="color:#667eea"></i>Total Bill</span><span class="sum-value" style="color:#667eea" id="user_sum_bill">0</span></div>
-                                <div class="sum-row"><span class="sum-label"><i class="bi bi-list-ol me-2 text-success"></i>Bills Count</span><span class="sum-value text-success" id="user_sum_count">0</span></div>
-                                <div class="sum-row" style="background:rgba(13,110,253,.05)"><span class="sum-label"><i class="bi bi-lightning-charge me-2 text-primary"></i>Active IOU</span><span class="sum-value text-primary" id="user_sum_active_iou">0</span></div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -439,7 +423,6 @@ function formatMonthLabel(m){if(!m)return'All Time';var p=m.split('-');var ms=['
 function formatDate(d){if(!d)return'';if(d.indexOf('-')===2)return d;if(d.indexOf('-')!==4)return d;var p=d.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 function isBillRequiredIOU(t){return t==='Delivery'||t==='Collection'||t==='Return';}
 function isNoBillIOU(t){return t==='General'||t==='Bill Payment';}
-function getDAName(daId){return daListCache[daId]||'Unknown';}
 
 function getDateParts(dateStr){
     if(!dateStr)return{year:'',month:''};
@@ -576,7 +559,7 @@ function setGlobalMonth(monthVal){
         else{bc.classList.remove('active-month');ba.classList.remove('active-month');}
     }
     var lbl=formatMonthLabel(globalFilterMonth);
-    ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label','user_sum_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
+    ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
     localStorage.setItem('globalFilterMonth',globalFilterMonth);
     loadIOUListGlobal(function(){reloadAllData();});
 }
@@ -656,7 +639,7 @@ function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileR
 
 // ========== PRESENCE ==========
 function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
-function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
 
 // ========== DASHBOARD ==========
 function showDashboard(){
@@ -665,20 +648,15 @@ function showDashboard(){
     document.getElementById('header_user_name').innerText=currentUser.name;
     var hp=document.getElementById('header_profile_pic');
     if(currentUser.photoUrl)hp.src=currentUser.photoUrl;else hp.src="https://via.placeholder.com/30";
-
-    // ★ FIX: CSS class on body — no inline style.display conflicts
     document.body.classList.remove('role-user','role-admin','role-superadmin');
     document.body.classList.add('role-'+currentUser.role);
-
     resetAllTabs();
     document.getElementById('dash-tab').classList.add('active');
     document.getElementById('dashTab').classList.add('show','active');
     setupPresence();listenForOnlineUsers();
-
     var savedMonth=localStorage.getItem('globalFilterMonth');
     var targetMonth=getCurrentMonth();
     if(savedMonth!==null&&savedMonth!==''){if(/^\d{4}-\d{2}$/.test(savedMonth))targetMonth=savedMonth;}
-
     if(currentUser.role==='user'){
         document.getElementById('user_dash_name').innerText='Welcome, '+currentUser.name+'!';
         document.getElementById('user_dash_depot').innerText=currentUser.depot;
@@ -693,7 +671,6 @@ function showDashboard(){
     }
 }
 
-// ★ User Dashboard with Stats
 function loadUserDashboardData(){
     var myName=currentUser.name;
     var ab=document.getElementById('user_active_iou_list'),ub=document.getElementById('user_used_iou_list');
@@ -718,28 +695,22 @@ function loadUserDashboardData(){
     document.getElementById('user_used_iou_count').innerText=ubCount;
     if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
     if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
-
     database.ref('Bills').once('value',function(snap){
         var allBills=collectBills(snap,null,null);
-        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0,totalBillAmt=0;
+        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0;
         allBills.forEach(function(item){
             var b=item.data;if(b.daName!==myName)return;
             if(b.status==='draft')return;
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
             totalCount++;
-            var amt=b.originalAmount||(b.totalAmount||0);
-            if(b.status==='red'){pendingCount++;totalBillAmt+=amt;}
-            else if(b.status==='orange'){checkedCount++;totalBillAmt+=amt;}
-            else if(b.status==='green'){verifiedCount++;totalBillAmt+=amt;}
+            if(b.status==='red')pendingCount++;
+            else if(b.status==='orange')checkedCount++;
+            else if(b.status==='green')verifiedCount++;
         });
         document.getElementById('user_stat_total').innerText=totalCount;
         document.getElementById('user_stat_pending').innerText=pendingCount;
         document.getElementById('user_stat_checked').innerText=checkedCount;
         document.getElementById('user_stat_verified').innerText=verifiedCount;
-        document.getElementById('user_sum_iou').innerText=totalIouAmount.toFixed(0);
-        document.getElementById('user_sum_bill').innerText=totalBillAmt.toFixed(0);
-        document.getElementById('user_sum_count').innerText=totalCount;
-        document.getElementById('user_sum_active_iou').innerText=activeIouCount;
     });
 }
 
@@ -824,14 +795,11 @@ function loadApprovedBillSummary(){
     });
 }
 
-// ★ FIX: DA filter loads ALL DAs properly
-// ★ FIX: DA filter default value must be "" (empty), not "All DAs"
 function loadDAListForFilters(callback){
     database.ref('Users').once('value',function(snap){
         daListCache={};daNameToIdCache={};
         var ids=['iou_da_name','filter_iou_da','filter_history_da','filter_approved_da','summary_da'];
         var labels=['','All DAs','All DAs','All DAs','-- Select DA --'];
-        // ★ FIX: value="" for ALL defaults — "All DAs" is only display text
         ids.forEach(function(id,i){
             var el=document.getElementById(id);
             if(el)el.innerHTML='<option value="">'+(labels[i]||'Select')+'</option>';
@@ -862,7 +830,6 @@ function resetIOUFilter(){document.getElementById('filter_iou_month').value='';d
 
 function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
 
-// ★ FIX: IOU filter now uses daId for comparison
 function loadAdminIOU(){
     var fDa=document.getElementById('filter_iou_da').value;
     var fStart=document.getElementById('iou_filter_start').value;
@@ -871,7 +838,6 @@ function loadAdminIOU(){
     var tS=0,tR=0,tSo=0,tQ=0,tB=0,tT=0,cnt=1;iouPrintCache=[];
     Object.keys(iouListGlobal).forEach(function(id){
         var d=iouListGlobal[id];var show=true;
-        // ★ FIX: compare daId (Firebase key) not daName (string)
         if(fDa&&d.daId!==fDa)show=false;
         if(fStart&&d.date<fStart)show=false;
         if(fEnd&&d.date>fEnd)show=false;
@@ -901,6 +867,7 @@ function calculateGrandTotal(){var total=0;document.querySelectorAll('.exp-total
 function updateEntryFormCostPercent(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,total=parseFloat(document.getElementById('grand_total').value)||0;document.getElementById('form_cost_percent').innerText=inv>0?((total/inv)*100).toFixed(2)+"%":"0%";}
 function prepareBillEntryForm(){if(currentUser.role!=='user')return;document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';if(!editingBillId)loadLocalDraft();}
 
+// ★★★ FIX: After bill submit, explicitly call loadBills() with delay ★★★
 function submitOrUpdateBill(statusType){
     var targetDaName,targetDepot;
     if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){targetDaName=editingBillDaName;targetDepot=document.getElementById('form_depot').value||'Kushtia';}
@@ -917,11 +884,24 @@ function submitOrUpdateBill(statusType){
         if(editingBillId&&originalIouId&&originalIouYear&&originalIouMonth&&originalIouDaName&&originalIouId!==currentIouId){database.ref('IOU_List/'+originalIouYear+'/'+originalIouMonth+'/'+sanitizeKey(originalIouDaName)+'/'+originalIouId).update({status:'active'});}
         if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});}}
     };
+    var afterSave=function(){
+        clearLocalDraft();
+        alert(statusType==='draft'?"Draft Saved!":"Submitted!");
+        document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;
+        editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;
+        document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
+        prepareBillEntryForm();
+        // ★ Switch to History tab AND explicitly reload
+        document.getElementById('history-tab').click();
+        setTimeout(function(){loadBills();},400);
+        setTimeout(function(){loadBills();},1200);
+    };
     if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){
-        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();}});
+        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();setTimeout(function(){loadBills();},400);}});
     }else{
         var newBillRef=database.ref(basePath).push();
-        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();clearLocalDraft();alert(statusType==='draft'?"Draft Saved!":"Submitted!");document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;prepareBillEntryForm();document.getElementById('history-tab').click();}});
+        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();afterSave();}});
     }
 }
 
@@ -959,17 +939,16 @@ function deleteBill(billId,year,month,daName){
         database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).remove().then(function(){
             alert("Deleted!");
             if(billData&&billData.iouId){var ciou=iouListGlobal[billData.iouId];if(ciou&&ciou._year)database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+billData.iouId).update({status:'active'});}
-            reloadAllData();
+            loadBills();
         }).catch(function(e){alert(e.message);});
     });
 }
 function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
 
-// ========== ★ FIXED: BILL HISTORY + APPROVED HISTORY ==========
+// ========== ★★★ FIXED: BILL HISTORY ★★★ ==========
 function resetHistoryFilter(){document.getElementById('filter_history_da').value='';loadBills();}
 function resetApprovedFilter(){document.getElementById('filter_approved_da').value='';loadBills();}
 
-// ★ Helper: resolve DA filter value to name
 function resolveDAFilterName(selectId){
     var val=document.getElementById(selectId).value;
     if(!val)return'';
@@ -979,17 +958,15 @@ function resolveDAFilterName(selectId){
 function loadBills(){
     var tableHead=document.getElementById('bill_table_head'),tableBody=document.getElementById('bill_table_body'),tableFoot=document.getElementById('bill_table_foot');
     var appBody=document.getElementById('approved_bill_table_body'),appFoot=document.getElementById('approved_bill_table_foot');
-
-    // ★ FIX: resolve filter to DA name for proper comparison
     var historyDAName=resolveDAFilterName('filter_history_da');
     var approvedDAName=resolveDAFilterName('filter_approved_da');
 
     tableBody.innerHTML='<tr><td colspan="12" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
     appBody.innerHTML='<tr><td colspan="11" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
 
-    // Set table headers based on role
+    // ★ User: 6 columns (Date, DA, Route, Amount, Status, Action)
     if(currentUser.role==='user'){
-        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Depot</th><th>Route</th><th class="text-end">Amount</th><th>Status</th></tr>';
+        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">Amount</th><th>Status</th><th>Action</th></tr>';
     }else if(currentUser.role==='admin'){
         tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th>Status</th><th>Action</th></tr>';
     }else{
@@ -1002,10 +979,10 @@ function loadBills(){
         var aTotals={iou:0,sales:0,userBill:0,payable:0};
         var allBills=collectBills(snap,null,null);
         var approvedArr=[];
+        var userBillCount=0;
 
         if(allBills.length===0){
             var cs=currentUser.role==='user'?'6':'9';
-            var cs2=currentUser.role==='superadmin'?'11':'9';
             tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             tableFoot.innerHTML='';appFoot.innerHTML='';return;
@@ -1013,10 +990,7 @@ function loadBills(){
 
         allBills.forEach(function(item){
             var b=item.data,billId=item.id,y=item.year,m=item.month,dn=item.daName;
-
-            // ★ Month filter — applied to ALL bills first
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
-
             var sales=b.invoiceVal||0,iou=b.iouAmount||0;
             if(!iou&&b.iouId&&iouListGlobal[b.iouId])iou=iouListGlobal[b.iouId].taka||0;
             var deduction=b.deduction||0;
@@ -1025,35 +999,44 @@ function loadBills(){
             var userBillPer=sales>0?((originalAmount/sales)*100).toFixed(1):'0';
             var payPer=sales>0?((approvedAmount/sales)*100).toFixed(1):'0';
 
-            // ========== USER ROLE ==========
+            // ========== ★★★ USER ROLE: Show red + orange, Hide green ★★★ ==========
             if(currentUser.role==='user'){
-    if(b.daName!==currentUser.name)return;
-    if(b.status!=='red')return;
-    var tr=document.createElement('tr');
-    tr.classList.add('status-red');
+                if(b.daName!==currentUser.name)return;
+                if(b.status==='draft')return;
+                // ★ Approved (green) bills DO NOT show
+                if(b.status==='green')return;
 
-    var statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
-    var userAction=' <button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                userBillCount++;
+                var tr=document.createElement('tr');
 
-    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.depot)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+userAction+'</td>';
-    tableBody.appendChild(tr);
-}
+                if(b.status==='red'){
+                    // ★ Pending: Show with Edit + Delete + Print
+                    tr.classList.add('status-red');
+                    var statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> '+
+                        '<button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> '+
+                        '<button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+                }else if(b.status==='orange'){
+                    // ★ Checked: Show with Print only (NO Edit/Delete)
+                    tr.classList.add('status-orange');
+                    var statusIcon='<span class="badge bg-info text-dark"><i class="bi bi-check2-square me-1"></i>Checked</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+                }
+                tableBody.appendChild(tr);
+            }
 
             // ========== ADMIN (DIC) ROLE ==========
             else if(currentUser.role==='admin'){
-                // ★ FIX: compare by DA name (not Firebase key)
                 if(historyDAName&&b.daName!==historyDAName)return;
-
                 if(b.status==='red'){
-                    // Red = pending → main history with check action
                     hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=originalAmount;
                     var trP=document.createElement('tr');trP.classList.add('status-red');
                     var act='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-secondary btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check2-square"></i></button> <button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
                     trP.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td><b class="text-warning">PENDING</b></td><td class="text-nowrap">'+act+'</td>';
                     tableBody.appendChild(trP);
                 }
-
-                // ★ FIX: BOTH orange + green → Approved History for DIC
                 if(b.status==='orange'||b.status==='green'){
                     approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
@@ -1061,76 +1044,69 @@ function loadBills(){
 
             // ========== SUPERADMIN (RSM) ROLE ==========
             else{
-                // ★ FIX: compare by DA name
                 if(historyDAName&&b.daName!==historyDAName)return;
-
                 if(b.status==='orange'){
-                    // Orange = checked by DIC → main history with APPROVE button
                     hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=approvedAmount;
                     var trS=document.createElement('tr');trS.classList.add('status-orange');
                     var sAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-eye"></i></button> <button class="btn btn-success btn-sm" onclick="approveBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check-lg"></i> Approve</button>';
                     var sPay=deduction>0?'<span class="cut-amount">'+originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+approvedAmount.toFixed(2)+'</span>':approvedAmount.toFixed(2);
                     trS.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td class="text-end fw-bold">'+sPay+'</td><td class="text-end">'+payPer+'%</td><td><b class="text-warning">CHECKED</b></td><td class="text-nowrap">'+sAct+'</td>';
                     tableBody.appendChild(trS);
-
-                    // ★★★ FIX: ALSO push to Approved History so RSM sees checked bills there ★★★
                     approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
-
                 if(b.status==='green'){
-                    // Green = fully approved → Approved History only
                     approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
             }
         });
 
-        // ========== BUILD APPROVED HISTORY TABLE ==========
-        approvedArr.sort(function(a,b){return new Date(getBillDate(a.b)||0)-new Date(getBillDate(b.b)||0);});
-        var approvedVisibleCount=0;
-
-        approvedArr.forEach(function(item){
-            var b=item.b;
-            // ★ FIX: apply approved DA filter by name
-            if(approvedDAName&&b.daName!==approvedDAName)return;
-            approvedVisibleCount++;
-            aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
-
-            var trA=document.createElement('tr');
-            if(item.b.status==='orange')trA.classList.add('status-orange');
-            else trA.classList.add('status-green');
-
-            var aSt=item.b.status==='orange'?'<span class="badge bg-warning text-dark">CHECKED</span>':'<span class="badge bg-success">APPROVED</span>';
-            var aPay=item.deduction>0?'<span class="cut-amount">'+item.originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+item.approvedAmount.toFixed(2)+'</span>':item.approvedAmount.toFixed(2);
-            var aAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+item.billId+'\',\''+item.y+'\',\''+item.m+'\',\''+item.dn+'\')"><i class="bi bi-printer"></i></button>';
-
-            trA.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+item.iou.toFixed(2)+'</td><td class="text-end">'+item.sales.toFixed(2)+'</td><td class="text-end">'+item.originalAmount.toFixed(2)+'</td><td class="text-end">'+item.userBillPer+'%</td><td class="text-end fw-bold">'+aPay+'</td><td class="text-end">'+item.payPer+'%</td><td>'+aSt+'</td><td>'+aAct+'</td>';
-            appBody.appendChild(trA);
-        });
-
-        // Show empty message if no approved bills after filtering
-        if(approvedVisibleCount===0){
-            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+        // ★ User empty message
+        if(currentUser.role==='user'&&userBillCount===0){
+            tableBody.innerHTML='<tr><td colspan="6" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br>No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
         }
 
-        // ========== TABLE FOOTERS ==========
+        // BUILD APPROVED HISTORY TABLE (Admin/Superadmin only)
+        approvedArr.sort(function(a,b){return new Date(getBillDate(a.b)||0)-new Date(getBillDate(b.b)||0);});
+        var approvedVisibleCount=0;
+        if(currentUser.role!=='user'){
+            approvedArr.forEach(function(item){
+                var b=item.b;
+                if(approvedDAName&&b.daName!==approvedDAName)return;
+                approvedVisibleCount++;
+                aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
+                var trA=document.createElement('tr');
+                if(item.b.status==='orange')trA.classList.add('status-orange');
+                else trA.classList.add('status-green');
+                var aSt=item.b.status==='orange'?'<span class="badge bg-warning text-dark">CHECKED</span>':'<span class="badge bg-success">APPROVED</span>';
+                var aPay=item.deduction>0?'<span class="cut-amount">'+item.originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+item.approvedAmount.toFixed(2)+'</span>':item.approvedAmount.toFixed(2);
+                var aAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+item.billId+'\',\''+item.y+'\',\''+item.m+'\',\''+item.dn+'\')"><i class="bi bi-printer"></i></button>';
+                trA.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+item.iou.toFixed(2)+'</td><td class="text-end">'+item.sales.toFixed(2)+'</td><td class="text-end">'+item.originalAmount.toFixed(2)+'</td><td class="text-end">'+item.userBillPer+'%</td><td class="text-end fw-bold">'+aPay+'</td><td class="text-end">'+item.payPer+'%</td><td>'+aSt+'</td><td>'+aAct+'</td>';
+                appBody.appendChild(trA);
+            });
+            if(approvedVisibleCount===0){
+                appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+            }
+        }
+
+        // TABLE FOOTERS
         if(currentUser.role==='user'){
             var uTotal=0;
             document.querySelectorAll('#bill_table_body tr').forEach(function(r){
-                var td5=r.querySelector('td:nth-child(5)');
-                if(td5)uTotal+=parseFloat(td5.innerText.replace(/,/g,''))||0;
+                var td4=r.querySelector('td:nth-child(4)');
+                if(td4)uTotal+=parseFloat(td4.innerText.replace(/,/g,''))||0;
             });
-            tableFoot.innerHTML=uTotal>0?'<tr><td colspan="4" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td></td></tr>':'';
+            tableFoot.innerHTML=uTotal>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td colspan="2"></td></tr>':'';
         }else if(currentUser.role==='admin'){
             tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
         }else{
             tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+hTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
         }
-
         if(currentUser.role==='admin'||currentUser.role==='superadmin'){
             appFoot.innerHTML=aTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+aTotals.iou.toFixed(2)+'</td><td class="text-end">'+aTotals.sales.toFixed(2)+'</td><td class="text-end">'+aTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+aTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
         }
     });
 }
+
 // ========== BILL SUMMARY ==========
 function generateSummary(){
     var daId=document.getElementById('summary_da').value;var tbody=document.getElementById('summary_table_body');
@@ -1352,7 +1328,7 @@ function saveNewUser(){
     else{alert("User Created!");document.getElementById('new_user_id').value='';document.getElementById('new_user_name').value='';document.getElementById('new_user_phone').value='';document.getElementById('new_user_username').value='';document.getElementById('new_user_pass').value='';document.getElementById('new_user_depot').value='Kushtia';document.getElementById('new_user_role').value='user';document.getElementById('new_user_photo').value='';document.getElementById('photo_preview').classList.add('hidden');userPhotoBase64=null;loadDAListForFilters();}});
 }
 
-// ========== ★ FIX: Tab change listeners — reload data when switching tabs ==========
+// ========== Tab change listeners ==========
 document.addEventListener('DOMContentLoaded',function(){
     var summaryTabEl=document.getElementById('summaryTab');
     var iouTabEl=document.getElementById('iouTab');
