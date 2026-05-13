@@ -5,11 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bill Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="https://median.co/api/v2/assets/signed-url?url=https%3A%2F%2Fs3.amazonaws.com%2Fgonativeio%2Fapp_files%2Fjbebanq%2Fapp_icon_android.png">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body{background:#e8eaed;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px}
+        body:not(.role-admin):not(.role-superadmin) .admin-only,
+        body:not(.role-admin):not(.role-superadmin) .admin-superadmin-only{display:none!important}
+        body.role-user .admin-only,
+        body.role-user .admin-superadmin-only{display:none!important}
+        body.role-admin .user-only,
+        body.role-superadmin .user-only{display:none!important}
         .w98-desktop{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#008080;padding:15px;position:relative;overflow:hidden}
         .w98-desktop::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px);pointer-events:none}
         .w98-window{width:460px;max-width:100%;background:#c0c0c0;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080,1px 1px 0 #000;font-family:'MS Sans Serif','Tahoma','Segoe UI',sans-serif;font-size:12px;position:relative;z-index:1}
@@ -148,7 +153,6 @@
             .user-welcome-banner img{margin:0 auto 10px}
             .user-welcome-banner .ms-auto{display:none!important}
         }
-        /* ★ User Dashboard Beautification */
         .user-welcome-banner{border-radius:16px;overflow:hidden;border:none;box-shadow:0 6px 24px rgba(13,110,253,.25)}
         .user-welcome-banner .card-body{padding:20px 24px}
         .user-stat-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .25s,box-shadow .25s;overflow:hidden;position:relative}
@@ -162,11 +166,6 @@
         .user-iou-card .table{margin-bottom:0}
         .user-iou-card .table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;background:#f8f9fa}
         .user-iou-card .table td{font-size:13px;padding:8px 10px;vertical-align:middle}
-        .user-summary-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden;background:linear-gradient(135deg,#f8f9fa,#e9ecef)}
-        .user-summary-card .sum-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)}
-        .user-summary-card .sum-row:last-child{border-bottom:none}
-        .user-summary-card .sum-label{font-size:13px;color:#495057;font-weight:500}
-        .user-summary-card .sum-value{font-size:15px;font-weight:700}
         .user-online-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
         .user-online-card .online-user-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f0f0f0;transition:background .15s}
         .user-online-card .online-user-item:hover{background:#f0f7ff}
@@ -189,61 +188,32 @@
         <div class="w98-titlebar">
             <div class="w98-icon"><i class="bi bi-receipt-cutoff"></i></div>
             <span class="w98-text">Bill Management System — Log On</span>
-            <div class="w98-btns">
-                <button>_</button><button>□</button><button>×</button>
-            </div>
+            <div class="w98-btns"></div>
         </div>
-        <div class="w98-menubar">
-            <span>File</span><span>Edit</span><span>View</span><span>Help</span>
-        </div>
+        <div class="w98-menubar"></div>
         <div class="w98-body">
             <div class="w98-group">
                 <div class="w98-group-label">Enter Network Password</div>
                 <div class="w98-login-row">
                     <div class="w98-avatar-box">
-                        <div class="w98-avatar-frame" id="w98_avatar_frame">
-                            <i class="bi bi-person-fill" id="w98_avatar_icon"></i>
-                        </div>
+                        <div class="w98-avatar-frame" id="w98_avatar_frame"><i class="bi bi-person-fill" id="w98_avatar_icon"></i></div>
                         <div class="w98-avatar-label" id="w98_avatar_name">&nbsp;</div>
                     </div>
                     <div class="w98-form-area">
-                        <div class="w98-field">
-                            <label for="login_user_id">User ID:</label>
-                            <input type="text" id="login_user_id" placeholder="Type your User ID..." autocomplete="off" spellcheck="false">
-                        </div>
+                        <div class="w98-field"><label for="login_user_id">User ID:</label><input type="text" id="login_user_id" placeholder="Type your User ID..." autocomplete="off" spellcheck="false"></div>
                         <div class="w98-user-card" id="w98_user_card">
-                            <div class="w98-uc-row">
-                                <span class="w98-uc-label">Name:</span>
-                                <span class="w98-uc-val" id="w98_show_name">—</span>
-                            </div>
-                            <div class="w98-uc-row">
-                                <span class="w98-uc-label">Role:</span>
-                                <span class="w98-role-tag w98-role-user" id="w98_show_role">—</span>
-                            </div>
-                            <div class="w98-uc-row">
-                                <span class="w98-uc-label">Depot:</span>
-                                <span class="w98-uc-val" id="w98_show_depot">—</span>
-                            </div>
+                            <div class="w98-uc-row"><span class="w98-uc-label">Name:</span><span class="w98-uc-val" id="w98_show_name">—</span></div>
+                            <div class="w98-uc-row"><span class="w98-uc-label">Role:</span><span class="w98-role-tag w98-role-user" id="w98_show_role">—</span></div>
+                            <div class="w98-uc-row"><span class="w98-uc-label">Depot:</span><span class="w98-uc-val" id="w98_show_depot">—</span></div>
                         </div>
-                        <div class="w98-field">
-                            <label for="login_password">Password:</label>
-                            <input type="password" id="login_password" placeholder="Enter password..." disabled>
-                        </div>
-                        <button class="w98-login-btn" id="w98_login_btn" disabled onclick="handleUnifiedLogin()">
-                            <i class="bi bi-box-arrow-in-right"></i> Log In
-                        </button>
+                        <div class="w98-field"><label for="login_password">Password:</label><input type="password" id="login_password" placeholder="Enter password..." disabled></div>
+                        <button class="w98-login-btn" id="w98_login_btn" disabled onclick="handleUnifiedLogin()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
                     </div>
                 </div>
             </div>
-            <div class="w98-hint">
-                <i class="bi bi-info-circle"></i> Enter your User ID (e.g. DA-001) — name &amp; role will appear automatically.
-            </div>
+            <div class="w98-hint"><i class="bi bi-info-circle"></i> Enter your User ID (e.g. DA-001) — name &amp; role will appear automatically.</div>
         </div>
-        <div class="w98-statusbar">
-            <div class="w98-sb-section">
-                <span class="w98-status-text" id="w98_status">Ready</span>
-            </div>
-        </div>
+        <div class="w98-statusbar"><div class="w98-sb-section"><span class="w98-status-text" id="w98_status">Ready</span></div></div>
     </div>
 </div>
 
@@ -284,10 +254,7 @@
     <div class="tab-content pt-2">
         <!-- DASHBOARD TAB -->
         <div class="tab-pane fade" id="dashTab" role="tabpanel">
-
-            <!-- ★ BEAUTIFIED USER DASHBOARD -->
             <div class="user-only">
-                <!-- Welcome Banner -->
                 <div class="card user-welcome-banner mb-3 animate-in no-print" style="background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%)">
                     <div class="card-body text-white d-flex align-items-center">
                         <img id="user_dash_profile" src="https://via.placeholder.com/70/0d6efd/ffffff?text=U" style="width:70px;height:70px;border-radius:50%;border:3px solid rgba(255,255,255,.35);object-fit:cover;box-shadow:0 4px 15px rgba(0,0,0,.2)" class="me-3">
@@ -301,127 +268,44 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Stats Cards -->
                 <div class="row g-2 mb-3 no-print">
-                    <div class="col-6 col-md-3">
-                        <div class="card user-stat-card animate-in animate-in-d1">
-                            <div class="card-body text-center py-3">
-                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="bi bi-file-earmark-text"></i></div>
-                                <div class="stat-value" style="color:#667eea" id="user_stat_total">0</div>
-                                <div class="stat-label">Total Bills</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card user-stat-card animate-in animate-in-d2">
-                            <div class="card-body text-center py-3">
-                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><i class="bi bi-hourglass-split"></i></div>
-                                <div class="stat-value" style="color:#f5576c" id="user_stat_pending">0</div>
-                                <div class="stat-label">Pending</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card user-stat-card animate-in animate-in-d3">
-                            <div class="card-body text-center py-3">
-                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="bi bi-pencil-square"></i></div>
-                                <div class="stat-value" style="color:#0ea5e9" id="user_stat_checked">0</div>
-                                <div class="stat-label">Checked</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <div class="card user-stat-card animate-in animate-in-d4">
-                            <div class="card-body text-center py-3">
-                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="bi bi-check-circle"></i></div>
-                                <div class="stat-value" style="color:#10b981" id="user_stat_verified">0</div>
-                                <div class="stat-label">Verified</div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d1"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="bi bi-file-earmark-text"></i></div><div class="stat-value" style="color:#667eea" id="user_stat_total">0</div><div class="stat-label">Total Bills</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d2"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><i class="bi bi-hourglass-split"></i></div><div class="stat-value" style="color:#f5576c" id="user_stat_pending">0</div><div class="stat-label">Pending</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d3"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="bi bi-pencil-square"></i></div><div class="stat-value" style="color:#0ea5e9" id="user_stat_checked">0</div><div class="stat-label">Checked</div></div></div></div>
+                    <div class="col-6 col-md-3"><div class="card user-stat-card animate-in animate-in-d4"><div class="card-body text-center py-3"><div class="stat-icon-wrap" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="bi bi-check-circle"></i></div><div class="stat-value" style="color:#10b981" id="user_stat_verified">0</div><div class="stat-label">Verified</div></div></div></div>
                 </div>
-
-                <!-- Active IOU + Monthly Summary -->
+                <!-- ★ CHANGE: Monthly Summary removed, Active IOU now full width -->
                 <div class="row g-2 mb-3 no-print">
-                    <div class="col-md-7">
+                    <div class="col-12">
                         <div class="card user-iou-card animate-in animate-in-d5">
                             <div class="card-header text-white" style="background:linear-gradient(135deg,#0d6efd,#0b5ed7)">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>My Active IOU <small style="opacity:.7" id="user_active_iou_month_label"></small></span>
-                                    <span class="badge bg-light text-primary" id="user_active_iou_count">0</span>
-                                </div>
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>My Active IOU <small style="opacity:.7" id="user_active_iou_month_label"></small></span><span class="badge bg-light text-primary" id="user_active_iou_count">0</span></div>
                             </div>
-                            <div class="scroll-box-sm">
-                                <table class="table table-hover mb-0">
-                                    <thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th></th></tr></thead>
-                                    <tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Active IOU</td></tr></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="card user-summary-card animate-in animate-in-d6" style="height:100%">
-                            <div class="card-header border-0 py-2" style="background:transparent">
-                                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-pie-chart me-2"></i>Monthly Summary <small class="text-muted" id="user_sum_month_label"></small></h6>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="sum-row">
-                                    <span class="sum-label"><i class="bi bi-receipt me-2 text-info"></i>Total IOU</span>
-                                    <span class="sum-value text-info" id="user_sum_iou">0</span>
-                                </div>
-                                <div class="sum-row">
-                                    <span class="sum-label"><i class="bi bi-file-earmark-text me-2" style="color:#667eea"></i>Total Bill</span>
-                                    <span class="sum-value" style="color:#667eea" id="user_sum_bill">0</span>
-                                </div>
-                                <div class="sum-row">
-                                    <span class="sum-label"><i class="bi bi-list-ol me-2 text-success"></i>Bills Count</span>
-                                    <span class="sum-value text-success" id="user_sum_count">0</span>
-                                </div>
-                                <div class="sum-row" style="background:rgba(13,110,253,.05)">
-                                    <span class="sum-label"><i class="bi bi-lightning-charge me-2 text-primary"></i>Active IOU</span>
-                                    <span class="sum-value text-primary" id="user_sum_active_iou">0</span>
-                                </div>
-                            </div>
+                            <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th></th></tr></thead><tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Active IOU</td></tr></tbody></table></div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Used IOU + Online -->
                 <div class="row g-2 mb-3 no-print">
                     <div class="col-md-7">
                         <div class="card user-iou-card animate-in animate-in-d5">
                             <div class="card-header text-white" style="background:linear-gradient(135deg,#6c757d,#495057)">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold mb-0"><i class="bi bi-archive me-2"></i>Used IOU <small style="opacity:.7" id="user_used_iou_month_label"></small></span>
-                                    <span class="badge bg-light text-secondary" id="user_used_iou_count">0</span>
-                                </div>
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-archive me-2"></i>Used IOU <small style="opacity:.7" id="user_used_iou_month_label"></small></span><span class="badge bg-light text-secondary" id="user_used_iou_count">0</span></div>
                             </div>
-                            <div class="scroll-box-sm">
-                                <table class="table table-hover mb-0">
-                                    <thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th>Status</th></tr></thead>
-                                    <tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Used IOU</td></tr></tbody>
-                                </table>
-                            </div>
+                            <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th>Status</th></tr></thead><tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Used IOU</td></tr></tbody></table></div>
                         </div>
                     </div>
                     <div class="col-md-5">
                         <div class="card user-online-card animate-in animate-in-d6" style="height:100%">
                             <div class="card-header border-0 py-2" style="background:linear-gradient(135deg,#10b981,#059669)">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online</span>
-                                    <span class="badge bg-light text-success" id="user_online_count_badge">0</span>
-                                </div>
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online</span><span class="badge bg-light text-success" id="user_online_count_badge">0</span></div>
                             </div>
-                            <div class="scroll-box-sm" id="user_online_list_view" style="max-height:200px">
-                                <div class="text-center text-muted p-3">Checking...</div>
-                            </div>
+                            <div class="scroll-box-sm" id="user_online_list_view" style="max-height:200px"><div class="text-center text-muted p-3">Checking...</div></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ADMIN DASHBOARD (unchanged) -->
+            <!-- ADMIN DASHBOARD -->
             <div class="admin-only">
                 <div class="row g-2 mb-3">
                     <div class="col-6 col-md"><div class="dash-card bg-dc-iou text-white"><div class="dc-body"><div><div class="dc-label">Total IOUs (Bill Req)</div><div class="dc-val" id="dash_iou_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-receipt"></i></div></div></div></div>
@@ -433,13 +317,13 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <div class="card dash-card no-print mb-3"><div class="card-header bg-white py-2"><h6 class="mb-0"><i class="bi bi-people"></i> DA Wise Status <small class="text-muted" id="dash_da_month_label"></small></h6></div><div class="card-body p-2 scroll-box-md"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>DA Name</th><th class="text-center">IOU</th><th class="text-center">Bills</th><th class="text-center text-warning">Checking</th><th class="text-center text-danger">Approval</th><th class="text-center text-success">Approved</th></tr></thead><tbody id="dash_da_table_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2">IOU Entry</div><div class="card-body"><div class="row g-2 mb-2"><div class="col-6 col-md-3"><label>Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div><div class="col-6 col-md-3"><label>Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div><div class="col-4 col-md-2"><label>Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Bund</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div><div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div></div><button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm w-100">Save IOU Entry</button><button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm w-100 hidden">Cancel Edit</button></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-primary text-white py-2">New User Record</div><div class="card-body"><div class="row g-2"><div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div><div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div><div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div><div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div><div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-select-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="col-12"><hr class="my-1"></div><div class="col-md-6"><label class="fw-bold text-muted">Username</label><input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID"></div><div class="col-md-6"><label class="fw-bold text-muted">Password</label><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password"></div><div class="col-md-6"><label class="fw-bold text-muted">Role</label><select id="new_user_role" class="form-select form-control-sm"><option value="user">User</option><option value="admin">Admin (DIC)</option><option value="superadmin">Super Admin (RSM)</option></select></div><div class="col-12"><button onclick="saveNewUser()" class="btn btn-primary w-100 btn-sm mt-2">Save Record</button></div></div></div></div>
+                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2">IOU Entry</div><div class="card-body"><div class="row g-2 mb-2"><div class="col-6 col-md-3"><label>Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div><div class="col-6 col-md-3"><label>Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div><div class="col-4 col-md-2"><label>Invoice Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Bundle Qty</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div><div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div></div><button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm w-100">Save IOU Entry</button><button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm w-100 hidden">Cancel Edit</button></div></div>
+                        <div class="card dash-card no-print mb-3"><div class="card-header bg-primary text-white py-2">New User Record</div><div class="card-body"><div class="row g-2"><div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div><div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div><div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div><div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div><div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="col-12"><hr class="my-1"></div><div class="col-md-6"><label class="fw-bold text-muted">Username</label><input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID"></div><div class="col-md-6"><label class="fw-bold text-muted">Password</label><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password"></div><div class="col-md-6"><label class="fw-bold text-muted">Role</label><select id="new_user_role" class="form-select form-control-sm"><option value="user">User</option><option value="admin">Admin (DIC)</option><option value="superadmin">Super Admin (RSM)</option></select></div><div class="col-12"><button onclick="saveNewUser()" class="btn btn-primary w-100 btn-sm mt-2">Save Record</button></div></div></div></div>
                     </div>
                     <div class="col-md-6 mb-3">
                         <div class="card dash-card no-print mb-3"><div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6><span class="badge bg-light text-success" id="online_count_badge">0</span></div><div class="card-body p-2 scroll-box-sm" id="online_users_list"><div class="text-center text-muted p-2">Checking...</div></div></div>
                         <div class="card dash-card no-print mb-3 border border-danger"><div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-exclamation-octagon-fill me-1"></i> Unbilled IOU <small id="iou_pending_month_label"></small></h6><span class="badge bg-light text-danger" id="unbilled_iou_count">0</span></div><div class="card-body p-2 scroll-box-md" id="unbilled_iou_container"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Date</th><th>DA</th><th>Type</th><th>Route</th><th class="text-end">Amount</th></tr></thead><tbody id="unbilled_iou_list"><tr><td colspan="5" class="text-center text-muted p-2">Loading...</td></tr></tbody></table></div></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2"><h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU <small id="approved_vs_iou_month_label"></small></h6></div><div class="card-body p-2 scroll-box-md"><div class="table-responsive"><table class="table table-bordered table-sm mb-0"><thead class="table-secondary"><tr><th>DA Name</th><th class="text-end">IOU</th><th class="text-end">Appr.Bill</th><th class="text-end">Balance</th><th class="text-center">Bund</th><th class="text-center">Status</th></tr></thead><tbody id="approved_summary_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
+                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2"><h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU <small id="approved_vs_iou_month_label"></small></h6></div><div class="card-body p-2 scroll-box-md"><div class="table-responsive"><table class="table table-bordered table-sm mb-0"><thead class="table-secondary"><tr><th>DA Name</th><th class="text-end">IOU</th><th class="text-end">Appr.Bill</th><th class="text-end">Balance</th><th class="text-center">Bund Qty</th><th class="text-center">Status</th></tr></thead><tbody id="approved_summary_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
                         <div class="card dash-card no-print border border-primary"><div class="card-header bg-primary text-white py-2"><h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Excel Operations</h6></div><div class="card-body p-2"><div class="d-grid gap-2"><button onclick="exportBillsToExcel()" class="btn btn-success btn-sm"><i class="bi bi-download me-1"></i>Export Pending Bills</button><div class="input-group"><input type="file" id="excel_upload_input" class="form-control form-control-sm" accept=".xlsx,.xls"><button onclick="importBillsFromExcel('excel_upload_input')" class="btn btn-warning btn-sm"><i class="bi bi-upload me-1"></i>Import Bills</button></div><small class="text-muted">Excel format must match exported file.</small></div></div></div>
                     </div>
                 </div>
@@ -461,7 +345,7 @@
                 <div class="row mb-2"><div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Notes..." oninput="triggerAutoSave()"></div></div>
                 <div class="quick-entry-card no-print">
                     <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="text-primary mb-0"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6><div class="input-group input-group-sm" style="max-width:220px"><input type="file" id="user_exp_excel_input" class="form-control form-control-sm" accept=".xlsx,.xls" style="font-size:10px"><button class="btn btn-info text-white" onclick="importExpensesToTable()">Excel</button></div></div>
-                    <div class="row g-1"><div class="col-4"><label>From</label><input type="text" id="q_from" class="form-control form-control-sm" placeholder="From"></div><div class="col-4"><label>To</label><input type="text" id="q_to" class="form-control form-control-sm" placeholder="To"></div><div class="col-4"><label>Mode</label><select id="q_mode" class="form-select form-select-sm"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></div><div class="col-4"><label>Amount</label><input type="number" id="q_amount" class="form-control form-control-sm" placeholder="0"></div><div class="col-4"><label>DA Exp</label><input type="number" id="q_da_expense" class="form-control form-control-sm" placeholder="0"></div><div class="col-4 d-flex align-items-end"><button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button></div></div>
+                    <div class="row g-1"><div class="col-4"><label>From</label><input type="text" id="q_from" class="form-control form-control-sm" placeholder="From"></div><div class="col-4"><label>To</label><input type="text" id="q_to" class="form-control form-control-sm" placeholder="To"></div><div class="col-4"><label>Mode</label><select id="q_mode" class="form-select form-control-sm"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></div><div class="col-4"><label>Amount</label><input type="number" id="q_amount" class="form-control form-control-sm" placeholder="0"></div><div class="col-4"><label>DA Exp</label><input type="number" id="q_da_expense" class="form-control form-control-sm" placeholder="0"></div><div class="col-4 d-flex align-items-end"><button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button></div></div>
                     <small class="text-muted d-block mt-1">Excel: Date, From, To, Mode, Amount, DA</small>
                 </div>
                 <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Total</th><th>X</th></tr></thead><tbody id="expense_table_body"></tbody><tfoot><tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td colspan="3"><input type="text" id="grand_total" class="form-control form-control-sm fw-bold text-center" value="0" readonly></td></tr><tr class="table-info"><td colspan="4" class="text-end fw-bold">Cost (%):</td><td colspan="3"><span id="form_cost_percent" class="fw-bold">0%</span></td></tr></tfoot></table></div>
@@ -483,27 +367,27 @@
         <!-- APPROVED HISTORY TAB -->
         <div class="tab-pane fade" id="approvedHistoryTab" role="tabpanel">
             <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div></div></div>
-            <div class="card dash-card no-print"><div class="card-body p-1"><h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+            <div class="card dash-card no-print"><div class="card-body p-1"><h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
         </div>
 
         <!-- IOU LIST TAB -->
         <div class="tab-pane fade admin-only" id="iouTab" role="tabpanel">
-            <div class="card dash-card no-print"><div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center"><span>IOU List & Management</span><button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>Print</button></div><div class="card-body"><div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end"><div class="col-6 col-md-2"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">From</label><input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">To</label><input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-12 col-md-3"><label class="fw-bold text-muted">DA</label><select id="filter_iou_da" class="form-select form-select-sm" onchange="loadAdminIOU()"><option value="">All DA</option></select></div><div class="col-12 col-md-2"><button onclick="resetIOUFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-secondary"><tr><th>#</th><th>Date</th><th>DA</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Qty</th><th>Bund</th><th>Taka</th><th>%</th><th>Action</th></tr></thead><tbody id="iou_admin_table_body"></tbody><tfoot><tr class="fw-bold table-warning"><td colspan="7">Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr></tfoot></table></div></div></div>
+            <div class="card dash-card no-print"><div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center"><span>IOU List & Management</span><button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>Print</button></div><div class="card-body"><div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end"><div class="col-6 col-md-2"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">From</label><input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">To</label><input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-12 col-md-3"><label class="fw-bold text-muted">DA</label><select id="filter_iou_da" class="form-select form-control-sm" onchange="loadAdminIOU()"><option value="">All DA</option></select></div><div class="col-12 col-md-2"><button onclick="resetIOUFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-secondary"><tr><th>#</th><th>Date</th><th>DA</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Invoice Qty</th><th>Bund Qty</th><th>Taka</th><th>%</th><th>Action</th></tr></thead><tbody id="iou_admin_table_body"></tbody><tfoot><tr class="fw-bold table-warning"><td colspan="7">Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr></tfoot></table></div></div></div>
         </div>
     </div>
 </div>
 
 <!-- MODALS -->
-<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-select-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
+<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
 <div class="modal fade no-print" id="changePassModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning py-2"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="fw-bold">Current</label><input type="password" id="cp_current" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">New</label><input type="password" id="cp_new" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Confirm</label><input type="password" id="cp_confirm" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update</button></div></div></div></div>
 <div class="modal fade no-print" id="cutBillModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content"><div class="modal-header bg-warning py-1"><h5 class="modal-title">Bill Checking & Deduction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-2"><input type="hidden" id="edit_bill_id"><input type="hidden" id="m_year"><input type="hidden" id="m_month"><input type="hidden" id="m_daName"><div class="table-responsive"><table class="table table-sm modal-table table-bordered"><thead class="table-secondary text-center"><tr><th style="min-width:75px">Date</th><th style="min-width:90px">From</th><th style="min-width:90px">To</th><th style="min-width:75px">Mode</th><th style="min-width:65px">Amount</th><th style="min-width:65px">DA</th><th style="min-width:65px">Deduction</th><th style="min-width:75px">Total</th></tr></thead><tbody id="modal_expense_body"></tbody><tfoot><tr class="table-light fw-bold"><td colspan="7" class="text-end">Total Payable:</td><td class="text-center text-success" id="modal_grand_total">0</td></tr></tfoot></table></div><div class="mt-3 p-2 border rounded bg-light"><h6 class="text-center mb-2">Summary</h6><div class="table-responsive"><table class="table table-sm table-bordered summary-table"><thead><tr><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Final</th></tr></thead><tbody><tr><td id="sum_iou">0</td><td id="sum_sales">0</td><td id="sum_user_bill">0</td><td id="sum_user_per">0%</td><td id="sum_payable">0</td><td id="sum_payable_per">0%</td><td id="sum_final" class="text-success">0</td></tr></tbody></table></div><div class="mt-2"><label class="fw-bold">Remarks:</label><input type="text" id="modal_remarks" class="form-control form-control-sm" placeholder="Checking remarks..."></div></div></div><div class="modal-footer py-1"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button><button onclick="saveDeduction()" type="button" class="btn btn-success btn-sm">Save</button></div></div></div></div>
 
 <!-- PRINT CONTAINERS -->
-<div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Inv Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
+<div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
 
-<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:100px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">DA</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved</td></tr></table></div>
+<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:100px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
 
-<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Qty</th><th style="padding:3px;text-align:center;width:5%">Bund</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
+<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -539,7 +423,6 @@ function formatMonthLabel(m){if(!m)return'All Time';var p=m.split('-');var ms=['
 function formatDate(d){if(!d)return'';if(d.indexOf('-')===2)return d;if(d.indexOf('-')!==4)return d;var p=d.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 function isBillRequiredIOU(t){return t==='Delivery'||t==='Collection'||t==='Return';}
 function isNoBillIOU(t){return t==='General'||t==='Bill Payment';}
-function getDAName(daId){return daListCache[daId]||'Unknown';}
 
 function getDateParts(dateStr){
     if(!dateStr)return{year:'',month:''};
@@ -676,7 +559,7 @@ function setGlobalMonth(monthVal){
         else{bc.classList.remove('active-month');ba.classList.remove('active-month');}
     }
     var lbl=formatMonthLabel(globalFilterMonth);
-    ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label','user_sum_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
+    ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
     localStorage.setItem('globalFilterMonth',globalFilterMonth);
     loadIOUListGlobal(function(){reloadAllData();});
 }
@@ -686,7 +569,7 @@ function reloadAllData(){
     if(currentUser.role==='user')loadUserDashboardData();
     else{loadAdminDashboardData();loadAdminIOU();}
     loadBills();
-    if(document.getElementById('summaryTab').classList.contains('show'))generateSummary();
+    if(document.getElementById('summaryTab').classList.contains('active'))generateSummary();
 }
 
 function loadIOUListGlobal(callback){
@@ -743,7 +626,7 @@ function addExpenseRowWithData(exp){var tb=document.getElementById('expense_tabl
 function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;currentIouId=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_iou_amount').value=0;document.getElementById('form_remarks').value='';var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';calculateSoldValue();clearLocalDraft();if(currentUser&&currentUser.role==='user'){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;}}
 
 // ========== LOGOUT ==========
-function logout(){if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();currentUser=null;location.reload();}
+function logout(){if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();currentUser=null;document.body.className='';location.reload();}
 function resetAllTabs(){document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});}
 
 // ========== PROFILE ==========
@@ -756,7 +639,7 @@ function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileR
 
 // ========== PRESENCE ==========
 function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
-function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
 
 // ========== DASHBOARD ==========
 function showDashboard(){
@@ -765,9 +648,8 @@ function showDashboard(){
     document.getElementById('header_user_name').innerText=currentUser.name;
     var hp=document.getElementById('header_profile_pic');
     if(currentUser.photoUrl)hp.src=currentUser.photoUrl;else hp.src="https://via.placeholder.com/30";
-    document.querySelectorAll('.admin-only').forEach(function(i){i.style.display='none';});
-    document.querySelectorAll('.user-only').forEach(function(i){i.style.display='none';});
-    document.querySelectorAll('.admin-superadmin-only').forEach(function(i){i.style.display='none';});
+    document.body.classList.remove('role-user','role-admin','role-superadmin');
+    document.body.classList.add('role-'+currentUser.role);
     resetAllTabs();
     document.getElementById('dash-tab').classList.add('active');
     document.getElementById('dashTab').classList.add('show','active');
@@ -776,9 +658,6 @@ function showDashboard(){
     var targetMonth=getCurrentMonth();
     if(savedMonth!==null&&savedMonth!==''){if(/^\d{4}-\d{2}$/.test(savedMonth))targetMonth=savedMonth;}
     if(currentUser.role==='user'){
-        document.querySelectorAll('.user-only').forEach(function(i){i.style.display='block';});
-        document.getElementById('history_tab_li').style.display='block';
-        // ★ User Dashboard Welcome
         document.getElementById('user_dash_name').innerText='Welcome, '+currentUser.name+'!';
         document.getElementById('user_dash_depot').innerText=currentUser.depot;
         var now=new Date();var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -788,14 +667,10 @@ function showDashboard(){
         else{var ini=currentUser.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();dp.src='https://ui-avatars.com/api/?name='+encodeURIComponent(currentUser.name)+'&background=0d6efd&color=fff&size=140&bold=true';}
         prepareBillEntryForm();setGlobalMonth(targetMonth);
     }else{
-        document.querySelectorAll('.admin-only').forEach(function(i){i.style.display='block';});
-        document.querySelectorAll('.admin-superadmin-only').forEach(function(i){i.style.display='block';});
-        document.getElementById('history_tab_li').style.display='block';
         loadDAListForFilters(function(){setGlobalMonth(targetMonth);});
     }
 }
 
-// ★ IMPROVED User Dashboard with Stats
 function loadUserDashboardData(){
     var myName=currentUser.name;
     var ab=document.getElementById('user_active_iou_list'),ub=document.getElementById('user_used_iou_list');
@@ -811,8 +686,7 @@ function loadUserDashboardData(){
             var usedIcon=d.status==='used'?'<i class="bi bi-check2-circle text-success"></i>':'<i class="bi bi-archive text-secondary"></i>';
             ub.innerHTML+='<tr><td>'+formatDate(d.date)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-semibold">'+d.taka+'</td><td>'+usedIcon+'</td></tr>';
         }else{
-            abCount++;
-            activeIouCount++;totalIouAmount+=(d.taka||0);
+            abCount++;activeIouCount++;totalIouAmount+=(d.taka||0);
             var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';}
             ab.innerHTML+='<tr class="clickable-row" onclick="fillBillFromIOU(\''+id+'\')"><td>'+formatDate(d.date)+daysBadge+'</td><td><small class="badge bg-info text-dark">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td><td><i class="bi bi-arrow-right-circle text-primary"></i></td></tr>';
         }
@@ -821,30 +695,22 @@ function loadUserDashboardData(){
     document.getElementById('user_used_iou_count').innerText=ubCount;
     if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
     if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
-
-    // ★ Calculate Bill Stats for User
     database.ref('Bills').once('value',function(snap){
         var allBills=collectBills(snap,null,null);
-        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0,totalBillAmt=0;
+        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0;
         allBills.forEach(function(item){
             var b=item.data;if(b.daName!==myName)return;
             if(b.status==='draft')return;
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
             totalCount++;
-            var amt=b.originalAmount||(b.totalAmount||0);
-            if(b.status==='red'){pendingCount++;totalBillAmt+=amt;}
-            else if(b.status==='orange'){checkedCount++;totalBillAmt+=amt;}
-            else if(b.status==='green'){verifiedCount++;totalBillAmt+=amt;}
+            if(b.status==='red')pendingCount++;
+            else if(b.status==='orange')checkedCount++;
+            else if(b.status==='green')verifiedCount++;
         });
         document.getElementById('user_stat_total').innerText=totalCount;
         document.getElementById('user_stat_pending').innerText=pendingCount;
         document.getElementById('user_stat_checked').innerText=checkedCount;
         document.getElementById('user_stat_verified').innerText=verifiedCount;
-        // Monthly Summary
-        document.getElementById('user_sum_iou').innerText=totalIouAmount.toFixed(0);
-        document.getElementById('user_sum_bill').innerText=totalBillAmt.toFixed(0);
-        document.getElementById('user_sum_count').innerText=totalCount;
-        document.getElementById('user_sum_active_iou').innerText=activeIouCount;
     });
 }
 
@@ -933,13 +799,17 @@ function loadDAListForFilters(callback){
     database.ref('Users').once('value',function(snap){
         daListCache={};daNameToIdCache={};
         var ids=['iou_da_name','filter_iou_da','filter_history_da','filter_approved_da','summary_da'];
-        var defs=['','All DAs','All DAs','All DAs','-- Select DA --'];
-        ids.forEach(function(id,i){var el=document.getElementById(id);if(el)el.innerHTML='<option value="'+defs[i]+'">'+(defs[i]||'Select')+'</option>';});
+        var labels=['','All DAs','All DAs','All DAs','-- Select DA --'];
+        ids.forEach(function(id,i){
+            var el=document.getElementById(id);
+            if(el)el.innerHTML='<option value="">'+(labels[i]||'Select')+'</option>';
+        });
         if(snap.exists()){
             snap.forEach(function(c){
                 var u=c.val();
                 if(u.role!=='admin'&&u.role!=='superadmin'){
-                    daListCache[c.key]=u.name;daNameToIdCache[u.name]=c.key;
+                    daListCache[c.key]=u.name;
+                    daNameToIdCache[u.name]=c.key;
                     var opt='<option value="'+c.key+'">'+escHtml(u.name)+'</option>';
                     ids.forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML+=opt;});
                 }
@@ -960,7 +830,32 @@ function resetIOUFilter(){document.getElementById('filter_iou_month').value='';d
 
 function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
 
-function loadAdminIOU(){var fDa=document.getElementById('filter_iou_da').value,fStart=document.getElementById('iou_filter_start').value,fEnd=document.getElementById('iou_filter_end').value;var tbody=document.getElementById('iou_admin_table_body');tbody.innerHTML='';var tS=0,tR=0,tSo=0,tQ=0,tB=0,tT=0,cnt=1;iouPrintCache=[];Object.keys(iouListGlobal).forEach(function(id){var d=iouListGlobal[id];var show=true;if(fDa&&d.daId!==fDa)show=false;if(fStart&&d.date<fStart)show=false;if(fEnd&&d.date>fEnd)show=false;if(!show)return;var iS=d.soldVal||((d.sales||0)-(d.returnVal||0));tS+=(d.sales||0);tR+=(d.returnVal||0);tSo+=iS;tQ+=(d.qty||0);tB+=(d.bundleQty||0);tT+=(d.taka||0);var type=d.type||'Delivery';var badge=(d.status==='used'||isNoBillIOU(type))?'<span class="badge bg-secondary">Used</span>':'<span class="badge bg-success">Active</span>';var typeB=type?'<span class="badge bg-info">'+escHtml(type)+'</span>':'';var rc=(d.status==='used'||isNoBillIOU(type))?'table-secondary':'';tbody.innerHTML+='<tr class="'+rc+'"><td>'+cnt+'</td><td>'+formatDate(d.date)+'</td><td>'+escHtml(d.daName)+'</td><td>'+typeB+'</td><td>'+escHtml(d.territory)+'</td><td>'+escHtml(d.mpo)+'</td><td>'+escHtml(d.summary)+'</td><td>'+(d.sales||0)+'</td><td>'+(d.returnVal||0)+'</td><td>'+iS+'</td><td>'+(d.qty||0)+'</td><td>'+(d.bundleQty||0)+'</td><td>'+d.taka+'</td><td>'+(d.percent||0)+'%</td><td>'+badge+' <button class="btn btn-sm btn-warning" onclick="editIOU(\''+id+'\')">E</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\''+id+'\')">X</button></td></tr>';iouPrintCache.push({date:formatDate(d.date),daName:d.daName,type:type,territory:d.territory,mpo:d.mpo,summary:d.summary,sales:d.sales||0,ret:d.returnVal||0,sold:iS,qty:d.qty||0,bundleQty:d.bundleQty||0,taka:d.taka||0,percent:d.percent||'0'});cnt++;});document.getElementById('iou_tot_sales').innerText=tS;document.getElementById('iou_tot_ret').innerText=tR;document.getElementById('iou_tot_sold').innerText=tSo;document.getElementById('iou_tot_qty').innerText=tQ;document.getElementById('iou_tot_bqty').innerText=tB;document.getElementById('iou_tot_taka').innerText=tT;}
+function loadAdminIOU(){
+    var fDa=document.getElementById('filter_iou_da').value;
+    var fStart=document.getElementById('iou_filter_start').value;
+    var fEnd=document.getElementById('iou_filter_end').value;
+    var tbody=document.getElementById('iou_admin_table_body');tbody.innerHTML='';
+    var tS=0,tR=0,tSo=0,tQ=0,tB=0,tT=0,cnt=1;iouPrintCache=[];
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];var show=true;
+        if(fDa&&d.daId!==fDa)show=false;
+        if(fStart&&d.date<fStart)show=false;
+        if(fEnd&&d.date>fEnd)show=false;
+        if(!show)return;
+        var iS=d.soldVal||((d.sales||0)-(d.returnVal||0));
+        tS+=(d.sales||0);tR+=(d.returnVal||0);tSo+=iS;tQ+=(d.qty||0);tB+=(d.bundleQty||0);tT+=(d.taka||0);
+        var type=d.type||'Delivery';
+        var badge=(d.status==='used'||isNoBillIOU(type))?'<span class="badge bg-secondary">Used</span>':'<span class="badge bg-success">Active</span>';
+        var typeB=type?'<span class="badge bg-info">'+escHtml(type)+'</span>':'';
+        var rc=(d.status==='used'||isNoBillIOU(type))?'table-secondary':'';
+        tbody.innerHTML+='<tr class="'+rc+'"><td>'+cnt+'</td><td>'+formatDate(d.date)+'</td><td>'+escHtml(d.daName)+'</td><td>'+typeB+'</td><td>'+escHtml(d.territory)+'</td><td>'+escHtml(d.mpo)+'</td><td>'+escHtml(d.summary)+'</td><td>'+(d.sales||0)+'</td><td>'+(d.returnVal||0)+'</td><td>'+iS+'</td><td>'+(d.qty||0)+'</td><td>'+(d.bundleQty||0)+'</td><td>'+d.taka+'</td><td>'+(d.percent||0)+'%</td><td>'+badge+' <button class="btn btn-sm btn-warning" onclick="editIOU(\''+id+'\')">E</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\''+id+'\')">X</button></td></tr>';
+        iouPrintCache.push({date:formatDate(d.date),daName:d.daName,type:type,territory:d.territory,mpo:d.mpo,summary:d.summary,sales:d.sales||0,ret:d.returnVal||0,sold:iS,qty:d.qty||0,bundleQty:d.bundleQty||0,taka:d.taka||0,percent:d.percent||'0'});
+        cnt++;
+    });
+    document.getElementById('iou_tot_sales').innerText=tS;document.getElementById('iou_tot_ret').innerText=tR;
+    document.getElementById('iou_tot_sold').innerText=tSo;document.getElementById('iou_tot_qty').innerText=tQ;
+    document.getElementById('iou_tot_bqty').innerText=tB;document.getElementById('iou_tot_taka').innerText=tT;
+}
 
 // ========== BILL ENTRY ==========
 function calculateSoldValue(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,ret=parseFloat(document.getElementById('form_return_val').value)||0;document.getElementById('form_sold_val').value=inv-ret;updateEntryFormCostPercent();}
@@ -972,6 +867,7 @@ function calculateGrandTotal(){var total=0;document.querySelectorAll('.exp-total
 function updateEntryFormCostPercent(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,total=parseFloat(document.getElementById('grand_total').value)||0;document.getElementById('form_cost_percent').innerText=inv>0?((total/inv)*100).toFixed(2)+"%":"0%";}
 function prepareBillEntryForm(){if(currentUser.role!=='user')return;document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';if(!editingBillId)loadLocalDraft();}
 
+// ★★★ FIX: After bill submit, explicitly call loadBills() with delay ★★★
 function submitOrUpdateBill(statusType){
     var targetDaName,targetDepot;
     if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){targetDaName=editingBillDaName;targetDepot=document.getElementById('form_depot').value||'Kushtia';}
@@ -988,96 +884,152 @@ function submitOrUpdateBill(statusType){
         if(editingBillId&&originalIouId&&originalIouYear&&originalIouMonth&&originalIouDaName&&originalIouId!==currentIouId){database.ref('IOU_List/'+originalIouYear+'/'+originalIouMonth+'/'+sanitizeKey(originalIouDaName)+'/'+originalIouId).update({status:'active'});}
         if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});}}
     };
+    var afterSave=function(){
+        clearLocalDraft();
+        alert(statusType==='draft'?"Draft Saved!":"Submitted!");
+        document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;
+        editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;
+        document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
+        prepareBillEntryForm();
+        // ★ Switch to History tab AND explicitly reload
+        document.getElementById('history-tab').click();
+        setTimeout(function(){loadBills();},400);
+        setTimeout(function(){loadBills();},1200);
+    };
     if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){
-        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();}});
+        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();setTimeout(function(){loadBills();},400);}});
     }else{
         var newBillRef=database.ref(basePath).push();
-        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();clearLocalDraft();alert(statusType==='draft'?"Draft Saved!":"Submitted!");document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;prepareBillEntryForm();document.getElementById('history-tab').click();}});
+        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();afterSave();}});
     }
 }
 
 function editBill(billId,year,month,daName){
-    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){var bill=snapshot.val();if(!bill)return;
-    // ★ FIX: User can only edit RED (pending) bills, NOT checked/approved
-    if(currentUser.role==='user'&&(bill.status==='orange'||bill.status==='green')){alert("This bill is already checked/approved. Cannot edit.");return;}
-    clearLocalDraft();editingBillId=billId;editingBillYear=year;editingBillMonth=month;editingBillDaName=daName;originalIouId=bill.iouId||null;currentIouId=bill.iouId||null;if(currentIouId&&iouListGlobal[currentIouId]){var ciou=iouListGlobal[currentIouId];originalIouYear=ciou._year;originalIouMonth=ciou._month;originalIouDaName=ciou._daName;}document.getElementById('form_da_name').value=bill.daName;document.getElementById('form_depot').value=bill.depot;document.getElementById('form_dep_date').value=bill.depDate;document.getElementById('form_ret_date').value=bill.retDate;document.getElementById('form_submit_date').value=bill.submitDate||bill.depDate;document.getElementById('form_route').value=bill.route;document.getElementById('form_mpo').value=bill.mpo;document.getElementById('form_summary').value=bill.summaryNo;document.getElementById('form_invoice_val').value=bill.invoiceVal;document.getElementById('form_return_val').value=bill.returnVal;document.getElementById('form_invoice_qty').value=bill.invoiceQty;document.getElementById('form_bundle_qty').value=bill.bundleQty||0;document.getElementById('form_iou_amount').value=bill.iouAmount||0;document.getElementById('form_remarks').value=bill.remarks||'';var tb=document.getElementById('expense_table_body');tb.innerHTML='';if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}calculateGrandTotal();calculateSoldValue();document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';document.getElementById('cancel_edit_btn').classList.remove('hidden');document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');});
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        if(currentUser.role==='user'&&(bill.status==='orange'||bill.status==='green')){alert("This bill is already checked/approved. Cannot edit.");return;}
+        clearLocalDraft();editingBillId=billId;editingBillYear=year;editingBillMonth=month;editingBillDaName=daName;
+        originalIouId=bill.iouId||null;currentIouId=bill.iouId||null;
+        if(currentIouId&&iouListGlobal[currentIouId]){var ciou=iouListGlobal[currentIouId];originalIouYear=ciou._year;originalIouMonth=ciou._month;originalIouDaName=ciou._daName;}
+        document.getElementById('form_da_name').value=bill.daName;document.getElementById('form_depot').value=bill.depot;
+        document.getElementById('form_dep_date').value=bill.depDate;document.getElementById('form_ret_date').value=bill.retDate;
+        document.getElementById('form_submit_date').value=bill.submitDate||bill.depDate;
+        document.getElementById('form_route').value=bill.route;document.getElementById('form_mpo').value=bill.mpo;
+        document.getElementById('form_summary').value=bill.summaryNo;document.getElementById('form_invoice_val').value=bill.invoiceVal;
+        document.getElementById('form_return_val').value=bill.returnVal;document.getElementById('form_invoice_qty').value=bill.invoiceQty;
+        document.getElementById('form_bundle_qty').value=bill.bundleQty||0;document.getElementById('form_iou_amount').value=bill.iouAmount||0;
+        document.getElementById('form_remarks').value=bill.remarks||'';
+        var tb=document.getElementById('expense_table_body');tb.innerHTML='';
+        if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}
+        calculateGrandTotal();calculateSoldValue();
+        document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';
+        document.getElementById('cancel_edit_btn').classList.remove('hidden');
+        document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});
+        document.getElementById('entryTab').classList.add('show','active');
+        document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
+        document.getElementById('entry-tab').classList.add('active');
+    });
 }
 function deleteBill(billId,year,month,daName){
     database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
         var billData=snapshot.val();if(!billData)return;
-        // ★ FIX: User cannot delete checked/approved bills
         if(currentUser.role==='user'&&(billData.status==='orange'||billData.status==='green')){alert("This bill is already checked/approved. Cannot delete.");return;}
         if(!confirm("Delete?"))return;
-        database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).remove().then(function(){alert("Deleted!");if(billData&&billData.iouId){var ciou=iouListGlobal[billData.iouId];if(ciou&&ciou._year)database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+billData.iouId).update({status:'active'});}reloadAllData();}).catch(function(e){alert(e.message);});
+        database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).remove().then(function(){
+            alert("Deleted!");
+            if(billData&&billData.iouId){var ciou=iouListGlobal[billData.iouId];if(ciou&&ciou._year)database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+billData.iouId).update({status:'active'});}
+            loadBills();
+        }).catch(function(e){alert(e.message);});
     });
 }
 function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
 
-// ========== ★ FIX: BILL HISTORY — User sees only submit amount, NO approved amount/status ==========
+// ========== ★★★ FIXED: BILL HISTORY ★★★ ==========
 function resetHistoryFilter(){document.getElementById('filter_history_da').value='';loadBills();}
 function resetApprovedFilter(){document.getElementById('filter_approved_da').value='';loadBills();}
+
+function resolveDAFilterName(selectId){
+    var val=document.getElementById(selectId).value;
+    if(!val)return'';
+    return daListCache[val]||val;
+}
+
 function loadBills(){
     var tableHead=document.getElementById('bill_table_head'),tableBody=document.getElementById('bill_table_body'),tableFoot=document.getElementById('bill_table_foot');
     var appBody=document.getElementById('approved_bill_table_body'),appFoot=document.getElementById('approved_bill_table_foot');
-    var historyDA=document.getElementById('filter_history_da')?document.getElementById('filter_history_da').value:'';
-    var approvedDA=document.getElementById('filter_approved_da')?document.getElementById('filter_approved_da').value:'';
-    tableBody.innerHTML='<tr><td colspan="12" class="text-center">Loading...</td></tr>';
-    appBody.innerHTML='<tr><td colspan="11" class="text-center">Loading...</td></tr>';
+    var historyDAName=resolveDAFilterName('filter_history_da');
+    var approvedDAName=resolveDAFilterName('filter_approved_da');
+
+    tableBody.innerHTML='<tr><td colspan="12" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
+    appBody.innerHTML='<tr><td colspan="11" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
+
+    // ★ User: 6 columns (Date, DA, Route, Amount, Status, Action)
     if(currentUser.role==='user'){
-        // ★ User table: Date, DA, Route, Amount, Status (NO approved amount column)
-        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Depot</th><th>Route</th><th class="text-end">Amount</th><th>Status</th></tr>';
+        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">Amount</th><th>Status</th><th>Action</th></tr>';
     }else if(currentUser.role==='admin'){
         tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th>Status</th><th>Action</th></tr>';
     }else{
         tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr>';
     }
+
     database.ref('Bills').once('value',function(snap){
         tableBody.innerHTML='';appBody.innerHTML='';
-        var hTotals={iou:0,sales:0,userBill:0,payable:0};var aTotals={iou:0,sales:0,userBill:0,payable:0};
-        var allBills=collectBills(snap,null,null);var approvedArr=[];
+        var hTotals={iou:0,sales:0,userBill:0,payable:0};
+        var aTotals={iou:0,sales:0,userBill:0,payable:0};
+        var allBills=collectBills(snap,null,null);
+        var approvedArr=[];
+        var userBillCount=0;
+
         if(allBills.length===0){
-            var cs=currentUser.role==='user'?'6':'12';
-            tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
-            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger">No Bills</td></tr>';
+            var cs=currentUser.role==='user'?'6':'9';
+            tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             tableFoot.innerHTML='';appFoot.innerHTML='';return;
         }
+
         allBills.forEach(function(item){
             var b=item.data,billId=item.id,y=item.year,m=item.month,dn=item.daName;
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
             var sales=b.invoiceVal||0,iou=b.iouAmount||0;
             if(!iou&&b.iouId&&iouListGlobal[b.iouId])iou=iouListGlobal[b.iouId].taka||0;
-            var deduction=b.deduction||0,originalAmount=b.originalAmount||(b.totalAmount+deduction),approvedAmount=b.totalAmount||0;
+            var deduction=b.deduction||0;
+            var originalAmount=b.originalAmount||(b.totalAmount+deduction);
+            var approvedAmount=b.totalAmount||0;
             var userBillPer=sales>0?((originalAmount/sales)*100).toFixed(1):'0';
             var payPer=sales>0?((approvedAmount/sales)*100).toFixed(1):'0';
 
+            // ========== ★★★ USER ROLE: Show red + orange, Hide green ★★★ ==========
             if(currentUser.role==='user'){
-                // ★ USER HISTORY: Only show user's own bills
                 if(b.daName!==currentUser.name)return;
+                if(b.status==='draft')return;
+                // ★ Approved (green) bills DO NOT show
+                if(b.status==='green')return;
+
+                userBillCount++;
                 var tr=document.createElement('tr');
-                if(b.status==='draft')tr.classList.add('status-draft');
-                else if(b.status==='red')tr.classList.add('status-red');
-                else if(b.status==='orange')tr.classList.add('status-orange');
-                else tr.classList.add('status-green');
 
-                // ★ FIX: Show ONLY submit amount (originalAmount), NOT approved amount
-                // ★ FIX: Status shows icon only, NO "APPROVED" text
-                var statusIcon='';
-                if(b.status==='red')statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
-                else if(b.status==='orange')statusIcon='<span class="badge bg-info text-white"><i class="bi bi-pencil-square me-1"></i>Checked</span>';
-                else if(b.status==='green')statusIcon='<span class="text-success fw-bold"><i class="bi bi-check-circle-fill"></i></span>';
-                else statusIcon='<span class="badge bg-secondary">Draft</span>';
-
-                // ★ FIX: Edit/Delete ONLY for red/draft, NOT for orange/green
-                var userAction='';
-                if(b.status==='red'||b.status==='draft'){
-                    userAction='<button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                if(b.status==='red'){
+                    // ★ Pending: Show with Edit + Delete + Print
+                    tr.classList.add('status-red');
+                    var statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> '+
+                        '<button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> '+
+                        '<button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+                }else if(b.status==='orange'){
+                    // ★ Checked: Show with Print only (NO Edit/Delete)
+                    tr.classList.add('status-orange');
+                    var statusIcon='<span class="badge bg-info text-dark"><i class="bi bi-check2-square me-1"></i>Checked</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
                 }
-
-                tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.depot)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+' '+userAction+'</td>';
                 tableBody.appendChild(tr);
+            }
 
-            }else if(currentUser.role==='admin'){
-                if(historyDA&&b.daName!==historyDA)return;
+            // ========== ADMIN (DIC) ROLE ==========
+            else if(currentUser.role==='admin'){
+                if(historyDAName&&b.daName!==historyDAName)return;
                 if(b.status==='red'){
                     hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=originalAmount;
                     var trP=document.createElement('tr');trP.classList.add('status-red');
@@ -1085,46 +1037,73 @@ function loadBills(){
                     trP.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td><b class="text-warning">PENDING</b></td><td class="text-nowrap">'+act+'</td>';
                     tableBody.appendChild(trP);
                 }
-                if(b.status==='orange'||b.status==='green')approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
-            }else{
-                if(historyDA&&b.daName!==historyDA)return;
+                if(b.status==='orange'||b.status==='green'){
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                }
+            }
+
+            // ========== SUPERADMIN (RSM) ROLE ==========
+            else{
+                if(historyDAName&&b.daName!==historyDAName)return;
                 if(b.status==='orange'){
                     hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=approvedAmount;
                     var trS=document.createElement('tr');trS.classList.add('status-orange');
-                    // ★ FIX: Approved bills — NO Edit/Delete for Superadmin either
-                    var sAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-eye"></i></button> <button class="btn btn-success btn-sm" onclick="approveBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check-lg"></i></button>';
+                    var sAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-eye"></i></button> <button class="btn btn-success btn-sm" onclick="approveBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check-lg"></i> Approve</button>';
                     var sPay=deduction>0?'<span class="cut-amount">'+originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+approvedAmount.toFixed(2)+'</span>':approvedAmount.toFixed(2);
                     trS.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td class="text-end fw-bold">'+sPay+'</td><td class="text-end">'+payPer+'%</td><td><b class="text-warning">CHECKED</b></td><td class="text-nowrap">'+sAct+'</td>';
                     tableBody.appendChild(trS);
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
-                if(b.status==='green')approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                if(b.status==='green'){
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                }
             }
         });
+
+        // ★ User empty message
+        if(currentUser.role==='user'&&userBillCount===0){
+            tableBody.innerHTML='<tr><td colspan="6" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br>No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+        }
+
+        // BUILD APPROVED HISTORY TABLE (Admin/Superadmin only)
         approvedArr.sort(function(a,b){return new Date(getBillDate(a.b)||0)-new Date(getBillDate(b.b)||0);});
-        approvedArr.forEach(function(item){
-            var b=item.b;if(approvedDA&&b.daName!==approvedDA)return;
-            aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
-            var trA=document.createElement('tr');if(item.b.status==='orange')trA.classList.add('status-orange');else trA.classList.add('status-green');
-            var aSt=item.b.status==='orange'?"CHECKED":"APPROVED";
-            var aPay=item.deduction>0?'<span class="cut-amount">'+item.originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+item.approvedAmount.toFixed(2)+'</span>':item.approvedAmount.toFixed(2);
-            // ★ FIX: Approved bills — ONLY Print, NO Edit/Delete
-            var aAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+item.billId+'\',\''+item.y+'\',\''+item.m+'\',\''+item.dn+'\')"><i class="bi bi-printer"></i></button>';
-            trA.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+item.iou.toFixed(2)+'</td><td class="text-end">'+item.sales.toFixed(2)+'</td><td class="text-end">'+item.originalAmount.toFixed(2)+'</td><td class="text-end">'+item.userBillPer+'%</td><td class="text-end fw-bold">'+aPay+'</td><td class="text-end">'+item.payPer+'%</td><td><b>'+aSt+'</b></td><td>'+aAct+'</td>';
-            appBody.appendChild(trA);
-        });
-        // User table footer
+        var approvedVisibleCount=0;
+        if(currentUser.role!=='user'){
+            approvedArr.forEach(function(item){
+                var b=item.b;
+                if(approvedDAName&&b.daName!==approvedDAName)return;
+                approvedVisibleCount++;
+                aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
+                var trA=document.createElement('tr');
+                if(item.b.status==='orange')trA.classList.add('status-orange');
+                else trA.classList.add('status-green');
+                var aSt=item.b.status==='orange'?'<span class="badge bg-warning text-dark">CHECKED</span>':'<span class="badge bg-success">APPROVED</span>';
+                var aPay=item.deduction>0?'<span class="cut-amount">'+item.originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+item.approvedAmount.toFixed(2)+'</span>':item.approvedAmount.toFixed(2);
+                var aAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+item.billId+'\',\''+item.y+'\',\''+item.m+'\',\''+item.dn+'\')"><i class="bi bi-printer"></i></button>';
+                trA.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+item.iou.toFixed(2)+'</td><td class="text-end">'+item.sales.toFixed(2)+'</td><td class="text-end">'+item.originalAmount.toFixed(2)+'</td><td class="text-end">'+item.userBillPer+'%</td><td class="text-end fw-bold">'+aPay+'</td><td class="text-end">'+item.payPer+'%</td><td>'+aSt+'</td><td>'+aAct+'</td>';
+                appBody.appendChild(trA);
+            });
+            if(approvedVisibleCount===0){
+                appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+            }
+        }
+
+        // TABLE FOOTERS
         if(currentUser.role==='user'){
             var uTotal=0;
             document.querySelectorAll('#bill_table_body tr').forEach(function(r){
-                var val=parseFloat(r.querySelector('td:nth-child(5)')?r.querySelector('td:nth-child(5)').innerText.replace(/,/g,''):0)||0;
-                uTotal+=val;
+                var td4=r.querySelector('td:nth-child(4)');
+                if(td4)uTotal+=parseFloat(td4.innerText.replace(/,/g,''))||0;
             });
-            if(uTotal>0)tableFoot.innerHTML='<tr><td colspan="4" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td></td></tr>';
-            else tableFoot.innerHTML='';
+            tableFoot.innerHTML=uTotal>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td colspan="2"></td></tr>':'';
+        }else if(currentUser.role==='admin'){
+            tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
+        }else{
+            tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+hTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
         }
-        else if(currentUser.role==='admin')tableFoot.innerHTML='<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td colspan="3"></td></tr>';
-        else tableFoot.innerHTML='<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+hTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>';
-        if(currentUser.role==='admin'||currentUser.role==='superadmin')appFoot.innerHTML='<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+aTotals.iou.toFixed(2)+'</td><td class="text-end">'+aTotals.sales.toFixed(2)+'</td><td class="text-end">'+aTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+aTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>';
+        if(currentUser.role==='admin'||currentUser.role==='superadmin'){
+            appFoot.innerHTML=aTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+aTotals.iou.toFixed(2)+'</td><td class="text-end">'+aTotals.sales.toFixed(2)+'</td><td class="text-end">'+aTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+aTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
+        }
     });
 }
 
@@ -1348,6 +1327,19 @@ function saveNewUser(){
     newUserRef.set(userData,function(error){if(error)alert("Error creating user");
     else{alert("User Created!");document.getElementById('new_user_id').value='';document.getElementById('new_user_name').value='';document.getElementById('new_user_phone').value='';document.getElementById('new_user_username').value='';document.getElementById('new_user_pass').value='';document.getElementById('new_user_depot').value='Kushtia';document.getElementById('new_user_role').value='user';document.getElementById('new_user_photo').value='';document.getElementById('photo_preview').classList.add('hidden');userPhotoBase64=null;loadDAListForFilters();}});
 }
+
+// ========== Tab change listeners ==========
+document.addEventListener('DOMContentLoaded',function(){
+    var summaryTabEl=document.getElementById('summaryTab');
+    var iouTabEl=document.getElementById('iouTab');
+    var billTabEl=document.getElementById('billTab');
+    var approvedTabEl=document.getElementById('approvedHistoryTab');
+
+    summaryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)generateSummary();});
+    iouTabEl.addEventListener('shown.bs.tab',function(){if(currentUser&&currentUser.role!=='user')loadAdminIOU();});
+    billTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
+    approvedTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
+});
 
 // ========== AUTO IMPORT LISTENERS ==========
 var userExpInput=document.getElementById('user_exp_excel_input');
