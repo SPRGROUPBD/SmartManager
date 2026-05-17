@@ -268,6 +268,15 @@
         .upload-chip{display:flex;align-items:center;gap:6px;padding:6px 14px;background:#f8fafc;border:1px solid var(--border);border-radius:20px;font-size:.82rem;color:var(--muted);font-weight:500}
         .upload-chip strong{color:var(--text)}
         .file-type-icon{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem;background:#f1f5f9;color:var(--muted);border:1px solid var(--border)}
+
+        /* NEW: Export button styles */
+        .btn-export{background:#10b981;color:#fff;border:none;padding:6px 14px;border-radius:8px;font-weight:600;cursor:pointer;transition:.2s;font-size:.85rem;display:inline-flex;align-items:center;gap:6px}
+        .btn-export:hover{background:#059669;transform:translateY(-1px);box-shadow:0 4px 12px rgba(16,185,129,.35)}
+        .btn-export svg{pointer-events:none}
+        .deposit-action-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+        .filter-dates-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+        .filter-dates-row input[type="date"]{width:155px}
+        @media(max-width:768px){.filter-dates-row input[type="date"]{width:130px}}
     </style>
 </head>
 <body>
@@ -516,10 +525,24 @@
             <div>
                 <div class="card">
                     <div class="card-header">Deposit History & Statement</div>
+                    <!-- UPDATED FILTER BAR: Month + Date Range + Actions -->
                     <div class="filter-bar">
                         <label>Month:</label><input type="month" id="depositFilterMonth">
-                        <button class="btn btn-secondary btn-sm" onclick="renderDeposits()">Filter</button>
-                        <button class="btn btn-primary btn-sm" onclick="window.generateBankStatement()">Generate Statement</button>
+                    </div>
+                    <div class="filter-dates-row" style="padding:0 16px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                        <label style="margin:0;white-space:nowrap">From:</label><input type="date" id="depositFilterFromDate">
+                        <label style="margin:0;white-space:nowrap">To:</label><input type="date" id="depositFilterToDate">
+                        <button class="btn btn-secondary btn-sm" onclick="window.clearDepositFilter()">Clear</button>
+                    </div>
+                    <div class="deposit-action-bar" style="padding:0 16px 12px">
+                        <button class="btn btn-primary btn-sm" onclick="window.generateBankStatement()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                            Print Statement
+                        </button>
+                        <button class="btn-export btn-sm" onclick="window.exportBankExcel()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Export Excel
+                        </button>
                     </div>
                     <div style="overflow-x:auto"><table><thead><tr><th>Month</th><th>Date</th><th>Bank</th><th>Territory</th><th>Amount</th><th>Actions</th></tr></thead><tbody id="depositTableBody"></tbody></table></div>
                     <div class="filtered-total" style="margin-top:12px"><span>Total Deposits:</span><span class="amount" id="depositTotalAmount">৳ 0.00</span></div>
@@ -804,9 +827,145 @@ window.editDeposit=id=>{const d=bankDeposits.find(x=>x.id===id);if(!d)return;$('
 function resetDepositForm(){$('depositForm').reset();$('depositId').value='';const m=new Date().toISOString().slice(0,7);$('depositMonth').value=m;$('depositDate').value=new Date().toISOString().slice(0,10);$('depositAccNo').value='';$('depositBranch').value='';$('depositFormTitle').textContent='Add Deposit';$('submitDepositBtn').textContent='Add Deposit';$('cancelDepositBtn').style.display='none'}
 window.resetDepositForm=resetDepositForm;
 
-function renderDeposits(){const fm=$('depositFilterMonth').value;let f=bankDeposits;if(fm)f=f.filter(d=>d.month===fm);const sorted=[...f].sort((a,b)=>(b.date||'').localeCompare(a.date||''));const tb=$('depositTableBody');tb.innerHTML='';let total=0;if(!sorted.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No deposits found</td></tr>';}else{sorted.forEach(d=>{total+=d.amount;const tr=document.createElement('tr');const dateStr=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';tr.innerHTML=`<td>${mn(d.month)}</td><td>${dateStr}</td><td style="font-weight:600">${d.bankName}</td><td>${d.territory||'-'}</td><td style="font-weight:700">${fmt(d.amount)}</td><td><button class="action-btn" onclick="window.editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="window.confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;tb.appendChild(tr)})}$('depositTotalAmount').textContent=fmt(total)}
+/* UPDATED: Day-wise Date Filter logic added */
+function renderDeposits(){
+    const fm=$('depositFilterMonth').value;
+    const fromDate=$('depositFilterFromDate').value;
+    const toDate=$('depositFilterToDate').value;
+    
+    let f=bankDeposits;
+    if(fm) f=f.filter(d=>d.month===fm);
+    if(fromDate) f=f.filter(d=>(d.date||'')>=fromDate);
+    if(toDate) f=f.filter(d=>(d.date||'')<=toDate);
+    
+    const sorted=[...f].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const tb=$('depositTableBody');tb.innerHTML='';
+    let total=0;
+    if(!sorted.length){
+        tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No deposits found</td></tr>';
+    }else{
+        sorted.forEach(d=>{
+            total+=d.amount;
+            const tr=document.createElement('tr');
+            const dateStr=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';
+            tr.innerHTML=`<td>${mn(d.month)}</td><td>${dateStr}</td><td style="font-weight:600">${d.bankName}</td><td>${d.territory||'-'}</td><td style="font-weight:700">${fmt(d.amount)}</td><td><button class="action-btn" onclick="window.editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="window.confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
+            tb.appendChild(tr)
+        })
+    }
+    $('depositTotalAmount').textContent=fmt(total)
+}
 
-window.generateBankStatement=()=>{const fm=$('depositFilterMonth').value;if(!fm){showToast('Please select a month to generate statement','error');return}const f=bankDeposits.filter(d=>d.month===fm).sort((a,b)=>(a.date||'').localeCompare(b.date||''));if(!f.length){showToast('No deposits found for this month','error');return}const[y,m]=fm.split('-');const date=new Date(y,m-1,1);const monthName=date.toLocaleString('default',{month:'long'});$('bankRptTitle').textContent=`Bank Deposit Statement-${monthName}-${y}`;const tb=$('bankRptTableBody');tb.innerHTML='';let total=0;f.forEach(d=>{total+=d.amount;const dateStr=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';const tr=document.createElement('tr');tr.innerHTML=`<td>${dateStr}</td><td>${d.bankName}</td><td>${d.accountNo}</td><td>${fmt(d.amount)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;tb.appendChild(tr)});$('bankRptTotal').textContent=fmt(total);$('bankReportPaper').style.display='block';$('printBtnContainerBank').style.display='block';$('bankReportPaper').scrollIntoView({behavior:'smooth',block:'start'})};
+/* NEW: Clear Date Filters */
+window.clearDepositFilter=()=>{
+    $('depositFilterMonth').value='';
+    $('depositFilterFromDate').value='';
+    $('depositFilterToDate').value='';
+    renderDeposits();
+};
+
+/* UPDATED: Generate Statement respects Day-wise Filters */
+window.generateBankStatement=()=>{
+    const fm=$('depositFilterMonth').value;
+    const fromDate=$('depositFilterFromDate').value;
+    const toDate=$('depositFilterToDate').value;
+    
+    let f=bankDeposits;
+    if(fm) f=f.filter(d=>d.month===fm);
+    if(fromDate) f=f.filter(d=>(d.date||'')>=fromDate);
+    if(toDate) f=f.filter(d=>(d.date||'')<=toDate);
+    
+    const sorted=[...f].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if(!sorted.length){showToast('No deposits found for the selected filters','error');return}
+    
+    let titleSuffix = '';
+    if(fromDate && toDate){
+        const fDate=new Date(fromDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+        const tDate=new Date(toDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'});
+        titleSuffix=`${fDate} to ${tDate}`;
+    } else if(fm){
+        const[y,m]=fm.split('-');
+        const date=new Date(y,m-1,1);
+        titleSuffix=`${date.toLocaleString('default',{month:'long'})}-${y}`;
+    } else {
+        titleSuffix = 'All Time';
+    }
+    
+    $('bankRptTitle').textContent=`Bank Deposit Statement-${titleSuffix}`;
+    const tb=$('bankRptTableBody');tb.innerHTML='';let total=0;
+    sorted.forEach(d=>{
+        total+=d.amount;
+        const dateStr=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td>${dateStr}</td><td>${d.bankName}</td><td>${d.accountNo}</td><td>${fmt(d.amount)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;
+        tb.appendChild(tr)
+    });
+    $('bankRptTotal').textContent=fmt(total);
+    $('bankReportPaper').style.display='block';
+    $('printBtnContainerBank').style.display='block';
+    $('bankReportPaper').scrollIntoView({behavior:'smooth',block:'start'})
+};
+
+/* NEW: Export Bank Deposit Excel */
+window.exportBankExcel=()=>{
+    const fm=$('depositFilterMonth').value;
+    const fromDate=$('depositFilterFromDate').value;
+    const toDate=$('depositFilterToDate').value;
+    
+    let f=bankDeposits;
+    if(fm) f=f.filter(d=>d.month===fm);
+    if(fromDate) f=f.filter(d=>(d.date||'')>=fromDate);
+    if(toDate) f=f.filter(d=>(d.date||'')<=toDate);
+    
+    const sorted=[...f].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if(!sorted.length){showToast('No deposits found to export','error');return}
+    
+    let titleSuffix = fm ? mn(fm) : (fromDate && toDate ? 'Custom_Range' : 'All_Time');
+    
+    // Excel HTML Format
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Bank Statement</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>`;
+    html += `<h2 style="text-align:center;font-family:Arial">Monico Pharma Ltd - Bank Deposit Statement (${titleSuffix})</h2>`;
+    html += `<table border="1" cellspacing="0" cellpadding="5" style="border-collapse:collapse;font-family:Arial;font-size:12pt;width:100%">`;
+    html += `<thead><tr style="background-color:#d9e1f2;font-weight:bold">
+        <th>DATE</th>
+        <th>NAME OF BANK</th>
+        <th>ACCOUNT NO</th>
+        <th>AMOUNT (TK.)</th>
+        <th>TERRITORY</th>
+    </tr></thead><tbody>`;
+    
+    let total = 0;
+    sorted.forEach(d => {
+        total += d.amount;
+        const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : '';
+        html += `<tr>
+            <td>${dateStr}</td>
+            <td>${d.bankName}</td>
+            <td style="mso-number-format:'\\@'">${d.accountNo}</td>
+            <td style="text-align:right">${parseFloat(d.amount).toFixed(2)}</td>
+            <td>${d.territory || ''}</td>
+        </tr>`;
+    });
+    
+    html += `<tr style="font-weight:bold;background-color:#e2efda">
+        <td colspan="3" style="text-align:right">TOTAL</td>
+        <td style="text-align:right">${total.toFixed(2)}</td>
+        <td></td>
+    </tr>`;
+    html += `</tbody></table></body></html>`;
+    
+    // Download Logic
+    const blob = new Blob([html], {type: "application/vnd.ms-excel"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Bank_Deposit_Statement_${titleSuffix.replace(/\s+/g, '_')}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Excel Exported Successfully!','success');
+};
 
 function showToast(msg,type=''){const t=$('toast');t.textContent=msg;t.className='show'+(type?' '+type:'');setTimeout(()=>t.className="",3500)}
 
@@ -844,7 +1003,22 @@ function closeImgPreview(e){if(e&&e.target!==e.currentTarget&&!e.target.closest(
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('imgPreviewModal').classList.remove('open');$('imgPreviewImg').src=''}});
 
 /* ===== INIT ===== */
-document.addEventListener('DOMContentLoaded',async()=>{await seedDefaults();const m=new Date().toISOString().slice(0,7);$('billMonth').value=m;$('reportMonth').value=m;$('topSheetMonth').value=m;$('depositMonth').value=m;$('depositDate').value=new Date().toISOString().slice(0,10);updateBillNoPreview();updateTopSheetBillNoPreview()});
+document.addEventListener('DOMContentLoaded',async()=>{
+    await seedDefaults();
+    const m=new Date().toISOString().slice(0,7);
+    $('billMonth').value=m;
+    $('reportMonth').value=m;
+    $('topSheetMonth').value=m;
+    $('depositMonth').value=m;
+    $('depositDate').value=new Date().toISOString().slice(0,10);
+    updateBillNoPreview();
+    updateTopSheetBillNoPreview();
+    
+    // Listeners for date filters
+    $('depositFilterMonth').addEventListener('change',renderDeposits);
+    $('depositFilterFromDate').addEventListener('change',renderDeposits);
+    $('depositFilterToDate').addEventListener('change',renderDeposits);
+});
  $('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();$('loginForm').dispatchEvent(new Event('submit'))}});
 </script>
 </body>
