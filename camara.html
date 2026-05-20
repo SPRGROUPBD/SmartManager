@@ -2,25 +2,24 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Soho Cam — Live Location Camera</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         :root {
-            --bg: #0a0a0a;
+            --bg: #000000;
             --fg: #f0ece4;
-            --muted: #7a7568;
-            --accent: #e8c547;
-            --accent2: #ff6b35;
-            --card: rgba(20, 19, 16, 0.85);
-            --border: rgba(232, 197, 71, 0.15);
-            --glass: rgba(10, 10, 10, 0.6);
-            --success: #4ade80;
-            --danger: #ef4444;
+            --muted: #8a8578;
+            --accent: #2ecc71;
+            --accent-dim: rgba(46, 204, 113, 0.15);
+            --accent-glow: rgba(46, 204, 113, 0.4);
+            --warm: #f39c12;
+            --card: rgba(15, 15, 12, 0.92);
+            --border: rgba(46, 204, 113, 0.2);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: 'Space Grotesk', sans-serif;
@@ -29,632 +28,436 @@
             overflow: hidden;
             height: 100dvh;
             width: 100vw;
-            position: relative;
+            position: fixed;
+            top: 0; left: 0;
         }
 
-        /* === ব্যাকগ্রাউন্ড অ্যানিমেশন === */
-        .bg-pulse {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
+        /* === লোডিং স্ক্রিন === */
+        .loading-screen {
+            position: fixed; inset: 0; z-index: 500;
+            background: var(--bg);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            text-align: center; padding: 40px 28px;
+            transition: opacity 0.6s ease, visibility 0.6s ease;
         }
-        .bg-pulse::before {
+        .loading-screen.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+
+        .load-spinner {
+            width: 60px; height: 60px;
+            border-radius: 50%;
+            border: 3px solid rgba(46,204,113,0.15);
+            border-top-color: var(--accent);
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 24px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .load-text {
+            font-size: 14px; color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .load-sub {
+            font-size: 11px; color: rgba(46,204,113,0.5);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .load-dots::after {
             content: '';
-            position: absolute;
-            top: -30%;
-            left: -30%;
-            width: 160%;
-            height: 160%;
-            background: radial-gradient(ellipse at 30% 20%, rgba(232,197,71,0.06) 0%, transparent 50%),
-                        radial-gradient(ellipse at 70% 80%, rgba(255,107,53,0.04) 0%, transparent 50%);
-            animation: bgDrift 12s ease-in-out infinite alternate;
+            animation: dots 1.5s steps(4,end) infinite;
         }
-        @keyframes bgDrift {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            100% { transform: translate(-3%, 2%) rotate(2deg); }
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
         }
 
         /* === ক্যামেরা ভিউ === */
-        .camera-container {
-            position: relative;
-            width: 100%;
-            height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            z-index: 1;
+        .cam-view {
+            position: fixed; inset: 0;
+            display: flex; flex-direction: column;
+            background: #000;
         }
+        .cam-video-wrap {
+            flex: 1; position: relative; overflow: hidden;
+        }
+        #camVideo {
+            width: 100%; height: 100%;
+            object-fit: cover;
+        }
+        #capCanvas { display: none; }
+
+        /* গ্রিন ভিউফাইন্ডার ফ্রেম */
+        .viewfinder {
+            position: absolute; inset: 0; pointer-events: none; z-index: 10;
+        }
+        .vf-corner {
+            position: absolute; width: 30px; height: 30px;
+        }
+        .vf-corner::before, .vf-corner::after {
+            content: ''; position: absolute;
+            background: var(--accent);
+        }
+        .vf-tl { top: 11%; left: 7%; }
+        .vf-tl::before { top: 0; left: 0; width: 30px; height: 2.5px; }
+        .vf-tl::after { top: 0; left: 0; width: 2.5px; height: 30px; }
+        .vf-tr { top: 11%; right: 7%; }
+        .vf-tr::before { top: 0; right: 0; width: 30px; height: 2.5px; }
+        .vf-tr::after { top: 0; right: 0; width: 2.5px; height: 30px; }
+        .vf-bl { bottom: 33%; left: 7%; }
+        .vf-bl::before { bottom: 0; left: 0; width: 30px; height: 2.5px; }
+        .vf-bl::after { bottom: 0; left: 0; width: 2.5px; height: 30px; }
+        .vf-br { bottom: 33%; right: 7%; }
+        .vf-br::before { bottom: 0; right: 0; width: 30px; height: 2.5px; }
+        .vf-br::after { bottom: 0; right: 0; width: 2.5px; height: 30px; }
+
+        /* ক্রসহেয়ার */
+        .crosshair {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 10;
+        }
+        .crosshair::before, .crosshair::after {
+            content: ''; position: absolute; background: rgba(46,204,113,0.3);
+        }
+        .crosshair::before { width: 22px; height: 1px; top: 0; left: -11px; }
+        .crosshair::after { width: 1px; height: 22px; left: 0; top: -11px; }
+
+        /* গ্রিড লাইন */
+        .grid-lines {
+            position: absolute; inset: 0; pointer-events: none; z-index: 9;
+        }
+        .grid-lines .gline {
+            position: absolute; background: rgba(46,204,113,0.06);
+        }
+        .grid-lines .gh { left: 0; right: 0; height: 1px; }
+        .grid-lines .gv { top: 0; bottom: 0; width: 1px; }
+        .grid-lines .gh:nth-child(1) { top: 33.33%; }
+        .grid-lines .gh:nth-child(2) { top: 66.66%; }
+        .grid-lines .gv:nth-child(3) { left: 33.33%; }
+        .grid-lines .gv:nth-child(4) { left: 66.66%; }
 
         /* টপ বার */
-        .top-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 20;
-            padding: 12px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+        .cam-top {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 20;
+            padding: 10px 14px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 70%, transparent 100%);
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .top-bar-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .logo-text {
-            font-size: 18px;
-            font-weight: 700;
-            letter-spacing: 2px;
+        .cam-top-left { display: flex; align-items: center; gap: 8px; }
+        .brand {
+            font-size: 15px; font-weight: 700; letter-spacing: 3px;
             color: var(--accent);
-            text-transform: uppercase;
         }
-        .logo-dot {
-            display: inline-block;
-            width: 6px;
-            height: 6px;
+        .rec-indicator {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 9px; font-weight: 600; color: #e74c3c;
+            letter-spacing: 1px;
+        }
+        .rec-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: #e74c3c;
+            animation: recBlink 1s ease-in-out infinite;
+        }
+        @keyframes recBlink { 0%,100%{opacity:1;} 50%{opacity:0.1;} }
+
+        .cam-top-right { display: flex; align-items: center; gap: 6px; }
+        .top-chip {
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 20px; padding: 4px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; color: var(--muted);
+            display: flex; align-items: center; gap: 5px;
+            transition: all 0.4s;
+        }
+        .top-chip.gps-ok { border-color: var(--accent-dim); color: var(--accent); }
+        .top-chip .chip-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: #e74c3c; transition: all 0.4s;
+        }
+        .top-chip.gps-ok .chip-dot {
             background: var(--accent);
-            border-radius: 50%;
-            animation: blink 1.5s ease-in-out infinite;
-        }
-        @keyframes blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.2; }
+            box-shadow: 0 0 8px var(--accent-glow);
+            animation: recBlink 1.2s ease-in-out infinite;
         }
 
-        .top-bar-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        /* ফ্ল্যাশ */
+        .flash-fx {
+            position: absolute; inset: 0;
+            background: #fff; z-index: 30;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.05s;
         }
-        .gps-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 5px 12px;
-            font-size: 11px;
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--muted);
-            transition: all 0.4s ease;
+        .flash-fx.pop { opacity: 0.9; }
+
+        /* ফোকাস */
+        .focus-fx {
+            position: absolute; width: 56px; height: 56px;
+            border: 1.5px solid var(--accent); border-radius: 2px;
+            pointer-events: none; z-index: 12;
+            opacity: 0; transform: scale(1.8);
+            transition: opacity 0.25s, transform 0.25s;
         }
-        .gps-badge.active {
-            border-color: var(--success);
-            color: var(--success);
+        .focus-fx.on { opacity: 1; transform: scale(1); }
+
+        /* সুইচ FX */
+        .switch-fx {
+            position: absolute; inset: 0; z-index: 25;
+            background: #000; display: flex;
+            align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.12s;
         }
-        .gps-badge .gps-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--danger);
-            transition: background 0.4s ease;
-        }
-        .gps-badge.active .gps-dot {
-            background: var(--success);
-            box-shadow: 0 0 8px var(--success);
-            animation: blink 1s ease-in-out infinite;
+        .switch-fx.on { opacity: 1; }
+        .switch-fx i { font-size: 22px; color: var(--accent); animation: spin 0.4s linear; }
+
+        /* === বটম ইনফো প্যানেল === */
+        .info-panel {
+            position: absolute; bottom: 0; left: 0; right: 0; z-index: 20;
+            background: linear-gradient(to top, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.75) 55%, rgba(0,0,0,0.2) 85%, transparent 100%);
+            padding: 44px 14px 14px;
         }
 
-        .timestamp-badge {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            color: var(--muted);
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 20px;
-            padding: 5px 12px;
+        .loc-row {
+            display: flex; align-items: flex-start; gap: 9px;
+            margin-bottom: 5px;
         }
-
-        /* ক্যামেরা ভিডিও */
-        .video-wrapper {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            background: #111;
-        }
-        #cameraVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        #captureCanvas {
-            display: none;
-        }
-
-        /* ক্যামেরা গ্রিড ওভারলে */
-        .grid-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 5;
-        }
-        .grid-overlay .h-line,
-        .grid-overlay .v-line {
-            position: absolute;
-            background: rgba(255,255,255,0.08);
-        }
-        .grid-overlay .h-line {
-            left: 0; right: 0; height: 1px;
-        }
-        .grid-overlay .v-line {
-            top: 0; bottom: 0; width: 1px;
-        }
-        .grid-overlay .h-line:nth-child(1) { top: 33.33%; }
-        .grid-overlay .h-line:nth-child(2) { top: 66.66%; }
-        .grid-overlay .v-line:nth-child(3) { left: 33.33%; }
-        .grid-overlay .v-line:nth-child(4) { left: 66.66%; }
-
-        /* ফোকাস রিং */
-        .focus-ring {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            border: 1.5px solid var(--accent);
-            border-radius: 2px;
-            pointer-events: none;
-            z-index: 6;
-            opacity: 0;
-            transform: scale(1.5);
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        .focus-ring.show {
-            opacity: 1;
-            transform: scale(1);
-        }
-
-        /* ফ্ল্যাশ অ্যানিমেশন */
-        .flash-overlay {
-            position: absolute;
-            inset: 0;
-            background: white;
-            z-index: 30;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.08s ease;
-        }
-        .flash-overlay.flash {
-            opacity: 0.85;
-        }
-
-        /* === লোকেশন ফুটার === */
-        .location-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            z-index: 15;
-            background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 60%, transparent 100%);
-            padding: 40px 16px 16px;
-        }
-        .location-info {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 14px;
-        }
-        .location-icon-wrap {
-            width: 36px;
-            height: 36px;
-            background: rgba(232,197,71,0.15);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .loc-pin {
+            width: 32px; height: 32px; border-radius: 9px;
+            background: var(--accent-dim); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
         }
-        .location-icon-wrap i {
-            color: var(--accent);
-            font-size: 14px;
+        .loc-pin i { font-size: 13px; color: var(--accent); }
+        .loc-text { flex: 1; min-width: 0; }
+        .loc-name {
+            font-size: 14px; font-weight: 600; color: var(--fg);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
-        .location-details {
-            flex: 1;
-            min-width: 0;
+        .loc-addr {
+            font-size: 9.5px; color: var(--muted);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-top: 1px;
         }
-        .location-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--fg);
-            margin-bottom: 2px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .location-coords {
+        .loc-coords {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            color: var(--accent);
-            letter-spacing: 0.5px;
-        }
-        .location-accuracy {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: var(--muted);
-            margin-top: 2px;
+            font-size: 9.5px; color: var(--accent); margin-top: 2px;
+            letter-spacing: 0.3px;
         }
 
-        /* ক্যাপচার কন্ট্রোল */
-        .capture-controls {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 24px;
+        /* মেটা সারি */
+        .meta-row {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 8px; flex-wrap: wrap;
         }
-        .ctrl-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 1.5px solid rgba(255,255,255,0.2);
-            background: rgba(255,255,255,0.08);
+        .meta-tag {
+            display: flex; align-items: center; gap: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; color: var(--muted);
+        }
+        .meta-tag i { font-size: 10px; }
+        .meta-tag.temp-tag { color: var(--warm); }
+
+        /* মিনি ম্যাপ */
+        .mini-map {
+            width: 100%; height: 52px; border-radius: 10px;
+            background: #111; border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 10px; overflow: hidden; position: relative;
+        }
+        .mini-map iframe {
+            width: 100%; height: 100%; border: none;
+            filter: grayscale(0.4) brightness(0.65) contrast(1.1);
+        }
+        .mini-map-pin {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none;
+        }
+        .mini-map-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--accent); border: 2px solid #fff;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        /* শাটার কন্ট্রোল */
+        .shutter-row {
+            display: flex; align-items: center; justify-content: center; gap: 30px;
+        }
+        .side-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.06);
             backdrop-filter: blur(10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.25s ease;
-            color: var(--fg);
-            font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--fg); font-size: 16px;
+            transition: all 0.2s; position: relative;
         }
-        .ctrl-btn:hover {
-            border-color: var(--accent);
-            background: rgba(232,197,71,0.12);
-            color: var(--accent);
-            transform: scale(1.08);
+        .side-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .side-btn:active { transform: scale(0.9); }
+        .gal-badge {
+            position: absolute; top: -4px; right: -4px;
+            min-width: 17px; height: 17px; border-radius: 9px;
+            background: var(--accent); color: #000;
+            font-size: 9px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0 4px;
+            opacity: 0; transform: scale(0);
+            transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
         }
-        .ctrl-btn:active { transform: scale(0.95); }
+        .gal-badge.vis { opacity: 1; transform: scale(1); }
 
-        .shutter-btn {
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            border: 3px solid var(--accent);
-            background: transparent;
-            cursor: pointer;
-            position: relative;
-            transition: all 0.2s ease;
+        .shutter {
+            width: 68px; height: 68px; border-radius: 50%;
+            border: 3px solid var(--accent); background: transparent;
+            cursor: pointer; position: relative;
+            transition: all 0.15s;
         }
-        .shutter-btn::after {
-            content: '';
-            position: absolute;
-            inset: 5px;
-            border-radius: 50%;
-            background: var(--accent);
-            transition: all 0.15s ease;
+        .shutter::after {
+            content: ''; position: absolute; inset: 5px;
+            border-radius: 50%; background: var(--accent);
+            transition: all 0.1s;
         }
-        .shutter-btn:hover { transform: scale(1.06); }
-        .shutter-btn:active {
-            transform: scale(0.94);
-        }
-        .shutter-btn:active::after {
-            background: var(--accent2);
-        }
-
-        .gallery-btn {
-            position: relative;
-        }
-        .gallery-count {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 18px;
-            height: 18px;
-            background: var(--accent2);
-            border-radius: 50%;
-            font-size: 10px;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            opacity: 0;
-            transform: scale(0);
-            transition: all 0.3s ease;
-        }
-        .gallery-count.show {
-            opacity: 1;
-            transform: scale(1);
-        }
+        .shutter:hover { transform: scale(1.06); }
+        .shutter:active { transform: scale(0.92); }
+        .shutter:active::after { background: #27ae60; }
 
         /* === প্রিভিউ মোডাল === */
-        .preview-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
+        .prev-modal {
+            position: fixed; inset: 0; z-index: 200;
             background: var(--bg);
-            display: none;
-            flex-direction: column;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            display: flex; flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.45s cubic-bezier(0.22,1,0.36,1);
         }
-        .preview-modal.open {
-            display: flex;
-            opacity: 1;
-        }
-        .preview-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
+        .prev-modal.open { transform: translateY(0); }
+        .prev-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        .preview-top h3 {
-            font-size: 15px;
-            font-weight: 600;
-        }
-        .preview-close {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(255,255,255,0.08);
-            color: var(--fg);
-            font-size: 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .prev-head h3 { font-size: 14px; font-weight: 600; }
+        .close-btn {
+            width: 34px; height: 34px; border-radius: 50%;
+            border: none; background: rgba(255,255,255,0.08);
+            color: var(--fg); font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
             transition: all 0.2s;
         }
-        .preview-close:hover {
-            background: rgba(255,255,255,0.15);
+        .close-btn:hover { background: rgba(255,255,255,0.15); }
+        .prev-body {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            padding: 12px; overflow: hidden;
         }
-        .preview-image-wrap {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 16px;
-            overflow: hidden;
+        .prev-body img {
+            max-width: 100%; max-height: 100%;
+            border-radius: 8px; object-fit: contain;
         }
-        .preview-image-wrap img {
-            max-width: 100%;
-            max-height: 100%;
-            border-radius: 8px;
-            object-fit: contain;
-        }
-        .preview-footer {
-            padding: 16px;
+        .prev-foot {
+            padding: 14px 16px;
             border-top: 1px solid rgba(255,255,255,0.06);
         }
-        .preview-location {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-            padding: 10px 14px;
-            background: rgba(232,197,71,0.06);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-        }
-        .preview-location i {
-            color: var(--accent);
-            font-size: 16px;
-        }
-        .preview-location-info {
-            flex: 1;
-        }
-        .preview-location-name {
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .preview-location-coords {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: var(--accent);
-            margin-top: 2px;
-        }
-        .preview-location-time {
-            font-size: 10px;
-            color: var(--muted);
-            margin-top: 2px;
-        }
-        .preview-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .preview-action-btn {
-            flex: 1;
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        .btn-download {
-            background: var(--accent);
-            color: var(--bg);
-        }
-        .btn-download:hover { filter: brightness(1.1); transform: translateY(-1px); }
-        .btn-share {
-            background: rgba(255,255,255,0.08);
-            color: var(--fg);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .btn-share:hover { background: rgba(255,255,255,0.14); }
-
-        /* === গ্যালারি মোডাল === */
-        .gallery-modal {
-            position: fixed;
-            inset: 0;
-            z-index: 90;
-            background: var(--bg);
-            display: none;
-            flex-direction: column;
-        }
-        .gallery-modal.open {
-            display: flex;
-        }
-        .gallery-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 16px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .gallery-top h3 {
-            font-size: 15px;
-            font-weight: 600;
-        }
-        .gallery-grid {
-            flex: 1;
-            overflow-y: auto;
-            padding: 12px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-        }
-        .gallery-item {
-            aspect-ratio: 1;
-            border-radius: 6px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-        }
-        .gallery-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.2s;
-        }
-        .gallery-item:hover img { transform: scale(1.05); }
-        .gallery-item .loc-tag {
-            position: absolute;
-            bottom: 4px;
-            left: 4px;
-            background: rgba(0,0,0,0.65);
-            backdrop-filter: blur(4px);
-            border-radius: 4px;
-            padding: 2px 5px;
-            font-size: 8px;
-            color: var(--accent);
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-
-        /* === পারমিশন স্ক্রিন === */
-        .permission-screen {
-            position: fixed;
-            inset: 0;
-            z-index: 200;
-            background: var(--bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 40px 30px;
-        }
-        .permission-screen.hidden { display: none; }
-        .perm-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 24px;
-            background: rgba(232,197,71,0.1);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 24px;
-        }
-        .perm-icon i {
-            font-size: 32px;
-            color: var(--accent);
-        }
-        .perm-title {
-            font-size: 22px;
-            font-weight: 700;
+        .prev-loc-card {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 12px;
+            background: var(--accent-dim); border: 1px solid var(--border);
             margin-bottom: 10px;
         }
-        .perm-desc {
-            font-size: 14px;
-            color: var(--muted);
-            line-height: 1.6;
-            margin-bottom: 30px;
-            max-width: 320px;
-        }
-        .perm-btn {
-            padding: 14px 36px;
-            border-radius: 14px;
-            border: none;
-            background: var(--accent);
-            color: var(--bg);
+        .prev-loc-card i { color: var(--accent); font-size: 16px; }
+        .prev-loc-info { flex: 1; }
+        .prev-loc-name { font-size: 12px; font-weight: 600; }
+        .prev-loc-coords { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--accent); margin-top: 1px; }
+        .prev-loc-time { font-size: 9px; color: var(--muted); margin-top: 1px; }
+        .prev-actions { display: flex; gap: 8px; }
+        .prev-act {
+            flex: 1; padding: 13px; border-radius: 12px; border: none;
             font-family: 'Space Grotesk', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
+            font-size: 12px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
             transition: all 0.2s;
         }
-        .perm-btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
-        .perm-btn:active { transform: scale(0.97); }
+        .prev-act.dl { background: var(--accent); color: #000; }
+        .prev-act.dl:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .prev-act.sh { background: rgba(255,255,255,0.08); color: var(--fg); border: 1px solid rgba(255,255,255,0.1); }
+        .prev-act.sh:hover { background: rgba(255,255,255,0.14); }
+
+        /* === গ্যালারি মোডাল === */
+        .gal-modal {
+            position: fixed; inset: 0; z-index: 180;
+            background: var(--bg);
+            display: flex; flex-direction: column;
+            transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.22,1,0.36,1);
+        }
+        .gal-modal.open { transform: translateX(0); }
+        .gal-head {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .gal-head h3 { font-size: 14px; font-weight: 600; }
+        .gal-grid {
+            flex: 1; overflow-y: auto; padding: 8px;
+            display: grid; grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        .gal-item {
+            aspect-ratio: 1; border-radius: 4px; overflow: hidden;
+            cursor: pointer; position: relative;
+        }
+        .gal-item img {
+            width: 100%; height: 100%; object-fit: cover;
+            transition: transform 0.2s;
+        }
+        .gal-item:active img { transform: scale(1.06); }
+        .gal-item .gal-loc {
+            position: absolute; bottom: 3px; left: 3px;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+            border-radius: 3px; padding: 1px 4px;
+            font-size: 7px; color: var(--accent);
+            display: flex; align-items: center; gap: 2px;
+        }
+        .gal-empty {
+            grid-column: 1/-1; text-align: center;
+            color: var(--muted); padding: 60px 0; font-size: 13px;
+        }
 
         /* === টোস্ট === */
-        .toast {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-80px);
-            z-index: 300;
-            background: var(--card);
-            backdrop-filter: blur(20px);
+        .toast-el {
+            position: fixed; top: 16px; left: 50%;
+            transform: translateX(-50%) translateY(-70px);
+            z-index: 400; background: var(--card);
+            backdrop-filter: blur(16px);
             border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 12px 20px;
-            font-size: 13px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 14px; padding: 10px 18px;
+            font-size: 12px; font-weight: 500;
+            display: flex; align-items: center; gap: 7px;
+            transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
             white-space: nowrap;
         }
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
-        .toast i { color: var(--accent); }
+        .toast-el.show { transform: translateX(-50%) translateY(0); }
+        .toast-el i { color: var(--accent); }
 
-        /* === ক্যামেরা সুইচ অ্যানিমেশন === */
-        .switching-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 25;
-            background: var(--bg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.2s;
+        /* === ক্যাপচার কাউন্টার অ্যানিমেশন === */
+        .capture-flash-text {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 31; pointer-events: none;
+            font-size: 20px; font-weight: 700;
+            color: var(--accent); opacity: 0;
+            text-shadow: 0 0 20px var(--accent-glow);
         }
-        .switching-overlay.active {
-            opacity: 1;
+        .capture-flash-text.pop {
+            animation: capText 0.6s ease-out forwards;
         }
-        .switching-overlay i {
-            font-size: 28px;
-            color: var(--accent);
-            animation: spinIcon 0.5s linear;
-        }
-        @keyframes spinIcon {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        @keyframes capText {
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
         }
 
-        /* স্ক্রলবার */
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--muted); border-radius: 4px; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
 
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after {
@@ -666,479 +469,508 @@
 </head>
 <body>
 
-    <div class="bg-pulse"></div>
+<!-- লোডিং স্ক্রিন (অটো শুরু হওয়ার সময় দেখাবে) -->
+<div class="loading-screen" id="loadScreen">
+    <div class="load-spinner"></div>
+    <div class="load-text">ক্যামেরা শুরু হচ্ছে<span class="load-dots"></span></div>
+    <div class="load-sub" id="loadStatus">ক্যামেরা ও লোকেশন প্রস্তুত হচ্ছে</div>
+</div>
 
-    <!-- পারমিশন স্ক্রিন -->
-    <div class="permission-screen" id="permScreen">
-        <div class="perm-icon">
-            <i class="fas fa-camera"></i>
+<!-- ক্যামেরা ভিউ -->
+<div class="cam-view" id="camView">
+    <div class="cam-video-wrap" id="vidWrap">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <canvas id="capCanvas"></canvas>
+
+        <!-- ভিউফাইন্ডার -->
+        <div class="viewfinder">
+            <div class="vf-corner vf-tl"></div>
+            <div class="vf-corner vf-tr"></div>
+            <div class="vf-corner vf-bl"></div>
+            <div class="vf-corner vf-br"></div>
         </div>
-        <div class="perm-title">Soho Cam</div>
-        <p class="perm-desc">
-            ক্যামেরা ও লোকেশন পারমিশন দিন ছবি তোলার জন্য। আপনার লাইভ লোকেশন প্রতিটি ছবিতে স্ট্যাম্প হবে।
-        </p>
-        <button class="perm-btn" id="startBtn" aria-label="ক্যামেরা শুরু করুন">
-            <i class="fas fa-power-off"></i>&nbsp; ক্যামেরা চালু করুন
-        </button>
-    </div>
+        <div class="crosshair"></div>
+        <div class="grid-lines">
+            <div class="gline gh"></div>
+            <div class="gline gh"></div>
+            <div class="gline gv"></div>
+            <div class="gline gv"></div>
+        </div>
 
-    <!-- ক্যামেরা কন্টেইনার -->
-    <div class="camera-container" id="cameraContainer">
         <!-- টপ বার -->
-        <div class="top-bar">
-            <div class="top-bar-left">
-                <span class="logo-text">SOHO<span class="logo-dot"></span></span>
+        <div class="cam-top">
+            <div class="cam-top-left">
+                <span class="brand">SOHO</span>
+                <div class="rec-indicator"><span class="rec-dot"></span>REC</div>
             </div>
-            <div class="top-bar-right">
-                <span class="timestamp-badge" id="liveTime">--:--:--</span>
-                <div class="gps-badge" id="gpsBadge">
-                    <span class="gps-dot"></span>
-                    <span id="gpsText">GPS খোঁজা হচ্ছে...</span>
-                </div>
+            <div class="cam-top-right">
+                <span class="top-chip" id="timeChip"><i class="far fa-clock"></i> <span id="liveTime">00:00:00</span></span>
+                <span class="top-chip" id="gpsChip">
+                    <span class="chip-dot"></span>
+                    <span id="gpsLabel">GPS...</span>
+                </span>
             </div>
         </div>
 
-        <!-- ভিডিও -->
-        <div class="video-wrapper" id="videoWrapper">
-            <video id="cameraVideo" autoplay playsinline muted></video>
-            <canvas id="captureCanvas"></canvas>
+        <div class="flash-fx" id="flashFx"></div>
+        <div class="focus-fx" id="focusFx"></div>
+        <div class="switch-fx" id="switchFx"><i class="fas fa-sync-alt"></i></div>
+        <div class="capture-flash-text" id="capText">CAPTURED</div>
+    </div>
 
-            <div class="grid-overlay">
-                <div class="h-line"></div>
-                <div class="h-line"></div>
-                <div class="v-line"></div>
-                <div class="v-line"></div>
+    <!-- ইনফো প্যানেল -->
+    <div class="info-panel">
+        <div class="loc-row">
+            <div class="loc-pin"><i class="fas fa-map-marker-alt"></i></div>
+            <div class="loc-text">
+                <div class="loc-name" id="locName">লোকেশন খোঁজা হচ্ছে...</div>
+                <div class="loc-addr" id="locAddr">--</div>
+                <div class="loc-coords" id="locCoords">--.--, --.--</div>
             </div>
-
-            <div class="focus-ring" id="focusRing"></div>
-            <div class="flash-overlay" id="flashOverlay"></div>
-            <div class="switching-overlay" id="switchOverlay">
+        </div>
+        <div class="meta-row">
+            <span class="meta-tag"><i class="far fa-calendar-alt"></i> <span id="metaDate">--</span></span>
+            <span class="meta-tag"><i class="far fa-clock"></i> <span id="metaTime">--</span></span>
+            <span class="meta-tag temp-tag"><i class="fas fa-thermometer-half"></i> <span id="metaTemp">--°C</span></span>
+        </div>
+        <div class="mini-map" id="miniMap">
+            <div class="mini-map-pin"><div class="mini-map-dot"></div></div>
+        </div>
+        <div class="shutter-row">
+            <button class="side-btn" id="galBtn" aria-label="গ্যালারি">
+                <i class="fas fa-images"></i>
+                <span class="gal-badge" id="galBadge">0</span>
+            </button>
+            <button class="shutter" id="shutterBtn" aria-label="ছবি তোলুন"></button>
+            <button class="side-btn" id="switchBtn" aria-label="ক্যামেরা পাল্টান">
                 <i class="fas fa-sync-alt"></i>
-            </div>
-        </div>
-
-        <!-- লোকেশন ফুটার -->
-        <div class="location-footer">
-            <div class="location-info">
-                <div class="location-icon-wrap">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div class="location-details">
-                    <div class="location-name" id="locName">লোকেশন খোঁজা হচ্ছে...</div>
-                    <div class="location-coords" id="locCoords">--.--, --.--</div>
-                    <div class="location-accuracy" id="locAccuracy">Accuracy: --</div>
-                </div>
-            </div>
-            <div class="capture-controls">
-                <button class="ctrl-btn" id="galleryBtn" aria-label="গ্যালারি">
-                    <i class="fas fa-images"></i>
-                    <span class="gallery-count" id="galleryCount">0</span>
-                </button>
-                <button class="shutter-btn" id="shutterBtn" aria-label="ছবি তোলুন"></button>
-                <button class="ctrl-btn" id="switchCamBtn" aria-label="ক্যামেরা পাল্টান">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
+            </button>
         </div>
     </div>
+</div>
 
-    <!-- প্রিভিউ মোডাল -->
-    <div class="preview-modal" id="previewModal">
-        <div class="preview-top">
-            <h3>ক্যাপচার প্রিভিউ</h3>
-            <button class="preview-close" id="previewClose" aria-label="বন্ধ করুন"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="preview-image-wrap">
-            <img id="previewImg" src="" alt="ক্যাপচার করা ছবি">
-        </div>
-        <div class="preview-footer">
-            <div class="preview-location">
-                <i class="fas fa-map-marker-alt"></i>
-                <div class="preview-location-info">
-                    <div class="preview-location-name" id="prevLocName">--</div>
-                    <div class="preview-location-coords" id="prevLocCoords">--</div>
-                    <div class="preview-location-time" id="prevLocTime">--</div>
-                </div>
-            </div>
-            <div class="preview-actions">
-                <button class="preview-action-btn btn-download" id="downloadBtn">
-                    <i class="fas fa-download"></i> ডাউনলোড
-                </button>
-                <button class="preview-action-btn btn-share" id="shareBtn">
-                    <i class="fas fa-share-alt"></i> শেয়ার
-                </button>
+<!-- প্রিভিউ মোডাল -->
+<div class="prev-modal" id="prevModal">
+    <div class="prev-head">
+        <h3>ক্যাপচার প্রিভিউ</h3>
+        <button class="close-btn" id="prevClose" aria-label="বন্ধ"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="prev-body"><img id="prevImg" src="" alt="ক্যাপচার ছবি"></div>
+    <div class="prev-foot">
+        <div class="prev-loc-card">
+            <i class="fas fa-map-marker-alt"></i>
+            <div class="prev-loc-info">
+                <div class="prev-loc-name" id="pLocName">--</div>
+                <div class="prev-loc-coords" id="pLocCoords">--</div>
+                <div class="prev-loc-time" id="pLocTime">--</div>
             </div>
         </div>
-    </div>
-
-    <!-- গ্যালারি মোডাল -->
-    <div class="gallery-modal" id="galleryModal">
-        <div class="gallery-top">
-            <h3>গ্যালারি</h3>
-            <button class="preview-close" id="galleryClose" aria-label="বন্ধ করুন"><i class="fas fa-times"></i></button>
+        <div class="prev-actions">
+            <button class="prev-act dl" id="dlBtn"><i class="fas fa-download"></i> ডাউনলোড</button>
+            <button class="prev-act sh" id="shBtn"><i class="fas fa-share-alt"></i> শেয়ার</button>
         </div>
-        <div class="gallery-grid" id="galleryGrid"></div>
     </div>
+</div>
 
-    <!-- টোস্ট -->
-    <div class="toast" id="toast">
-        <i class="fas fa-check-circle"></i>
-        <span id="toastText">ছবি সেভ হয়েছে!</span>
+<!-- গ্যালারি মোডাল -->
+<div class="gal-modal" id="galModal">
+    <div class="gal-head">
+        <h3>গ্যালারি</h3>
+        <button class="close-btn" id="galClose" aria-label="বন্ধ"><i class="fas fa-times"></i></button>
     </div>
+    <div class="gal-grid" id="galGrid"></div>
+</div>
 
-    <script>
-        // === স্টেট ===
-        let currentStream = null;
-        let facingMode = 'environment';
-        let currentLat = null;
-        let currentLon = null;
-        let currentAccuracy = null;
-        let currentAddress = 'অজানা লোকেশন';
-        let photos = [];
-        let lastCaptureData = null;
-        let watchId = null;
+<!-- টোস্ট -->
+<div class="toast-el" id="toastEl"><i class="fas fa-check-circle"></i><span id="toastTxt">done</span></div>
 
-        // === DOM ===
-        const permScreen = document.getElementById('permScreen');
-        const startBtn = document.getElementById('startBtn');
-        const cameraVideo = document.getElementById('cameraVideo');
-        const captureCanvas = document.getElementById('captureCanvas');
-        const shutterBtn = document.getElementById('shutterBtn');
-        const switchCamBtn = document.getElementById('switchCamBtn');
-        const galleryBtn = document.getElementById('galleryBtn');
-        const galleryCount = document.getElementById('galleryCount');
-        const gpsBadge = document.getElementById('gpsBadge');
-        const gpsText = document.getElementById('gpsText');
-        const liveTime = document.getElementById('liveTime');
-        const locName = document.getElementById('locName');
-        const locCoords = document.getElementById('locCoords');
-        const locAccuracy = document.getElementById('locAccuracy');
-        const flashOverlay = document.getElementById('flashOverlay');
-        const focusRing = document.getElementById('focusRing');
-        const switchOverlay = document.getElementById('switchOverlay');
-        const previewModal = document.getElementById('previewModal');
-        const previewImg = document.getElementById('previewImg');
-        const previewClose = document.getElementById('previewClose');
-        const prevLocName = document.getElementById('prevLocName');
-        const prevLocCoords = document.getElementById('prevLocCoords');
-        const prevLocTime = document.getElementById('prevLocTime');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const shareBtn = document.getElementById('shareBtn');
-        const galleryModal = document.getElementById('galleryModal');
-        const galleryClose = document.getElementById('galleryClose');
-        const galleryGrid = document.getElementById('galleryGrid');
-        const toast = document.getElementById('toast');
-        const toastText = document.getElementById('toastText');
-        const videoWrapper = document.getElementById('videoWrapper');
+<script>
+    // === স্টেট ===
+    let stream = null;
+    let facing = 'environment';
+    let lat = null, lon = null, accuracy = null;
+    let address = 'অজানা লোকেশন';
+    let fullAddress = '';
+    let tempVal = '--';
+    let weatherDesc = '';
+    let photos = [];
+    let lastPhoto = null;
+    let watchGPS = null;
+    let cameraReady = false;
 
-        // === লাইভ টাইম ===
-        function updateTime() {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            const s = String(now.getSeconds()).padStart(2, '0');
-            liveTime.textContent = `${h}:${m}:${s}`;
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
+    // === DOM ===
+    const $ = id => document.getElementById(id);
+    const loadScreen = $('loadScreen');
+    const loadStatus = $('loadStatus');
+    const camVideo = $('camVideo');
+    const capCanvas = $('capCanvas');
+    const vidWrap = $('vidWrap');
+    const flashFx = $('flashFx');
+    const focusFx = $('focusFx');
+    const switchFx = $('switchFx');
+    const capText = $('capText');
+    const gpsChip = $('gpsChip');
+    const gpsLabel = $('gpsLabel');
+    const liveTime = $('liveTime');
+    const locName = $('locName');
+    const locAddr = $('locAddr');
+    const locCoords = $('locCoords');
+    const metaDate = $('metaDate');
+    const metaTime = $('metaTime');
+    const metaTemp = $('metaTemp');
+    const miniMap = $('miniMap');
+    const galBadge = $('galBadge');
+    const prevModal = $('prevModal');
+    const prevImg = $('prevImg');
+    const galModal = $('galModal');
+    const galGrid = $('galGrid');
+    const toastEl = $('toastEl');
+    const toastTxt = $('toastTxt');
 
-        // === টোস্ট ===
-        function showToast(msg, icon = 'fa-check-circle') {
-            toastText.textContent = msg;
-            toast.querySelector('i').className = `fas ${icon}`;
-            toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 2500);
-        }
+    // === ইউটিলিটি ===
+    function toast(msg, icon = 'fa-check-circle') {
+        toastTxt.textContent = msg;
+        toastEl.querySelector('i').className = `fas ${icon}`;
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 2400);
+    }
 
-        // === ক্যামেরা শুরু ===
-        async function startCamera() {
-            try {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(t => t.stop());
-                }
-                const constraints = {
-                    video: {
-                        facingMode: facingMode,
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    },
-                    audio: false
-                };
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                currentStream = stream;
-                cameraVideo.srcObject = stream;
-                await cameraVideo.play();
-                permScreen.classList.add('hidden');
-                showToast('ক্যামেরা চালু হয়েছে', 'fa-camera');
-            } catch (err) {
-                console.error('ক্যামেরা এরর:', err);
-                showToast('ক্যামেরা পারমিশন দিন', 'fa-exclamation-triangle');
-            }
-        }
+    function fmtDate(d) {
+        const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+    }
+    function fmtTime(d) {
+        return d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    }
+    function fmtDateShort(d) {
+        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    }
 
-        // === ক্যামেরা সুইচ ===
-        async function switchCamera() {
-            switchOverlay.classList.add('active');
-            facingMode = facingMode === 'environment' ? 'user' : 'environment';
-            await startCamera();
-            setTimeout(() => switchOverlay.classList.remove('active'), 300);
-        }
+    // === লাইভ ক্লক ===
+    function tickClock() {
+        const now = new Date();
+        liveTime.textContent = fmtTime(now);
+        metaDate.textContent = fmtDateShort(now);
+        metaTime.textContent = fmtTime(now);
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
 
-        // === লোকেশন ===
-        function startLocation() {
-            if (!navigator.geolocation) {
-                gpsText.textContent = 'GPS সাপোর্ট নেই';
-                return;
-            }
-
-            watchId = navigator.geolocation.watchPosition(
-                async (pos) => {
-                    currentLat = pos.coords.latitude;
-                    currentLon = pos.coords.longitude;
-                    currentAccuracy = pos.coords.accuracy;
-
-                    // GPS ব্যাজ আপডেট
-                    gpsBadge.classList.add('active');
-                    gpsText.textContent = 'GPS সক্রিয়';
-
-                    // কোঅর্ডিনেট দেখান
-                    locCoords.textContent = `${currentLat.toFixed(6)}, ${currentLon.toFixed(6)}`;
-                    locAccuracy.textContent = `Accuracy: ±${Math.round(currentAccuracy)}m`;
-
-                    // রিভার্স জিওকোডিং (বিনামূল্যে Nominatim API)
-                    try {
-                        const resp = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}&accept-language=bn`,
-                            { headers: { 'User-Agent': 'SohoCam/1.0' } }
-                        );
-                        const data = await resp.json();
-                        if (data && data.display_name) {
-                            const parts = data.display_name.split(',');
-                            currentAddress = parts.slice(0, 3).join(',').trim();
-                            locName.textContent = currentAddress;
-                        }
-                    } catch (e) {
-                        // অফলাইনে শুধু কোঅর্ডিনেট দেখাবে
-                        currentAddress = `${currentLat.toFixed(4)}°N, ${currentLon.toFixed(4)}°E`;
-                        locName.textContent = currentAddress;
-                    }
-                },
-                (err) => {
-                    console.warn('লোকেশন এরর:', err);
-                    gpsText.textContent = 'GPS পাওয়া যায়নি';
-                    gpsBadge.classList.remove('active');
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 5000
-                }
-            );
-        }
-
-        // === ছবি ক্যাপচার ===
-        function capturePhoto() {
-            // ফ্ল্যাশ
-            flashOverlay.classList.add('flash');
-            setTimeout(() => flashOverlay.classList.remove('flash'), 150);
-
-            const vw = cameraVideo.videoWidth;
-            const vh = cameraVideo.videoHeight;
-            captureCanvas.width = vw;
-            captureCanvas.height = vh;
-
-            const ctx = captureCanvas.getContext('2d');
-
-            // ভিডিও ফ্রেম আঁকুন
-            ctx.drawImage(cameraVideo, 0, 0, vw, vh);
-
-            // লোকেশন স্ট্যাম্প ছবির উপরে
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' });
-            const timeStr = now.toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const coordStr = currentLat && currentLon ? `${currentLat.toFixed(6)}, ${currentLon.toFixed(6)}` : 'GPS পাওয়া যায়নি';
-
-            // স্ট্যাম্প ব্যাকগ্রাউন্ড
-            const stampH = Math.max(60, vh * 0.08);
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-            ctx.fillRect(0, vh - stampH, vw, stampH);
-
-            // অ্যাকসেন্ট লাইন
-            ctx.fillStyle = '#e8c547';
-            ctx.fillRect(0, vh - stampH, vw, 3);
-
-            // টেক্সট
-            const fontSize = Math.max(14, Math.round(vw * 0.022));
-            const smallFont = Math.max(10, Math.round(vw * 0.016));
-            ctx.font = `600 ${fontSize}px 'Space Grotesk', sans-serif`;
-            ctx.fillStyle = '#f0ece4';
-            ctx.textBaseline = 'middle';
-
-            const padX = Math.round(vw * 0.03);
-            const centerY = vh - stampH / 2;
-
-            // লোকেশন নাম
-            ctx.fillText(currentAddress, padX, centerY - fontSize * 0.4);
-
-            // কোঅর্ডিনেট ও সময়
-            ctx.font = `400 ${smallFont}px 'JetBrains Mono', monospace`;
-            ctx.fillStyle = '#e8c547';
-            ctx.fillText(`${coordStr}  |  ${dateStr} ${timeStr}`, padX, centerY + fontSize * 0.6);
-
-            // SOHO ওয়াটারমার্ক
-            ctx.font = `700 ${Math.max(12, Math.round(vw * 0.018))}px 'Space Grotesk', sans-serif`;
-            ctx.fillStyle = 'rgba(232, 197, 71, 0.7)';
-            ctx.textAlign = 'right';
-            ctx.fillText('SOHO CAM', vw - padX, centerY);
-            ctx.textAlign = 'left';
-
-            // ডেটা URL
-            const dataUrl = captureCanvas.toDataURL('image/jpeg', 0.92);
-
-            const photoData = {
-                src: dataUrl,
-                lat: currentLat,
-                lon: currentLon,
-                accuracy: currentAccuracy,
-                address: currentAddress,
-                date: dateStr,
-                time: timeStr,
-                timestamp: now.getTime()
-            };
-
-            photos.push(photoData);
-            lastCaptureData = photoData;
-
-            // গ্যালারি কাউন্ট
-            galleryCount.textContent = photos.length;
-            galleryCount.classList.add('show');
-
-            // প্রিভিউ দেখান
-            showPreview(photoData);
-
-            showToast('ছবি ক্যাপচার হয়েছে!', 'fa-camera');
-        }
-
-        // === প্রিভিউ ===
-        function showPreview(data) {
-            previewImg.src = data.src;
-            prevLocName.textContent = data.address;
-            prevLocCoords.textContent = data.lat && data.lon
-                ? `${data.lat.toFixed(6)}, ${data.lon.toFixed(6)}`
-                : 'GPS ডেটা নেই';
-            prevLocTime.textContent = `${data.date} ${data.time}`;
-            previewModal.classList.add('open');
-        }
-
-        previewClose.addEventListener('click', () => {
-            previewModal.classList.remove('open');
-        });
-
-        // === ডাউনলোড ===
-        downloadBtn.addEventListener('click', () => {
-            if (!lastCaptureData) return;
-            const a = document.createElement('a');
-            a.href = lastCaptureData.src;
-            const ts = new Date(lastCaptureData.timestamp);
-            a.download = `soho_cam_${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}_${String(ts.getHours()).padStart(2,'0')}${String(ts.getMinutes()).padStart(2,'0')}${String(ts.getSeconds()).padStart(2,'0')}.jpg`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            showToast('ছবি ডাউনলোড হচ্ছে', 'fa-download');
-        });
-
-        // === শেয়ার ===
-        shareBtn.addEventListener('click', async () => {
-            if (!lastCaptureData) return;
-            try {
-                const blob = await (await fetch(lastCaptureData.src)).blob();
-                const file = new File([blob], 'soho_cam_photo.jpg', { type: 'image/jpeg' });
-                if (navigator.share) {
-                    await navigator.share({
-                        title: 'Soho Cam Photo',
-                        text: `${lastCaptureData.address}\n${lastCaptureData.lat?.toFixed(6)}, ${lastCaptureData.lon?.toFixed(6)}`,
-                        files: [file]
-                    });
-                } else {
-                    // শেয়ার API না থাকলে কপি
-                    const text = `Soho Cam | ${lastCaptureData.address} | ${lastCaptureData.lat?.toFixed(6)}, ${lastCaptureData.lon?.toFixed(6)}`;
-                    await navigator.clipboard.writeText(text);
-                    showToast('লোকেশন কপি হয়েছে', 'fa-copy');
-                }
-            } catch (e) {
-                console.log('শেয়ার বাতিল হয়েছে');
-            }
-        });
-
-        // === গ্যালারি ===
-        galleryBtn.addEventListener('click', () => {
-            renderGallery();
-            galleryModal.classList.add('open');
-        });
-        galleryClose.addEventListener('click', () => {
-            galleryModal.classList.remove('open');
-        });
-
-        function renderGallery() {
-            galleryGrid.innerHTML = '';
-            if (photos.length === 0) {
-                galleryGrid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;font-size:14px;">এখনো কোনো ছবি নেই</p>';
-                return;
-            }
-            // সর্বশেষ আগে
-            const reversed = [...photos].reverse();
-            reversed.forEach((p, i) => {
-                const div = document.createElement('div');
-                div.className = 'gallery-item';
-                div.innerHTML = `
-                    <img src="${p.src}" alt="ছবি ${photos.length - i}" loading="lazy">
-                    <div class="loc-tag"><i class="fas fa-map-marker-alt"></i>${p.address.substring(0, 15)}...</div>
-                `;
-                div.addEventListener('click', () => {
-                    galleryModal.classList.remove('open');
-                    showPreview(p);
-                    lastCaptureData = p;
-                });
-                galleryGrid.appendChild(div);
+    // === ক্যামেরা অটো শুরু ===
+    async function startCam() {
+        try {
+            loadStatus.textContent = 'ক্যামেরা চালু হচ্ছে...';
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
             });
+            camVideo.srcObject = stream;
+            await camVideo.play();
+            cameraReady = true;
+
+            // লোডিং স্ক্রিন সরাও
+            loadScreen.classList.add('gone');
+            toast('ক্যামেরা চালু হয়েছে', 'fa-camera');
+        } catch (e) {
+            console.error('ক্যামেরা এরর:', e);
+            loadStatus.textContent = 'ক্যামেরা পারমিশন দিন এবং রিলোড করুন';
+            toast('ক্যামেরা পারমিশন দিন', 'fa-exclamation-triangle');
         }
+    }
 
-        // === ফোকাস রিং ===
-        videoWrapper.addEventListener('click', (e) => {
-            const rect = videoWrapper.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            focusRing.style.left = (x - 35) + 'px';
-            focusRing.style.top = (y - 35) + 'px';
-            focusRing.classList.add('show');
-            setTimeout(() => focusRing.classList.remove('show'), 800);
-        });
+    // ক্যামেরা সুইচ
+    async function switchCam() {
+        if (!cameraReady) return;
+        switchFx.classList.add('on');
+        facing = facing === 'environment' ? 'user' : 'environment';
+        try {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
+            });
+            camVideo.srcObject = stream;
+            await camVideo.play();
+        } catch (e) {
+            toast('ক্যামেরা সুইচ ব্যর্থ', 'fa-exclamation-triangle');
+        }
+        setTimeout(() => switchFx.classList.remove('on'), 280);
+    }
 
-        // === ইভেন্ট লিসেনার ===
-        startBtn.addEventListener('click', () => {
-            startCamera();
-            startLocation();
-        });
+    // === লোকেশন অটো শুরু ===
+    function startGPS() {
+        if (!navigator.geolocation) {
+            gpsLabel.textContent = 'GPS নেই';
+            return;
+        }
+        loadStatus.textContent = 'GPS লোকেশন খোঁজা হচ্ছে...';
+        watchGPS = navigator.geolocation.watchPosition(
+            async pos => {
+                lat = pos.coords.latitude;
+                lon = pos.coords.longitude;
+                accuracy = pos.coords.accuracy;
 
-        shutterBtn.addEventListener('click', capturePhoto);
-        switchCamBtn.addEventListener('click', switchCamera);
+                gpsChip.classList.add('gps-ok');
+                gpsLabel.textContent = 'GPS';
+                locCoords.textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
 
-        // কীবোর্ড শর্টকাট
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !previewModal.classList.contains('open') && !galleryModal.classList.contains('open')) {
-                e.preventDefault();
-                capturePhoto();
+                // রিভার্স জিওকোডিং
+                try {
+                    const r = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=en`,
+                        { headers: { 'User-Agent': 'SohoCam/1.0' } }
+                    );
+                    const d = await r.json();
+                    if (d && d.display_name) {
+                        const parts = d.display_name.split(',');
+                        address = parts.slice(0, 2).join(',').trim();
+                        fullAddress = d.display_name;
+                        locName.textContent = address;
+                        locAddr.textContent = parts.slice(2, 5).join(',').trim();
+                    }
+                } catch (e) {
+                    address = `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`;
+                    locName.textContent = address;
+                }
+
+                // আবহাওয়া (Open-Meteo ফ্রি)
+                try {
+                    const wr = await fetch(
+                        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`
+                    );
+                    const wd = await wr.json();
+                    if (wd && wd.current_weather) {
+                        tempVal = Math.round(wd.current_weather.temperature);
+                        metaTemp.textContent = `${tempVal}°C`;
+                        const codes = {0:'Clear',1:'Mainly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Drizzle',53:'Drizzle',55:'Drizzle',61:'Rain',63:'Rain',65:'Rain',71:'Snow',73:'Snow',75:'Snow',80:'Showers',81:'Showers',82:'Showers',95:'Thunderstorm'};
+                        weatherDesc = codes[wd.current_weather.weathercode] || '';
+                    }
+                } catch (e) {
+                    metaTemp.textContent = '--°C';
+                }
+
+                // মিনি ম্যাপ
+                updateMiniMap();
+            },
+            err => {
+                gpsLabel.textContent = 'GPS ব্যর্থ';
+                gpsChip.classList.remove('gps-ok');
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+        );
+    }
+
+    // মিনি ম্যাপ
+    function updateMiniMap() {
+        if (!lat || !lon) return;
+        const url = `https://www.openstreetmap.org/export/embed.html?bbox=${lon-0.008},${lat-0.006},${lon+0.008},${lat+0.006}&layer=mapnik&marker=${lat},${lon}`;
+        miniMap.innerHTML = `<iframe src="${url}" allowfullscreen></iframe><div class="mini-map-pin"><div class="mini-map-dot"></div></div>`;
+    }
+
+    // === ছবি ক্যাপচার ===
+    function capture() {
+        if (!cameraReady) return;
+
+        // ফ্ল্যাশ
+        flashFx.classList.add('pop');
+        setTimeout(() => flashFx.classList.remove('pop'), 130);
+
+        // ক্যাপচার টেক্সট
+        capText.classList.remove('pop');
+        void capText.offsetWidth; // reflow
+        capText.classList.add('pop');
+
+        const vw = camVideo.videoWidth;
+        const vh = camVideo.videoHeight;
+        if (!vw || !vh) { toast('ক্যামেরা প্রস্তুত নয়', 'fa-exclamation-triangle'); return; }
+
+        capCanvas.width = vw;
+        capCanvas.height = vh;
+        const ctx = capCanvas.getContext('2d');
+
+        // ভিডিও ফ্রেম
+        ctx.drawImage(camVideo, 0, 0, vw, vh);
+
+        const now = new Date();
+        const dateStr = fmtDate(now);
+        const timeStr = fmtTime(now);
+        const coordStr = lat && lon ? `${lat.toFixed(6)}, ${lon.toFixed(6)}` : 'N/A';
+        const tempStr = tempVal !== '--' ? `${tempVal}°C` : '';
+
+        // === স্ট্যাম্প ডিজাইন ===
+
+        // বটম গ্র্যাডিয়েন্ট ব্যাকগ্রাউন্ড
+        const stampH = Math.max(100, vh * 0.15);
+        const grad = ctx.createLinearGradient(0, vh - stampH - 30, 0, vh);
+        grad.addColorStop(0, 'rgba(0,0,0,0)');
+        grad.addColorStop(0.25, 'rgba(0,0,0,0.55)');
+        grad.addColorStop(1, 'rgba(0,0,0,0.88)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, vh - stampH - 30, vw, stampH + 30);
+
+        // গ্রিন অ্যাকসেন্ট লাইন
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillRect(0, vh - stampH - 2, vw, 2.5);
+
+        const px = Math.round(vw * 0.035);
+        let cy = vh - stampH + 16;
+
+        // লোকেশন নাম
+        ctx.font = `700 ${Math.max(15, Math.round(vw * 0.026))}px 'Space Grotesk', sans-serif`;
+        ctx.fillStyle = '#2ecc71';
+        ctx.textBaseline = 'top';
+        ctx.fillText(address, px, cy);
+
+        // ঠিকানা
+        cy += Math.round(vw * 0.034);
+        ctx.font = `400 ${Math.max(10, Math.round(vw * 0.017))}px 'Space Grotesk', sans-serif`;
+        ctx.fillStyle = '#cccccc';
+        const addrLine = fullAddress ? fullAddress.substring(0, 90) : coordStr;
+        ctx.fillText(addrLine, px, cy);
+
+        // তারিখ / সময় / তাপমাত্রা
+        cy += Math.round(vw * 0.028);
+        ctx.font = `500 ${Math.max(10, Math.round(vw * 0.015))}px 'JetBrains Mono', monospace`;
+        ctx.fillStyle = '#2ecc71';
+        ctx.fillText(`${dateStr}  ${timeStr}  ${tempStr}  ${weatherDesc}`, px, cy);
+
+        // গ্রিন ভিউফাইন্ডার কর্নার স্ট্যাম্পে
+        const cLen = Math.round(vw * 0.04);
+        const cW = Math.max(2, Math.round(vw * 0.003));
+        const margin = Math.round(vw * 0.03);
+        ctx.strokeStyle = '#2ecc71';
+        ctx.lineWidth = cW;
+
+        // টপ-লেফট
+        ctx.beginPath(); ctx.moveTo(margin, margin + cLen); ctx.lineTo(margin, margin); ctx.lineTo(margin + cLen, margin); ctx.stroke();
+        // টপ-রাইট
+        ctx.beginPath(); ctx.moveTo(vw - margin - cLen, margin); ctx.lineTo(vw - margin, margin); ctx.lineTo(vw - margin, margin + cLen); ctx.stroke();
+        // বটম-লেফট
+        ctx.beginPath(); ctx.moveTo(margin, vh - stampH - cLen + 4); ctx.lineTo(margin, vh - stampH + 4); ctx.lineTo(margin + cLen, vh - stampH + 4); ctx.stroke();
+        // বটম-রাইট
+        ctx.beginPath(); ctx.moveTo(vw - margin - cLen, vh - stampH + 4); ctx.lineTo(vw - margin, vh - stampH + 4); ctx.lineTo(vw - margin, vh - stampH - cLen + 4); ctx.stroke();
+
+        // SOHO CAM ওয়াটারমার্ক
+        ctx.font = `700 ${Math.max(12, Math.round(vw * 0.018))}px 'Space Grotesk', sans-serif`;
+        ctx.fillStyle = 'rgba(46, 204, 113, 0.45)';
+        ctx.textAlign = 'right';
+        ctx.fillText('SOHO CAM', vw - margin, margin + Math.round(vw * 0.022));
+        ctx.textAlign = 'left';
+
+        // ডেটা URL
+        const dataUrl = capCanvas.toDataURL('image/jpeg', 0.93);
+        const photo = {
+            src: dataUrl,
+            lat, lon, accuracy,
+            address, fullAddress,
+            date: dateStr, time: timeStr,
+            temp: tempStr, weather: weatherDesc,
+            ts: now.getTime()
+        };
+        photos.push(photo);
+        lastPhoto = photo;
+
+        galBadge.textContent = photos.length;
+        galBadge.classList.add('vis');
+
+        // প্রিভিউ
+        showPreview(photo);
+        toast('ছবি সেভ হয়েছে!', 'fa-camera');
+    }
+
+    // === প্রিভিউ ===
+    function showPreview(p) {
+        prevImg.src = p.src;
+        $('pLocName').textContent = p.address;
+        $('pLocCoords').textContent = p.lat && p.lon ? `${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}` : 'GPS ডেটা নেই';
+        $('pLocTime').textContent = `${p.date}  ${p.time}  ${p.temp}  ${p.weather}`;
+        prevModal.classList.add('open');
+    }
+    $('prevClose').onclick = () => prevModal.classList.remove('open');
+
+    // ডাউনলোড
+    $('dlBtn').onclick = () => {
+        if (!lastPhoto) return;
+        const a = document.createElement('a');
+        a.href = lastPhoto.src;
+        const t = new Date(lastPhoto.ts);
+        a.download = `soho_${t.getFullYear()}${String(t.getMonth()+1).padStart(2,'0')}${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}${String(t.getMinutes()).padStart(2,'0')}${String(t.getSeconds()).padStart(2,'0')}.jpg`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        toast('ডাউনলোড শুরু', 'fa-download');
+    };
+
+    // শেয়ার
+    $('shBtn').onclick = async () => {
+        if (!lastPhoto) return;
+        try {
+            const blob = await (await fetch(lastPhoto.src)).blob();
+            const file = new File([blob], 'soho_cam.jpg', { type: 'image/jpeg' });
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Soho Cam Photo',
+                    text: `${lastPhoto.address} | ${lastPhoto.lat?.toFixed(6)}, ${lastPhoto.lon?.toFixed(6)}`,
+                    files: [file]
+                });
+            } else {
+                await navigator.clipboard.writeText(`${lastPhoto.address}\n${lastPhoto.lat?.toFixed(6)}, ${lastPhoto.lon?.toFixed(6)}`);
+                toast('লোকেশন কপি হয়েছে', 'fa-copy');
             }
-            if (e.code === 'Escape') {
-                previewModal.classList.remove('open');
-                galleryModal.classList.remove('open');
-            }
+        } catch (e) {}
+    };
+
+    // === গ্যালারি ===
+    $('galBtn').onclick = () => { renderGal(); galModal.classList.add('open'); };
+    $('galClose').onclick = () => galModal.classList.remove('open');
+
+    function renderGal() {
+        galGrid.innerHTML = '';
+        if (!photos.length) {
+            galGrid.innerHTML = '<p class="gal-empty">এখনো কোনো ছবি নেই</p>';
+            return;
+        }
+        [...photos].reverse().forEach((p, i) => {
+            const div = document.createElement('div');
+            div.className = 'gal-item';
+            div.innerHTML = `<img src="${p.src}" alt="ছবি" loading="lazy"><div class="gal-loc"><i class="fas fa-map-marker-alt"></i>${p.address.substring(0,14)}</div>`;
+            div.onclick = () => { galModal.classList.remove('open'); showPreview(p); lastPhoto = p; };
+            galGrid.appendChild(div);
         });
+    }
 
-        // ভলিউম বাটন দিয়ে ছবি তোলা (মোবাইল)
-        let lastVolume = null;
-        document.addEventListener('volumechange', () => {});
+    // === ফোকাস ===
+    vidWrap.addEventListener('click', e => {
+        const r = vidWrap.getBoundingClientRect();
+        focusFx.style.left = (e.clientX - r.left - 28) + 'px';
+        focusFx.style.top = (e.clientY - r.top - 28) + 'px';
+        focusFx.classList.add('on');
+        setTimeout(() => focusFx.classList.remove('on'), 700);
+    });
 
-    </script>
+    // === শাটার ও সুইচ ===
+    $('shutterBtn').onclick = capture;
+    $('switchBtn').onclick = switchCam;
+
+    // কীবোর্ড শর্টকাট
+    document.addEventListener('keydown', e => {
+        if (e.code === 'Space' && !prevModal.classList.contains('open') && !galModal.classList.contains('open')) {
+            e.preventDefault(); capture();
+        }
+        if (e.code === 'Escape') {
+            prevModal.classList.remove('open');
+            galModal.classList.remove('open');
+        }
+    });
+
+    // ==========================================
+    // === অটো শুরু — কোনো বাটন ক্লিক লাগবে না ===
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+        // ক্যামেরা ও GPS একসাথে শুরু
+        startCam();
+        startGPS();
+    });
+</script>
 </body>
 </html>
