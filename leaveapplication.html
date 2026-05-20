@@ -33,6 +33,17 @@
         .card.approved { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); color: #333; }
         .card.rejected { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); color: #333; }
 
+        .leave-balance-section { margin-top: 25px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fafafa; }
+        .leave-balance-section h3 { margin: 0 0 10px; color: #333; font-size: 14px; }
+        .balance-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .balance-table th, .balance-table td { padding: 8px 12px; text-align: center; border: 1px solid #ccc; }
+        .balance-table th { background: #333; color: #fff; font-weight: bold; }
+        .balance-table tr:nth-child(even) { background: #f2f2f2; }
+        .balance-table td:first-child { text-align: left; font-weight: bold; }
+        .balance-positive { color: #27ae60; font-weight: bold; }
+        .balance-zero { color: #e74c3c; font-weight: bold; }
+        .dash-user-select { margin-bottom: 10px; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; min-width: 250px; }
+
         .form-container { width: 100%; background: #fff; padding: 0; }
         .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 4px; margin-bottom: 8px; }
         .header h2 { margin: 0; color: #000; font-size: 16px; font-weight: bold; }
@@ -108,6 +119,16 @@
                 <div class="card approved"><h3>Approved</h3><p id="dashApproved">0</p></div>
                 <div class="card rejected"><h3>Rejected</h3><p id="dashRejected">0</p></div>
             </div>
+            <div class="leave-balance-section">
+                <h3>📋 Leave Balance Summary</h3>
+                <div id="dashUserSelector" style="display:none; margin-bottom:10px;">
+                    <label style="font-size:12px;">Select Employee: </label>
+                    <select id="dashUserSelect" class="dash-user-select" onchange="renderLeaveBalance()">
+                        <option value="">-- Select Employee --</option>
+                    </select>
+                </div>
+                <div id="leaveBalanceTable"><p style="color:#999;">Loading leave balance...</p></div>
+            </div>
         </div>
 
         <div id="formTab" class="tab-content">
@@ -128,7 +149,7 @@
                     
                     <div style="text-align: right; margin-top: 15px;">
                         <div class="signature-name" id="sigApplicantName"></div>
-                        <div class="signature-box" style="margin-left: auto;">APPLICANT’S SIGNATURE</div>
+                        <div class="signature-box" style="margin-left: auto;">APPLICANT'S SIGNATURE</div>
                     </div>
 
                     <div class="section-title">RECOMMENDATION & REMARKS</div><div class="row"><textarea id="remarks" style="width: 100%; height: 30px;" placeholder="Enter remarks here..."></textarea></div>
@@ -145,7 +166,7 @@
                     </div>
 
                     <div class="section-title">FOR ADMINISTRATION & HR USE ONLY</div>
-                    <table><thead><tr><th>Leave Types</th><th style="width: 20%; text-align: center;">Leave dues for the Year <span id="currentYearSpan"></span></th><th style="width: 20%;">Leave Enjoyed</th><th style="width: 20%;">Balance Leave</th><th style="width: 20%;">Remarks</th></tr></thead><tbody><tr><td>Casual Leave (CL)</td><td style="text-align: center;">10</td><td><input type="number" id="clEnjoyed" min="0" oninput="calcBalance('cl', 10)"></td><td><input type="number" id="clBalance" class="readonly-input" readonly></td><td><input type="text" id="clRemarks"></td></tr><tr><td>Medical Leave (ML)</td><td style="text-align: center;">14</td><td><input type="number" id="mlEnjoyed" min="0" oninput="calcBalance('ml', 14)"></td><td><input type="number" id="mlBalance" class="readonly-input" readonly></td><td><input type="text" id="mlRemarks"></td></tr><tr><td>Earned Leave (EL)</td><td style="text-align: center;">-</td><td><input type="number" id="elEnjoyed" min="0" oninput="calcBalance('el', 0)"></td><td><input type="number" id="elBalance" class="readonly-input" readonly></td><td><input type="text" id="elRemarks"></td></tr><tr><td>Maternity Leave (MTL)</td><td style="text-align: center;">-</td><td><input type="number" id="mtlEnjoyed" min="0" oninput="calcBalance('mtl', 0)"></td><td><input type="number" id="mtlBalance" class="readonly-input" readonly></td><td><input type="text" id="mtlRemarks"></td></tr><tr><td>Others (if any)</td><td style="text-align: center;">-</td><td><input type="number" id="otEnjoyed" min="0" oninput="calcBalance('ot', 0)"></td><td><input type="number" id="otBalance" class="readonly-input" readonly></td><td><input type="text" id="otRemarks"></td></tr></tbody></table>
+                    <table><thead><tr><th>Leave Types</th><th style="width: 20%; text-align: center;">Leave dues for the Year <span id="currentYearSpan"></span></th><th style="width: 20%;">Leave Enjoyed</th><th style="width: 20%;">Balance Leave</th><th style="width: 20%;">Remarks</th></tr></thead><tbody><tr><td>Casual Leave (CL)</td><td style="text-align: center;" id="clDuesCell">10</td><td><input type="number" id="clEnjoyed" min="0" oninput="calcBalance('cl', 10)"></td><td><input type="number" id="clBalance" class="readonly-input" readonly></td><td><input type="text" id="clRemarks"></td></tr><tr><td>Medical Leave (ML)</td><td style="text-align: center;" id="mlDuesCell">14</td><td><input type="number" id="mlEnjoyed" min="0" oninput="calcBalance('ml', 14)"></td><td><input type="number" id="mlBalance" class="readonly-input" readonly></td><td><input type="text" id="mlRemarks"></td></tr><tr><td>Earned Leave (EL)</td><td style="text-align: center;" id="elDuesCell">-</td><td><input type="number" id="elEnjoyed" min="0" oninput="calcBalance('el', 0)"></td><td><input type="number" id="elBalance" class="readonly-input" readonly></td><td><input type="text" id="elRemarks"></td></tr><tr><td>Maternity Leave (MTL)</td><td style="text-align: center;" id="mtlDuesCell">-</td><td><input type="number" id="mtlEnjoyed" min="0" oninput="calcBalance('mtl', 0)"></td><td><input type="number" id="mtlBalance" class="readonly-input" readonly></td><td><input type="text" id="mtlRemarks"></td></tr><tr><td>Others (if any)</td><td style="text-align: center;" id="otDuesCell">-</td><td><input type="number" id="otEnjoyed" min="0" oninput="calcBalance('ot', 0)"></td><td><input type="number" id="otBalance" class="readonly-input" readonly></td><td><input type="text" id="otRemarks"></td></tr></tbody></table>
                     <div class="row"><div class="col"><label>Signature of Authorized Officer:</label><input type="text" id="authSignature" placeholder="Type name to sign"></div><div class="col" style="flex: 0 0 220px;"><label>Date:</label><input type="date" id="authDate"></div></div>
                     <div class="section-title">APPROVAL</div><div class="row" style="gap: 15px; margin-bottom: 0;"><label><input type="radio" name="approval" value="Approved as recommended"> Approved as recommended</label><label><input type="radio" name="approval" value="Not Approved"> Not Approved</label><div class="col" style="flex: 0 0 auto;"><label><input type="radio" name="approval" value="Approved for"> Approved for</label><input type="number" id="approvedDays" min="0" style="width: 50px;"><label>day(s)</label></div></div>
                     
@@ -215,48 +236,160 @@
     function handleLogin() { const id=document.getElementById('loginId').value.trim(), pass=document.getElementById('loginPass').value; document.getElementById('loginError').textContent=''; if(id==='KS'&&pass==='KS'){currentRole='SA';currentUserId='KS';currentDbKey='KS';currentUserName='System Admin';currentUserData={name:'System Admin',id:'KS',role:'SA',desig:'Admin',dept:'IT'};showApp();return;} db.ref('users').orderByChild('userId').equalTo(id).once('value').then(snapshot=>{if(snapshot.exists()){snapshot.forEach(child=>{let u=child.val();if(u.password===pass){currentUserData=u;currentRole=u.role;currentUserId=u.userId;currentDbKey=child.key;currentUserName=u.name;showApp();}else{document.getElementById('loginError').textContent="Invalid Password.";}});}else{document.getElementById('loginError').textContent="User ID not found.";}}); }
     function handleLogout() { currentRole='User';currentUserId='';currentUserName='';currentUserData=null;document.getElementById('mainApp').style.display='none';document.getElementById('loginPage').style.display='block';document.getElementById('loginId').value='';document.getElementById('loginPass').value=''; }
     
-    function showApp() { document.getElementById('loginPage').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('loggedName').textContent=currentUserName;const d=document.getElementById('currentRoleDisplay');d.textContent=currentRole;d.className='role-badge role-'+currentRole;applyRolePermissions();autoFillApplicantInfo();loadSubstituteDropdown();document.getElementById('appDate').valueAsDate=new Date();renderDashboard();renderMyLeaves(); }
+    function showApp() { document.getElementById('loginPage').style.display='none';document.getElementById('mainApp').style.display='block';document.getElementById('loggedName').textContent=currentUserName;const d=document.getElementById('currentRoleDisplay');d.textContent=currentRole;d.className='role-badge role-'+currentRole;applyRolePermissions();resetForm();autoFillApplicantInfo();loadSubstituteDropdown();loadDashUserSelector();renderDashboard();renderMyLeaves(); }
     
     function applyRolePermissions() { 
         document.getElementById('tabDashboard').classList.add('hidden');document.getElementById('tabForm').classList.add('hidden');document.getElementById('tabUser').classList.add('hidden');document.getElementById('tabHistory').classList.add('hidden');document.getElementById('myLeavesSection').style.display = 'none';
         if(currentRole === 'User') {document.getElementById('tabForm').classList.remove('hidden');document.getElementById('myLeavesSection').style.display = 'block';openTab('formTab');} 
         else if(currentRole === 'DIC') {document.getElementById('tabDashboard').classList.remove('hidden');document.getElementById('tabForm').classList.remove('hidden');document.getElementById('tabUser').classList.remove('hidden');document.getElementById('tabHistory').classList.remove('hidden');openTab('dashboardTab');} 
         else if(currentRole === 'RSM' || currentRole === 'SA') {document.getElementById('tabDashboard').classList.remove('hidden');document.getElementById('tabHistory').classList.remove('hidden');openTab('dashboardTab');}
+        applyHRSectionPermissions();
+    }
+
+    function applyHRSectionPermissions() {
+        const hrFields = ['clEnjoyed', 'mlEnjoyed', 'elEnjoyed', 'mtlEnjoyed', 'otEnjoyed', 'authSignature', 'authDate', 'approvedDays', 'clRemarks', 'mlRemarks', 'elRemarks', 'mtlRemarks', 'otRemarks'];
+        const isSA = (currentRole === 'SA');
+        hrFields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.readOnly = !isSA;
+        });
+        document.querySelectorAll('input[name="approval"]').forEach(r => { r.disabled = !isSA; });
     }
 
     function autoFillApplicantInfo() { if(currentUserData){document.getElementById('appName').value=currentUserData.name;document.getElementById('appDesignation').value=currentUserData.desig||'';document.getElementById('appDept').value=currentUserData.dept||'';document.getElementById('appID').value=currentUserData.id;document.getElementById('sigApplicantName').textContent=currentUserData.name;} }
     function loadSubstituteDropdown() { const s=document.getElementById('subName');s.innerHTML='<option value="">Select Substitute</option>';db.ref('users').once('value').then(snapshot=>{snapshot.forEach(child=>{let u=child.val();if(u.userId!==currentUserId){const o=document.createElement('option');o.value=child.key;o.textContent=u.name;s.appendChild(o);}});}); }
     function fillSubstituteData() { const k=document.getElementById('subName').value;if(!k){document.getElementById('subDesignation').value='';document.getElementById('subID').value='';document.getElementById('subSignatureName').value='';return;}db.ref('users/'+k).once('value').then(snapshot=>{if(snapshot.exists()){let u=snapshot.val();document.getElementById('subDesignation').value=u.desig;document.getElementById('subID').value=u.id;document.getElementById('subSignatureName').value=u.name;}}); }
-    function openTab(tId) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(tId).classList.add('active');let btn=document.getElementById('tab'+tId.replace('Tab',''));if(btn)btn.classList.add('active');if(tId==='historyTab')renderHistory();if(tId==='userTab')renderUsers();if(tId==='dashboardTab')renderDashboard(); }
+    function openTab(tId) { document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById(tId).classList.add('active');let btn=document.getElementById('tab'+tId.replace('Tab',''));if(btn)btn.classList.add('active');if(tId==='historyTab')renderHistory();if(tId==='userTab')renderUsers();if(tId==='dashboardTab'){renderDashboard();renderLeaveBalance();}if(tId==='formTab'){if(!document.getElementById('editId').value){autoCalcLeaveEnjoyed();}} }
     function calcTotalDays(){const f=document.getElementById('leaveFrom').value,t=document.getElementById('leaveTo').value;if(f&&t){const s=new Date(f),e=new Date(t);document.getElementById('totalDays').value=Math.ceil((e-s)/(1000*60*60*24))+1>0?Math.ceil((e-s)/(1000*60*60*24))+1:0;}else{document.getElementById('totalDays').value='';}}
     document.getElementById('leaveFrom').addEventListener('change',calcTotalDays);document.getElementById('leaveTo').addEventListener('change',calcTotalDays);
-    function calcBalance(p,t){const e=parseInt(document.getElementById(p+'Enjoyed').value)||0;document.getElementById(p+'Balance').value=t-e>=0?t-e:0;}
+    function calcBalance(p,t){const e=parseInt(document.getElementById(p+'Enjoyed').value)||0;const bal=t-e>=0?t-e:0;document.getElementById(p+'Balance').value=bal;}
 
-    function renderDashboard() { db.ref('leaves').once('value').then(snapshot=>{let total=0,pending=0,approved=0,rejected=0;if(snapshot.exists()){snapshot.forEach(child=>{let e=child.val();total++;if(e.status==='Pending')pending++;else if(e.status==='Approved')approved++;else if(e.status==='Rejected')rejected++;});}document.getElementById('dashTotal').textContent=total;document.getElementById('dashPending').textContent=pending;document.getElementById('dashApproved').textContent=approved;document.getElementById('dashRejected').textContent=rejected;}); }
+    // ============ DASHBOARD ============
+    function renderDashboard() { db.ref('leaves').once('value').then(snapshot=>{let total=0,pending=0,approved=0,rejected=0;if(snapshot.exists()){snapshot.forEach(child=>{let e=child.val();total++;if(e.status==='Pending')pending++;else if(e.status==='Approved')approved++;else if(e.status==='Rejected')rejected++;});}document.getElementById('dashTotal').textContent=total;document.getElementById('dashPending').textContent=pending;document.getElementById('dashApproved').textContent=approved;document.getElementById('dashRejected').textContent=rejected;});renderLeaveBalance();}
+
+    function loadDashUserSelector() {
+        const selectorDiv = document.getElementById('dashUserSelector');
+        const select = document.getElementById('dashUserSelect');
+        if(currentRole === 'User') {
+            selectorDiv.style.display = 'none';
+            return;
+        }
+        selectorDiv.style.display = 'block';
+        select.innerHTML = '<option value="">-- Select Employee --</option>';
+        db.ref('users').once('value').then(snapshot => {
+            snapshot.forEach(child => {
+                let u = child.val();
+                if(u.role === 'User') {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = u.name + ' (' + u.id + ')';
+                    select.appendChild(opt);
+                }
+            });
+        });
+    }
+
+    function renderLeaveBalance() {
+        let targetEmpId;
+        if(currentRole === 'User') {
+            targetEmpId = currentUserData ? currentUserData.id : '';
+        } else {
+            targetEmpId = document.getElementById('dashUserSelect').value || (currentUserData ? currentUserData.id : '');
+        }
+
+        if(!targetEmpId) {
+            document.getElementById('leaveBalanceTable').innerHTML = '<p style="color:#999;">Select an employee to view leave balance.</p>';
+            return;
+        }
+
+        db.ref('leaves').once('value').then(snapshot => {
+            let clEnjoyed = 0, mlEnjoyed = 0, elEnjoyed = 0, mtlEnjoyed = 0, otEnjoyed = 0;
+            if(snapshot.exists()) {
+                snapshot.forEach(child => {
+                    let e = child.val();
+                    if(e.status === 'Approved' && e.appID === targetEmpId) {
+                        let days = parseInt(e.totalDays) || 0;
+                        if(e.leaveType === 'CL') clEnjoyed += days;
+                        else if(e.leaveType === 'ML') mlEnjoyed += days;
+                        else if(e.leaveType === 'EL') elEnjoyed += days;
+                        else if(e.leaveType === 'MTL') mtlEnjoyed += days;
+                        else if(e.leaveType === 'Others') otEnjoyed += days;
+                    }
+                });
+            }
+            const year = new Date().getFullYear();
+            const clDues = 10, mlDues = 14;
+            const clBal = clDues - clEnjoyed, mlBal = mlDues - mlEnjoyed;
+
+            let html = `<table class="balance-table">
+                <thead><tr><th>Leave Types</th><th>Leave dues for the Year ${year}</th><th>Leave Enjoyed</th><th>Balance Leave</th></tr></thead>
+                <tbody>
+                    <tr><td>Casual Leave (CL)</td><td>${clDues}</td><td>${clEnjoyed}</td><td class="${clBal > 0 ? 'balance-positive' : 'balance-zero'}">${clBal}</td></tr>
+                    <tr><td>Medical Leave (ML)</td><td>${mlDues}</td><td>${mlEnjoyed}</td><td class="${mlBal > 0 ? 'balance-positive' : 'balance-zero'}">${mlBal}</td></tr>
+                    <tr><td>Earned Leave (EL)</td><td>-</td><td>${elEnjoyed}</td><td>-</td></tr>
+                    <tr><td>Maternity Leave (MTL)</td><td>-</td><td>${mtlEnjoyed}</td><td>-</td></tr>
+                    <tr><td>Others (if any)</td><td>-</td><td>${otEnjoyed}</td><td>-</td></tr>
+                </tbody>
+            </table>`;
+            document.getElementById('leaveBalanceTable').innerHTML = html;
+        });
+    }
+
+    // ============ AUTO CALC LEAVE ENJOYED FOR FORM ============
+    function autoCalcLeaveEnjoyed() {
+        if(!currentUserData) return;
+        const editId = document.getElementById('editId').value;
+        // For new applications, auto-calculate enjoyed from approved leaves
+        // For editing, keep saved values (loaded by editEntry)
+        if(editId) return;
+
+        db.ref('leaves').once('value').then(snapshot => {
+            let clTotal = 0, mlTotal = 0, elTotal = 0, mtlTotal = 0, otTotal = 0;
+            if(snapshot.exists()) {
+                snapshot.forEach(child => {
+                    let e = child.val();
+                    if(e.status === 'Approved' && e.appID === currentUserData.id) {
+                        let days = parseInt(e.totalDays) || 0;
+                        if(e.leaveType === 'CL') clTotal += days;
+                        else if(e.leaveType === 'ML') mlTotal += days;
+                        else if(e.leaveType === 'EL') elTotal += days;
+                        else if(e.leaveType === 'MTL') mtlTotal += days;
+                        else if(e.leaveType === 'Others') otTotal += days;
+                    }
+                });
+            }
+            document.getElementById('clEnjoyed').value = clTotal;
+            document.getElementById('mlEnjoyed').value = mlTotal;
+            document.getElementById('elEnjoyed').value = elTotal;
+            document.getElementById('mtlEnjoyed').value = mtlTotal;
+            document.getElementById('otEnjoyed').value = otTotal;
+            calcBalance('cl', 10); calcBalance('ml', 14); calcBalance('el', 0); calcBalance('mtl', 0); calcBalance('ot', 0);
+        });
+    }
     
     function renderMyLeaves() { if(currentRole !== 'User') return; const t=document.getElementById('myLeavesBody');t.innerHTML='Loading...'; db.ref('leaves').orderByChild('createdBy').equalTo(currentDbKey).once('value').then(snapshot=>{t.innerHTML='';if(!snapshot.exists()){t.innerHTML='<tr><td colspan="6" style="text-align:center;">No pending applications.</td></tr>';return;} snapshot.forEach(child=>{let e=child.val(); let k=child.key; if(e.status==='Pending'){ t.innerHTML+=`<tr><td>${formatDate(e.appDate)}</td><td>${e.leaveType==='Others'?e.leaveTypeOther:e.leaveType}</td><td>${formatDate(e.leaveFrom)}</td><td>${formatDate(e.leaveTo)}</td><td>${e.totalDays}</td><td><button class="btn btn-sm btn-success" onclick="editEntry('${k}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteEntry('${k}')">Delete</button> <button class="btn btn-sm" onclick="printEntry('${k}')">Print</button></td></tr>`;}});}); }
 
     function renderUsers() { const t=document.querySelector('#userTable tbody');t.innerHTML='Loading...';db.ref('users').once('value').then(snapshot=>{t.innerHTML='';snapshot.forEach(child=>{let u=child.val();let k=child.key;let actions='';if(currentRole==='SA'||currentRole==='DIC'){actions=`<button class="btn btn-sm btn-info" onclick="openEditModal('${k}')">Edit</button> <button class="btn btn-sm btn-danger" onclick="deleteUser('${k}')">Delete</button>`;}t.innerHTML+=`<tr><td>${u.name}</td><td>${u.id}</td><td>${u.dept}</td><td>${u.desig}</td><td>${u.role}</td><td>${u.userId}</td><td>${actions}</td></tr>`;});}); }
-    function addUser() { const name=document.getElementById('userName').value,empId=document.getElementById('userEmpId').value,dept=document.getElementById('userDept').value,desig=document.getElementById('userDesig').value,role=document.getElementById('userRole').value,userId=document.getElementById('userLoginId').value.trim(),pass=document.getElementById('userPass').value;if(!name||!empId||!userId||!pass)return alert('Name, Emp ID, User ID and Password are required.');db.ref('users').orderByChild('userId').equalTo(userId).once('value').then(snapshot=>{if(snapshot.exists()){alert('This User ID is already taken!');}else{db.ref('users').push({name,id:empId,dept,desig,role,userId,password:pass}).then(()=>{alert('User created successfully!');document.getElementById('userName').value='';document.getElementById('userEmpId').value='';document.getElementById('userDept').value='';document.getElementById('userDesig').value='';document.getElementById('userLoginId').value='';document.getElementById('userPass').value='';renderUsers();loadSubstituteDropdown();}).catch(error=>alert("Failed to create user: "+error.message));}}); }
-    function deleteUser(k){if(currentRole!=='DIC'&&currentRole!=='SA')return alert('Access Denied');if(confirm('Are you sure?')){db.ref('users/'+k).remove().then(()=>{renderUsers();loadSubstituteDropdown();});}}
+    function addUser() { const name=document.getElementById('userName').value,empId=document.getElementById('userEmpId').value,dept=document.getElementById('userDept').value,desig=document.getElementById('userDesig').value,role=document.getElementById('userRole').value,userId=document.getElementById('userLoginId').value.trim(),pass=document.getElementById('userPass').value;if(!name||!empId||!userId||!pass)return alert('Name, Emp ID, User ID and Password are required.');db.ref('users').orderByChild('userId').equalTo(userId).once('value').then(snapshot=>{if(snapshot.exists()){alert('This User ID is already taken!');}else{db.ref('users').push({name,id:empId,dept,desig,role,userId,password:pass}).then(()=>{alert('User created successfully!');document.getElementById('userName').value='';document.getElementById('userEmpId').value='';document.getElementById('userDept').value='';document.getElementById('userDesig').value='';document.getElementById('userLoginId').value='';document.getElementById('userPass').value='';renderUsers();loadSubstituteDropdown();loadDashUserSelector();}).catch(error=>alert("Failed to create user: "+error.message));}}); }
+    function deleteUser(k){if(currentRole!=='DIC'&&currentRole!=='SA')return alert('Access Denied');if(confirm('Are you sure?')){db.ref('users/'+k).remove().then(()=>{renderUsers();loadSubstituteDropdown();loadDashUserSelector();});}}
     function openEditModal(key){db.ref('users/'+key).once('value').then(snapshot=>{if(snapshot.exists()){let u=snapshot.val();document.getElementById('editUserKey').value=key;document.getElementById('editUserName').value=u.name;document.getElementById('editUserEmpId').value=u.id;document.getElementById('editUserDept').value=u.dept;document.getElementById('editUserDesig').value=u.desig;document.getElementById('editUserRole').value=u.role;document.getElementById('editUserLoginId').value=u.userId;document.getElementById('editUserPass').value='';document.getElementById('editUserModal').style.display='block';}});}
     function closeEditModal(){document.getElementById('editUserModal').style.display='none';}
-    function updateUser(){const key=document.getElementById('editUserKey').value;const updData={name:document.getElementById('editUserName').value,id:document.getElementById('editUserEmpId').value,dept:document.getElementById('editUserDept').value,desig:document.getElementById('editUserDesig').value,role:document.getElementById('editUserRole').value,userId:document.getElementById('editUserLoginId').value.trim()};const newPass=document.getElementById('editUserPass').value;if(newPass.trim()!==""){updData.password=newPass;}db.ref('users/'+key).update(updData).then(()=>{alert('User updated successfully!');closeEditModal();renderUsers();loadSubstituteDropdown();}).catch(err=>alert("Error updating: "+err.message));}
+    function updateUser(){const key=document.getElementById('editUserKey').value;const updData={name:document.getElementById('editUserName').value,id:document.getElementById('editUserEmpId').value,dept:document.getElementById('editUserDept').value,desig:document.getElementById('editUserDesig').value,role:document.getElementById('editUserRole').value,userId:document.getElementById('editUserLoginId').value.trim()};const newPass=document.getElementById('editUserPass').value;if(newPass.trim()!==""){updData.password=newPass;}db.ref('users/'+key).update(updData).then(()=>{alert('User updated successfully!');closeEditModal();renderUsers();loadSubstituteDropdown();loadDashUserSelector();}).catch(err=>alert("Error updating: "+err.message));}
 
-    // Form Submit 
+    // ============ FORM SUBMIT ============ 
     document.getElementById('leaveForm').addEventListener('submit', function(e) { e.preventDefault(); if(currentRole!=='User'&&currentRole!=='DIC'&&currentRole!=='SA') return alert('Access Denied'); const editId=document.getElementById('editId').value; 
         
         // Re-enable disabled fields so they submit properly
         document.querySelectorAll('input[name="leaveType"]').forEach(r => r.disabled = false);
         document.getElementById('subName').disabled = false;
 
-        const entry={appDate:document.getElementById('appDate').value,leaveType:document.querySelector('input[name="leaveType"]:checked')?.value||'',leaveTypeOther:document.getElementById('leaveTypeOther').value,appName:document.getElementById('appName').value,appDesignation:document.getElementById('appDesignation').value,appDept:document.getElementById('appDept').value,appID:document.getElementById('appID').value,leaveFrom:document.getElementById('leaveFrom').value,leaveTo:document.getElementById('leaveTo').value,totalDays:document.getElementById('totalDays').value,reason:document.getElementById('reason').value,contactAddress:document.getElementById('contactAddress').value,contactPhone:document.getElementById('contactPhone').value,subName:document.getElementById('subName').options[document.getElementById('subName').selectedIndex].text,subDesignation:document.getElementById('subDesignation').value,subID:document.getElementById('subID').value,subSignatureName:document.getElementById('subSignatureName').value,applicantSignature:document.getElementById('sigApplicantName').textContent,remarks:document.getElementById('remarks').value,clEnjoyed:document.getElementById('clEnjoyed').value||0,mlEnjoyed:document.getElementById('mlEnjoyed').value||0,elEnjoyed:document.getElementById('elEnjoyed').value||0,mtlEnjoyed:document.getElementById('mtlEnjoyed').value||0,otEnjoyed:document.getElementById('otEnjoyed').value||0,clBalance:document.getElementById('clBalance').value||0,mlBalance:document.getElementById('mlBalance').value||14,authSignature:document.getElementById('authSignature').value,authDate:document.getElementById('authDate').value,approvedDays:document.getElementById('approvedDays').value,createdBy:currentDbKey,status:document.getElementById('editStatus').value||'Pending',signatureReportingOfficer:document.getElementById('sigDicName').textContent||'',signatureDepotHead:document.getElementById('sigRsmName').textContent||'',signatureSanctionAuth:document.getElementById('sigSaName').textContent||''}; 
+        const entry={appDate:document.getElementById('appDate').value,leaveType:document.querySelector('input[name="leaveType"]:checked')?.value||'',leaveTypeOther:document.getElementById('leaveTypeOther').value,appName:document.getElementById('appName').value,appDesignation:document.getElementById('appDesignation').value,appDept:document.getElementById('appDept').value,appID:document.getElementById('appID').value,leaveFrom:document.getElementById('leaveFrom').value,leaveTo:document.getElementById('leaveTo').value,totalDays:document.getElementById('totalDays').value,reason:document.getElementById('reason').value,contactAddress:document.getElementById('contactAddress').value,contactPhone:document.getElementById('contactPhone').value,subName:document.getElementById('subName').options[document.getElementById('subName').selectedIndex].text,subDesignation:document.getElementById('subDesignation').value,subID:document.getElementById('subID').value,subSignatureName:document.getElementById('subSignatureName').value,applicantSignature:document.getElementById('sigApplicantName').textContent,remarks:document.getElementById('remarks').value,clEnjoyed:document.getElementById('clEnjoyed').value||0,mlEnjoyed:document.getElementById('mlEnjoyed').value||0,elEnjoyed:document.getElementById('elEnjoyed').value||0,mtlEnjoyed:document.getElementById('mtlEnjoyed').value||0,otEnjoyed:document.getElementById('otEnjoyed').value||0,clBalance:document.getElementById('clBalance').value||0,mlBalance:document.getElementById('mlBalance').value||14,elBalance:document.getElementById('elBalance').value||0,mtlBalance:document.getElementById('mtlBalance').value||0,otBalance:document.getElementById('otBalance').value||0,authSignature:document.getElementById('authSignature').value,authDate:document.getElementById('authDate').value,approvedDays:document.getElementById('approvedDays').value,createdBy:currentDbKey,status:document.getElementById('editStatus').value||'Pending',signatureReportingOfficer:document.getElementById('sigDicName').textContent||'',signatureDepotHead:document.getElementById('sigRsmName').textContent||'',signatureSanctionAuth:document.getElementById('sigSaName').textContent||''}; 
         
         if(editId){db.ref('leaves/'+editId).update(entry).then(()=>{alert('Updated successfully!');resetForm();if(currentRole==='User')renderMyLeaves();else openTab('historyTab');});}
         else{db.ref('leaves').push(entry).then(()=>{alert('Submitted successfully!');resetForm();if(currentRole==='User')renderMyLeaves();else openTab('historyTab');}).catch(e=>alert("Submit Error: "+e.message));} 
     });
     
-    function resetForm(){document.getElementById('leaveForm').reset();document.getElementById('editId').value='';document.getElementById('editStatus').value='';document.getElementById('totalDays').value='';document.querySelectorAll('.readonly-input').forEach(i=>i.value='');document.getElementById('submitBtn').textContent='SUBMIT LEAVE APPLICATION';document.getElementById('appDate').valueAsDate=new Date();document.getElementById('sigDicName').textContent='';document.getElementById('sigRsmName').textContent='';document.getElementById('sigSaName').textContent=''; unlockFormFields(); autoFillApplicantInfo(); }
+    function resetForm(){document.getElementById('leaveForm').reset();document.getElementById('editId').value='';document.getElementById('editStatus').value='';document.getElementById('totalDays').value='';document.querySelectorAll('.readonly-input').forEach(i=>i.value='');document.getElementById('submitBtn').textContent='SUBMIT LEAVE APPLICATION';document.getElementById('appDate').valueAsDate=new Date();document.getElementById('sigDicName').textContent='';document.getElementById('sigRsmName').textContent='';document.getElementById('sigSaName').textContent='';unlockFormFields();autoFillApplicantInfo();applyHRSectionPermissions();autoCalcLeaveEnjoyed();}
 
     // Lock/Unlock Logic for SA Approval
     function lockFormFieldsForSA() {
@@ -285,7 +418,7 @@
     function rejectEntry(id) { db.ref('leaves/'+id).update({status:'Rejected'}).then(()=>renderHistory()); }
 
     async function saApproveEdit(id) { 
-        await editEntry(id); // Opens form and populates data
+        await editEntry(id);
         
         let e = await db.ref('leaves/'+id).once('value');
         if(!e.exists()) return;
@@ -298,20 +431,20 @@
         document.getElementById('clEnjoyed').value = clTotal; document.getElementById('mlEnjoyed').value = mlTotal; document.getElementById('elEnjoyed').value = elTotal; document.getElementById('mtlEnjoyed').value = mtlTotal; document.getElementById('otEnjoyed').value = otTotal; 
         calcBalance('cl', 10); calcBalance('ml', 14); calcBalance('el', 0); calcBalance('mtl', 0); calcBalance('ot', 0); 
         
-        lockFormFieldsForSA(); // Lock top section
+        lockFormFieldsForSA();
+        applyHRSectionPermissions(); // Ensure SA can edit HR fields
         
         document.getElementById('editStatus').value = 'Approved'; 
-        document.getElementById('sigSaName').textContent = currentUserName; // Pre-fill SA signature
+        document.getElementById('sigSaName').textContent = currentUserName;
         document.getElementById('submitBtn').textContent = 'APPROVE & SUBMIT'; 
     }
 
     function editEntry(id){db.ref('leaves/'+id).once('value').then(s=>{if(!s.exists())return;let e=s.val();if(currentRole==='User'&&e.createdBy!==currentDbKey)return alert('Access Denied.');openTab('formTab');document.getElementById('editId').value=id;document.getElementById('editStatus').value=e.status;document.getElementById('appDate').value=e.appDate;if(e.leaveType){let r=document.querySelector(`input[name="leaveType"][value="${e.leaveType}"]`);if(r)r.checked=true;}document.getElementById('leaveTypeOther').value=e.leaveTypeOther;document.getElementById('appName').value=e.appName;document.getElementById('appDesignation').value=e.appDesignation;document.getElementById('appDept').value=e.appDept;document.getElementById('appID').value=e.appID;document.getElementById('leaveFrom').value=e.leaveFrom;document.getElementById('leaveTo').value=e.leaveTo;document.getElementById('totalDays').value=e.totalDays;document.getElementById('reason').value=e.reason;document.getElementById('contactAddress').value=e.contactAddress;document.getElementById('contactPhone').value=e.contactPhone;
         
-        // Fix for Substitute Data Disappearing
         const subSelect = document.getElementById('subName');
         let matched = false;
         for (let i = 0; i < subSelect.options.length; i++) {
-            if (subSelect.options[i].text === e.subName) { // Match by text since we save text, not key
+            if (subSelect.options[i].text === e.subName) {
                 subSelect.selectedIndex = i;
                 matched = true;
                 break;
@@ -319,12 +452,42 @@
         }
         if (!matched) subSelect.value = ""; 
         
-        // Explicitly set the text fields so they don't get cleared by fillSubstituteData
         document.getElementById('subDesignation').value = e.subDesignation || '';
         document.getElementById('subID').value = e.subID || '';
         document.getElementById('subSignatureName').value = e.subSignatureName || '';
 
-        document.getElementById('remarks').value=e.remarks;document.getElementById('clEnjoyed').value=e.clEnjoyed;document.getElementById('mlEnjoyed').value=e.mlEnjoyed;document.getElementById('sigApplicantName').textContent=e.applicantSignature||e.appName;document.getElementById('sigDicName').textContent=e.signatureReportingOfficer||'';document.getElementById('sigRsmName').textContent=e.signatureDepotHead||'';document.getElementById('sigSaName').textContent=e.signatureSanctionAuth||'';document.getElementById('submitBtn').textContent='UPDATE LEAVE APPLICATION'; unlockFormFields(); });}
+        document.getElementById('remarks').value=e.remarks;document.getElementById('clEnjoyed').value=e.clEnjoyed;document.getElementById('mlEnjoyed').value=e.mlEnjoyed;document.getElementById('elEnjoyed').value=e.elEnjoyed||0;document.getElementById('mtlEnjoyed').value=e.mtlEnjoyed||0;document.getElementById('otEnjoyed').value=e.otEnjoyed||0;
+        calcBalance('cl', 10); calcBalance('ml', 14); calcBalance('el', 0); calcBalance('mtl', 0); calcBalance('ot', 0);
+        
+        // IMPORTANT: Only show signatures that have been actually set through approval
+        // DIC signature = only show if DIC has approved this entry
+        // RSM signature = only show if RSM has approved this entry
+        // SA signature = only show if SA has approved this entry
+        // For NEW/PENDING entries, NO approval signatures should appear
+        document.getElementById('sigApplicantName').textContent=e.applicantSignature||e.appName;
+        
+        // Only show DIC name if DIC has actually approved (status is at least DIC Approved)
+        if(e.status === 'DIC Approved' || e.status === 'RSM Approved' || e.status === 'Approved') {
+            document.getElementById('sigDicName').textContent = e.signatureReportingOfficer || '';
+        } else {
+            document.getElementById('sigDicName').textContent = '';
+        }
+        
+        // Only show RSM name if RSM has actually approved
+        if(e.status === 'RSM Approved' || e.status === 'Approved') {
+            document.getElementById('sigRsmName').textContent = e.signatureDepotHead || '';
+        } else {
+            document.getElementById('sigRsmName').textContent = '';
+        }
+        
+        // Only show SA name if fully approved
+        if(e.status === 'Approved') {
+            document.getElementById('sigSaName').textContent = e.signatureSanctionAuth || '';
+        } else {
+            document.getElementById('sigSaName').textContent = '';
+        }
+        
+        document.getElementById('submitBtn').textContent='UPDATE LEAVE APPLICATION'; unlockFormFields(); applyHRSectionPermissions(); });}
     
     function deleteEntry(id){db.ref('leaves/'+id).once('value').then(s=>{if(!s.exists())return;let e=s.val();if(currentRole==='User'&&e.createdBy!==currentDbKey)return alert('Access Denied.');if(currentRole==='RSM'||currentRole==='SA')return alert('Access Denied.');if(confirm('Delete this application?')){db.ref('leaves/'+id).remove().then(()=>{if(currentRole==='User')renderMyLeaves();else renderHistory();});}});}
 
@@ -335,6 +498,7 @@
             let lt = e.leaveType === 'Others' ? e.leaveTypeOther : e.leaveType;
             let chkCL = e.leaveType === 'CL' ? '☑' : '☐'; let chkML = e.leaveType === 'ML' ? '☑' : '☐'; let chkEL = e.leaveType === 'EL' ? '☑' : '☐'; let chkMTL = e.leaveType === 'MTL' ? '☑' : '☐'; let chkOth = e.leaveType === 'Others' ? '☑' : '☐'; let chkApp1 = e.status === 'Approved' ? '☑' : '☐'; let chkApp2 = e.status === 'Rejected' ? '☑' : '☐';
             let currentYear = new Date().getFullYear();
+            let clBal = 10 - (e.clEnjoyed||0); let mlBal = 14 - (e.mlEnjoyed||0);
             
             let html = `
             <div style="width:100%; max-width:210mm; margin:0 auto; font-family:'Times New Roman', Times, serif; font-size:11px; line-height:1.2; color:#000;">
@@ -349,11 +513,11 @@
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;"><div style="flex:2; display:flex; align-items:center; gap:5px;"><label style="font-weight:bold;">Contact Address during leave:</label><span style="border-bottom:1px solid #000; width:100%; display:inline-block; height:18px; padding:0 2px;">${e.contactAddress}</span></div><div style="flex:1; display:flex; align-items:center; gap:5px;"><label style="font-weight:bold;">Contact Phone No.:</label><span style="border-bottom:1px solid #000; width:100%; display:inline-block; height:18px; padding:0 2px;">${e.contactPhone}</span></div></div>
                 <div style="font-weight:bold; border-bottom:1px solid #000; text-transform:uppercase; margin:8px 0 4px;">CASUAL SUBSTITUTE / RESPONSIBILITY TAKEN BY</div>
                 <table style="width:100%; border-collapse:collapse; margin-bottom:6px; table-layout:fixed;"><tr><td style="width:12%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Name:</td><td style="width:38%; border:1px solid #000; padding:2px 4px;">${e.subName}</td><td style="width:15%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Designation:</td><td style="width:35%; border:1px solid #000; padding:2px 4px;">${e.subDesignation}</td></tr><tr><td style="border:1px solid #000; padding:2px 4px; font-weight:bold;">ID:</td><td style="border:1px solid #000; padding:2px 4px;">${e.subID}</td><td style="border:1px solid #000; padding:2px 4px; font-weight:bold;">Signature:</td><td style="border:1px solid #000; padding:2px 4px;">${e.subSignatureName}</td></tr></table>
-                <div style="text-align:right; margin-top:15px;"><div style="font-size:11px; min-height:15px; font-weight:bold; text-align:center; width:180px; margin-left:auto;">${e.applicantSignature || e.appName}</div><div style="border-top:1px solid #000; margin-left:auto; padding-top:2px; text-align:center; width:180px; font-size:10px; font-weight:bold;">APPLICANT’S SIGNATURE</div></div>
+                <div style="text-align:right; margin-top:15px;"><div style="font-size:11px; min-height:15px; font-weight:bold; text-align:center; width:180px; margin-left:auto;">${e.applicantSignature || e.appName}</div><div style="border-top:1px solid #000; margin-left:auto; padding-top:2px; text-align:center; width:180px; font-size:10px; font-weight:bold;">APPLICANT'S SIGNATURE</div></div>
                 <div style="font-weight:bold; border-bottom:1px solid #000; text-transform:uppercase; margin:8px 0 4px;">RECOMMENDATION & REMARKS</div><div style="min-height:30px; border-bottom:1px solid #000; margin-bottom:5px; padding:0 2px;">${e.remarks || ''}</div>
                 <div style="display:flex; justify-content:space-between; margin-top:10px;"><div style="text-align:center; width:180px;"><div style="font-size:11px; min-height:15px; font-weight:bold;">${e.signatureReportingOfficer || ''}</div><div style="border-top:1px solid #000; padding-top:2px; font-size:10px; font-weight:bold;">Signature of Reporting Officer/Supervisor</div></div><div style="text-align:center; width:180px;"><div style="font-size:11px; min-height:15px; font-weight:bold;">${e.signatureDepotHead || ''}</div><div style="border-top:1px solid #000; padding-top:2px; font-size:10px; font-weight:bold;">Signature of Depot / Unit Head</div></div></div>
                 <div style="font-weight:bold; border-bottom:1px solid #000; text-transform:uppercase; margin:8px 0 4px;">FOR ADMINISTRATION & HR USE ONLY</div>
-                <table style="width:100%; border-collapse:collapse; margin-bottom:6px; table-layout:fixed;"><thead><tr><th style="border:1px solid #000; padding:2px 4px; text-align:left; font-weight:bold;">Leave Types</th><th style="width:20%; border:1px solid #000; padding:2px 4px; text-align:center; font-weight:bold;">Leave dues for the Year ${currentYear}</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Leave Enjoyed</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Balance Leave</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Remarks</th></tr></thead><tbody><tr><td style="border:1px solid #000; padding:2px 4px;">Casual Leave (CL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">10</td><td style="border:1px solid #000; padding:2px 4px;">${e.clEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">${10 - (e.clEnjoyed||0)}</td><td style="border:1px solid #000; padding:2px 4px;"></td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Medical Leave (ML)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">14</td><td style="border:1px solid #000; padding:2px 4px;">${e.mlEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">${14 - (e.mlEnjoyed||0)}</td><td style="border:1px solid #000; padding:2px 4px;"></td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Earned Leave (EL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.elEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;"></td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Maternity Leave (MTL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.mtlEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;"></td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Others (if any)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.otEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;"></td></tr></tbody></table>
+                <table style="width:100%; border-collapse:collapse; margin-bottom:6px; table-layout:fixed;"><thead><tr><th style="border:1px solid #000; padding:2px 4px; text-align:left; font-weight:bold;">Leave Types</th><th style="width:20%; border:1px solid #000; padding:2px 4px; text-align:center; font-weight:bold;">Leave dues for the Year ${currentYear}</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Leave Enjoyed</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Balance Leave</th><th style="width:20%; border:1px solid #000; padding:2px 4px; font-weight:bold;">Remarks</th></tr></thead><tbody><tr><td style="border:1px solid #000; padding:2px 4px;">Casual Leave (CL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">${clBal}</td><td style="border:1px solid #000; padding:2px 4px;">${e.clEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">${clBal}</td><td style="border:1px solid #000; padding:2px 4px;">${e.clRemarks||''}</td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Medical Leave (ML)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">${mlBal}</td><td style="border:1px solid #000; padding:2px 4px;">${e.mlEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">${mlBal}</td><td style="border:1px solid #000; padding:2px 4px;">${e.mlRemarks||''}</td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Earned Leave (EL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.elEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;">${e.elRemarks||''}</td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Maternity Leave (MTL)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.mtlEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;">${e.mtlRemarks||''}</td></tr><tr><td style="border:1px solid #000; padding:2px 4px;">Others (if any)</td><td style="border:1px solid #000; padding:2px 4px; text-align:center;">-</td><td style="border:1px solid #000; padding:2px 4px;">${e.otEnjoyed||0}</td><td style="border:1px solid #000; padding:2px 4px;">0</td><td style="border:1px solid #000; padding:2px 4px;">${e.otRemarks||''}</td></tr></tbody></table>
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;"><div style="flex:1; display:flex; align-items:center; gap:5px;"><label style="font-weight:bold;">Signature of Authorized Officer:</label><span style="border-bottom:1px solid #000; width:100%; display:inline-block; height:18px; padding:0 2px;">${e.authSignature || ''}</span></div><div style="flex:0 0 220px; display:flex; align-items:center; gap:5px;"><label style="font-weight:bold;">Date:</label><span style="border-bottom:1px solid #000; width:100%; display:inline-block; height:18px; padding:0 2px;">${formatDate(e.authDate)}</span></div></div>
                 <div style="font-weight:bold; border-bottom:1px solid #000; text-transform:uppercase; margin:8px 0 4px;">APPROVAL</div>
                 <div style="display:flex; gap:15px; margin-bottom:0;"><span style="font-size:14px; font-weight:bold;">${chkApp1}</span> <label style="font-weight:bold;">Approved as recommended</label><span style="font-size:14px; font-weight:bold;">${chkApp2}</span> <label style="font-weight:bold;">Not Approved</label><div style="display:flex; align-items:center; gap:5px;"><label style="font-weight:bold;">Approved for</label><span style="border-bottom:1px solid #000; width:50px; display:inline-block; height:18px; padding:0 2px; text-align:center;">${e.approvedDays || ''}</span><label style="font-weight:bold;">day(s)</label></div></div>
