@@ -147,6 +147,12 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 .checkin-btn.leave-btn{background:linear-gradient(135deg,#d97706,#f59e0b);color:#0a0f1a}
 .checkin-btn.leave-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(245,158,11,.3)}
 .checkin-btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.checkout-locked-msg{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:12px;padding:16px;text-align:center;animation:lockPulse 3s ease-in-out infinite}
+@keyframes lockPulse{0%,100%{border-color:rgba(239,68,68,.2)}50%{border-color:rgba(239,68,68,.4)}}
+.checkout-locked-msg i.lock-icon{font-size:28px;color:#ef4444;margin-bottom:8px;display:block}
+.checkout-locked-msg .lock-title{font-weight:700;color:#ef4444;font-size:14px;margin-bottom:4px}
+.checkout-locked-msg .lock-subtitle{font-size:11px;color:var(--text2)}
+.checkout-locked-msg .lock-countdown{font-size:20px;font-weight:900;color:#f59e0b;margin-top:8px;letter-spacing:1px}
 .type-tab{padding:10px 20px;border:2px solid var(--border);border-radius:10px;background:var(--bg);color:var(--text2);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
 .type-tab:hover{border-color:var(--muted)}
 .type-tab.active-office{border-color:#00d4aa;background:rgba(0,212,170,.08);color:#00d4aa}
@@ -210,7 +216,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 <script>
 /* ===== CONFIG ===== */
 var DIC_ID='KS',DIC_PASS='Monico@Ku007';
-var START_TIME='08:30',LATE_TIME='09:10',END_TIME='19:00';
+var START_TIME='08:30',LATE_TIME='09:10',END_TIME='19:00',CHECKOUT_UNLOCK_TIME='19:00';
 
 var DB_URL='https://attendance-kushtia-default-rtdb.europe-west1.firebasedatabase.app';
 var firebaseConfig={apiKey:"AIzaSyBEg0YOOsFgKiyTv3QkyQv0Vhpym1lms",authDomain:"attendance-kushtia.firebaseapp.com",databaseURL:DB_URL,projectId:"attendance-kushtia",storageBucket:"attendance-kushtia.firebasestorage.app",messagingSenderId:"695383066612",appId:"1:695383066612:web:0d9f5a6dc5d1bbd0a6dba1",measurementId:"G-G21R0GPT2X"};
@@ -220,6 +226,7 @@ var db=firebase.database();
 /* ===== STATE ===== */
 var currentUser=null,allUsers={},allHolidays={},allSignatures={},currentTab='overview',tourImageData=null;
 var imgCache={};
+var checkoutTimerInterval=null;
 var DESIG_ORDER=['Depot In-Charge','Asst. Depot In-Charge','Delivery Assistant'];
 var DESIGNATIONS=DESIG_ORDER;
 
@@ -249,24 +256,47 @@ function isBeforeStartTime(time){if(!time)return false;return time<START_TIME}
 function isEarlyOut(outTime){if(!outTime)return false;return outTime<END_TIME}
 function lateIcon(){return'<span class="late-dot" title="Late Entry (after '+LATE_TIME+')"></span>'}
 
-/* Attendance status logic: Both IN+OUT approved = Present */
+/* ===== CHECKOUT TIME LOCK ===== */
+function isCheckOutAllowed(dateStr){
+  if(!dateStr) return false;
+  /* অতীতের তারিখের জন্য সবসময় allow */
+  if(dateStr<todayStr()) return true;
+  /* ভবিষ্যতের তারিখের জন্য allow না */
+  if(dateStr>todayStr()) return false;
+  /* আজকের তারিখ: CHECKOUT_UNLOCK_TIME এর পরেই allow */
+  return getCurrentTime()>=CHECKOUT_UNLOCK_TIME;
+}
+function getTimeUntilCheckout(){
+  var now=new Date(),target=new Date();
+  var p=CHECKOUT_UNLOCK_TIME.split(':');
+  target.setHours(parseInt(p[0]),parseInt(p[1]),0,0);
+  if(now>=target) return null;
+  var diff=target-now;
+  var h=Math.floor(diff/3600000);
+  var m=Math.floor((diff%3600000)/60000);
+  var s=Math.floor((diff%60000)/1000);
+  return{hours:h,minutes:m,seconds:s,total:diff};
+}
+function getCountdownStr(){
+  var t=getTimeUntilCheckout();
+  if(!t) return'';
+  return String(t.hours).padStart(2,'0')+':'+String(t.minutes).padStart(2,'0')+':'+String(t.seconds).padStart(2,'0');
+}
+
+/* Attendance status logic */
 function getAttStatus(ds,uid,att){
   if(att&&att.status) return att.status;
   if(isHoliday(ds)) return'H';
   if(ds<=todayStr()) return'A';
   return'';
 }
-/* Is this a full Present? (both IN+OUT submitted and approved, not Leave/Holiday) */
 function isFullPresent(att){
   if(!att||!att.approved) return false;
   if(att.status==='L'||att.status==='H') return false;
   return !!(att.inTime&&att.outTime);
 }
-/* Is IN submitted? */
 function hasIn(att){return !!(att&&att.inTime)}
-/* Is OUT submitted? */
 function hasOut(att){return !!(att&&att.outTime)}
-/* Is complete (both IN+OUT for P/T, or just submitted for L/H) */
 function isCompleteAttendance(att){
   if(!att) return false;
   if(att.status==='L'||att.status==='H') return true;
@@ -278,8 +308,9 @@ function isAutoAbsent(ds,uid,att){return(!att||!att.status)&&!isHoliday(ds)&&ds<
 function getEntryWindowStatus(){
   var now=getCurrentTime();
   if(now<START_TIME) return{cls:'entry-window-closed',icon:'fa-lock',color:'#ef4444',title:'Entry Not Yet Open',msg:'Check-IN starts at '+formatTime12(START_TIME)+'. Current: '+formatTime12(now),canIn:false,canOut:false};
-  if(now<=LATE_TIME) return{cls:'entry-window-open',icon:'fa-lock-open',color:'#00d4aa',title:'Normal Entry Window',msg:'Check-IN window: '+formatTime12(START_TIME)+' - '+formatTime12(LATE_TIME)+' | After '+formatTime12(LATE_TIME)+' = LET',canIn:true,canOut:true};
-  return{cls:'entry-window-late',icon:'fa-triangle-exclamation',color:'#f59e0b',title:'Late Entry Window (LET)',msg:'After '+formatTime12(LATE_TIME)+' = Late Entry. Check-OUT by '+formatTime12(END_TIME),canIn:true,canOut:true};
+  if(now<=LATE_TIME) return{cls:'entry-window-open',icon:'fa-lock-open',color:'#00d4aa',title:'Normal Entry Window',msg:'Check-IN window: '+formatTime12(START_TIME)+' - '+formatTime12(LATE_TIME)+' | After '+formatTime12(LATE_TIME)+' = LET',canIn:true,canOut:false};
+  if(now<CHECKOUT_UNLOCK_TIME) return{cls:'entry-window-late',icon:'fa-triangle-exclamation',color:'#f59e0b',title:'Late Entry Window (LET)',msg:'After '+formatTime12(LATE_TIME)+' = Late Entry. Check-OUT unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME),canIn:true,canOut:false};
+  return{cls:'entry-window-open',icon:'fa-lock-open',color:'#00d4aa',title:'Checkout Available',msg:'Check-OUT is now available. Office end: '+formatTime12(END_TIME),canIn:true,canOut:true};
 }
 
 /* ===== LOCATION ===== */
@@ -374,6 +405,59 @@ function showModal(title,bodyHTML,onConfirm){var ov=document.getElementById('mod
 function closeModal(){document.getElementById('modalOverlay').style.display='none'}
 function switchView(id){document.querySelectorAll('.view').forEach(function(v){v.classList.remove('active')});document.getElementById(id).classList.add('active')}
 
+/* ===== CHECKOUT TIMER ===== */
+function startCheckoutTimer(){
+  stopCheckoutTimer();
+  checkoutTimerInterval=setInterval(function(){
+    updateCheckoutUI();
+  },1000);
+}
+function stopCheckoutTimer(){
+  if(checkoutTimerInterval){clearInterval(checkoutTimerInterval);checkoutTimerInterval=null;}
+}
+function updateCheckoutUI(){
+  var dateEl=document.getElementById('userDate');
+  if(!dateEl) return;
+  var date=dateEl.value;
+  var allowed=isCheckOutAllowed(date);
+  var lockMsg=document.getElementById('checkoutLockMsg');
+  var checkOutBtn=document.getElementById('checkOutBtn');
+  var outTimeDisplay=document.getElementById('outTimeDisplay');
+
+  if(!lockMsg||!checkOutBtn) return;
+
+  /* যদি ইতিমধ্যে OUT হয়ে গেছে তাহলে lock message দেখাব না */
+  if(outTimeDisplay&&outTimeDisplay.textContent!=='--:-- --'){
+    lockMsg.style.display='none';
+    checkOutBtn.style.display='flex';
+    return;
+  }
+
+  if(allowed){
+    /* Checkout unlocked */
+    lockMsg.style.display='none';
+    checkOutBtn.style.display='flex';
+    /* শুধুমাত্র IN করা থাকলে এবং Leave না হলে enable করব */
+    var inDisplay=document.getElementById('inTimeDisplay');
+    if(inDisplay&&inDisplay.textContent!=='--:-- --'){
+      var leaveSection=document.getElementById('leaveSection');
+      var isLeave=leaveSection&&leaveSection.style.display!=='none';
+      checkOutBtn.disabled=isLeave;
+    }
+  }else{
+    /* Checkout locked - বাটন লুকাব, lock message দেখাব */
+    checkOutBtn.style.display='none';
+    checkOutBtn.disabled=true;
+    var countdown=getCountdownStr();
+    lockMsg.style.display='block';
+    lockMsg.innerHTML='<i class="fa-solid fa-lock lock-icon"></i>'+
+      '<div class="lock-title">Check-OUT Locked</div>'+
+      '<div class="lock-subtitle">Check-OUT সুবিধা প্রতিদিন সন্ধ্যা <strong style="color:#f59e0b">'+formatTime12(CHECKOUT_UNLOCK_TIME)+'</strong> এর পরে সক্রিয় হবে</div>'+
+      (countdown?'<div class="lock-countdown" id="checkoutCountdown">'+countdown+'</div>':'')+
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px"><i class="fa-solid fa-clock"></i> Current: '+formatTime12(getCurrentTime())+'</div>';
+  }
+}
+
 /* ===== DATA LOADERS ===== */
 async function loadUsers(){try{var snap=await db.ref('users').once('value');allUsers=snap.val()||{}}catch(e){showToast('Failed to load users','error')}}
 async function loadHolidays(){try{var snap=await db.ref('holidays').once('value');allHolidays=snap.val()||{}}catch(e){showToast('Failed to load holidays','error')}}
@@ -410,11 +494,11 @@ function printContent(htmlContent,title){
 
 /* ===== LOGIN ===== */
 async function handleLogin(){var id=document.getElementById('loginId').value.trim(),pass=document.getElementById('loginPass').value.trim();if(!id||!pass){showToast('Enter ID and Password','error');return}if(id===DIC_ID&&pass===DIC_PASS){var snap=await db.ref('users/'+DIC_ID).once('value');if(!snap.exists())await db.ref('users/'+DIC_ID).set({id:DIC_ID,name:'Depot In-Charge',designation:'Depot In-Charge',depot:'Kushtia',joinDate:todayStr(),salary:0,mobile:'',role:'DIC',password:DIC_PASS,active:true,createdAt:Date.now()});currentUser={id:DIC_ID,name:'Depot In-Charge',role:'DIC',designation:'Depot In-Charge'};await loadUsers();await loadHolidays();await loadSignatures();document.getElementById('dicDisplayId').textContent=DIC_ID+' | Admin (DIC)';switchView('dicView');renderSidebar();showTab('overview');showToast('Welcome, Admin','success');return}try{var snap=await db.ref('users/'+id).once('value');if(!snap.exists()){showToast('User not found','error');return}var data=snap.val();if(data.password!==pass){showToast('Wrong password','error');return}if(data.active===false){showToast('Account deactivated','error');return}currentUser=data;await loadUsers();await loadHolidays();await loadSignatures();document.getElementById('userDisplayInfo').textContent=id+' | '+(data.designation||'');switchView('userView');renderUserDashboard();showToast('Welcome, '+data.name,'success')}catch(e){showToast('Login error: '+e.message,'error')}}
-function handleLogout(){currentUser=null;allUsers={};allHolidays={};allSignatures={};tourImageData=null;imgCache={};document.getElementById('loginId').value='';document.getElementById('loginPass').value='';switchView('loginView');showToast('Logged out','info')}
+function handleLogout(){currentUser=null;allUsers={};allHolidays={};allSignatures={};tourImageData=null;imgCache={};stopCheckoutTimer();document.getElementById('loginId').value='';document.getElementById('loginPass').value='';switchView('loginView');showToast('Logged out','info')}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('loginView').classList.contains('active'))handleLogin()});
 
 /* ===== USER DASHBOARD ===== */
-var userType='office'; // office | tour | leave
+var userType='office';
 
 function renderUserDashboard(){
   var c=document.getElementById('userContent'),today=todayStr(),hol=isHoliday(today),holName=getHolidayName(today);
@@ -422,6 +506,8 @@ function renderUserDashboard(){
   var now=new Date(),monthOpts='',yearOpts='';
   for(var i=0;i<12;i++)monthOpts+='<option value="'+i+'"'+(i===now.getMonth()?' selected':'')+'>'+['January','February','March','April','May','June','July','August','September','October','November','December'][i]+'</option>';
   for(var i=0;i<5;i++){var yr=now.getFullYear()-2+i;yearOpts+='<option value="'+yr+'"'+(yr===now.getFullYear()?' selected':'')+'>'+yr+'</option>'}
+  
+  var checkoutAllowed=isCheckOutAllowed(today);
   
   c.innerHTML='<div class="fade-in">'+
   /* User Info */
@@ -443,7 +529,18 @@ function renderUserDashboard(){
     /* IN Card */
     '<div class="checkin-card in-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:36px;height:36px;background:rgba(0,212,170,.15);border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-right-to-bracket" style="color:#00d4aa;font-size:16px"></i></div><div><div style="font-size:14px;font-weight:700;color:#00d4aa">CHECK IN</div><div style="font-size:10px;color:var(--text2)">Office arrival time</div></div></div><div id="inTimeDisplay" class="time-locked" style="color:#00d4aa">--:-- --</div><div id="inLocDisplay"></div><button class="checkin-btn in-btn" id="checkInBtn" onclick="userCheckIn()"><i class="fa-solid fa-right-to-bracket"></i> Check IN</button><div id="inStatusDisplay" style="margin-top:8px;font-size:11px"></div></div>'+
     /* OUT Card */
-    '<div class="checkin-card out-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:36px;height:36px;background:rgba(59,130,246,.15);border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-right-from-bracket" style="color:#60a5fa;font-size:16px"></i></div><div><div style="font-size:14px;font-weight:700;color:#60a5fa">CHECK OUT</div><div style="font-size:10px;color:var(--text2)">Office departure time</div></div></div><div id="outTimeDisplay" class="time-locked" style="color:#60a5fa">--:-- --</div><div id="outLocDisplay"></div><button class="checkin-btn out-btn" id="checkOutBtn" onclick="userCheckOut()" disabled><i class="fa-solid fa-right-from-bracket"></i> Check OUT</button><div id="outStatusDisplay" style="margin-top:8px;font-size:11px"></div></div>'+
+    '<div class="checkin-card out-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:36px;height:36px;background:rgba(59,130,246,.15);border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-right-from-bracket" style="color:#60a5fa;font-size:16px"></i></div><div><div style="font-size:14px;font-weight:700;color:#60a5fa">CHECK OUT</div><div style="font-size:10px;color:var(--text2)">Office departure time</div></div></div><div id="outTimeDisplay" class="time-locked" style="color:#60a5fa">--:-- --</div><div id="outLocDisplay"></div>'+
+    /* Checkout Lock Message - 6:30 PM এর আগে দেখাবে */
+    '<div id="checkoutLockMsg" class="checkout-locked-msg" style="display:'+(checkoutAllowed?'none':'block')+'">'+
+      '<i class="fa-solid fa-lock lock-icon"></i>'+
+      '<div class="lock-title">Check-OUT Locked</div>'+
+      '<div class="lock-subtitle">Check-OUT সুবিধা প্রতিদিন সন্ধ্যা <strong style="color:#f59e0b">'+formatTime12(CHECKOUT_UNLOCK_TIME)+'</strong> এর পরে সক্রিয় হবে</div>'+
+      '<div class="lock-countdown" id="checkoutCountdown">'+getCountdownStr()+'</div>'+
+      '<div style="font-size:10px;color:var(--muted);margin-top:6px"><i class="fa-solid fa-clock"></i> Current: '+formatTime12(getCurrentTime())+'</div>'+
+    '</div>'+
+    /* Checkout Button - 6:30 PM এর আগে লুকানো থাকবে */
+    '<button class="checkin-btn out-btn" id="checkOutBtn" onclick="userCheckOut()" disabled style="display:'+(checkoutAllowed?'flex':'none')+'"><i class="fa-solid fa-right-from-bracket"></i> Check OUT</button>'+
+    '<div id="outStatusDisplay" style="margin-top:8px;font-size:11px"></div></div>'+
   '</div>'+
   /* Leave Submit */
   '<div id="leaveSection" style="display:none;margin-bottom:16px"><div class="checkin-card leave-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><div style="width:36px;height:36px;background:rgba(245,158,11,.15);border-radius:10px;display:flex;align-items:center;justify-content:center"><i class="fa-solid fa-calendar-xmark" style="color:#f59e0b;font-size:16px"></i></div><div><div style="font-size:14px;font-weight:700;color:#f59e0b">LEAVE APPLICATION</div><div style="font-size:10px;color:var(--text2)">No IN/OUT required for leave</div></div></div><button class="checkin-btn leave-btn" id="leaveSubmitBtn" onclick="userSubmitLeave()"><i class="fa-solid fa-paper-plane"></i> Submit Leave</button><div id="leaveStatusDisplay" style="margin-top:8px;font-size:11px"></div></div></div>'+
@@ -459,6 +556,8 @@ function renderUserDashboard(){
   loadUserTodayStatus();
   checkUserAbsentWarning();
   loadUserHistoryGrid();
+  /* Countdown timer শুরু */
+  startCheckoutTimer();
 }
 
 /* Load today's existing attendance data and update UI */
@@ -478,9 +577,9 @@ async function loadUserTodayStatus(){
     return;
   }
   
-  /* If existing attendance, restore state */
+  var checkoutAllowed=isCheckOutAllowed(date);
+  
   if(att){
-    /* IN time */
     if(att.inTime){
       document.getElementById('inTimeDisplay').textContent=formatTime12(att.inTime);
       document.getElementById('inLocDisplay').innerHTML=locHTML(att.inLocation||att.location||null,'loc-locked');
@@ -488,19 +587,29 @@ async function loadUserTodayStatus(){
       document.getElementById('checkInBtn').innerHTML='<i class="fa-solid fa-check-circle"></i> Checked IN';
       var lateFlag=isLate(att.inTime);
       document.getElementById('inStatusDisplay').innerHTML='<span style="color:'+(lateFlag?'#f59e0b':'#00d4aa')+'"><i class="fa-solid '+(lateFlag?'fa-triangle-exclamation':'fa-check')+'"></i> '+(lateFlag?'Late Entry (LET)':'Submitted')+'</span>';
-      /* Enable OUT button */
-      if(att.status!=='L') document.getElementById('checkOutBtn').disabled=false;
+      /* OUT button - checkout time check সহ */
+      if(att.status!=='L'){
+        if(checkoutAllowed){
+          document.getElementById('checkOutBtn').style.display='flex';
+          document.getElementById('checkOutBtn').disabled=false;
+          document.getElementById('checkoutLockMsg').style.display='none';
+        }else{
+          document.getElementById('checkOutBtn').style.display='none';
+          document.getElementById('checkOutBtn').disabled=true;
+          document.getElementById('checkoutLockMsg').style.display='block';
+        }
+      }
     }
-    /* OUT time */
     if(att.outTime){
       document.getElementById('outTimeDisplay').textContent=formatTime12(att.outTime);
       document.getElementById('outLocDisplay').innerHTML=locHTML(att.outLocation||null,'loc-locked-out');
+      document.getElementById('checkOutBtn').style.display='flex';
       document.getElementById('checkOutBtn').disabled=true;
       document.getElementById('checkOutBtn').innerHTML='<i class="fa-solid fa-check-circle"></i> Checked OUT';
+      document.getElementById('checkoutLockMsg').style.display='none';
       var earlyFlag=isEarlyOut(att.outTime);
       document.getElementById('outStatusDisplay').innerHTML='<span style="color:'+(earlyFlag?'#f59e0b':'#60a5fa')+'"><i class="fa-solid '+(earlyFlag?'fa-triangle-exclamation':'fa-check')+'"></i> '+(earlyFlag?'Early Checkout (before '+formatTime12(END_TIME)+')':'Submitted')+'</span>';
     }
-    /* Type state */
     if(att.status==='L'){
       selectUserType('leave');
     }else if(att.status==='T'){
@@ -509,14 +618,17 @@ async function loadUserTodayStatus(){
     }else{
       selectUserType('office');
     }
-    /* Tour cam */
     if(att.status==='T'){
       document.getElementById('userTourCam').style.display='block';
     }
-    /* Status summary */
     updateTodayStatusSummary(att);
   }else{
     updateTodayStatusSummary(null);
+    /* কোনো attendance না থাকলে checkout lock অবস্থা অনুযায়ী UI */
+    if(!checkoutAllowed){
+      document.getElementById('checkOutBtn').style.display='none';
+      document.getElementById('checkoutLockMsg').style.display='block';
+    }
   }
 }
 
@@ -534,6 +646,15 @@ function updateTodayStatusSummary(att){
   if(att.approved){parts.push('<span class="approved-badge"><i class="fa-solid fa-check"></i> Approved</span>');}
   else if(att.inTime){parts.push('<span class="pending-badge"><i class="fa-solid fa-clock"></i> Pending Approval</span>');}
   
+  if(!att.outTime&&att.inTime&&s!=='L'){
+    var checkoutAllowed=isCheckOutAllowed(document.getElementById('userDate').value);
+    if(!checkoutAllowed){
+      parts.push('<span style="color:#ef4444;font-size:11px"><i class="fa-solid fa-lock"></i> Check-OUT unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</span>');
+    }else{
+      parts.push('<span style="color:var(--warn);font-size:11px">Check OUT বাকি আছে</span>');
+    }
+  }
+  
   if(s==='L'){
     el.innerHTML=parts.join(' | ');
   }else if(att.inTime&&att.outTime&&att.approved){
@@ -541,13 +662,14 @@ function updateTodayStatusSummary(att){
   }else if(att.inTime&&att.outTime){
     el.innerHTML=parts.join(' | ')+' | <span style="color:var(--warn);font-size:11px">Both IN+OUT approved হলে Present হবে</span>';
   }else if(att.inTime){
-    el.innerHTML=parts.join(' | ')+' | <span style="color:var(--warn);font-size:11px">Check OUT বাকি আছে</span>';
+    el.innerHTML=parts.join(' | ');
   }else{
     el.innerHTML=parts.join(' | ')||'<span style="color:var(--muted)">Not yet submitted</span>';
   }
 }
 
 async function onUserDateChange(){
+  stopCheckoutTimer();
   var date=document.getElementById('userDate').value,hol=isHoliday(date);
   document.getElementById('holidayNotice').style.display=hol?'flex':'none';
   document.getElementById('userHolName').textContent=getHolidayName(date);
@@ -555,7 +677,6 @@ async function onUserDateChange(){
   document.getElementById('inOutSection').style.display=hol?'none':'';
   document.getElementById('leaveSection').style.display='none';
   document.getElementById('userTourCam').style.display='none';
-  /* Reset IN/OUT UI */
   document.getElementById('inTimeDisplay').textContent='--:-- --';
   document.getElementById('inLocDisplay').innerHTML='';
   document.getElementById('checkInBtn').disabled=false;
@@ -565,6 +686,8 @@ async function onUserDateChange(){
   document.getElementById('outLocDisplay').innerHTML='';
   document.getElementById('checkOutBtn').disabled=true;
   document.getElementById('checkOutBtn').innerHTML='<i class="fa-solid fa-right-from-bracket"></i> Check OUT';
+  document.getElementById('checkOutBtn').style.display='flex';
+  document.getElementById('checkoutLockMsg').style.display='none';
   document.getElementById('outStatusDisplay').innerHTML='';
   document.getElementById('leaveStatusDisplay').innerHTML='';
   document.getElementById('todayStatusText').innerHTML='<span style="color:var(--muted)">Loading...</span>';
@@ -574,6 +697,8 @@ async function onUserDateChange(){
   checkUserAbsentWarningForDate(date);
   var ws=getEntryWindowStatus();var ind=document.getElementById('entryWindowIndicator');
   if(ind){ind.className=ws.cls;ind.innerHTML='<i class="fa-solid '+ws.icon+'" style="color:'+ws.color+';font-size:22px"></i><div><div style="font-weight:700;color:'+ws.color+';font-size:14px">'+ws.title+'</div><div style="font-size:12px;color:var(--text2)">'+ws.msg+'</div></div>'}
+  /* নতুন তারিখের জন্য timer আবার শুরু */
+  startCheckoutTimer();
 }
 
 function selectUserType(type){
@@ -608,7 +733,6 @@ async function userCheckIn(){
   var nowTime=getCurrentTime();
   if(date===todayStr()&&isBeforeStartTime(nowTime)){showToast('Check-IN starts at '+formatTime12(START_TIME)+'. Current: '+formatTime12(nowTime),'error');return}
   
-  /* Check if already checked in */
   var ex=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
   var exData=ex.val();
   if(exData&&exData.inTime){showToast('Already checked IN','error');return}
@@ -625,10 +749,9 @@ async function userCheckIn(){
   var status=userType==='tour'?'T':'P';
   var record={status:status,approved:false,submittedBy:currentUser.id,inTime:inTime,inSubmittedAt:Date.now()};
   if(loc)record.inLocation=loc;
-  if(loc)record.location=loc; /* backward compat */
+  if(loc)record.location=loc;
   if(userType==='tour'&&tourImageData)record.image=tourImageData;
   
-  /* If existing record (e.g. leave), merge */
   if(exData){
     record.outTime=exData.outTime||'';
     record.outLocation=exData.outLocation||null;
@@ -638,7 +761,6 @@ async function userCheckIn(){
   
   await db.ref('attendance/'+date+'/'+currentUser.id).update(record);
   
-  /* Update UI - locked, cannot change */
   var lateFlag=isLate(inTime);
   document.getElementById('inTimeDisplay').textContent=formatTime12(inTime);
   document.getElementById('inLocDisplay').innerHTML=locHTML(loc,'loc-locked');
@@ -646,10 +768,20 @@ async function userCheckIn(){
   btn.disabled=true;
   document.getElementById('inStatusDisplay').innerHTML='<span style="color:'+(lateFlag?'#f59e0b':'#00d4aa')+'"><i class="fa-solid '+(lateFlag?'fa-triangle-exclamation':'fa-check')+'"></i> '+(lateFlag?'Late Entry (LET) - After '+formatTime12(LATE_TIME):'Checked IN successfully')+'</span>';
   
-  /* Enable OUT button */
-  document.getElementById('checkOutBtn').disabled=false;
+  /* OUT button - checkout time check সহ */
+  if(status!=='L'){
+    var checkoutAllowed=isCheckOutAllowed(date);
+    if(checkoutAllowed){
+      document.getElementById('checkOutBtn').style.display='flex';
+      document.getElementById('checkOutBtn').disabled=false;
+      document.getElementById('checkoutLockMsg').style.display='none';
+    }else{
+      document.getElementById('checkOutBtn').style.display='none';
+      document.getElementById('checkOutBtn').disabled=true;
+      document.getElementById('checkoutLockMsg').style.display='block';
+    }
+  }
   
-  /* Update summary */
   var snap2=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
   updateTodayStatusSummary(snap2.val());
   
@@ -663,6 +795,12 @@ async function userCheckIn(){
 async function userCheckOut(){
   var date=document.getElementById('userDate').value;
   if(!date){showToast('Select date','error');return}
+  
+  /* Checkout time validation */
+  if(!isCheckOutAllowed(date)){
+    showToast('Check-OUT সুবিধা সন্ধ্যা '+formatTime12(CHECKOUT_UNLOCK_TIME)+' এর পরে সক্রিয় হবে','error');
+    return;
+  }
   
   var snap=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
   var att=snap.val();
@@ -683,11 +821,12 @@ async function userCheckOut(){
   
   await db.ref('attendance/'+date+'/'+currentUser.id).update(updates);
   
-  /* Update UI - locked */
   document.getElementById('outTimeDisplay').textContent=formatTime12(outTime);
   document.getElementById('outLocDisplay').innerHTML=locHTML(loc,'loc-locked-out');
   btn.innerHTML='<i class="fa-solid fa-check-circle"></i> Checked OUT';
   btn.disabled=true;
+  btn.style.display='flex';
+  document.getElementById('checkoutLockMsg').style.display='none';
   document.getElementById('outStatusDisplay').innerHTML='<span style="color:'+(earlyFlag?'#f59e0b':'#60a5fa')+'"><i class="fa-solid '+(earlyFlag?'fa-triangle-exclamation':'fa-check')+'"></i> '+(earlyFlag?'Early Checkout (before '+formatTime12(END_TIME)+')':'Checked OUT successfully')+'</span>';
   
   var snap2=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
@@ -712,7 +851,6 @@ async function userSubmitLeave(){
   
   var record={status:'L',approved:false,submittedBy:currentUser.id,inTime:'',outTime:'',inSubmittedAt:Date.now()};
   
-  /* Preserve existing IN/OUT if any */
   if(exData){
     if(exData.inTime){record.inTime=exData.inTime;record.inLocation=exData.inLocation||exData.location||null;record.location=record.inLocation;}
     if(exData.outTime){record.outTime=exData.outTime;record.outLocation=exData.outLocation||null;}
@@ -723,9 +861,9 @@ async function userSubmitLeave(){
   btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Submit Leave';
   document.getElementById('leaveStatusDisplay').innerHTML='<span style="color:#f59e0b"><i class="fa-solid fa-clock"></i> Leave Submitted - Pending Approval</span>';
   
-  /* Disable IN/OUT since it's leave */
   document.getElementById('checkInBtn').disabled=true;
   document.getElementById('checkOutBtn').disabled=true;
+  document.getElementById('checkoutLockMsg').style.display='none';
   
   var snap2=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
   updateTodayStatusSummary(snap2.val());
@@ -735,20 +873,8 @@ async function userSubmitLeave(){
   loadUserHistoryGrid();
 }
 
-async function checkUserAbsentWarning(){
-  var today=todayStr();if(isHoliday(today))return;
-  var snap=await db.ref('attendance/'+today+'/'+currentUser.id).once('value');
-  var att=snap.val();
-  if(!att||!att.status)document.getElementById('userAbsentWarning').style.display='block';
-  else document.getElementById('userAbsentWarning').style.display='none';
-}
-async function checkUserAbsentWarningForDate(date){
-  if(isHoliday(date)){document.getElementById('userAbsentWarning').style.display='none';return}
-  var snap=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');
-  var att=snap.val();
-  if(!att||!att.status)document.getElementById('userAbsentWarning').style.display='block';
-  else document.getElementById('userAbsentWarning').style.display='none';
-}
+async function checkUserAbsentWarning(){var today=todayStr();if(isHoliday(today))return;var snap=await db.ref('attendance/'+today+'/'+currentUser.id).once('value');var att=snap.val();if(!att||!att.status)document.getElementById('userAbsentWarning').style.display='block';else document.getElementById('userAbsentWarning').style.display='none'}
+async function checkUserAbsentWarningForDate(date){if(isHoliday(date)){document.getElementById('userAbsentWarning').style.display='none';return}var snap=await db.ref('attendance/'+date+'/'+currentUser.id).once('value');var att=snap.val();if(!att||!att.status)document.getElementById('userAbsentWarning').style.display='block';else document.getElementById('userAbsentWarning').style.display='none'}
 
 /* ===== USER HISTORY GRID ===== */
 var lastUserHistData=null;
@@ -778,13 +904,10 @@ async function loadUserHistoryGrid(){
     var lateIcn=(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))?lateIcon():'';
     if(s==='P'&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;
     var cellStyle=(fri?'background:rgba(245,158,11,.04)':(hol2?'background:rgba(168,85,247,.04)':''));
-    /* IN row */
     var inT=(attData&&attData.inTime)?formatTimeShort(attData.inTime):'';
     inCells+='<td class="time-cell" style="'+cellStyle+(attData&&attData.inTime&&isLate(attData.inTime)?'color:#f59e0b;font-weight:700':'')+'">'+inT+'</td>';
-    /* OUT row */
     var outT=(attData&&attData.outTime)?formatTimeShort(attData.outTime):'';
     outCells+='<td class="time-cell" style="'+cellStyle+'">'+outT+'</td>';
-    /* Status row */
     var appIcon=approved?'<i class="fa-solid fa-check" style="color:#00d4aa;font-size:7px;margin-left:1px"></i>':(attData?'<i class="fa-solid fa-clock" style="color:#f59e0b;font-size:7px;margin-left:1px"></i>':(autoAbs?'<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:7px;margin-left:1px" title="Not Submitted"></i>':''));
     var statusBadge=s?'<span class="badge mini '+s+'">'+s+'</span>':'';
     var incompleteIcon=(!isFullP&&attData&&(s==='P'||s==='T')&&(!attData.outTime))?'<i class="fa-solid fa-exclamation" style="color:#f59e0b;font-size:6px;margin-left:1px" title="OUT pending"></i>':'';
@@ -793,7 +916,7 @@ async function loadUserHistoryGrid(){
   inCells+='<td colspan="6"></td>';outCells+='<td colspan="6"></td>';
   attCells+='<td style="text-align:center;font-weight:800;color:#00d4aa;font-size:13px">'+counts.P+'</td><td style="text-align:center;font-weight:800;color:#ef4444;font-size:13px">'+counts.A+'</td><td style="text-align:center;font-weight:800;color:#60a5fa;font-size:13px">'+counts.T+'</td><td style="text-align:center;font-weight:800;color:#f59e0b;font-size:13px">'+counts.L+'</td><td style="text-align:center;font-weight:800;color:#f59e0b;font-size:13px">'+letCount+'</td><td style="text-align:center;font-weight:800;color:#a855f7;font-size:13px">'+counts.H+'</td>';
   var holidayList='';for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var hn=getHolidayName(ds);if(hn){holidayList+='<span class="'+(isFriday(ds)?'pending-badge':'holiday-badge')+'" style="margin:2px">'+d+': '+hn+'</span> '}}
-  var legend='<div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text2)"><span><i class="fa-solid fa-check" style="color:#00d4aa;font-size:9px"></i> = Approved</span><span><i class="fa-solid fa-clock" style="color:#f59e0b;font-size:9px"></i> = Pending</span><span><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:9px"></i> = Auto-Absent</span><span><i class="fa-solid fa-exclamation" style="color:#f59e0b;font-size:9px"></i> = OUT Pending</span><span><span class="late-dot" style="display:inline-block"></span> = LET (after '+LATE_TIME+')</span><span>IN+OUT Both Approved = Present</span></div>';
+  var legend='<div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:11px;color:var(--text2)"><span><i class="fa-solid fa-check" style="color:#00d4aa;font-size:9px"></i> = Approved</span><span><i class="fa-solid fa-clock" style="color:#f59e0b;font-size:9px"></i> = Pending</span><span><i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;font-size:9px"></i> = Auto-Absent</span><span><i class="fa-solid fa-exclamation" style="color:#f59e0b;font-size:9px"></i> = OUT Pending</span><span><span class="late-dot" style="display:inline-block"></span> = LET (after '+LATE_TIME+')</span><span>IN+OUT Both Approved = Present</span><span><i class="fa-solid fa-lock" style="color:#ef4444;font-size:9px"></i> = Checkout at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</span></div>';
   container.innerHTML=(holidayList?'<div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:4px">'+holidayList+'</div>':'')+'<table class="data-table"><thead><tr>'+headerCells+'</tr></thead><tbody><tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr></tbody></table>'+legend;
   lastUserHistData={m:m,y:y,days:days,allAtt:allAtt,counts:counts,letCount:letCount};
 }
@@ -816,7 +939,7 @@ function buildUserHistPrintHTML(){
   inCells+='<td colspan="6"></td>';outCells+='<td colspan="6"></td>';
   var dicSig=allSignatures.dic||'';var dicSigHTML=dicSig?'<img src="'+dicSig+'" style="height:40px;max-width:100px;object-fit:contain;margin-bottom:2px;">':'<div style="margin-bottom:40px">&nbsp;</div>';
   var footer='<div style="width:100%;margin-top:40px;padding-top:8px;"><table style="width:100%;border:none;border-collapse:collapse"><tr><td style="width:50%;text-align:center;vertical-align:bottom;border:none;padding:0 20px">'+dicSigHTML+'<div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;color:#000;padding-top:2px">Approved by (DIC)</div></td><td style="width:50%;text-align:center;vertical-align:bottom;border:none;padding:0 20px"><div style="margin-bottom:40px">&nbsp;</div><div style="border-top:1px solid #000;width:80%;margin:0 auto;font-size:8px;color:#000;padding-top:2px">Employee Signature</div></td></tr></table></div>';
-  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:14px;margin:0 0 2px 0;color:#000">MONTHLY ATTENDANCE RECORD</h2><h3 style="text-align:center;font-size:11px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><div style="text-align:center;font-size:10px;color:#000;margin:0 0 1px 0"><b>'+currentUser.name+'</b></div><div style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Designation: '+(currentUser.designation||'')+' | Join Date: '+(currentUser.joinDate?formatPrintDate(currentUser.joinDate):'N/A')+'</div><div style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+'</div><table style="width:100%;border-collapse:collapse;table-layout:auto"><thead><tr>'+hCells+'</tr></thead><tbody><tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr></tbody></table><div style="margin-top:4px;font-size:8px;display:flex;gap:8px;color:#000"><span><b>P</b>=Present</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=LET</span><span><b>†</b>=Auto-Absent</span><span><b>‡</b>=OUT Pending</span><span><b>H</b>=Holiday</span></div><div style="margin-top:2px;font-size:7px;color:#000">IN+OUT Both Approved = Present | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction</div>'+footer+'</div>';
+  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:14px;margin:0 0 2px 0;color:#000">MONTHLY ATTENDANCE RECORD</h2><h3 style="text-align:center;font-size:11px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><div style="text-align:center;font-size:10px;color:#000;margin:0 0 1px 0"><b>'+currentUser.name+'</b></div><div style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Designation: '+(currentUser.designation||'')+' | Join Date: '+(currentUser.joinDate?formatPrintDate(currentUser.joinDate):'N/A')+'</div><div style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+'</div><table style="width:100%;border-collapse:collapse;table-layout:auto"><thead><tr>'+hCells+'</tr></thead><tbody><tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr></tbody></table><div style="margin-top:4px;font-size:8px;display:flex;gap:8px;color:#000"><span><b>P</b>=Present</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=LET</span><span><b>†</b>=Auto-Absent</span><span><b>‡</b>=OUT Pending</span><span><b>H</b>=Holiday</span></div><div style="margin-top:2px;font-size:7px;color:#000">IN+OUT Both Approved = Present | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction | Checkout unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</div>'+footer+'</div>';
 }
 function printUserHistory(){if(!lastUserHistData){showToast('Load history first','error');return}printContent(buildUserHistPrintHTML(),'My Attendance - '+monthName(lastUserHistData.m)+' '+lastUserHistData.y)}
 
@@ -909,7 +1032,6 @@ function applyAllBulkOut(){var val=document.getElementById('bulkAllOut').value;d
 function applyAllBulkStatus(){var val=document.getElementById('bulkAllStatus').value;if(!val){showToast('Select status first','error');return}document.querySelectorAll('[id^="bk_"][id$="_s"]').forEach(function(sel){sel.value=val});updateBulkCounts();showToast('Status applied to all','success')}
 async function reloadBulkModalData(){var date=document.getElementById('bulkModalDate').value;if(!date)return;var snap=await db.ref('attendance/'+date).once('value');var att=snap.val()||{};var userList=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false});for(var i=0;i<userList.length;i++){var uid=userList[i][0];var a=att[uid];var sEl=document.getElementById('bk_'+uid+'_s');var iEl=document.getElementById('bk_'+uid+'_in');var oEl=document.getElementById('bk_'+uid+'_out');if(sEl){if(a){sEl.value=a.status||'P';if(a.inTime&&iEl)iEl.value=a.inTime;if(a.outTime&&oEl)oEl.value=a.outTime;var row=sEl.closest('tr');if(row)row.className='bulk-row-exists'}else{sEl.value=isHoliday(date)?'H':'P';if(iEl)iEl.value=getCurrentTime();if(oEl)oEl.value='';var row=sEl.closest('tr');if(row)row.className='bulk-row-new'}}}updateBulkCounts();showToast('Data reloaded for '+formatBD(date),'info')}
 async function submitBulkInOut(){var date=document.getElementById('bulkModalDate').value;if(!date){showToast('Select date','error');return}if(date>todayStr()){showToast('Future date not allowed','error');return}var btn=document.getElementById('bulkSubmitBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';var userList=Object.entries(allUsers).filter(function(e){return e[0]!==DIC_ID&&e[1].active!==false});var count=0;
-  /* Load existing to preserve locations */
   var exSnap=await db.ref('attendance/'+date).once('value');var exAtt=exSnap.val()||{};
   for(var i=0;i<userList.length;i++){var uid=userList[i][0];var sEl=document.getElementById('bk_'+uid+'_s');var iEl=document.getElementById('bk_'+uid+'_in');var oEl=document.getElementById('bk_'+uid+'_out');if(sEl){var status=sEl.value;var inTime=iEl?iEl.value:'';var outTime=oEl?oEl.value:'';
     /* Leave: no outTime needed */
@@ -927,24 +1049,18 @@ try{showToast(count+' users attendance submitted & auto-approved','success');clo
 
 /* ===== Single entry helpers ===== */
 function onDicEntryChange(){var date=document.getElementById('dicEntryDate').value,hol=isHoliday(date);if(hol){document.getElementById('dicHolidayNotice').style.display='flex';document.getElementById('dicHolName').textContent=getHolidayName(date);selectDicStatus('H')}else{document.getElementById('dicHolidayNotice').style.display='none';if(dicEntryStatus==='H')selectDicStatus('P')}document.querySelectorAll('#dicStatusBtns .status-btn').forEach(function(b){var s=b.dataset.s;b.disabled=(hol&&s!=='H')||(!hol&&s==='H')});tourImageData=null;var tc=document.getElementById('dicTourCam');if(tc)tc.style.display='none';var tp=document.getElementById('dicTourImgPreview');if(tp)tp.innerHTML='';
-  /* Load existing data for the user+date */
   loadDicExistingEntry()}
 async function loadDicExistingEntry(){var uid=document.getElementById('dicEntryUser').value,date=document.getElementById('dicEntryDate').value;if(!uid||!date)return;var snap=await db.ref('attendance/'+date+'/'+uid).once('value');var att=snap.val();if(att){if(att.inTime)document.getElementById('dicInTime').value=att.inTime;if(att.outTime)document.getElementById('dicOutTime').value=att.outTime;selectDicStatus(att.status||'P')}else{document.getElementById('dicOutTime').value=''}}
 function selectDicStatus(s){dicEntryStatus=s;tourImageData=null;document.querySelectorAll('#dicStatusBtns .status-btn').forEach(function(b){b.className='status-btn'+(b.dataset.s===s?' selected-'+s:'')});var tc=document.getElementById('dicTourCam');if(tc)tc.style.display=(s==='T')?'block':'none';if(s!=='T'){var tp=document.getElementById('dicTourImgPreview');if(tp)tp.innerHTML='';var ti=document.getElementById('dicTourImgInput');if(ti)ti.value=''}
-  /* Leave: clear and disable OUT time */
   var outEl=document.getElementById('dicOutTime');if(outEl){if(s==='L'){outEl.value='';outEl.disabled=true}else{outEl.disabled=false}}}
 async function dicSubmitEntry(){var uid=document.getElementById('dicEntryUser').value,date=document.getElementById('dicEntryDate').value,inTime=document.getElementById('dicInTime').value,outTime=document.getElementById('dicOutTime').value;if(!uid){showToast('Select user','error');return}if(!date){showToast('Select date','error');return}if(!dicEntryStatus){showToast('Select status','error');return}if(date>todayStr()){showToast('Future date not allowed','error');return}if(dicEntryStatus==='T'&&!tourImageData){showToast('Tour photo is required','error');return}
-  /* Leave: no outTime */
   if(dicEntryStatus==='L')outTime='';
   var btn=document.getElementById('dicEntryBtn');btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Capturing Location...';var loc=await captureLocation();btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
-  /* Load existing to preserve locations */
   var exSnap=await db.ref('attendance/'+date+'/'+uid).once('value');var exData=exSnap.val()||{};
   var record={status:dicEntryStatus,approved:true,submittedBy:DIC_ID,submittedAt:Date.now(),inTime:inTime||''};
   if(outTime)record.outTime=outTime;else if(dicEntryStatus!=='L')record.outTime=null;
-  /* Set location as IN location (for DIC entry) */
   if(loc)record.inLocation=loc;
   if(loc)record.location=loc;
-  /* Preserve existing OUT location if not changing outTime or no new out location from user */
   if(exData.outLocation&&!loc)record.outLocation=exData.outLocation;
   if(exData.inLocation&&!loc)record.inLocation=exData.inLocation;
   if(exData.location&&!loc)record.location=exData.location;
@@ -975,7 +1091,6 @@ async function loadRecords(){var date=document.getElementById('recordDate').valu
   rows+='<tr><td style="font-weight:600">'+u.name+'</td><td style="font-size:11px;color:var(--text2)">'+u.designation+'</td><td>'+roleBadge(u.role)+'</td><td>'+(u.joinDate?formatBD(u.joinDate):'--')+'</td><td>'+statusHTML+lateIcn+noOutIcn+imgBtn(date+'_'+uid)+'</td><td style="font-size:12px;color:'+(a&&a.inTime&&isLate(a.inTime)?'#f59e0b':'var(--accent)')+'">'+(a&&a.inTime?formatTime12(a.inTime):'--')+'</td><td>'+locHTML(a?(a.inLocation||a.location):null,'loc-locked')+'</td><td style="font-size:12px;color:#60a5fa">'+(a&&a.outTime?formatTime12(a.outTime):(s==='L'?'N/A':'--'))+'</td><td>'+locHTML(a?a.outLocation:null,'loc-locked-out')+'</td><td>'+approvalHTML+'</td><td style="white-space:nowrap"><button class="btn btn-xs btn-warn" onclick="editAttModal(\''+date+'\',\''+uid+'\',\''+s+'\')"><i class="fa-solid fa-pen"></i></button>'+(a?'<button class="btn btn-xs btn-danger" onclick="deleteAtt(\''+date+'\',\''+uid+'\')" style="margin-left:4px"><i class="fa-solid fa-trash"></i></button>':'')+'</td></tr>'}container.innerHTML='<div style="margin-bottom:8px;font-size:12px;color:var(--text2)"><i class="fa-solid fa-users" style="color:var(--accent);margin-right:4px"></i>Showing all '+activeUsers.length+' active users'+(hol?' | <span class="holiday-badge">'+getHolidayName(date)+'</span>':'')+'</div><table class="data-table"><thead><tr><th>Name</th><th>Designation</th><th>Role</th><th>Join Date</th><th>Status</th><th>IN Time</th><th>IN Location</th><th>OUT Time</th><th>OUT Location</th><th>Approval</th><th>Action</th></tr></thead><tbody>'+rows+'</tbody></table>'}
 function editAttModal(date,uid,current){var u=allUsers[uid],hol=isHoliday(date);db.ref('attendance/'+date+'/'+uid).once('value').then(function(snap){var existing=snap.val()||{};var options=hol?['H']:['P','A','T','L'],optHTML='';for(var i=0;i<options.length;i++)optHTML+='<option value="'+options[i]+'"'+(options[i]===current?' selected':'')+'>'+options[i]+' - '+statusLabel(options[i])+'</option>';
   showModal('Edit Attendance','<p style="margin-bottom:12px"><strong>'+(u?u.name:uid)+'</strong></p><p style="color:var(--text2);font-size:13px;margin-bottom:4px">Date: '+formatBD(date)+(hol?' <span class="holiday-badge">'+getHolidayName(date)+'</span>':'')+'</p>'+(existing.inLocation?'<p style="font-size:11px;color:var(--accent)"><i class="fa-solid fa-location-dot"></i> IN Location: '+existing.inLocation.lat.toFixed(5)+', '+existing.inLocation.lng.toFixed(5)+' (locked)</p>':'')+(existing.outLocation?'<p style="font-size:11px;color:#60a5fa"><i class="fa-solid fa-location-dot"></i> OUT Location: '+existing.outLocation.lat.toFixed(5)+', '+existing.outLocation.lng.toFixed(5)+' (locked)</p>':'')+'<p style="font-size:11px;color:var(--warn);margin-bottom:16px"><i class="fa-solid fa-lock"></i> Location data cannot be edited - only time & status</p><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px"><div class="form-group" style="margin:0"><label class="form-label">Status</label><select class="form-select" id="editAttStatus" onchange="document.getElementById(\'editOutTime\').disabled=(this.value===\'L\')">'+optHTML+'</select></div><div class="form-group" style="margin:0"><label class="form-label">IN Time</label><input type="time" class="form-input" id="editInTime" value="'+(existing.inTime||'')+'"></div><div class="form-group" style="margin:0"><label class="form-label">OUT Time</label><input type="time" class="form-input" id="editOutTime" value="'+(existing.outTime||'')+'" '+(current==='L'?'disabled':'')+'></div></div>',async function(){var ns=document.getElementById('editAttStatus').value;var editInTime=document.getElementById('editInTime').value;var editOutTime=document.getElementById('editOutTime').value;var updates={status:ns,approved:true,submittedBy:DIC_ID,submittedAt:Date.now(),inTime:editInTime};if(ns==='L'){updates.outTime=''}else if(editOutTime){updates.outTime=editOutTime}else{updates.outTime=null}
-  /* NEVER touch location fields during edit */
   if(ns!=='T'&&ns!=='P'){updates.image=null}
   await db.ref('attendance/'+date+'/'+uid).update(updates);showToast('Updated - Locations preserved','success');loadRecords()})})}
 function deleteAtt(date,uid){var u=allUsers[uid];showModal('Delete','<p style="color:var(--text2)">Delete attendance for <strong>'+(u?u.name:uid)+'</strong> on <strong>'+formatBD(date)+'</strong>?</p><p style="color:var(--warn);font-size:12px;margin-top:8px"><i class="fa-solid fa-triangle-exclamation"></i> Working day - Auto-Absent হয়ে যাবে।</p>',async function(){await db.ref('attendance/'+date+'/'+uid).remove();showToast('Deleted - Auto-Absent','info');loadRecords()})}
@@ -1074,7 +1189,7 @@ function buildReportPrintHTML(){
     attCells+='<td style="'+tdS+'font-weight:700;">'+counts.P+'</td><td style="'+tdS+'font-weight:700;">'+counts.A+'</td><td style="'+tdS+'font-weight:700;">'+counts.T+'</td><td style="'+tdS+'font-weight:700;">'+counts.L+'</td><td style="border:1px solid #000;padding:1px;font-size:6px;color:#000;font-weight:800;background:#eee;text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'font-weight:700;">'+counts.H+'</td>';
     pbRows+='<tr>'+inCells+'</tr><tr>'+outCells+'</tr><tr>'+attCells+'</tr>';
   }
-  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">MONICO PHARMA LTD</h2><h3 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">ATTENDANCE REPORT</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr>'+phCells+'</tr></thead><tbody>'+pbRows+'</tbody></table><div style="margin-top:4px;font-size:7px;display:flex;gap:6px;color:#000"><span><b>P</b>=Present (IN+OUT Approved)</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=LET</span><span><b>‡</b>=OUT Pending</span><span><b>H</b>=Holiday</span></div><div style="margin-top:2px;font-size:7px;color:#000">IN+OUT Both Approved = Present | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction | Leave = No OUT required</div>'+buildPrintFooter()+'</div>';
+  return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">MONICO PHARMA LTD</h2><h3 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">ATTENDANCE REPORT</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr>'+phCells+'</tr></thead><tbody>'+pbRows+'</tbody></table><div style="margin-top:4px;font-size:7px;display:flex;gap:6px;color:#000"><span><b>P</b>=Present (IN+OUT Approved)</span><span><b>A</b>=Absent</span><span><b>T</b>=Tour</span><span><b>L</b>=Leave</span><span><b>*</b>=LET</span><span><b>‡</b>=OUT Pending</span><span><b>H</b>=Holiday</span></div><div style="margin-top:2px;font-size:7px;color:#000">IN+OUT Both Approved = Present | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction | Leave = No OUT required | Checkout unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</div>'+buildPrintFooter()+'</div>';
 }
 function printReport(){if(!lastReportData){showToast('Generate report first','error');return}printContent(buildReportPrintHTML(),'Attendance Report - '+monthName(lastReportData.m)+' '+lastReportData.y)}
 
@@ -1087,11 +1202,11 @@ var rows='',totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;
 for(var i=0;i<users.length;i++){var uid=users[i][0],u=users[i][1];var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;for(var d=1;d<=days;d++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');var attData=allAtt[ds]?allAtt[ds][uid]:null;var s=getAttStatus(ds,uid,attData);var fullP=isFullPresent(attData);if(fullP)counts.P++;else if(s&&counts.hasOwnProperty(s))counts[s]++;if((s==='P'||s==='T')&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;}
 var basic=u.salary,dailyRate=Math.round(basic/days);var absentDeduct=Math.round(dailyRate*counts.A);var letDeductDays=Math.floor(letCount/3);var letDeductAmount=Math.round(dailyRate*letDeductDays);var totalDeduct=absentDeduct+letDeductAmount;var net=basic-totalDeduct;totalBasic+=basic;totalAbsentDeduct+=absentDeduct;totalLetDeduct+=letDeductAmount;totalNet+=net;
 rows+='<tr><td style="font-weight:700">'+(i+1)+'</td><td style="font-weight:600">'+u.name+'</td><td style="color:var(--text2)">'+(u.designation||'')+'</td><td style="color:var(--text2)">'+(u.depot||'')+'</td><td style="color:var(--text2);font-size:10px">'+(u.joinDate?formatBD(u.joinDate):'--')+'</td><td style="font-weight:600;color:var(--accent)">৳'+basic.toLocaleString()+'</td><td style="font-weight:600;color:var(--text2)">৳'+dailyRate.toLocaleString()+'</td><td style="color:#00d4aa;font-weight:700">'+counts.P+'</td><td style="color:#ef4444;font-weight:700">'+counts.A+'</td><td style="color:#60a5fa;font-weight:700">'+counts.T+'</td><td style="color:#f59e0b;font-weight:700">'+counts.L+'</td><td style="color:#f59e0b;font-weight:800;background:rgba(245,158,11,.06)">'+letCount+'</td><td style="color:#a855f7;font-weight:700">'+counts.H+'</td><td style="font-weight:600">'+days+'</td><td style="color:#ef4444;font-weight:700">৳'+absentDeduct.toLocaleString()+'</td><td style="color:#f59e0b;font-weight:700;background:rgba(245,158,11,.06)">৳'+letDeductAmount.toLocaleString()+'<div style="font-size:9px;color:var(--muted)">'+letDeductDays+' day(s)</div></td><td style="color:var(--accent);font-weight:800">৳'+net.toLocaleString()+'</td><td style="color:var(--muted);min-width:60px">&nbsp;</td><td style="color:var(--muted);min-width:80px">&nbsp;</td></tr>'}
-document.getElementById('salaryArea').innerHTML='<table class="rpt-table"><thead><tr><th>Sl</th><th>Name</th><th>Designation</th><th>Depot</th><th>Join Date</th><th>Basic (৳)</th><th>Daily Rate</th><th>Present</th><th>Absent</th><th>Tour</th><th>Leave</th><th style="background:rgba(245,158,11,.1)">LET</th><th>Holiday</th><th>Days</th><th>Absent Deduct (৳)</th><th style="background:rgba(245,158,11,.1)">LET Deduct (৳)</th><th>Net Salary (৳)</th><th>Received</th><th>Signature</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="font-weight:800;border-top:2px solid var(--border2)"><td colspan="5" style="text-align:right;color:var(--text2)">TOTAL</td><td style="color:var(--accent)">৳'+totalBasic.toLocaleString()+'</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="color:#ef4444">৳'+totalAbsentDeduct.toLocaleString()+'</td><td style="color:#f59e0b;background:rgba(245,158,11,.06)">৳'+totalLetDeduct.toLocaleString()+'</td><td style="color:var(--accent);font-size:16px">৳'+totalNet.toLocaleString()+'</td><td></td><td></td></tr></tfoot></table><div style="margin-top:16px;padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;font-size:13px;color:var(--text2)"><i class="fa-solid fa-info-circle" style="color:#f59e0b;margin-right:6px"></i><strong style="color:#f59e0b">LET Rule:</strong> Every <strong>3 LET = 1 Day Salary Deduction</strong><br><i class="fa-solid fa-calculator" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Daily Rate = Basic / '+days+' | Net = Basic - Absent Deduct - LET Deduct<br><i class="fa-solid fa-fingerprint" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Present = IN + OUT Both Approved | Leave = No OUT Required<br><i class="fa-solid fa-clock" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Office End Time: '+formatTime12(END_TIME)+' | After '+formatTime12(LATE_TIME)+' = LET</div>';
+document.getElementById('salaryArea').innerHTML='<table class="rpt-table"><thead><tr><th>Sl</th><th>Name</th><th>Designation</th><th>Depot</th><th>Join Date</th><th>Basic (৳)</th><th>Daily Rate</th><th>Present</th><th>Absent</th><th>Tour</th><th>Leave</th><th style="background:rgba(245,158,11,.1)">LET</th><th>Holiday</th><th>Days</th><th>Absent Deduct (৳)</th><th style="background:rgba(245,158,11,.1)">LET Deduct (৳)</th><th>Net Salary (৳)</th><th>Received</th><th>Signature</th></tr></thead><tbody>'+rows+'</tbody><tfoot><tr style="font-weight:800;border-top:2px solid var(--border2)"><td colspan="5" style="text-align:right;color:var(--text2)">TOTAL</td><td style="color:var(--accent)">৳'+totalBasic.toLocaleString()+'</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td style="color:#ef4444">৳'+totalAbsentDeduct.toLocaleString()+'</td><td style="color:#f59e0b;background:rgba(245,158,11,.06)">৳'+totalLetDeduct.toLocaleString()+'</td><td style="color:var(--accent);font-size:16px">৳'+totalNet.toLocaleString()+'</td><td></td><td></td></tr></tfoot></table><div style="margin-top:16px;padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px;font-size:13px;color:var(--text2)"><i class="fa-solid fa-info-circle" style="color:#f59e0b;margin-right:6px"></i><strong style="color:#f59e0b">LET Rule:</strong> Every <strong>3 LET = 1 Day Salary Deduction</strong><br><i class="fa-solid fa-calculator" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Daily Rate = Basic / '+days+' | Net = Basic - Absent Deduct - LET Deduct<br><i class="fa-solid fa-fingerprint" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Present = IN + OUT Both Approved | Leave = No OUT Required<br><i class="fa-solid fa-clock" style="color:var(--accent);margin-right:6px;margin-top:4px"></i>Office End Time: '+formatTime12(END_TIME)+' | After '+formatTime12(LATE_TIME)+' = LET | Checkout at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</div>';
 document.getElementById('printSalBtn').style.display='inline-flex';lastSalaryData={m:m,y:y,days:days,users:users,allAtt:allAtt,totalBasic:totalBasic,totalAbsentDeduct:totalAbsentDeduct,totalLetDeduct:totalLetDeduct,totalNet:totalNet}}
 
 /* ===== Salary Print ===== */
-function buildSalaryPrintHTML(){if(!lastSalaryData)return'';var d=lastSalaryData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;var thS='border:1px solid #000;padding:2px 1px;font-size:7px;background:#bbb;color:#000;text-align:center;white-space:nowrap;';var tdS='border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:center;white-space:nowrap;';var printRows='';var totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;for(var i=0;i<users.length;i++){var uid=users[i][0],u=users[i][1];var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;for(var dd=1;dd<=days;dd++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');var attData=allAtt[ds]?allAtt[ds][uid]:null;var s=getAttStatus(ds,uid,attData);var fullP=isFullPresent(attData);if(fullP)counts.P++;else if(s&&counts.hasOwnProperty(s))counts[s]++;if((s==='P'||s==='T')&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;};var basic=u.salary,dailyRate=Math.round(basic/days);var absentDeduct=Math.round(dailyRate*counts.A);var letDeductDays=Math.floor(letCount/3);var letDeductAmount=Math.round(dailyRate*letDeductDays);var net=basic-absentDeduct-letDeductAmount;totalBasic+=basic;totalAbsentDeduct+=absentDeduct;totalLetDeduct+=letDeductAmount;totalNet+=net;printRows+='<tr><td style="'+tdS+'font-weight:700;">'+(i+1)+'</td><td style="'+tdS+'font-weight:600;text-align:left;">'+u.name+'</td><td style="'+tdS+'text-align:left;">'+(u.designation||'')+'</td><td style="'+tdS+'text-align:left;">'+(u.depot||'')+'</td><td style="border:1px solid #000;padding:1px;font-size:6px;color:#000;text-align:center;white-space:nowrap;">'+(u.joinDate?formatPrintDate(u.joinDate):'')+'</td><td style="'+tdS+'text-align:right;">'+basic.toLocaleString()+'</td><td style="'+tdS+'text-align:right;">'+dailyRate.toLocaleString()+'</td><td style="'+tdS+'">'+counts.P+'</td><td style="'+tdS+'">'+counts.A+'</td><td style="'+tdS+'">'+counts.T+'</td><td style="'+tdS+'">'+counts.L+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;font-weight:800;background:#eee;text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'">'+counts.H+'</td><td style="'+tdS+'">'+days+'</td><td style="'+tdS+'text-align:right;">'+absentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:right;background:#eee;white-space:nowrap;">'+letDeductAmount+' ('+letDeductDays+'d)</td><td style="border:1px solid #000;padding:2px 1px;font-size:8px;color:#000;font-weight:800;text-align:right;white-space:nowrap;">'+net.toLocaleString()+'</td><td style="'+tdS+'min-width:30px;">&nbsp;</td><td style="'+tdS+'min-width:40px;">&nbsp;</td></tr>';};return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">SALARY SHEET</h2><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+' | Days: '+days+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr><th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig</th><th style="'+thS+'text-align:left;">Depot</th><th style="'+thS+'">Join</th><th style="'+thS+'">Basic</th><th style="'+thS+'">Rate</th><th style="'+thS+'">P</th><th style="'+thS+'">A</th><th style="'+thS+'">T</th><th style="'+thS+'">L</th><th style="'+thS+'background:#eee;">LET</th><th style="'+thS+'">H</th><th style="'+thS+'">Days</th><th style="'+thS+'">Abs Ded</th><th style="'+thS+'background:#eee;">LET Ded</th><th style="'+thS+'">Net Pay</th><th style="'+thS+'">Recv</th><th style="'+thS+'">Sign</th></tr></thead><tbody>'+printRows+'</tbody><tfoot><tr style="font-weight:bold"><td colspan="5" style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">TOTAL</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalBasic.toLocaleString()+'</td><td colspan="7" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalAbsentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#eee;color:#000;">'+totalLetDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:9px;font-weight:800;background:#ddd;color:#000;">'+totalNet.toLocaleString()+'</td><td colspan="2" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td></tr></tfoot></table><div style="margin-top:4px;font-size:7px;color:#000">Present = IN+OUT Both Approved | Daily Rate = Basic / '+days+' | Absent Ded. = Rate × Absent | LET Ded. = Rate × Floor(LET/3) | Net = Basic - Absent Ded. - LET Ded. | Leave = No OUT Required</div><div style="margin-top:2px;font-size:7px;color:#000">Office End: '+formatTime12(END_TIME)+' | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction</div>'+buildPrintFooter()+'</div>';}
+function buildSalaryPrintHTML(){if(!lastSalaryData)return'';var d=lastSalaryData,m=d.m,y=d.y,days=d.days,users=d.users,allAtt=d.allAtt;var thS='border:1px solid #000;padding:2px 1px;font-size:7px;background:#bbb;color:#000;text-align:center;white-space:nowrap;';var tdS='border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:center;white-space:nowrap;';var printRows='';var totalBasic=0,totalAbsentDeduct=0,totalLetDeduct=0,totalNet=0;for(var i=0;i<users.length;i++){var uid=users[i][0],u=users[i][1];var counts={P:0,A:0,T:0,L:0,H:0},letCount=0;for(var dd=1;dd<=days;dd++){var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');var attData=allAtt[ds]?allAtt[ds][uid]:null;var s=getAttStatus(ds,uid,attData);var fullP=isFullPresent(attData);if(fullP)counts.P++;else if(s&&counts.hasOwnProperty(s))counts[s]++;if((s==='P'||s==='T')&&attData&&attData.inTime&&isLate(attData.inTime))letCount++;};var basic=u.salary,dailyRate=Math.round(basic/days);var absentDeduct=Math.round(dailyRate*counts.A);var letDeductDays=Math.floor(letCount/3);var letDeductAmount=Math.round(dailyRate*letDeductDays);var net=basic-absentDeduct-letDeductAmount;totalBasic+=basic;totalAbsentDeduct+=absentDeduct;totalLetDeduct+=letDeductAmount;totalNet+=net;printRows+='<tr><td style="'+tdS+'font-weight:700;">'+(i+1)+'</td><td style="'+tdS+'font-weight:600;text-align:left;">'+u.name+'</td><td style="'+tdS+'text-align:left;">'+(u.designation||'')+'</td><td style="'+tdS+'text-align:left;">'+(u.depot||'')+'</td><td style="border:1px solid #000;padding:1px;font-size:6px;color:#000;text-align:center;white-space:nowrap;">'+(u.joinDate?formatPrintDate(u.joinDate):'')+'</td><td style="'+tdS+'text-align:right;">'+basic.toLocaleString()+'</td><td style="'+tdS+'text-align:right;">'+dailyRate.toLocaleString()+'</td><td style="'+tdS+'">'+counts.P+'</td><td style="'+tdS+'">'+counts.A+'</td><td style="'+tdS+'">'+counts.T+'</td><td style="'+tdS+'">'+counts.L+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;font-weight:800;background:#eee;text-align:center;white-space:nowrap;">'+letCount+'</td><td style="'+tdS+'">'+counts.H+'</td><td style="'+tdS+'">'+days+'</td><td style="'+tdS+'text-align:right;">'+absentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px 1px;font-size:7px;color:#000;text-align:right;background:#eee;white-space:nowrap;">'+letDeductAmount+' ('+letDeductDays+'d)</td><td style="border:1px solid #000;padding:2px 1px;font-size:8px;color:#000;font-weight:800;text-align:right;white-space:nowrap;">'+net.toLocaleString()+'</td><td style="'+tdS+'min-width:30px;">&nbsp;</td><td style="'+tdS+'min-width:40px;">&nbsp;</td></tr>';};return'<div style="font-family:Arial,Helvetica,sans-serif;color:#000;padding:4mm;background:#fff"><h2 style="text-align:center;font-size:12px;margin:0 0 2px 0;color:#000">SALARY SHEET</h2><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 1px 0">Kushtia Depot</h3><h3 style="text-align:center;font-size:9px;color:#000;margin:0 0 4px 0">'+monthName(m).toUpperCase()+' '+y+' | Days: '+days+'</h3><table style="width:100%;border-collapse:collapse;table-layout:auto;"><thead><tr><th style="'+thS+'">Sl</th><th style="'+thS+'text-align:left;">Name</th><th style="'+thS+'text-align:left;">Desig</th><th style="'+thS+'text-align:left;">Depot</th><th style="'+thS+'">Join</th><th style="'+thS+'">Basic</th><th style="'+thS+'">Rate</th><th style="'+thS+'">P</th><th style="'+thS+'">A</th><th style="'+thS+'">T</th><th style="'+thS+'">L</th><th style="'+thS+'background:#eee;">LET</th><th style="'+thS+'">H</th><th style="'+thS+'">Days</th><th style="'+thS+'">Abs Ded</th><th style="'+thS+'background:#eee;">LET Ded</th><th style="'+thS+'">Net Pay</th><th style="'+thS+'">Recv</th><th style="'+thS+'">Sign</th></tr></thead><tbody>'+printRows+'</tbody><tfoot><tr style="font-weight:bold"><td colspan="5" style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">TOTAL</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalBasic.toLocaleString()+'</td><td colspan="7" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#ddd;color:#000;">'+totalAbsentDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:7px;background:#eee;color:#000;">'+totalLetDeduct.toLocaleString()+'</td><td style="border:1px solid #000;padding:2px;text-align:right;font-size:9px;font-weight:800;background:#ddd;color:#000;">'+totalNet.toLocaleString()+'</td><td colspan="2" style="border:1px solid #000;padding:2px;font-size:7px;background:#ddd;color:#000;"></td></tr></tfoot></table><div style="margin-top:4px;font-size:7px;color:#000">Present = IN+OUT Both Approved | Daily Rate = Basic / '+days+' | Absent Ded. = Rate × Absent | LET Ded. = Rate × Floor(LET/3) | Net = Basic - Absent Ded. - LET Ded. | Leave = No OUT Required</div><div style="margin-top:2px;font-size:7px;color:#000">Office End: '+formatTime12(END_TIME)+' | LET = Entry after '+formatTime12(LATE_TIME)+' | 3 LET = 1 Day Deduction | Checkout unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME)+'</div>'+buildPrintFooter()+'</div>';}
 function printSalary(){if(!lastSalaryData){showToast('Generate salary sheet first','error');return}printContent(buildSalaryPrintHTML(),'Salary Sheet - '+monthName(lastSalaryData.m)+' '+lastSalaryData.y)}
 
 /* ===== DIC HOLIDAYS ===== */
@@ -1115,8 +1230,8 @@ async function renderSettings(){
   '</div>'+
   '<div style="margin-top:20px;padding:14px 18px;background:rgba(0,212,170,.05);border:1px solid rgba(0,212,170,.15);border-radius:10px"><div style="font-size:12px;font-weight:600;color:var(--accent);margin-bottom:6px"><i class="fa-solid fa-lightbulb" style="margin-right:6px"></i>Print Footer Preview</div><div style="background:#fff;padding:16px;border-radius:8px;color:#000;font-family:Arial,sans-serif"><div style="display:flex;justify-content:space-around;text-align:center;font-size:9px;color:#000"><div>'+(dicSig?'<img src="'+dicSig+'" style="height:35px;max-width:80px;object-fit:contain;margin-bottom:4px;display:block;margin:0 auto">':'')+'<div style="border-top:1px solid #000;padding-top:2px;margin-top:8px">Prepared by Depot In-Charge</div></div><div>'+(rsmSig?'<img src="'+rsmSig+'" style="height:35px;max-width:80px;object-fit:contain;margin-bottom:4px;display:block;margin:0 auto">':'')+'<div style="border-top:1px solid #000;padding-top:2px;margin-top:8px">Rechecked by RSM/Sr.RSM</div></div><div><div style="margin-top:35px">&nbsp;</div><div style="border-top:1px solid #000;padding-top:2px">Recommended by</div></div><div><div style="margin-top:35px">&nbsp;</div><div style="border-top:1px solid #000;padding-top:2px">Approved by</div></div></div></div></div>'+
   '</div></div>'+
-  '<div class="card" style="margin-bottom:20px;border-color:rgba(59,130,246,.2)"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-clock" style="color:#60a5fa;margin-right:8px"></i>Attendance Time Configuration</h3><p style="font-size:12px;color:var(--text2);margin-bottom:12px">Current time settings for attendance entry.</p><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px"><div style="padding:14px 18px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">IN Start Time</div><div style="font-size:22px;font-weight:800;color:var(--accent)">'+formatTime12(START_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Before this = Locked</div></div><div style="padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">LET Threshold</div><div style="font-size:22px;font-weight:800;color:#f59e0b">'+formatTime12(LATE_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">After this = Late Entry</div></div><div style="padding:14px 18px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">Office End Time</div><div style="font-size:22px;font-weight:800;color:#60a5fa">'+formatTime12(END_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">OUT before end</div></div></div></div>'+
-  '<div class="card" style="margin-bottom:20px;border-color:rgba(168,85,247,.15)"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-fingerprint" style="color:#a855f7;margin-right:8px"></i>Attendance Rules</h3><div style="display:grid;gap:12px;font-size:13px;color:var(--text2)"><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #00d4aa"><strong style="color:var(--accent)">Present:</strong> IN Check + OUT Check + Both Approved = Present</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #f59e0b"><strong style="color:#f59e0b">Leave (L):</strong> No OUT time required, just submit and get approved</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #60a5fa"><strong style="color:#60a5fa">Tour (T):</strong> IN + OUT both required + Tour Photo mandatory</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #ef4444"><strong style="color:#ef4444">Location Lock:</strong> IN & OUT locations captured separately, cannot be edited after submission</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #a855f7"><strong style="color:#a855f7">LET Rule:</strong> Every 3 LET = 1 Day Salary Deduction</div></div></div>'+
+  '<div class="card" style="margin-bottom:20px;border-color:rgba(59,130,246,.2)"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-clock" style="color:#60a5fa;margin-right:8px"></i>Attendance Time Configuration</h3><p style="font-size:12px;color:var(--text2);margin-bottom:12px">Current time settings for attendance entry.</p><div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:16px"><div style="padding:14px 18px;background:rgba(0,212,170,.06);border:1px solid rgba(0,212,170,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">IN Start Time</div><div style="font-size:22px;font-weight:800;color:var(--accent)">'+formatTime12(START_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Before this = Locked</div></div><div style="padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">LET Threshold</div><div style="font-size:22px;font-weight:800;color:#f59e0b">'+formatTime12(LATE_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">After this = Late Entry</div></div><div style="padding:14px 18px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">Checkout Unlock</div><div style="font-size:22px;font-weight:800;color:#60a5fa">'+formatTime12(CHECKOUT_UNLOCK_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Checkout button appears</div></div><div style="padding:14px 18px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px"><div style="font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px">Office End Time</div><div style="font-size:22px;font-weight:800;color:#a855f7">'+formatTime12(END_TIME)+'</div><div style="font-size:10px;color:var(--text2);margin-top:2px">OUT before end</div></div></div></div>'+
+  '<div class="card" style="margin-bottom:20px;border-color:rgba(168,85,247,.15)"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-fingerprint" style="color:#a855f7;margin-right:8px"></i>Attendance Rules</h3><div style="display:grid;gap:12px;font-size:13px;color:var(--text2)"><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #00d4aa"><strong style="color:var(--accent)">Present:</strong> IN Check + OUT Check + Both Approved = Present</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #f59e0b"><strong style="color:#f59e0b">Leave (L):</strong> No OUT time required, just submit and get approved</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #60a5fa"><strong style="color:#60a5fa">Tour (T):</strong> IN + OUT both required + Tour Photo mandatory</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #ef4444"><strong style="color:#ef4444">Location Lock:</strong> IN & OUT locations captured separately, cannot be edited after submission</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #a855f7"><strong style="color:#a855f7">LET Rule:</strong> Every 3 LET = 1 Day Salary Deduction</div><div style="padding:10px 14px;background:var(--bg);border-radius:8px;border-left:3px solid #60a5fa"><strong style="color:#60a5fa">Checkout Lock:</strong> Check-OUT button only appears after '+formatTime12(CHECKOUT_UNLOCK_TIME)+' (7:00 PM)</div></div></div>'+
   '<div class="card"><h3 style="font-size:16px;font-weight:700;margin-bottom:16px"><i class="fa-solid fa-database" style="color:var(--warn);margin-right:8px"></i>Data Management</h3><p style="font-size:12px;color:var(--text2);margin-bottom:16px">Manage your application data stored in Firebase.</p><button class="btn btn-danger" onclick="showModal(\'Clear All Data\',\'<p style=color:var(--text2)>This will permanently delete ALL attendance records, custom holidays, and signatures. Users will be kept.</p>\',async function(){await db.ref(\'attendance\').remove();await db.ref(\'holidays\').remove();await db.ref(\'signatures\').remove();allHolidays={};allSignatures={};showToast(\'Data cleared\',\'info\');renderSettings()})"><i class="fa-solid fa-trash"></i> Clear All Attendance & Holiday Data</button></div></div>';
 }
 
