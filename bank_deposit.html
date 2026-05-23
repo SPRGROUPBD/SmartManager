@@ -134,36 +134,83 @@
         
         /* PRINT MEDIA QUERY */
         @media print {
-            body * { visibility: hidden; }
-            #bankReportPaper, #bankReportPaper * { visibility: visible; }
-            #bankReportPaper { 
-                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; 
-                box-shadow: none; display: block !important; 
+            /* SETUP A4 SIZE */
+            @page { 
+                size: A4; 
+                margin: 15mm 15mm 25mm 15mm; /* Bottom margin larger for footer */
             }
+
+            body * { visibility: hidden; }
+            
+            /* REPEATING HEADER LOGIC */
+            .print-running-header {
+                position: running(header);
+                border-bottom: 2px solid #000;
+                padding-bottom: 5px;
+                margin-bottom: 10px;
+                text-align: center;
+            }
+
+            #bankReportPaper, #bankReportPaper * { visibility: visible; }
+            
+            #bankReportPaper { 
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; 
+                box-shadow: none; display: block !important; 
+                font-size: 12pt; /* Ensure print font size */
+            }
+            
+            /* Hide UI elements */
             .slip-actions, .sidebar, header, .modal-overlay, .img-preview-modal, .login-overlay, .toast { display: none !important; }
             .slip-preview-modal { 
                 position: static; background: none; overflow: visible; display: block !important; 
             }
             .slip-content-area { padding: 0; overflow: visible; background: none; }
-            .report-footer { page-break-inside: avoid; }
+            
+            /* Table Pagination: Prevent rows from breaking */
+            table { width: 100%; border-collapse: collapse; }
+            tr { break-inside: avoid; }
+            
+            /* Footer styling */
+            .report-footer { 
+                margin-top: 40px; 
+                page-break-inside: avoid; 
+                position: absolute;
+                bottom: 0;
+                width: 100%;
+                text-align: center;
+            }
         }
 
-        /* ACTUAL PAPER STYLES */
+        /* ACTUAL PAPER STYLES (SCREEN PREVIEW) */
         #bankReportPaper { 
             background: #fff; width: 210mm; min-height: 297mm; padding: 10mm; 
             box-shadow: var(--shadow); display: none; font-family: 'Times New Roman', Times, serif; color: #000; 
         }
-        .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px; }
-        .report-header h3 { font-size: 18px; margin-bottom: 4px; color: #000; text-transform: uppercase; }
-        .report-header p { font-size: 12px; margin: 2px 0; color: #000; }
-        .report-title { font-size: 16px; font-weight: 700; text-align: center; margin: 10px 0; text-transform: uppercase; text-decoration: underline; color: #000; }
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+        
+        /* Header styles */
+        .report-header-content h3 { font-size: 18px; margin-bottom: 4px; color: #000; text-transform: uppercase; }
+        .report-header-content p { font-size: 12px; margin: 2px 0; color: #000; }
+        .report-title { font-size: 16px; font-weight: 700; text-align: center; margin: 5px 0 10px 0; text-transform: uppercase; text-decoration: underline; color: #000; }
+        
+        /* Params (From/To/Month) */
+        .report-params {
+            display: flex; justify-content: space-between; 
+            margin-bottom: 15px; padding: 8px 0; 
+            border-bottom: 1px solid #ccc; font-size: 12px; font-weight: 600;
+        }
+        .report-params div { text-align: center; }
+        
+        /* Table Styles */
+        .report-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
         .report-table th, .report-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; color: #000; }
         .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; }
         .report-table td { text-align: center; }
-        .report-table td:nth-child(2), .report-table td:nth-child(5) { text-align: left; }
+        .report-table td:nth-child(2) { text-align: center; } 
+        .report-table td:nth-child(5) { text-align: left; }
         .report-table tfoot td { border-top: 2px solid #000; font-weight: 700; font-size: 13px; }
-        .report-footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 12px; page-break-inside: avoid; }
+        
+        /* Footer Styles */
+        .report-footer-inner { display: flex; justify-content: space-between; text-align: center; font-size: 12px; }
         .sign-line { margin-bottom: 4px; letter-spacing: 2px; border-bottom: 1px solid #000; display: inline-block; width: 150px; }
 
         @media (max-width: 768px) {
@@ -173,6 +220,7 @@
             .nav-item { justify-content: center; padding: 14px 0; }
             .filter-bar { flex-direction: column; align-items: stretch; }
             .filter-bar input { width: 100%; }
+            .report-params { flex-direction: column; gap: 5px; }
         }
     </style>
 </head>
@@ -402,10 +450,9 @@
 
                     <!-- ACTION BAR -->
                     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap: wrap; align-items:center;">
-                        <button class="btn btn-primary" onclick="generateDepositSlip()">📄 Generate Slip</button>
                         <button class="btn btn-primary" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
-                        <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
                         <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp Direct</button>
+                        <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
                     </div>
 
                     <!-- DATA TABLE -->
@@ -448,12 +495,22 @@
         <div class="slip-content-area">
             <!-- THE PAPER -->
             <div id="bankReportPaper">
-                <div class="report-header">
-                    <h3>Monico Pharma Ltd</h3>
-                    <p>8/1 Gausnagar, New Eskaton Road, Mogbazar, Dhaka-1205</p>
+                
+                <!-- REPEATING HEADER (Company & Title) -->
+                <div class="print-running-header">
+                    <div class="report-header-content">
+                        <h3>Monico Pharma Ltd</h3>
+                        <p>8/1 Gausnagar, New Eskaton Road, Mogbazar, Dhaka-1205</p>
+                    </div>
+                    <div class="report-title" id="bankRptTitle">Bank Deposit Statement</div>
                 </div>
-                <div style="text-align:center; margin-top:8px; font-size:13px"><strong>Name of Depot:</strong> Kushtia</div>
-                <div class="report-title" id="bankRptTitle">Bank Deposit Statement</div>
+
+                <!-- PARAMETERS (Only show once on page 1) -->
+                <div class="report-params">
+                    <div><strong>From Date:</strong> <span id="printFromDate">-</span></div>
+                    <div><strong>To Date:</strong> <span id="printToDate">-</span></div>
+                    <div><strong>Month:</strong> <span id="printMonth">-</span></div>
+                </div>
                 
                 <table class="report-table">
                     <thead>
@@ -476,19 +533,12 @@
                     </tfoot>
                 </table>
 
+                <!-- FOOTER (Shows at the end) -->
                 <div class="report-footer">
-                    <!-- Line on top (Upor), Text below -->
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div> 
-                        <div>Prepared by</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div>
-                        <div>Checked by</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div>
-                        <div>Approved by</div>
+                    <div class="report-footer-inner">
+                        <div><div class="sign-line"></div>Prepared by</div>
+                        <div><div class="sign-line"></div>Checked by</div>
+                        <div><div class="sign-line"></div>Approved by</div>
                     </div>
                 </div>
             </div>
@@ -969,7 +1019,7 @@
         renderDeposits();
     };
 
-    // GENERATE SLIP LOGIC
+    // GENERATE SLIP LOGIC (HANDLES 0 DATA)
     window.generateDepositSlip = (isDirect = false) => {
         let f = currentFilteredData;
 
@@ -977,20 +1027,36 @@
         const fromDate = $('depositFilterFromDate').value;
         const toDate = $('depositFilterToDate').value;
 
-        if (!f.length) { showToast('No data to generate slip', 'error'); return; }
+        // Allow 0 data report
 
         let titleSuffix = '';
+        // UPDATED LOGIC FOR PRINT HEADER
+        let d1 = "-", d2 = "-", mStr = "-";
+
         if (fromDate && toDate) {
-            titleSuffix = `${new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })} to ${new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}`;
+            d1 = new Date(fromDate).toLocaleDateString('en-GB');
+            d2 = new Date(toDate).toLocaleDateString('en-GB');
+            // Derive Month from Date
+            mStr = new Date(toDate).toLocaleString('default', { month: 'long', year: 'numeric' });
+            titleSuffix = `${d1} to ${d2}`;
         } else if (fm) {
             const [y, m] = fm.split('-');
-            titleSuffix = `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'long' })} ${y}`;
+            const monthIdx = parseInt(m) - 1;
+            mStr = new Date(y, monthIdx).toLocaleString('default', { month: 'long', year: 'numeric' });
+            d1 = `01/${m}/${y}`;
+            d2 = new Date(y, parseInt(m), 0).toLocaleDateString('en-GB'); // Last day of month
+            titleSuffix = mStr;
         } else {
             titleSuffix = 'All Records';
         }
 
         currentReportTitle = `Bank Deposit Slip - ${titleSuffix}`;
         $('bankRptTitle').textContent = currentReportTitle;
+        
+        // SET NEW PRINT HEADER VALUES
+        $('printFromDate').textContent = d1;
+        $('printToDate').textContent = d2;
+        $('printMonth').textContent = mStr;
         
         const tb = $('bankRptTableBody');
         tb.innerHTML = '';
@@ -999,18 +1065,23 @@
 
         const sorted = [...f].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-        sorted.forEach(d => {
-            const amount = parseFloat(d.amount) || 0;
-            total += amount;
-            const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${dateStr}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(amount)}</td><td>${d.branch || ''}</td><td>${d.territory || ''}</td>`;
-            tb.appendChild(tr);
+        if (sorted.length === 0) {
+             tb.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#000; font-style:italic;">No transactions found for this period</td></tr>`;
+        } else {
+            sorted.forEach(d => {
+                const amount = parseFloat(d.amount) || 0;
+                total += amount;
+                const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${dateStr}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(amount)}</td><td>${d.branch || ''}</td><td>${d.territory || ''}</td>`;
+                tb.appendChild(tr);
 
-            const key = `${d.bankName}-${d.accountNo}`;
-            if (!currentSummaryData[key]) currentSummaryData[key] = 0;
-            currentSummaryData[key] += amount;
-        });
+                // Print Summary Grouping: Sudu Bank Name
+                const key = d.bankName; 
+                if (!currentSummaryData[key]) currentSummaryData[key] = 0;
+                currentSummaryData[key] += amount;
+            });
+        }
 
         $('bankRptTotal').textContent = fmt(total);
 
@@ -1029,54 +1100,76 @@
     window.printGeneratedSlip = () => { window.print(); };
     window.closeSlipPreview = () => { $('slipPreviewModal').classList.remove('open'); };
 
-    // WHATSAPP & EXCEL LOGIC
+    // WHATSAPP FORMAT LOGIC (UPDATED AS PER REQUEST)
     window.shareSummaryWhatsApp = () => {
-        if(Object.keys(currentSummaryData).length === 0) { showToast('Generate a slip first', 'error'); return; }
         let text = `*${currentReportTitle}*\nDepot: Kushtia\n\n`;
         let total = 0;
-        for (const bank in currentSummaryData) {
-            text += `🏦 ${bank}: ৳ ${currentSummaryData[bank].toFixed(2)}\n`;
-            total += currentSummaryData[bank];
+        if (Object.keys(currentSummaryData).length > 0) {
+            for (const bank in currentSummaryData) {
+                text += `🏦 ${bank}: ৳ ${currentSummaryData[bank].toFixed(2)}\n`;
+                total += currentSummaryData[bank];
+            }
+        } else {
+            text += `No transactions found.\n`;
         }
         text += `\n*Total Amount: ৳ ${total.toFixed(2)}*`;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
 
-    // Direct WhatsApp Share (New Format)
+    // Direct WhatsApp Share (Custom Format: CENTERED + SUDU BANK NAME)
     window.shareWhatsAppDirect = () => {
          let f = currentFilteredData;
-         if(!f.length) { showToast('No data selected', 'error'); return; }
          
          let summary = {};
          let total = 0;
          f.forEach(d => {
              const amt = parseFloat(d.amount) || 0;
-             const key = `${d.bankName}-${d.accountNo}`;
+             // CHANGE: GROUP BY BANK NAME ONLY (NO ACCOUNT NUMBER)
+             const key = d.bankName;
              if(!summary[key]) summary[key] = 0;
              summary[key] += amt;
              total += amt;
          });
 
-         // Determine Date String for header
-         let dateStr = new Date().toLocaleDateString('en-GB'); // Default today
-         const fm = $('depositFilterMonth').value;
-         const fromDate = $('depositFilterFromDate').value;
+         // Helper to fake centering (padding with non-breaking spaces)
+         const pad = "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0"; 
+
+         // 1. HEADER: CENTERED *Bank Deposit*
+         let text = pad + `*Bank Deposit*` + pad + "\n";
+
+         // 2. DEPOT: CENTERED Depot: Kushtia
+         text += pad + `Depot: Kushtia` + pad + "\n";
+
+         // 3. DATE LOGIC: CENTERED Date :DD-MMM-YY*
          const toDate = $('depositFilterToDate').value;
-         
-         if (fromDate && toDate) {
-             dateStr = `${fromDate} to ${toDate}`;
+         const fm = $('depositFilterMonth').value;
+         let reportDate = new Date(); // Default Today
+
+         if (toDate) {
+             reportDate = new Date(toDate);
          } else if (fm) {
-             dateStr = fm;
+             const [y, m] = fm.split('-');
+             // Last day of selected month
+             reportDate = new Date(y, parseInt(m), 0); 
          }
 
-         let text = `*WhatsApp Direct Bank Deposit Summary ${dateStr}*\n`;
-         text += `Depot: Kushtia\n\n`;
-
-         for (const bank in summary) {
-             text += `🏦 ${bank}: ৳ ${summary[bank].toFixed(2)}\n`;
-         }
+         const day = String(reportDate.getDate()).padStart(2, '0');
+         const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+         const month = months[reportDate.getMonth()];
+         const year = String(reportDate.getFullYear()).slice(-2);
          
-         text += `\nTotal: ৳ ${total.toFixed(2)}/`;
+         text += pad + `Date :${day}-${month}-${year}*` + pad + "\n\n";
+
+         // 4. BODY
+         if (Object.keys(summary).length > 0) {
+            for (const bank in summary) {
+                // CHANGE: DISPLAY BANK NAME ONLY (NO ACCOUNT NUMBER)
+                text += `🏦 ${bank}\t৳ ${summary[bank].toFixed(2)}\n`;
+            }
+         }
+
+         // 5. TOTAL: Total:  ৳ 133500.00/
+         text += `Total:\t৳ ${total.toFixed(2)}/`;
          
          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
