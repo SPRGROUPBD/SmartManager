@@ -409,7 +409,6 @@
 
                     <!-- ACTION BAR -->
                     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap: wrap; align-items:center;">
-                        <button class="btn btn-primary" onclick="generateDepositSlip()">📄 Generate Slip</button>
                         <button class="btn btn-primary" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
                         <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
                         <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp Direct</button>
@@ -648,7 +647,7 @@
         banks = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
         renderBankList();
         populateBankDropdown();
-        populateBankFilterDropdown(); // New: Populate filter dropdown
+        populateBankFilterDropdown(); 
         renderDashboard();
     });
 
@@ -725,7 +724,6 @@
         if (currentVal) sel.value = currentVal;
     }
 
-    // NEW: Populate Filter Dropdown
     function populateBankFilterDropdown() {
         const sel = $('depositFilterBank');
         const currentVal = sel.value;
@@ -929,13 +927,13 @@
         const fm = $('depositFilterMonth').value;
         const fromDate = $('depositFilterFromDate').value;
         const toDate = $('depositFilterToDate').value;
-        const bankId = $('depositFilterBank').value; // New: Bank Filter
+        const bankId = $('depositFilterBank').value; 
 
         let f = [...bankDeposits];
         if (fm) f = f.filter(d => d.month === fm);
         if (fromDate) f = f.filter(d => (d.date || '') >= fromDate);
         if (toDate) f = f.filter(d => (d.date || '') <= toDate);
-        if (bankId) f = f.filter(d => d.bankId === bankId); // New: Apply Bank Filter
+        if (bankId) f = f.filter(d => d.bankId === bankId); 
 
         return f;
     }
@@ -989,11 +987,11 @@
         $('depositFilterMonth').value = '';
         $('depositFilterFromDate').value = '';
         $('depositFilterToDate').value = '';
-        $('depositFilterBank').value = ''; // Clear Bank Filter
+        $('depositFilterBank').value = ''; 
         renderDeposits();
     };
 
-    // GENERATE SLIP LOGIC
+    // GENERATE SLIP LOGIC (Kept for Print Direct functionality)
     window.generateDepositSlip = (isDirect = false) => {
         let f = currentFilteredData;
 
@@ -1002,8 +1000,6 @@
         const toDate = $('depositFilterToDate').value;
         const bankId = $('depositFilterBank').value;
         const bankNameFilter = bankId ? (banks.find(b=>b.id === bankId)?.name || '') : 'All Banks';
-
-        // REMOVED: The "No data" error check. We now allow 0 value reports.
 
         let titleSuffix = '';
         if (fromDate && toDate) {
@@ -1047,7 +1043,6 @@
         }
     };
 
-    // PRINT DIRECT FUNCTION
     window.printDirectSlip = () => {
         generateDepositSlip(true);
     }
@@ -1057,11 +1052,9 @@
 
     // WHATSAPP & EXCEL LOGIC
     window.shareSummaryWhatsApp = () => {
-        // Allow 0 value reports
         let text = `*${currentReportTitle}*\nDepot: Kushtia\n\n`;
         let total = 0;
         
-        // Handle case where summary is empty
         if(Object.keys(currentSummaryData).length === 0) {
              text += `(No entries found for this selection)\n`;
         } else {
@@ -1075,55 +1068,97 @@
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
 
-    // Direct WhatsApp Share (New Format)
+    // UPDATED: Direct WhatsApp Share (Month Name in Date, Hide 0 Always)
     window.shareWhatsAppDirect = () => {
-         let f = currentFilteredData;
-         // REMOVED: "No data selected" check.
-         
-         let summary = {};
-         let total = 0;
-         f.forEach(d => {
-             const amt = parseFloat(d.amount) || 0;
-             const key = `${d.bankName}-${d.accountNo}`;
-             if(!summary[key]) summary[key] = 0;
-             summary[key] += amt;
-             total += amt;
-         });
+        // 1. Header
+        let text = `*Depot: Kushtia*\n`;
 
-         // Determine Date String for header
-         let dateStr = new Date().toLocaleDateString('en-GB'); // Default today
-         const fm = $('depositFilterMonth').value;
-         const fromDate = $('depositFilterFromDate').value;
-         const toDate = $('depositFilterToDate').value;
-         const bankId = $('depositFilterBank').value;
-         const bankName = bankId ? (banks.find(b=>b.id===bankId)?.name) : 'All Banks';
-         
-         if (fromDate && toDate) {
-             dateStr = `${fromDate} to ${toDate}`;
-         } else if (fm) {
-             dateStr = fm;
-         }
+        // 2. Filter Logic for WhatsApp (Independent of Table Filter)
+        let fDate = $('depositFilterFromDate').value;
+        let tDate = $('depositFilterToDate').value;
+        let mVal = $('depositFilterMonth').value;
+        let bId = $('depositFilterBank').value;
 
-         let text = `*WhatsApp Direct Bank Deposit Summary*\n`;
-         text += `Bank: ${bankName}\n`;
-         text += `Period: ${dateStr}\n`;
-         text += `Depot: Kushtia\n\n`;
+        // Start with all data
+        let workingData = [...bankDeposits];
+        if (bId) workingData = workingData.filter(d => d.bankId === bId);
 
-         if(Object.keys(summary).length === 0) {
-             text += `No deposits found.\n`;
-         } else {
-             for (const bank in summary) {
-                 text += `🏦 ${bank}: ৳ ${summary[bank].toFixed(2)}\n`;
-             }
-         }
-         
-         text += `\nTotal: ৳ ${total.toFixed(2)}/`;
-         
-         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        let headerDateText = "";
+        let footerLabel = "Today Total Bank"; // Default
+        let isAllTime = false;
+        
+        // Logic Hierarchy: Month > Range > Single Day > All Time
+        if (mVal) {
+            // Month Selected
+            workingData = workingData.filter(d => d.month === mVal);
+            const [y, m] = mVal.split('-');
+            headerDateText = `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'long' })} ${y}`;
+            footerLabel = "Total Bank";
+        } else if (fDate && tDate) {
+            // Range Selected
+            workingData = workingData.filter(d => (d.date || '') >= fDate && (d.date || '') <= tDate);
+            headerDateText = `${fDate} to ${tDate}`;
+            footerLabel = "Total Bank";
+        } else if (fDate) {
+            // Single Day Selected
+            workingData = workingData.filter(d => d.date === fDate);
+            const dateObj = new Date(fDate);
+            const day = String(dateObj.getDate()).padStart(2, '0');
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const monthStr = months[dateObj.getMonth()];
+            const year = String(dateObj.getFullYear()).slice(-2);
+            const fullMonthName = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1).toLocaleString('default', { month: 'long' });
+            
+            // Requirement: Date er pase Month Show hobe
+            headerDateText = `${day}-${monthStr}-${year} (${fullMonthName})`;
+            footerLabel = "Today Total Bank";
+        } else {
+            // NO DATE FILTER -> ALL TIME
+            isAllTime = true;
+            headerDateText = "All Time";
+            footerLabel = "Total Bank"; 
+        }
+
+        // Add Header
+        text += `*Date : ${headerDateText}*\n`;
+
+        // 3. Calculate Sums for all banks
+        let bankMap = [];
+        let sortedBanks = [...banks].sort((a, b) => a.name.localeCompare(b.name));
+
+        sortedBanks.forEach(bank => {
+            const sum = workingData
+                .filter(d => d.bankId === bank.id)
+                .reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
+            bankMap.push({ ...bank, sum });
+        });
+
+        // 4. Determine which banks to loop
+        // Requirement: "kono bant deposit 0.00 hoy... sow hobe na" (No matter what)
+        // Filter out 0.00 globally
+        let banksToRender = bankMap.filter(b => b.sum > 0);
+
+        let grandTotal = 0;
+
+        if (banksToRender.length === 0) {
+            text += `(No deposits found for selection)\n`;
+        } else {
+            banksToRender.forEach(bank => {
+                grandTotal += bank.sum;
+                let label = bank.name; // ONLY BANK NAME
+                let amtStr = bank.sum.toFixed(2);
+                text += `🏦 ${label}  = ৳ ${amtStr}\n`;
+            });
+        }
+
+        // 5. Footer
+        let totalStr = grandTotal.toFixed(2);
+        text += `${footerLabel} : ৳ ${totalStr}`;
+        
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     };
 
     window.exportSummaryExcel = () => {
-        // Allow empty export (Header only)
         let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000; padding:5px; font-family:Arial; font-size:12px;}</style></head><body>`;
         html += `<h2 style="text-align:center">${currentReportTitle}</h2><table><thead><tr><th>Bank Name</th><th>Total Amount (Tk.)</th></tr></thead><tbody>`;
         let total = 0;
@@ -1145,7 +1180,6 @@
 
     window.exportBankExcel = () => {
         let f = currentFilteredData;
-        // Allow empty export
         const sorted = [...f].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
         let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000; padding:5px; font-family:Arial; font-size:12px;}</style></head><body>`;
@@ -1201,7 +1235,7 @@
         $('depositFilterMonth').addEventListener('change', renderDeposits);
         $('depositFilterFromDate').addEventListener('change', renderDeposits);
         $('depositFilterToDate').addEventListener('change', renderDeposits);
-        $('depositFilterBank').addEventListener('change', renderDeposits); // Listener for new filter
+        $('depositFilterBank').addEventListener('change', renderDeposits); 
     });
 
     </script>
