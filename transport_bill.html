@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transport Bill Manager</title>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+
+:root {
+    --primary: #0066cc;
+    --secondary: #004c99;
+    --danger: #dc3545;
+    --success: #28a745;
+    --bg: #f4f7f6;
+    --text: #333;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 0;
+}
+@page{
+    size:A4 portrait;
+    margin:10mm;
+}
+
+body{
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+.print-area{
+    width:190mm;
+    min-height:277mm;
+}
+
+/* --- Navigation --- */
+nav {
+    background: #fff;
+    padding: 15px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.nav-brand {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: var(--primary);
+}
+
+.nav-links button {
+    background: transparent;
+    color: #666;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 1rem;
+    border-bottom: 3px solid transparent;
+    transition: 0.3s;
+}
+
+.nav-links button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: bold;
+}
+
+/* --- Main Layout --- */
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.view-section {
+    display: none;
+    animation: fadeIn 0.4s ease;
+}
+
+.view-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Controls (Entry Page) --- */
+.action-bar {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.btn {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-primary { background: var(--primary); }
+.btn-primary:hover { background: var(--secondary); }
+
+.btn-success { background: var(--success); }
+.btn-success:hover { background: #218838; }
+
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: #c82333; }
+
+.btn-secondary { background: #6c757d; }
+.btn-secondary:hover { background: #5a6268; }
+
+/* --- A4 Sheet Styles --- */
+.sheet {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 10mm;
+    margin: auto;
+    background: #fff;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+.header { text-align: center; margin-bottom: 15px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+.header h1 { font-size: 28px; letter-spacing: 2px; text-transform: uppercase; margin: 0; }
+.header h3 { margin-top: 5px; font-weight: normal; color: #555; }
+
+.info { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+.info td { padding: 6px; vertical-align: middle; }
+.info b { font-size: 14px; }
+
+.info input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid #ccc;
+    padding: 6px;
+    outline: none;
+    font-size: 14px;
+    background: transparent;
+}
+.info input:focus { border-bottom-color: var(--primary); background: #f9f9f9; }
+
+.bill-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+.bill-table th, .bill-table td { border: 1px solid #000; padding: 8px; text-align: center; }
+.bill-table th { background: #f2f2f2; font-weight: bold; font-size: 13px; }
+.bill-table input { width: 100%; border: none; text-align: center; outline: none; font-family: inherit; }
+.bill-table td[contenteditable="true"]:focus { background: #fffde7; }
+
+.amount { font-weight: bold; }
+
+.total-box { margin-top: 10px; text-align: right; font-size: 22px; font-weight: bold; }
+
+/* --- Footer Style --- */
+.footer { 
+    margin-top: 80px; 
+    display: flex; 
+    justify-content: center; /* Centered the whole group */
+    gap: 60px; /* Space between items */
+}
+
+.signature { 
+    width: 200px; 
+    text-align: center; 
+}
+.line { border-top: 1px solid #000; margin-bottom: 5px; height: 40px; }
+
+/* --- History Table Styles --- */
+.history-container {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.table-responsive { overflow-x: auto; }
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.history-table th, .history-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.history-table th { background: #f8f9fa; color: #333; }
+.history-table tr:hover { background: #f1f1f1; }
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.action-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    border-radius: 3px;
+    color: white;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+/* --- Toast Notification --- */
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 16px;
+    position: fixed;
+    z-index: 1000;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 17px;
+}
+
+#toast.show {
+    visibility: visible;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+@keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+/* --- Print Styles --- */
+@media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; margin: 0; padding: 0; }
+    nav, .action-bar, .history-container, .controls, #toast { display: none !important; }
+    
+    .sheet {
+        margin: 0;
+        width: 100%;
+        box-shadow: none;
+        padding: 10mm;
+    }
+    
+    /* Hide inputs, show text styled like inputs (optional) or keep inputs clean */
+    input { border: none !important; }
+}
+
+/* Mobile Adjustments */
+@media (max-width: 768px) {
+    .sheet { width: 100%; padding: 5mm; }
+    .footer { flex-direction: column; gap: 30px; }
+    .signature { margin: auto; }
+    .header h1 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+    <div class="nav-brand">Smart Manager</div>
+    <div class="nav-links">
+        <button id="navEntry" class="active" onclick="switchView('entry')">New Bill</button>
+        <button id="navHistory" onclick="switchView('history')">History</button>
+    </div>
+</nav>
+
+<!-- Toast Notification -->
+<div id="toast">Message here</div>
+
+<main>
+    <!-- ENTRY PAGE -->
+    <div id="entryView" class="view-section active">
+        
+        <!-- Action Buttons (Save/Reset/Print) -->
+        <div class="action-bar">
+            <input type="hidden" id="editKey" value=""> <!-- Stores ID when editing -->
+            <button class="btn btn-primary" onclick="saveBill()">Save Bill</button>
+            <button class="btn btn-secondary" onclick="resetForm()">Reset / New</button>
+            <button class="btn btn-success" onclick="window.print()">Print Preview</button>
+        </div>
+
+        <!-- The Bill Sheet -->
+        <div class="sheet">
+            <div class="header">
+                <h1>Transport Bill</h1>
+                <h3>Transport Expense Statement</h3>
+            </div>
+
+            <table class="info">
+                <tr>
+                    <td><b>Bill No:</b></td>
+                    <td><input type="text" id="billNo" value="TB-2026-001"></td>
+                    <td><b>Date:</b></td>
+                    <td><input type="date" id="billDate"></td>
+                </tr>
+                <tr>
+                    <td><b>Transporter:</b></td>
+                    <td><input type="text" id="transporter"></td>
+                    <td><b>Vehicle No:</b></td>
+                    <td><input type="text" id="vehicleNo"></td>
+                </tr>
+                <tr>
+                    <td><b>From:</b></td>
+                    <td><input type="text" id="fromLoc"></td>
+                    <td><b>To:</b></td>
+                    <td><input type="text" id="toLoc"></td>
+                </tr>
+            </table>
+
+            <table class="bill-table" id="billTable">
+                <thead>
+                    <tr>
+                        <th width="50">SL</th>
+                        <th>Description</th>
+                        <th width="80">Qty</th>
+                        <th width="100">Rate</th>
+                        <th width="120">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Rows will be added here via JS -->
+                </tbody>
+            </table>
+
+            <div class="total-box">
+                Grand Total : ৳ <span id="grandTotal">0</span>
+            </div>
+
+            <div class="footer">
+                <div class="signature">
+                    <div class="line"></div>
+                    Prepared By
+                </div>
+                <div class="signature">
+                    <div class="line"></div>
+                    Checked By
+                </div>
+                <div class="signature">
+                    <div class="line"></div>
+                    Approved By
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORY PAGE -->
+    <div id="historyView" class="view-section">
+        <div class="history-container">
+            <h2>Bill History</h2>
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Bill No</th>
+                            <th>Date</th>
+                            <th>Transporter</th>
+                            <th>Total (৳)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyList">
+                        <!-- History items will be loaded here -->
+                        <tr><td colspan="5" style="text-align:center">Loading data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+    // --- 1. Firebase Configuration ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD3l-b_9jRDPC-UxjqmA6ZMiupXdP5yakQ",
+        authDomain: "smartmanager-ed5f0.firebaseapp.com",
+        databaseURL: "https://smartmanager-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "smartmanager-ed5f0",
+        storageBucket: "smartmanager-ed5f0.firebasestorage.app",
+        messagingSenderId: "886142154237",
+        appId: "1:886142154237:web:f0f838a0dcc69e1cdd1594",
+        measurementId: "G-YZ520GP66H"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const billsRef = db.ref('transport_bills');
+
+    // --- 2. DOM Elements ---
+    const entryView = document.getElementById('entryView');
+    const historyView = document.getElementById('historyView');
+    const navEntry = document.getElementById('navEntry');
+    const navHistory = document.getElementById('navHistory');
+    const historyList = document.getElementById('historyList');
+    const toast = document.getElementById('toast');
+    const grandTotalEl = document.getElementById('grandTotal');
+    
+    // --- 3. Core Logic ---
+
+    // Set today's date by default
+    document.getElementById('billDate').valueAsDate = new Date();
+
+    // Initialize table with one row
+    window.addEventListener('DOMContentLoaded', () => {
+        if(document.querySelector("#billTable tbody").children.length === 0) {
+            addRow();
+        }
+        calculateTotal();
+        loadHistory(); 
+    });
+
+    // Calculate Totals
+    function calculateTotal() {
+        let total = 0;
+        const rows = document.querySelectorAll("#billTable tbody tr");
+        
+        rows.forEach((row, index) => {
+            row.cells[0].innerText = index + 1;
+            let qty = parseFloat(row.querySelector(".qty").value) || 0;
+            let rate = parseFloat(row.querySelector(".rate").value) || 0;
+            let amount = qty * rate;
+            row.querySelector(".amount").innerText = amount.toLocaleString();
+            total += amount;
+        });
+        grandTotalEl.innerText = total.toLocaleString();
+    }
+
+    // Add New Row
+    function addRow() {
+        let tbody = document.querySelector("#billTable tbody");
+        let row = tbody.insertRow();
+        row.innerHTML = `
+            <td></td>
+            <td contenteditable="true" class="desc-input"></td>
+            <td><input type="number" class="qty" value="0" oninput="calculateTotal()"></td>
+            <td><input type="number" class="rate" value="0" oninput="calculateTotal()"></td>
+            <td class="amount">0</td>
+        `;
+        calculateTotal();
+    }
+
+    // Reset Form
+    function resetForm() {
+        document.getElementById('editKey').value = ""; 
+        document.getElementById('billNo').value = "TB-2026-00" + Math.floor(Math.random() * 1000);
+        document.getElementById('billDate').valueAsDate = new Date();
+        document.getElementById('transporter').value = "";
+        document.getElementById('vehicleNo').value = "";
+        document.getElementById('fromLoc').value = "";
+        document.getElementById('toLoc').value = "";
+        
+        const tbody = document.querySelector("#billTable tbody");
+        tbody.innerHTML = "";
+        addRow();
+        
+        showToast("Form Reset");
+    }
+
+    // --- 4. Firebase Operations ---
+
+    // Save (Create or Update)
+    function saveBill() {
+        const editKey = document.getElementById('editKey').value;
+        const billNo = document.getElementById('billNo').value;
+        
+        if(!billNo) {
+            showToast("Please enter a Bill Number");
+            return;
+        }
+
+        const billData = {
+            billNo: billNo,
+            date: document.getElementById('billDate').value,
+            transporter: document.getElementById('transporter').value,
+            vehicleNo: document.getElementById('vehicleNo').value,
+            from: document.getElementById('fromLoc').value,
+            to: document.getElementById('toLoc').value,
+            grandTotal: grandTotalEl.innerText, 
+            timestamp: Date.now()
+        };
+
+        billData.items = [];
+        document.querySelectorAll("#billTable tbody tr").forEach(row => {
+            billData.items.push({
+                desc: row.querySelector('.desc-input').innerText,
+                qty: row.querySelector('.qty').value,
+                rate: row.querySelector('.rate').value,
+                amount: row.querySelector('.amount').innerText
+            });
+        });
+
+        if (editKey) {
+            billsRef.child(editKey).update(billData)
+                .then(() => showToast("Bill Updated Successfully!"))
+                .catch(err => showToast("Error: " + err.message));
+        } else {
+            billsRef.push(billData)
+                .then(() => {
+                    showToast("Bill Saved Successfully!");
+                    resetForm();
+                })
+                .catch(err => showToast("Error: " + err.message));
+        }
+    }
+
+    // Load History
+    function loadHistory() {
+        billsRef.on('value', (snapshot) => {
+            historyList.innerHTML = "";
+            const data = snapshot.val();
+
+            if (!data) {
+                historyList.innerHTML = '<tr><td colspan="5" style="text-align:center">No bills found.</td></tr>';
+                return;
+            }
+
+            const billsArray = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+            billsArray.forEach(([key, bill]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${bill.billNo}</td>
+                    <td>${bill.date}</td>
+                    <td>${bill.transporter}</td>
+                    <td>৳ ${bill.grandTotal}</td>
+                    <td class="action-buttons">
+                        <!-- Edit Button: Goes to Edit Mode -->
+                        <button class="action-btn btn-primary" onclick="loadBillToForm('${key}', true)">Edit</button>
+                        
+                        <!-- Print Button: View Only (No Edit Mode) -->
+                        <button class="action-btn btn-success" onclick="printBill('${key}')">Print</button>
+                        
+                        <button class="action-btn btn-danger" onclick="deleteBill('${key}')">Delete</button>
+                    </td>
+                `;
+                historyList.appendChild(tr);
+            });
+        });
+    }
+
+    // Delete Bill
+    function deleteBill(key) {
+        if(confirm("Are you sure you want to delete this bill?")) {
+            billsRef.child(key).remove()
+                .then(() => showToast("Bill Deleted"))
+                .catch(err => showToast("Error: " + err.message));
+        }
+    }
+
+    // Helper: Load Data into Form
+    // isEditMode = true: Sets the ID to allow updating.
+    // isEditMode = false: Clears the ID, so saving creates a NEW bill (View/Print only).
+    function loadBillToForm(key, isEditMode) {
+        billsRef.child(key).once('value').then((snapshot) => {
+            const bill = snapshot.val();
+            if (!bill) return;
+
+            // 1. Fill Inputs
+            document.getElementById('billNo').value = bill.billNo;
+            document.getElementById('billDate').value = bill.date;
+            document.getElementById('transporter').value = bill.transporter;
+            document.getElementById('vehicleNo').value = bill.vehicleNo;
+            document.getElementById('fromLoc').value = bill.from;
+            document.getElementById('toLoc').value = bill.to;
+
+            // 2. Fill Table
+            const tbody = document.querySelector("#billTable tbody");
+            tbody.innerHTML = ""; 
+
+            if (bill.items && bill.items.length > 0) {
+                bill.items.forEach(item => {
+                    let row = tbody.insertRow();
+                    row.innerHTML = `
+                        <td></td>
+                        <td contenteditable="true" class="desc-input">${item.desc}</td>
+                        <td><input type="number" class="qty" value="${item.qty}" oninput="calculateTotal()"></td>
+                        <td><input type="number" class="rate" value="${item.rate}" oninput="calculateTotal()"></td>
+                        <td class="amount">${item.amount}</td>
+                    `;
+                });
+            } else {
+                addRow(); 
+            }
+            
+            calculateTotal();
+            
+            // 3. Switch View
+            switchView('entry');
+
+            // 4. Handle Edit Mode State
+            if (isEditMode) {
+                document.getElementById('editKey').value = key; // Set ID for updates
+                showToast("Bill Loaded for Editing");
+            } else {
+                document.getElementById('editKey').value = ""; // Clear ID (Not in edit mode)
+                showToast("Loaded for View/Print");
+            }
+        });
+    }
+
+    // Wrapper for Print Button
+    function printBill(key) {
+        loadBillToForm(key, false); // Load without edit mode
+        setTimeout(() => {
+            window.print();
+        }, 500);
+    }
+
+    // --- 5. UI Helpers ---
+
+    function switchView(viewName) {
+        if (viewName === 'entry') {
+            entryView.classList.add('active');
+            historyView.classList.remove('active');
+            navEntry.classList.add('active');
+            navHistory.classList.remove('active');
+        } else {
+            entryView.classList.remove('active');
+            historyView.classList.add('active');
+            navEntry.classList.remove('active');
+            navHistory.classList.add('active');
+        }
+    }
+
+    function showToast(message) {
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    document.getElementById('billTable').addEventListener('input', calculateTotal);
+
+</script>
+
+</body>
+</html>
