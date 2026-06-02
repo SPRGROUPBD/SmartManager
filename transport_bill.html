@@ -160,6 +160,49 @@
         // Set default date to today
         document.getElementById('billDate').valueAsDate = new Date();
 
+        // --- HELPER: Number to Words Converter for Taka ---
+        function convertAmountToWords(amount) {
+            if (!amount || isNaN(amount)) return "Zero Taka Only";
+
+            // Split into Taka and Paisa
+            const amountStr = parseFloat(amount).toFixed(2);
+            const parts = amountStr.split('.');
+            const takaPart = parseInt(parts[0], 10);
+            const paisaPart = parseInt(parts[1], 10);
+
+            const takaWords = convertNumber(takaPart);
+            let result = `${takaWords} Taka`;
+
+            if (paisaPart > 0) {
+                const paisaWords = convertNumber(paisaPart);
+                result += ` and ${paisaWords} Paisa`;
+            }
+
+            result += " Only";
+            return result;
+        }
+
+        function convertNumber(num) {
+            if (num === 0) return "Zero";
+
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            if (num < 20) {
+                return ones[num];
+            } else if (num < 100) {
+                return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '');
+            } else if (num < 1000) {
+                return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' ' + convertNumber(num % 100) : '');
+            } else if (num < 100000) {
+                return convertNumber(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convertNumber(num % 1000) : '');
+            } else if (num < 10000000) {
+                return convertNumber(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 !== 0 ? ' ' + convertNumber(num % 100000) : '');
+            } else {
+                return convertNumber(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 !== 0 ? ' ' + convertNumber(num % 10000000) : '');
+            }
+        }
+
         // --- 1. Function to Generate Bill No ---
         async function getNextBillNumber(dateString) {
             const date = new Date(dateString);
@@ -214,64 +257,46 @@
             }
         });
 
-        // --- নতুন Debugging Version of loadBills ---
-function loadBills() {
-    const billsRef = ref(db, 'transport_bills');
-    
-    console.log("🔍 Starting to listen for transport_bills...");
-
-    onValue(billsRef, (snapshot) => {
-        console.log("📡 Database update received!");
-        console.log("📊 Snapshot exists?", snapshot.exists());
-
-        // ১. লোডিং মেসেজ লুকাও
-        loadingMsg.style.display = 'none';
-        billsTableBody.innerHTML = ''; // টেবিল পরিষ্কার করো
-        
-        if (snapshot.exists()) {
-            console.log("✅ Data found! Processing...");
-            const bills = snapshot.val();
+        // --- 3. Load Bills ---
+        function loadBills() {
+            const billsRef = ref(db, 'transport_bills');
             
-            // কনসোলে ডেটা দেখাও (এখানেই সমস্যা বুঝতে পারবেন)
-            console.log("Raw Data from DB:", bills);
+            onValue(billsRef, (snapshot) => {
+                loadingMsg.style.display = 'none';
+                billsTableBody.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const bills = snapshot.val();
+                    const billsArray = Object.values(bills);
 
-            // অবজেক্ট কে অ্যারেতে রূপান্তর
-            const billsArray = Object.values(bills);
-            console.log("Converted Array:", billsArray);
+                    // Sort by date descending
+                    billsArray.sort((a, b) => new Date(b.billDate) - new Date(a.billDate));
 
-            // সর্ট করা
-            billsArray.sort((a, b) => new Date(b.billDate) - new Date(a.billDate));
-
-            // টেবিলে বসানোর লুপ
-            billsArray.forEach((bill, index) => {
-                console.log(`Processing row ${index + 1}:`, bill.billNo);
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${bill.billNo}</strong></td>
-                    <td>${bill.billDate}</td>
-                    <td>${bill.transporter}</td>
-                    <td>${bill.vehicleNo}</td>
-                    <td>${bill.fromLocation} ➝ ${bill.toLocation}</td>
-                    <td>${bill.amount.toFixed(2)}</td>
-                    <td>
-                        <button class="btn-print" onclick="window.printBill('${bill.billNo}')">Print</button>
-                    </td>
-                `;
-                billsTableBody.appendChild(row);
+                    billsArray.forEach((bill) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${bill.billNo}</strong></td>
+                            <td>${bill.billDate}</td>
+                            <td>${bill.transporter}</td>
+                            <td>${bill.vehicleNo}</td>
+                            <td>${bill.fromLocation} ➝ ${bill.toLocation}</td>
+                            <td>${bill.amount.toFixed(2)}</td>
+                            <td>
+                                <button class="btn-print" onclick="window.printBill('${bill.billNo}')">Print</button>
+                            </td>
+                        `;
+                        billsTableBody.appendChild(row);
+                    });
+                } else {
+                    noDataMsg.style.display = 'block';
+                }
+            }, (error) => {
+                console.error("Listener Error:", error);
+                loadingMsg.style.display = 'none';
+                noDataMsg.innerHTML = `<span style="color:red">Error: ${error.message}</span>`;
+                noDataMsg.style.display = 'block';
             });
-            console.log("✅ Table rendering completed.");
-
-        } else {
-            console.log("❌ No data found in 'transport_bills' node.");
-            noDataMsg.style.display = 'block';
         }
-    }, (error) => {
-        console.error("🔥 Listener Error:", error);
-        loadingMsg.style.display = 'none';
-        noDataMsg.innerHTML = `<span style="color:red">Listener Error: ${error.message}</span>`;
-        noDataMsg.style.display = 'block';
-    });
-}
 
         // Start loading bills
         loadBills();
@@ -292,7 +317,15 @@ function loadBills() {
 
         function renderPrintView(bill) {
             const printArea = document.getElementById('printArea');
-            const amountInWords = "Amount " + bill.amount + " Taka Only"; // Simple placeholder
+            
+            // 1. Date Formatting: YYYY-MM-DD to DD-MM-YYYY
+            const formattedDate = bill.billDate.split('-').reverse().join('-');
+
+            // 2. Amount in Words
+            const amountInWords = convertAmountToWords(bill.amount);
+
+            // 3. Formatted Amount with Taka Symbol
+            const formattedAmount = `৳ ${bill.amount.toFixed(2)}`;
 
             printArea.innerHTML = `
                 <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #000; max-width: 800px; margin: 0 auto; background: white;">
@@ -304,7 +337,8 @@ function loadBills() {
                     <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
                         <div>
                             <strong>Bill No:</strong> ${bill.billNo}<br>
-                            <strong>Date:</strong> ${bill.billDate}
+                            <!-- Formatted Date Here -->
+                            <strong>Date:</strong> ${formattedDate}
                         </div>
                         <div style="text-align: right;">
                             <strong>Transporter:</strong> ${bill.transporter}<br>
@@ -321,11 +355,13 @@ function loadBills() {
                         <tr>
                             <td style="border: 1px solid #000; padding: 10px;">Transport Charge</td>
                             <td style="border: 1px solid #000; padding: 10px;">From: ${bill.fromLocation} To: ${bill.toLocation}</td>
-                            <td style="border: 1px solid #000; padding: 10px; text-align: right;">${bill.amount.toFixed(2)}</td>
+                            <!-- Amount with Symbol Here -->
+                            <td style="border: 1px solid #000; padding: 10px; text-align: right;">${formattedAmount}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="border: 1px solid #000; padding: 10px; text-align: right; font-weight: bold;">Total</td>
-                            <td style="border: 1px solid #000; padding: 10px; text-align: right; font-weight: bold;">${bill.amount.toFixed(2)}</td>
+                            <!-- Total with Symbol Here -->
+                            <td style="border: 1px solid #000; padding: 10px; text-align: right; font-weight: bold;">${formattedAmount}</td>
                         </tr>
                     </table>
 
