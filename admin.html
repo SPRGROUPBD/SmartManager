@@ -113,15 +113,15 @@
         .modal-table th,.modal-table td{white-space:normal;word-wrap:break-word;vertical-align:middle;padding:6px 4px;font-size:12px}
         .modal-table input{width:100%;min-width:45px;padding:3px;font-size:12px}
         .row-total{font-weight:700;min-width:55px;display:inline-block}
-        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container{display:none;position:relative}
+        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none;position:relative}
         @media print{
             body *{visibility:hidden}
             .no-print{display:none!important}
-            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container{display:none!important;visibility:hidden}
+            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none!important;visibility:hidden}
             .active-print{display:block!important;position:absolute;left:0;top:0;width:100%;visibility:visible!important}
             .active-print *{visibility:visible!important}
-            #pageFooter,#pageFooterSummary,#pageFooterIOU,#pageFooterTopSheet{position:fixed;bottom:10px;left:0;width:100%;text-align:center;font-size:13px}
-            #pageFooter:after,#pageFooterSummary:after,#pageFooterIOU:after,#pageFooterTopSheet:after{content:"PAGE : " counter(page)}
+            #pageFooter,#pageFooterSummary,#pageFooterIOU,#pageFooterTopSheet,#pageFooterTopSheetFinal{position:fixed;bottom:10px;left:0;width:100%;text-align:center;font-size:13px}
+            #pageFooter:after,#pageFooterSummary:after,#pageFooterIOU:after,#pageFooterTopSheet:after,#pageFooterTopSheetFinal:after{content:"PAGE : " counter(page)}
             thead{display:table-header-group}tfoot{display:table-footer-group}
             table,th,td{border:1px solid #000!important;border-collapse:collapse}
             th,td{padding:2px 4px;font-size:13px;line-height:1.2}
@@ -366,62 +366,87 @@
             <div class="card dash-card no-print"><div class="card-header bg-primary text-white py-2"><h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Travels Allowance Bill Summary</h6></div><div class="card-body"><div class="row g-2 align-items-end mb-3"><div class="col-md-3"><label class="fw-bold text-muted">Month</label><input type="month" id="summary_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-4"><label class="fw-bold text-muted">Select DA</label><select id="summary_da" class="form-select form-select-sm" onchange="generateSummary()"><option value="">-- Select DA --</option></select></div><div class="col-md-3"><label class="fw-bold text-muted">Depot</label><input type="text" id="summary_depot" class="form-control form-control-sm" readonly value="Kushtia"></div><div class="col-md-2"><button onclick="printBillSummary()" class="btn btn-success btn-sm w-100"><i class="bi bi-printer"></i> Print</button></div></div><div class="table-responsive border"><table class="table table-bordered table-sm table-hover mb-0"><thead class="table-light"><tr><th>Sl</th><th>Date</th><th>Territory</th><th>Type</th><th class="text-end">Net Sales</th><th class="text-end">Taka</th><th class="text-end">DA</th><th class="text-end">Net Amount</th><th class="text-end">Cost %</th></tr></thead><tbody id="summary_table_body"><tr><td colspan="9" class="text-center text-muted">Select a DA.</td></tr></tbody><tfoot class="table-secondary fw-bold" id="summary_table_foot"><tr><td colspan="4" class="text-end">Grand Total:</td><td class="text-end" id="sum_foot_sales">0</td><td class="text-end" id="sum_foot_taka">0</td><td class="text-end" id="sum_foot_da">0</td><td class="text-end" id="sum_foot_net">0</td><td class="text-end" id="sum_foot_cost">0%</td></tr></tfoot></table></div></div></div>
         </div>
 
-        <!-- ★★★ NEW TOP SHEET TAB ★★★ -->
+        <!-- ★★★ TOP SHEET TAB (UPDATED) ★★★ -->
         <div class="tab-pane fade admin-superadmin-only" id="topSheetTab" role="tabpanel">
-            <div class="card dash-card no-print">
+            <div class="card dash-card no-print mb-3">
                 <div class="card-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Travels Allowance Bill Summary Month Wise Top Sheet</h6>
+                    <h6 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Top Sheet Generator</h6>
                 </div>
                 <div class="card-body">
-                    <!-- Controls -->
-                    <div class="row g-2 align-items-center mb-3 bg-light p-2 rounded">
-                        <div class="col-md-4">
-                            <label class="fw-bold text-muted mb-1">Select Month</label>
-                            <input type="month" id="topsheet_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)">
+                    <!-- Live Preview Section -->
+                    <div class="bg-light p-3 rounded mb-3 border">
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-eye"></i> Live Data Preview</h6>
+                        <div class="row g-2 align-items-center mb-3">
+                            <div class="col-md-4">
+                                <label class="fw-bold text-muted mb-1">Select Month</label>
+                                <input type="month" id="topsheet_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold text-primary mb-1">Total TP+Vat Sales (Input)</label>
+                                <input type="number" id="topsheet_total_sales" class="form-control form-control-sm fw-bold border-primary" placeholder="0.00" oninput="calculateTopSheetCost()">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="fw-bold text-success mb-1">Delivery Cost %</label>
+                                <div class="form-control form-control-sm bg-white fw-bold text-success" id="topsheet_cost_percent">0.00%</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="fw-bold mb-1">&nbsp;</label>
+                                <button onclick="generateAndSaveTopSheet()" class="btn btn-success btn-sm w-100 fw-bold"><i class="bi bi-save"></i> Generate Report</button>
+                            </div>
                         </div>
-                        <div class="col-md-4">
-                            <label class="fw-bold text-primary mb-1">Total TP+Vat Sales (Input)</label>
-                            <input type="number" id="topsheet_total_sales" class="form-control form-control-sm fw-bold border-primary" placeholder="0.00" oninput="calculateTopSheetCost()">
+
+                        <!-- Preview Table -->
+                        <div class="table-responsive border bg-white">
+                            <table class="table table-bordered table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%;">Sl</th>
+                                        <th style="width: 15%;">Month</th>
+                                        <th style="width: 25%;">DA Name</th>
+                                        <th class="text-end" style="width: 20%;">Total Bill Amount</th>
+                                        <th class="text-end" style="width: 20%;">Net Amount</th>
+                                        <th class="text-end" style="width: 15%;">Cost % (vs Sales)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topsheet_table_body">
+                                    <tr><td colspan="6" class="text-center text-muted py-3">Select a month to see preview.</td></tr>
+                                </tbody>
+                                <tfoot class="table-secondary fw-bold">
+                                    <tr>
+                                        <td colspan="3" class="text-end">TOTAL:</td>
+                                        <td class="text-end" id="topsheet_foot_total">0.00</td>
+                                        <td class="text-end" id="topsheet_foot_net">0.00</td>
+                                        <td class="text-end" id="topsheet_foot_cost">0.00%</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
-                        <div class="col-md-2">
-                            <label class="fw-bold text-success mb-1">Delivery Cost %</label>
-                            <div class="form-control form-control-sm bg-white fw-bold text-success" id="topsheet_cost_percent">0.00%</div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="fw-bold mb-1">&nbsp;</label>
-                            <button onclick="printTopSheet()" class="btn btn-primary btn-sm w-100"><i class="bi bi-printer-fill"></i> Print Top Sheet</button>
-                        </div>
+                        <small class="text-muted mt-1 d-block text-end">
+                            * Based on Approved (Green) Bills only.
+                        </small>
                     </div>
 
-                    <!-- Table -->
-                    <div class="table-responsive border">
-                        <table class="table table-bordered table-sm table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 5%;">Sl</th>
-                                    <th style="width: 15%;">Month</th>
-                                    <th style="width: 25%;">DA Name</th>
-                                    <th class="text-end" style="width: 20%;">Total Bill Amount</th>
-                                    <th class="text-end" style="width: 20%;">Net Amount</th>
-                                    <th class="text-end" style="width: 15%;">Cost % (vs Sales)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="topsheet_table_body">
-                                <tr><td colspan="6" class="text-center text-muted py-3">Select a month to generate report.</td></tr>
-                            </tbody>
-                            <tfoot class="table-secondary fw-bold">
-                                <tr>
-                                    <td colspan="3" class="text-end">TOTAL:</td>
-                                    <td class="text-end" id="topsheet_foot_total">0.00</td>
-                                    <td class="text-end" id="topsheet_foot_net">0.00</td>
-                                    <td class="text-end" id="topsheet_foot_cost">0.00%</td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                    <!-- Generated Reports List Section -->
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-text"></i> Generated Reports History</h6>
+                        <div class="table-responsive border">
+                            <table class="table table-bordered table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:20%">Report ID</th>
+                                        <th style="width:15%">Month</th>
+                                        <th style="width:20%">Grand Total (Net)</th>
+                                        <th style="width:20%">Generated On</th>
+                                        <th style="width:20%" class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topsheet_history_body">
+                                    <tr><td colspan="6" class="text-center text-muted py-3">No reports generated yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <small class="text-muted mt-2 d-block text-end">
-                        * Report based on Approved (Green) Bills only.
-                    </small>
                 </div>
             </div>
         </div>
@@ -444,6 +469,27 @@
 <div class="modal fade no-print" id="changePassModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning py-2"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="fw-bold">Current</label><input type="password" id="cp_current" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">New</label><input type="password" id="cp_new" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Confirm</label><input type="password" id="cp_confirm" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update</button></div></div></div></div>
 <div class="modal fade no-print" id="cutBillModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content"><div class="modal-header bg-warning py-1"><h5 class="modal-title">Bill Checking & Deduction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-2"><input type="hidden" id="edit_bill_id"><input type="hidden" id="m_year"><input type="hidden" id="m_month"><input type="hidden" id="m_daName"><div class="table-responsive"><table class="table table-sm modal-table table-bordered"><thead class="table-secondary text-center"><tr><th style="min-width:75px">Date</th><th style="min-width:90px">From</th><th style="min-width:90px">To</th><th style="min-width:75px">Mode</th><th style="min-width:65px">Amount</th><th style="min-width:65px">DA</th><th style="min-width:65px">Deduction</th><th style="min-width:75px">Total</th></tr></thead><tbody id="modal_expense_body"></tbody><tfoot><tr class="table-light fw-bold"><td colspan="7" class="text-end">Total Payable:</td><td class="text-center text-success" id="modal_grand_total">0</td></tr></tfoot></table></div><div class="mt-3 p-2 border rounded bg-light"><h6 class="text-center mb-2">Summary</h6><div class="table-responsive"><table class="table table-sm table-bordered summary-table"><thead><tr><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Final</th></tr></thead><tbody><tr><td id="sum_iou">0</td><td id="sum_sales">0</td><td id="sum_user_bill">0</td><td id="sum_user_per">0%</td><td id="sum_payable">0</td><td id="sum_payable_per">0%</td><td id="sum_final" class="text-success">0</td></tr></tbody></table></div><div class="mt-2"><label class="fw-bold">Remarks:</label><input type="text" id="modal_remarks" class="form-control form-control-sm" placeholder="Checking remarks..."></div></div></div><div class="modal-footer py-1"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button><button onclick="saveDeduction()" type="button" class="btn btn-success btn-sm">Save</button></div></div></div></div>
 
+<!-- ★★★ NEW VIEW TOP SHEET MODAL ★★★ -->
+<div class="modal fade no-print" id="viewTopSheetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title">Top Sheet Report View</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <div id="view_topsheet_content" style="background:white; padding:20px; border:1px solid #ddd; min-height:400px;">
+                    <!-- Content will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button id="btn_print_from_modal" onclick="" class="btn btn-primary btn-sm"><i class="bi bi-printer-fill"></i> Print This Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- PRINT CONTAINERS -->
 <div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
 
@@ -451,14 +497,19 @@
 
 <div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
 
-<!-- ★★★ NEW TOP SHEET PRINT CONTAINER ★★★ -->
-<div class="print-topsheet-container" id="print_topsheet_area">
+<!-- ★★★ GENERATED TOP SHEET PRINT CONTAINER ★★★ -->
+<div class="print-topsheet-final-container" id="print_topsheet_final_area">
     <div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">
         <h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2>
         <h4 style="margin:0">Travels Allowance Bill Summary Month Wise Top Sheet</h4>
-        <h5 style="margin:0" id="print_topsheet_depot">Kushtia Depot</h5>
+        <h5 style="margin:0" id="print_final_depot">Kushtia Depot</h5>
     </div>
-    <div style="margin-bottom:10px;font-weight:bold;font-size:16px">Month: <span id="print_topsheet_month_label"></span></div>
+    
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold">
+        <div>Report ID: <span id="print_final_id"></span></div>
+        <div>Month: <span id="print_final_month"></span></div>
+        <div>Date: <span id="print_final_date"></span></div>
+    </div>
     
     <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px">
         <thead>
@@ -469,21 +520,21 @@
                 <th style="padding:4px;text-align:right;width:55%">Net Amount (Taka + DA)</th>
             </tr>
         </thead>
-        <tbody id="print_topsheet_tbody"></tbody>
+        <tbody id="print_final_tbody"></tbody>
         <tfoot style="font-weight:bold;background:#e9ecef">
             <tr>
                 <td colspan="3" style="text-align:right;padding:4px">TOTAL:</td>
-                <td style="text-align:right;padding:4px" id="print_topsheet_foot_net">0.00</td>
+                <td style="text-align:right;padding:4px" id="print_final_foot_net">0.00</td>
             </tr>
         </tfoot>
     </table>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:30px;font-size:14px;border:1px solid #000;padding:10px">
         <div style="width:50%">
-            <strong>Total TP+Vat Sales:</strong> <span id="print_topsheet_sales_display">0.00</span>
+            <strong>Total TP+Vat Sales:</strong> <span id="print_final_sales">0.00</span>
         </div>
         <div style="width:40%;text-align:right">
-            <strong>Delivery Cost %:</strong> <span id="print_topsheet_cost_display">0.00%</span>
+            <strong>Delivery Cost %:</strong> <span id="print_final_cost">0.00%</span>
         </div>
     </div>
 
@@ -1226,20 +1277,27 @@ function generateSummary(){
         });
         document.getElementById('sum_foot_sales').innerText=tS.toFixed(2);document.getElementById('sum_foot_taka').innerText=tTk.toFixed(2);
         document.getElementById('sum_foot_da').innerText=tDA.toFixed(2);document.getElementById('sum_foot_net').innerText=tN.toFixed(2);
-        document.getElementById('sum_foot_cost').innerText=(tS>0?((tN/tS)*100).toFixed(2):"0.00")+"%";
+                document.getElementById('sum_foot_cost').innerText=(tS>0?((tN/tS)*100).toFixed(2):"0.00")+"%";
         if(currentSummaryData.length===0)tbody.innerHTML='<tr><td colspan="9" class="text-center">No bills for '+formatMonthLabel(globalFilterMonth)+'.</td></tr>';
     });
 }
 
-// ========== ★★★ TOP SHEET LOGIC ★★★ ==========
+// ========== ★★★ TOP SHEET LOGIC (UPDATED & FIXED) ★==========
 function loadTopSheetData(){
     var tbody=document.getElementById('topsheet_table_body');
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary"></div> Loading...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary"></div> Loading Preview...</td></tr>';
     
     if(!globalFilterMonth){
         tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger p-3">Please select a Month.</td></tr>';
+        // Reset footers
+        document.getElementById('topsheet_foot_total').innerText = "0.00";
+        document.getElementById('topsheet_foot_net').innerText = "0.00";
+        document.getElementById('topsheet_foot_cost').innerText = "0.00%";
         return;
     }
+
+    // Also load history list when tab opens
+    loadTopSheetHistory();
 
     database.ref('Bills').once('value',function(snap){
         tbody.innerHTML = '';
@@ -1252,9 +1310,6 @@ function loadTopSheetData(){
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
 
             var daName = b.daName;
-            // Formula: Taka + DA = Net Amount. 
-            // In the DB, totalAmount is already the sum of (Transport Amount + DA Amount) from rows.
-            // So totalBill IS the Net Amount requested.
             var totalBill = parseFloat(b.totalAmount) || 0; 
 
             if(!daAggregation[daName]){
@@ -1270,14 +1325,16 @@ function loadTopSheetData(){
 
         if(sortedDAs.length === 0){
              tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted p-3">No Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+             // Reset footers if no data
+             document.getElementById('topsheet_foot_total').innerText = "0.00";
+             document.getElementById('topsheet_foot_net').innerText = "0.00";
+             document.getElementById('topsheet_foot_cost').innerText = "0.00%";
         } else {
             sortedDAs.forEach(function(daName){
                 var data = daAggregation[daName];
                 grandTotalBill += data.totalBill;
 
                 var tr=document.createElement('tr');
-                // Screen table can remain detailed or match print. 
-                // Let's make screen show: Sl, Month, DA Name, Total Bill, Net Amount (Same), Cost
                 tr.innerHTML='<td class="text-center">'+sl+'</td>'+
                              '<td>'+formatMonthLabel(globalFilterMonth)+'</td>'+
                              '<td>'+escHtml(daName)+'</td>'+
@@ -1289,7 +1346,6 @@ function loadTopSheetData(){
             });
         }
 
-        // Update Table Footer
         document.getElementById('topsheet_foot_total').innerText = grandTotalBill.toFixed(2);
         document.getElementById('topsheet_foot_net').innerText = grandTotalBill.toFixed(2);
         
@@ -1312,58 +1368,221 @@ function calculateTopSheetCost(){
     document.getElementById('topsheet_foot_cost').innerText = formattedPercent;
 }
 
-function printTopSheet(){
+function generateAndSaveTopSheet(){
     if(!globalFilterMonth){ alert("Select a month first."); return; }
-    var tbody = document.getElementById('print_topsheet_tbody');
-    tbody.innerHTML = '';
-    
-    // Generate data directly for print to ensure 4 columns only as requested
+    var btn = document.querySelector('button[onclick="generateAndSaveTopSheet()"]');
+    var originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+    btn.disabled = true;
+
+    // Re-run calculation to ensure data is fresh
     database.ref('Bills').once('value',function(snap){
         var allBills=collectBills(snap,null,null);
-        var daAggregation = {};
+        var daAggregation = {}; 
+
         allBills.forEach(function(item){
             var b=item.data;
             if(b.status!=='green') return;
             if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
             var daName = b.daName;
-            var totalBill = parseFloat(b.totalAmount) || 0;
-            if(!daAggregation[daName]){ daAggregation[daName] = 0; }
+            var totalBill = parseFloat(b.totalAmount) || 0; 
+            if(!daAggregation[daName]) daAggregation[daName] = 0;
             daAggregation[daName] += totalBill;
         });
 
-        var sortedDAs = Object.keys(daAggregation).sort();
-        var grandTotal = 0;
-        var sl=1;
+        if(Object.keys(daAggregation).length === 0){
+            alert("No approved bills found for this month to generate a report.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
 
-        sortedDAs.forEach(function(daName){
-            var total = daAggregation[daName];
-            grandTotal += total;
+        // Generate ID Logic: KSDB + YYYY + MM + Sequence
+        var p = globalFilterMonth.split('-'); // [YYYY, MM]
+        var yearPart = p[0]; 
+        var monthPart = p[1];
+
+        // Check existing reports for this month to determine next sequence
+        database.ref('TopSheets/'+yearPart+'/'+monthPart).once('value', function(snapshot){
+            var count = snapshot.numChildren() || 0;
+            var nextIndex = count + 1;
+            var indexStr = String(nextIndex).padStart(2, '0');
+            var reportId = "KSDB" + yearPart + monthPart + indexStr;
+
+            // Prepare Data to Save
+            var salesInput = parseFloat(document.getElementById('topsheet_total_sales').value) || 0;
+            var costPercentVal = parseFloat(document.getElementById('topsheet_cost_percent').innerText) || 0;
+
+            var reportData = {
+                reportId: reportId,
+                month: globalFilterMonth,
+                monthLabel: formatMonthLabel(globalFilterMonth),
+                generatedAt: firebase.database.ServerValue.TIMESTAMP,
+                generatedBy: currentUser.name,
+                sales: salesInput,
+                costPercent: costPercentVal,
+                details: daAggregation, // Store DA wise sums
+                grandTotal: parseFloat(document.getElementById('topsheet_foot_net').innerText)
+            };
+
+            // Save to Firebase
+            database.ref('TopSheets/'+yearPart+'/'+monthPart+'/'+reportId).set(reportData)
+            .then(function(){
+                alert("Report Generated Successfully!\nID: " + reportId);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                // Refresh History and Preview
+                loadTopSheetHistory(); 
+                loadTopSheetData(); 
+            })
+            .catch(function(error){
+                console.error(error);
+                alert("Error saving report: " + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+    });
+}
+
+function loadTopSheetHistory(){
+    var tbody = document.getElementById('topsheet_history_body');
+    // Only clear if strictly reloading, but usually we just append/update. 
+    // For simplicity, we redraw list on tab load.
+    
+    if(!globalFilterMonth) {
+        // If no month selected, maybe clear or show recent all? 
+        // Let's show empty or recent. But for now, let's just do nothing if no month
+        return;
+    }
+
+    var p = globalFilterMonth.split('-');
+    database.ref('TopSheets/'+p[0]+'/'+p[1]).orderByChild('generatedAt').on('value', function(snapshot){
+        tbody.innerHTML = '';
+        var reports = [];
+        snapshot.forEach(function(child){
+            reports.push(child.val());
+        });
+        // Sort descending (newest first)
+        reports.sort(function(a,b){ return b.generatedAt - a.generatedAt; });
+
+        if(reports.length === 0){
+             tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted py-3">No reports generated yet.</td></tr>';
+        } else {
+            reports.forEach(function(r){
+                var dateObj = new Date(r.generatedAt);
+                var dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td class="text-center">'+ (reports.indexOf(r)+1) + '</td>' +
+                              '<td><span class="badge bg-primary text-white">' + escHtml(r.reportId) + '</span></td>' +
+                              '<td>' + escHtml(r.monthLabel) + '</td>' +
+                              '<td class="text-end fw-bold">' + r.grandTotal.toFixed(2) + '</td>' +
+                              '<td class="text-end text-muted" style="font-size:11px">' + dateStr + '</td>' +
+                              '<td class="text-center">' +
+                                '<button class="btn btn-sm btn-info text-white" onclick="viewGeneratedTopSheet(\''+escHtml(r.reportId)+'\')"><i class="bi bi-eye"></i></button> ' +
+                                '<button class="btn btn-sm btn-dark" onclick="printGeneratedTopSheet(\''+escHtml(r.reportId)+'\')"><i class="bi bi-printer"></i></button>' +
+                              '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+function viewGeneratedTopSheet(reportId){
+    var p = globalFilterMonth.split('-');
+    database.ref('TopSheets/'+p[0]+'/'+p[1]+'/'+reportId).once('value',function(snap){
+        var r = snap.val();
+        if(!r){ alert("Report not found."); return; }
+
+        var contentDiv = document.getElementById('view_topsheet_content');
+        
+        // Build simple HTML table for preview
+        var rowsHtml = '';
+        var grandTotal = 0;
+        var sl = 1;
+        Object.keys(r.details).sort().forEach(function(daName){
+            var amt = r.details[daName];
+            grandTotal += amt;
+            rowsHtml += '<tr><td class="text-center">'+sl+'</td>'+
+                        '<td>'+escHtml(r.monthLabel)+'</td>'+
+                        '<td>'+escHtml(daName)+'</td>'+
+                        '<td class="text-end">'+amt.toFixed(2)+'</td></tr>';
+            sl++;
+        });
+
+        var html = '<div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">'+
+            '<h4 style="margin:0">MONICO PHARMA LTD</h4>'+
+            '<h5 style="margin:0">Top Sheet Report</h5>'+
+            '</div>'+
+            '<div style="margin-bottom:10px;font-weight:bold">ID: '+escHtml(r.reportId)+' | Month: '+escHtml(r.monthLabel)+'</div>'+
+            '<table style="width:100%;border-collapse:collapse;border:1px solid #000">'+
+            '<thead style="background:#eee"><tr><th style="padding:5px">Sl</th><th style="padding:5px">Month</th><th style="padding:5px">DA Name</th><th style="padding:5px;text-align:right">Net Amount</th></tr></thead>'+
+            '<tbody>'+rowsHtml+'</tbody>'+
+            '<tfoot style="font-weight:bold;border-top:1px solid #000"><tr><td colspan="3" style="text-align:right;padding:5px">TOTAL:</td><td style="text-align:right;padding:5px">'+grandTotal.toFixed(2)+'</td></tr></tfoot>'+
+            '</table>'+
+            '<div style="margin-top:20px;font-weight:bold">'+
+            'Total Sales: '+r.sales.toFixed(2)+' | Cost %: '+r.costPercent.toFixed(2)+'%'+
+            '</div>';
+
+        contentDiv.innerHTML = html;
+
+        // Setup modal print button
+        document.getElementById('btn_print_from_modal').onclick = function(){ printGeneratedTopSheet(reportId); };
+
+        new bootstrap.Modal(document.getElementById('viewTopSheetModal')).show();
+    });
+}
+
+function printGeneratedTopSheet(reportId){
+    var p = globalFilterMonth.split('-');
+    database.ref('TopSheets/'+p[0]+'/'+p[1]+'/'+reportId).once('value',function(snap){
+        var r = snap.val();
+        if(!r){ alert("Report not found."); return; }
+
+        // Populate Print Container
+        document.getElementById('print_final_id').innerText = r.reportId;
+        document.getElementById('print_final_month').innerText = r.monthLabel;
+        document.getElementById('print_final_depot').innerText = "Kushtia Depot";
+        
+        var dateObj = new Date(r.generatedAt);
+        document.getElementById('print_final_date').innerText = dateObj.toLocaleDateString();
+
+        document.getElementById('print_final_sales').innerText = r.sales.toFixed(2);
+        document.getElementById('print_final_cost').innerText = r.costPercent.toFixed(2) + "%";
+
+        var tbody = document.getElementById('print_final_tbody');
+        tbody.innerHTML = '';
+        var grandTotal = 0;
+        var sl = 1;
+        Object.keys(r.details).sort().forEach(function(daName){
+            var amt = r.details[daName];
+            grandTotal += amt;
             var tr = document.createElement('tr');
-            // Requested Format: Sl, Month, DA Name, Net Amount
             tr.innerHTML = '<td class="text-center" style="padding:4px">'+sl+'</td>'+
-                          '<td style="padding:4px">'+formatMonthLabel(globalFilterMonth)+'</td>'+
+                          '<td style="padding:4px">'+escHtml(r.monthLabel)+'</td>'+
                           '<td style="padding:4px">'+escHtml(daName)+'</td>'+
-                          '<td class="text-end" style="padding:4px">'+total.toFixed(2)+'</td>';
+                          '<td class="text-end" style="padding:4px">'+amt.toFixed(2)+'</td>';
             tbody.appendChild(tr);
             sl++;
         });
 
-        // Set Header & Footer Data
-        document.getElementById('print_topsheet_depot').innerText = "Kushtia Depot";
-        document.getElementById('print_topsheet_month_label').innerText = formatMonthLabel(globalFilterMonth);
-        document.getElementById('print_topsheet_foot_net').innerText = grandTotal.toFixed(2);
-        
-        var salesVal = parseFloat(document.getElementById('topsheet_total_sales').value) || 0;
-        document.getElementById('print_topsheet_sales_display').innerText = salesVal.toFixed(2);
-        document.getElementById('print_topsheet_cost_display').innerText = document.getElementById('topsheet_cost_percent').innerText;
+        document.getElementById('print_final_foot_net').innerText = grandTotal.toFixed(2);
 
-        // FIX: Strictly remove active-print from ALL other containers
+        // Remove other print classes
         document.getElementById('print_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
-        document.getElementById('print_topsheet_area').classList.add('active-print');
+        
+        // Add this print class
+        document.getElementById('print_topsheet_final_area').classList.add('active-print');
         
         window.print();
+
+        // Clean up class after print dialog closes (setTimeout to allow print job to start)
+        setTimeout(function(){
+            document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+        }, 1000);
     });
 }
 
@@ -1440,7 +1659,7 @@ function printBill(billId,year,month,daName){
         });}
         document.getElementById('p_foot_amt').innerText=tAmt;document.getElementById('p_foot_da').innerText=tDa;
         document.getElementById('p_foot_total').innerText=tTot;document.getElementById('p_foot_ded').innerText=tDed;document.getElementById('p_total_amount').innerText=tNet;
-        document.getElementById('print_topsheet_area').classList.remove('active-print');
+        document.getElementById('print_topsheet_final_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
         document.getElementById('print_area').classList.add('active-print');window.print();
@@ -1461,7 +1680,7 @@ function printBillSummary(){
     document.getElementById('print_sum_foot_da').innerText=tDA.toFixed(2);document.getElementById('print_sum_foot_net').innerText=tN.toFixed(2);
     var tcp=tS>0?((tN/tS)*100).toFixed(2):"0.00";document.getElementById('print_sum_foot_cost').innerText=tcp+"%";
     document.getElementById('print_sum_cost_pct').innerText=tcp+"%";document.getElementById('print_sum_words').innerText=numberToEnglish(tN)+" Taka Only";
-    document.getElementById('print_topsheet_area').classList.remove('active-print');
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.add('active-print');window.print();
@@ -1481,7 +1700,7 @@ function printIOUList(){
     document.getElementById('print_iou_foot_sales').innerText=tS.toFixed(2);document.getElementById('print_iou_foot_ret').innerText=tR.toFixed(2);
     document.getElementById('print_iou_foot_sold').innerText=tSo.toFixed(2);document.getElementById('print_iou_foot_qty').innerText=tQ;
     document.getElementById('print_iou_foot_bqty').innerText=tB;document.getElementById('print_iou_foot_taka').innerText=tT.toFixed(2);
-    document.getElementById('print_topsheet_area').classList.remove('active-print');
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.add('active-print');window.print();
@@ -1575,11 +1794,13 @@ document.addEventListener('DOMContentLoaded',function(){
     var iouTabEl=document.getElementById('iouTab');
     var billTabEl=document.getElementById('billTab');
     var approvedTabEl=document.getElementById('approvedHistoryTab');
+    var topSheetTabEl = document.getElementById('topSheetTab');
 
     summaryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)generateSummary();});
     iouTabEl.addEventListener('shown.bs.tab',function(){if(currentUser&&currentUser.role!=='user')loadAdminIOU();});
     billTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
     approvedTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
+    topSheetTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadTopSheetData();});
 });
 
 // ========== AUTO IMPORT LISTENERS ==========
