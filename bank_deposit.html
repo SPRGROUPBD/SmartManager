@@ -179,7 +179,15 @@
         .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; }
         .report-table td { text-align: center; }
         .report-table td:nth-child(2), .report-table td:nth-child(5) { text-align: left; }
-        .report-table tfoot td { border-top: 2px solid #000; font-weight: 700; font-size: 13px; }
+        
+        /* GRAND TOTAL ROW STYLE */
+        .report-grand-total td { 
+            border-top: 2px solid #000 !important; 
+            font-weight: 700; 
+            font-size: 13px; 
+            background: #f0f0f0 !important;
+        }
+
         .report-footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 12px; page-break-inside: avoid; }
         .sign-line { margin-bottom: 4px; letter-spacing: 2px; border-bottom: 1px solid #000; display: inline-block; width: 150px; }
 
@@ -498,14 +506,10 @@
                             <th>Territory</th>
                         </tr>
                     </thead>
-                    <tbody id="bankRptTableBody"></tbody>
-                    <tfoot>
-                        <tr>
-                            <td colspan="3" style="text-align:right; border-top:2px solid #000">Total</td>
-                            <td id="bankRptTotal" style="text-align:center; border-top:2px solid #000"></td>
-                            <td colspan="2" style="border-top:2px solid #000"></td>
-                        </tr>
-                    </tfoot>
+                    <tbody id="bankRptTableBody">
+                        <!-- Rows will go here -->
+                    </tbody>
+                    <!-- REMOVED TFOOT. TOTAL WILL BE LAST ROW IN TBODY -->
                 </table>
 
                 <div class="report-footer">
@@ -1208,7 +1212,20 @@
             currentSummaryData[key] += amount;
         });
 
-        $('bankRptTotal').textContent = fmt(total);
+        // APPEND GRAND TOTAL AS A ROW IN TBODY INSTEAD OF TFOOT
+        // This ensures it flows to the last page only
+        const trTotal = document.createElement('tr');
+        trTotal.className = 'report-grand-total';
+        trTotal.innerHTML = `
+            <td colspan="3" style="text-align:center; font-weight:bold;">Total</td>
+            <td style="text-align:center;">${fmt(total)}</td>
+            <td colspan="2"></td>
+        `;
+        tb.appendChild(trTotal);
+
+        // Remove old footer element if exists (cleanup)
+        const oldTfoot = document.querySelector('#bankReportPaper tfoot');
+        if(oldTfoot) oldTfoot.remove();
 
         if (isDirect) {
             window.print();
