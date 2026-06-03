@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Deposit Portal | Monico Pharma</title>
+    <!-- SheetJS for Excel Handling -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f1f5f9;
             --card: #fff; --text: #1e293b; --muted: #64748b; --border: #e2e8f0;
-            --danger: #ef4444; --success: #10b981; --shadow: 0 4px 6px -1px rgb(0 0 0/.1);
+            --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --shadow: 0 4px 6px -1px rgb(0 0 0/.1);
             --sidebar-width: 250px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -16,6 +18,7 @@
 
         /* UTILITY */
         .d-none { display: none !important; }
+        .d-flex { display: flex !important; }
 
         /* LOGIN */
         .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #0f172a, #1e293b); display: flex; justify-content: center; align-items: center; z-index: 9999; }
@@ -71,6 +74,8 @@
         .btn-secondary:hover { background: #cbd5e1; }
         .btn-danger { background: #fee2e2; color: #991b1b; }
         .btn-danger:hover { background: #fecaca; }
+        .btn-success { background: #d1fae5; color: #065f46; }
+        .btn-success:hover { background: #a7f3d0; }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
 
         /* TABLES */
@@ -114,9 +119,20 @@
         /* MODALS & TOAST */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.open { display: flex; }
-        .modal { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; text-align: center; }
+        .modal { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; max-height: 90vh; overflow-y: auto; }
+        .modal.large { max-width: 900px; text-align: left; }
         .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
-        
+        .modal-footer-actions { border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
+
+        /* IMPORT MODAL STYLES */
+        .import-area { border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; background: #f8fafc; }
+        .import-area:hover { border-color: var(--primary); background: #eff6ff; }
+        .import-status { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
+        .import-table-wrapper { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 15px; }
+        .import-table th { background: #f1f5f9; position: sticky; top: 0; }
+        .row-error { background-color: #fee2e2 !important; color: #991b1b; }
+        .row-valid { background-color: #f0fdf4; }
+
         .img-preview-modal { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 2000; display: none; justify-content: center; align-items: center; cursor: zoom-out; }
         .img-preview-modal.open { display: flex; }
         .img-preview-modal img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
@@ -410,7 +426,15 @@
                     <!-- ACTION BAR -->
                     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap: wrap; align-items:center;">
                         <button class="btn btn-primary" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
+                        
+                        <!-- IMPORT / EXPORT SECTION -->
                         <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
+                        <button class="btn btn-sm" style="background:#2563eb; color:#fff;" onclick="openImportModal()">📥 Import Excel</button>
+                        <button class="btn btn-sm" style="background:#64748b; color:#fff;" onclick="downloadTemplate()">⬇️ Template</button>
+                        
+                        <!-- BULK DELETE BUTTON -->
+                        <button class="btn btn-danger btn-sm d-none" id="bulkDeleteBtn" onclick="handleBulkDelete()">🗑️ Delete Selected (<span id="selectedCount">0</span>)</button>
+
                         <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp Direct</button>
                     </div>
 
@@ -419,6 +443,7 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width:40px; text-align:center"><input type="checkbox" id="masterCheck" onchange="toggleSelectAll(this)"></th>
                                     <th>Date</th>
                                     <th>Bank</th>
                                     <th>Slip</th>
@@ -430,6 +455,7 @@
                             <tbody id="depositTableBody"></tbody>
                             <tfoot>
                                 <tr style="background: #f1f5f9; font-weight: 700;">
+                                    <td></td>
                                     <td colspan="4" style="text-align:right">Total:</td>
                                     <td id="depositTotalAmount" style="text-align:right">৳ 0.00</td>
                                     <td></td>
@@ -512,6 +538,47 @@
         </div>
     </div>
 
+    <!-- IMPORT EXCEL MODAL -->
+    <div class="modal-overlay" id="importModal">
+        <div class="modal large">
+            <div class="card-header" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #eee;">Import Bank Deposits</div>
+            
+            <div class="import-area" onclick="document.getElementById('excelUpload').click()">
+                <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display:none" onchange="handleFileSelect(event)">
+                <div style="font-size:2rem; color:var(--primary)">📂</div>
+                <p><strong>Click to upload Excel File</strong></p>
+                <p class="import-status" id="importFileName">No file selected</p>
+            </div>
+
+            <div id="importPreviewContainer" class="d-none">
+                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem; font-weight:600;">
+                    <span id="importStatusCount">0 rows found</span>
+                    <span id="importValidCount" style="color:var(--success)">0 Valid</span>
+                </div>
+                <div class="import-table-wrapper">
+                    <table class="import-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Month (Priority)</th>
+                                <th>Date</th>
+                                <th>Bank Name</th>
+                                <th>Amount</th>
+                                <th>Territory</th>
+                                <th>Error</th>
+                            </tr>
+                        </thead>
+                        <tbody id="importTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="modal-footer-actions">
+                    <button class="btn btn-secondary" onclick="closeImportModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="processImport()">Confirm Import</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- IMAGE PREVIEW -->
     <div class="img-preview-modal" id="imgPreviewModal" onclick="closeImgPreview(event)">
         <button class="img-preview-close" onclick="closeImgPreview()">&times;</button>
@@ -554,6 +621,12 @@
     let currentSummaryData = {}; 
     let currentReportTitle = "";
     let currentFilteredData = []; 
+    
+    // Import specific variables
+    let parsedImportData = [];
+
+    // Bulk Delete specific variables
+    let selectedDepositIds = new Set();
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -946,9 +1019,14 @@
         const tb = $('depositTableBody');
         tb.innerHTML = '';
 
+        // Reset selections on re-render
+        selectedDepositIds.clear();
+        updateBulkDeleteUI();
+        $('masterCheck').checked = false;
+
         let total = 0;
         if (!sorted.length) {
-            tb.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px">No deposits found</td></tr>';
+            tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px">No deposits found</td></tr>';
         } else {
             sorted.forEach(d => {
                 total += parseFloat(d.amount) || 0;
@@ -960,6 +1038,7 @@
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
+                    <td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td>
                     <td>${dateStr}</td>
                     <td style="font-weight:600">${d.bankName}</td>
                     <td>${slipHtml}</td>
@@ -990,6 +1069,101 @@
         $('depositFilterBank').value = ''; 
         renderDeposits();
     };
+
+    // ==========================================
+    // BULK DELETE LOGIC
+    // ==========================================
+    window.toggleRowSelection = (checkbox) => {
+        const id = checkbox.dataset.id;
+        if (checkbox.checked) {
+            selectedDepositIds.add(id);
+        } else {
+            selectedDepositIds.delete(id);
+        }
+        updateBulkDeleteUI();
+    };
+
+    window.toggleSelectAll = (source) => {
+        const checkboxes = document.querySelectorAll('.row-check');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+            const id = cb.dataset.id;
+            if (source.checked) {
+                selectedDepositIds.add(id);
+            } else {
+                selectedDepositIds.delete(id);
+            }
+        });
+        updateBulkDeleteUI();
+    };
+
+    function updateBulkDeleteUI() {
+        const count = selectedDepositIds.size;
+        $('selectedCount').textContent = count;
+        const btn = $('bulkDeleteBtn');
+        
+        if (count > 0) {
+            btn.classList.remove('d-none');
+            btn.disabled = false;
+        } else {
+            btn.classList.add('d-none');
+            btn.disabled = true;
+        }
+
+        // Update Master Checkbox state based on individual rows
+        const checkboxes = document.querySelectorAll('.row-check');
+        if (checkboxes.length > 0) {
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            const someChecked = Array.from(checkboxes).some(cb => cb.checked);
+            $('masterCheck').checked = allChecked;
+            $('masterCheck').indeterminate = someChecked && !allChecked;
+        } else {
+            $('masterCheck').checked = false;
+            $('masterCheck').indeterminate = false;
+        }
+    }
+
+    window.handleBulkDelete = async () => {
+        const count = selectedDepositIds.size;
+        if (count === 0) return;
+
+        if (!confirm(`Are you sure you want to delete ${count} selected deposits? This cannot be undone.`)) return;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        // Disable button during operation
+        $('bulkDeleteBtn').disabled = true;
+        $('bulkDeleteBtn').textContent = "Deleting...";
+
+        try {
+            for (const id of selectedDepositIds) {
+                try {
+                    await remove(ref(db, 'bankDeposits/' + id));
+                    successCount++;
+                } catch (err) {
+                    console.error(err);
+                    failCount++;
+                }
+            }
+
+            if (failCount === 0) {
+                showToast(`Successfully deleted ${successCount} deposits.`, "success");
+            } else {
+                showToast(`Deleted ${successCount}, Failed ${failCount}`, "warning");
+            }
+            
+            // Clear selection and re-render
+            selectedDepositIds.clear();
+            renderDeposits();
+        } catch (err) {
+            showToast("Delete operation failed: " + err.message, "error");
+        } finally {
+             $('bulkDeleteBtn').disabled = false;
+             $('bulkDeleteBtn').innerHTML = `🗑️ Delete Selected (<span id="selectedCount">0</span>)`;
+        }
+    };
+
 
     // GENERATE SLIP LOGIC (Kept for Print Direct functionality)
     window.generateDepositSlip = (isDirect = false) => {
@@ -1199,6 +1373,211 @@
         a.href = URL.createObjectURL(blob);
         a.download = `Bank_Statement_${new Date().getTime()}.xls`;
         a.click();
+    };
+
+    // ==========================================
+    // EXCEL IMPORT LOGIC
+    // ==========================================
+    
+    // 1. Download Template
+    window.downloadTemplate = () => {
+        const templateData = [
+            { "Month": "2023-10", "Date": "2023-10-27", "Bank Name": "Sonali Bank", "Amount": 5000.00, "Territory": "Sadar" },
+            { "Month": "", "Date": "2023-12-25", "Bank Name": "Dutch Bangla Bank", "Amount": 12000.50, "Territory": "Kushtia" }
+        ];
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        XLSX.writeFile(wb, "Deposit_Import_Template.xlsx");
+    };
+
+    // 2. Open Modal
+    window.openImportModal = () => {
+        $('importModal').classList.add('open');
+        $('importPreviewContainer').classList.add('d-none');
+        $('importFileName').textContent = "No file selected";
+        $('excelUpload').value = "";
+    };
+
+    window.closeImportModal = () => {
+        $('importModal').classList.remove('open');
+        parsedImportData = [];
+    };
+
+    // 3. Handle File Selection
+    window.handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        $('importFileName').textContent = file.name;
+        
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
+            
+            processImportData(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
+    // 4. Process and Validate Data
+    function processImportData(data) {
+        parsedImportData = [];
+        const tbody = $('importTableBody');
+        tbody.innerHTML = '';
+
+        let validCount = 0;
+
+        data.forEach((row, index) => {
+            // Normalization
+            let rawMonthCol = (row['Month'] || row['month'] || '').trim(); 
+            let rawDate = row['Date'] || row['date'] || '';
+            let bankName = (row['Bank Name'] || row['Bank'] || row['bankName'] || '').trim();
+            let rawAmount = row['Amount'] || row['amount'] || 0;
+            let territory = (row['Territory'] || row['territory'] || '').trim();
+
+            // Validation
+            let errors = [];
+            let isValid = true;
+            
+            let finalDate = "";
+            let finalMonth = "";
+
+            // NEW LOGIC: MONTH COLUMN PRIORITY
+            // Priority 1: Use Month Column if present
+            if (rawMonthCol && /^\d{4}-\d{2}$/.test(rawMonthCol)) {
+                finalMonth = rawMonthCol;
+                // Date Logic: If Month is provided but Date is missing -> default to 1st
+                // If Date is provided -> Use it (even if it conflicts with month)
+                const dateObj = new Date(rawDate);
+                if (!isNaN(dateObj.getTime())) {
+                    finalDate = dateObj.toISOString().split('T')[0];
+                } else {
+                    // Month present but Date missing/invalid -> Default to Month-01
+                    finalDate = finalMonth + "-01";
+                }
+
+            } else if (rawMonthCol) {
+                // Month column has text but is invalid format
+                errors.push("Invalid Month Format (YYYY-MM)");
+                isValid = false;
+
+            } else {
+                // Priority 2: Month column empty -> Use Date to Calculate Month
+                const dateObj = new Date(rawDate);
+                if (!isNaN(dateObj.getTime())) {
+                    finalDate = dateObj.toISOString().split('T')[0];
+                    finalMonth = finalDate.substring(0, 7); 
+                } else {
+                    errors.push("Missing Valid Date OR Month");
+                    isValid = false;
+                }
+            }
+
+            // Bank Validation
+            const bankObj = banks.find(b => b.name.toLowerCase() === bankName.toLowerCase());
+            if (!bankName) {
+                errors.push("Missing Bank");
+                isValid = false;
+            } else if (!bankObj) {
+                errors.push("Bank not found");
+                isValid = false;
+            }
+
+            // Amount Validation
+            let amount = parseFloat(rawAmount);
+            if (isNaN(amount) || amount <= 0) {
+                errors.push("Invalid Amount");
+                isValid = false;
+            }
+
+            if (isValid) validCount++;
+
+            const resultRow = {
+                originalIndex: index,
+                month: finalMonth,
+                date: finalDate,
+                bankId: bankObj ? bankObj.id : null,
+                bankName: bankName,
+                accountNo: bankObj ? bankObj.accountNo : '',
+                branch: bankObj ? bankObj.branch : '',
+                amount: amount,
+                territory: territory,
+                isValid: isValid,
+                errors: errors.join(", ")
+            };
+
+            parsedImportData.push(resultRow);
+
+            // Render Preview Row
+            const tr = document.createElement('tr');
+            tr.className = isValid ? 'row-valid' : 'row-error';
+            tr.innerHTML = `
+                <td style="text-align:center">${isValid ? '✅' : '❌'}</td>
+                <td>${finalMonth}</td>
+                <td>${finalDate}</td>
+                <td>${bankName}</td>
+                <td>${amount.toFixed(2)}</td>
+                <td>${territory}</td>
+                <td style="color:red; font-size:0.8rem">${errors.join(', ')}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        $('importStatusCount').textContent = `${data.length} rows found`;
+        $('importValidCount').textContent = `${validCount} Ready to Import`;
+        
+        $('importPreviewContainer').classList.remove('d-none');
+    }
+
+    // 5. Confirm Import to DB
+    window.processImport = async () => {
+        const validRows = parsedImportData.filter(r => r.isValid);
+        if (validRows.length === 0) {
+            showToast("No valid rows to import", "error");
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to import ${validRows.length} deposits?`)) return;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        try {
+            for (const row of validRows) {
+                try {
+                    await push(bankDepositsRef, {
+                        month: row.month,
+                        date: row.date,
+                        bankId: row.bankId,
+                        bankName: row.bankName,
+                        accountNo: row.accountNo,
+                        branch: row.branch,
+                        amount: row.amount,
+                        territory: row.territory,
+                        slipImage: null 
+                    });
+                    successCount++;
+                } catch (err) {
+                    console.error(err);
+                    failCount++;
+                }
+            }
+
+            if (failCount === 0) {
+                showToast(`Successfully imported ${successCount} deposits!`, "success");
+                closeImportModal();
+            } else {
+                showToast(`Imported ${successCount}, Failed ${failCount}`, "warning");
+                closeImportModal();
+            }
+        } catch (err) {
+            showToast("Import failed: " + err.message, "error");
+        }
     };
 
     // DELETE & MODALS
