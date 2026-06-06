@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bank Deposit Portal | Monico Pharma</title>
-    <!-- SheetJS for Excel Handling -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f1f5f9;
@@ -15,12 +15,9 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         body { background: var(--bg); color: var(--text); min-height: 100vh; }
-
-        /* UTILITY */
         .d-none { display: none !important; }
         .d-flex { display: flex !important; }
 
-        /* LOGIN */
         .login-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, #0f172a, #1e293b); display: flex; justify-content: center; align-items: center; z-index: 9999; }
         .login-card { background: rgba(255,255,255,.05); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 40px; width: 100%; max-width: 400px; color: #fff; box-shadow: 0 25px 50px rgba(0,0,0,.3); }
         .login-brand { font-size: 1.5rem; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
@@ -32,10 +29,7 @@
         .login-btn:hover { background: var(--primary-hover); }
         .login-error { background: rgba(239,68,68,.2); border: 1px solid rgba(239,68,68,.4); color: #fca5a5; padding: 10px; border-radius: 6px; font-size: 0.9rem; margin-bottom: 16px; display: none; }
 
-        /* APP LAYOUT */
         .app-container { display: flex; height: 100vh; overflow: hidden; }
-        
-        /* SIDEBAR */
         .sidebar { width: var(--sidebar-width); background: #0f172a; color: #fff; display: flex; flex-direction: column; transition: 0.3s; flex-shrink: 0; }
         .sidebar-brand { padding: 20px; font-size: 1.2rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
         .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; }
@@ -47,17 +41,14 @@
         .btn-logout { width: 100%; padding: 10px; border: 1px solid rgba(239,68,68,.5); color: #fca5a5; background: transparent; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: 0.2s; }
         .btn-logout:hover { background: rgba(239,68,68,.2); }
 
-        /* MAIN CONTENT */
         .main-area { flex: 1; display: flex; flex-direction: column; overflow-y: auto; background: var(--bg); }
         header { background: #fff; padding: 16px 30px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,.05); }
         .brand-title { font-size: 1.1rem; font-weight: 700; color: var(--text); }
         .user-info { font-size: 0.9rem; color: var(--muted); font-weight: 600; }
-        
         .view-section { display: none; padding: 30px; animation: fadeIn 0.3s; }
         .view-section.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* CARDS & FORMS */
         .card { background: var(--card); border-radius: 12px; box-shadow: var(--shadow); padding: 24px; margin-bottom: 24px; }
         .card-header { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
         .form-group { margin-bottom: 16px; }
@@ -66,7 +57,6 @@
         input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
         input[readonly] { background: #f8fafc; color: var(--muted); border: 1px dashed var(--border); }
 
-        /* BUTTONS */
         .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
         .btn-primary { background: var(--primary); color: #fff; }
         .btn-primary:hover { background: var(--primary-hover); }
@@ -78,7 +68,6 @@
         .btn-success:hover { background: #a7f3d0; }
         .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
 
-        /* TABLES */
         .table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
@@ -89,7 +78,6 @@
         .action-btn:hover { color: var(--primary); }
         .action-btn.delete:hover { color: var(--danger); }
 
-        /* SPECIFIC COMPONENTS */
         .deposit-slip-container { margin-top: 8px; display: none; }
         .deposit-slip-container.has-image { display: block; }
         .deposit-slip-preview { display: flex; align-items: center; gap: 12px; padding: 10px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
@@ -102,7 +90,6 @@
         .filter-bar label { margin: 0; white-space: nowrap; font-size: 0.85rem; color: var(--muted); }
         .filter-bar input[type="date"], .filter-bar input[type="month"], .filter-bar select { width: 100%; padding: 8px; }
 
-        /* DASHBOARD STATS */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .stat-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 15px; border-left: 4px solid var(--primary); }
         .stat-card.success { border-left-color: var(--success); }
@@ -116,7 +103,6 @@
         .stat-details h3 { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
         .stat-details span { font-size: 1.4rem; font-weight: 700; }
 
-        /* MODALS & TOAST */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.open { display: flex; }
         .modal { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; max-height: 90vh; overflow-y: auto; }
@@ -124,7 +110,6 @@
         .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         .modal-footer-actions { border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
 
-        /* IMPORT MODAL STYLES */
         .import-area { border: 2px dashed var(--border); padding: 30px; text-align: center; border-radius: 8px; margin-bottom: 15px; cursor: pointer; transition: 0.2s; background: #f8fafc; }
         .import-area:hover { border-color: var(--primary); background: #eff6ff; }
         .import-status { font-size: 0.85rem; color: var(--muted); margin-top: 8px; }
@@ -143,33 +128,31 @@
         #toast.success { border-left: 4px solid var(--success); }
         #toast.error { border-left: 4px solid var(--danger); }
 
-        /* SLIP PREVIEW & PRINT STYLES */
         .slip-preview-modal { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1500; display: none; flex-direction: column; align-items: center; }
         .slip-preview-modal.open { display: flex; }
-        .slip-actions { background: #fff; padding: 15px; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,.1); display: flex; justify-content: center; gap: 10px; z-index: 10; flex-shrink: 0; position: sticky; top: 0; }
+        .slip-actions { background: #fff; padding: 15px; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,.1); display: flex; justify-content: center; gap: 10px; z-index: 10; flex-shrink: 0; position: sticky; top: 0; flex-wrap: wrap; }
         .slip-content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; width: 100%; background: #525659; }
         
-        /* PRINT MEDIA QUERY */
+        /* DOWNLOAD PROGRESS BAR */
+        .download-progress-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 5000; display: none; justify-content: center; align-items: center; }
+        .download-progress-wrap.open { display: flex; }
+        .download-progress-box { background: #fff; padding: 30px 40px; border-radius: 16px; text-align: center; min-width: 320px; box-shadow: 0 25px 50px rgba(0,0,0,.3); }
+        .download-progress-box h3 { margin-bottom: 16px; font-size: 1rem; color: var(--text); }
+        .progress-bar-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 4px; transition: width 0.3s; }
+        .progress-text { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+
         @media print {
             body * { visibility: hidden; }
             #bankReportPaper, #bankReportPaper * { visibility: visible; }
-            #bankReportPaper { 
-                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; 
-                box-shadow: none; display: block !important; 
-            }
-            .slip-actions, .sidebar, header, .modal-overlay, .img-preview-modal, .login-overlay, .toast { display: none !important; }
-            .slip-preview-modal { 
-                position: static; background: none; overflow: visible; display: block !important; 
-            }
+            #bankReportPaper { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 10mm; box-shadow: none; display: block !important; }
+            .slip-actions, .sidebar, header, .modal-overlay, .img-preview-modal, .login-overlay, .download-progress-wrap { display: none !important; }
+            .slip-preview-modal { position: static; background: none; overflow: visible; display: block !important; }
             .slip-content-area { padding: 0; overflow: visible; background: none; }
             .report-footer { page-break-inside: avoid; }
         }
 
-        /* ACTUAL PAPER STYLES */
-        #bankReportPaper { 
-            background: #fff; width: 210mm; min-height: 297mm; padding: 10mm; 
-            box-shadow: var(--shadow); display: none; font-family: 'Times New Roman', Times, serif; color: #000; 
-        }
+        #bankReportPaper { background: #fff; width: 210mm; min-height: 297mm; padding: 10mm; box-shadow: var(--shadow); display: none; font-family: 'Times New Roman', Times, serif; color: #000; }
         .report-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px; }
         .report-header h3 { font-size: 18px; margin-bottom: 4px; color: #000; text-transform: uppercase; }
         .report-header p { font-size: 12px; margin: 2px 0; color: #000; }
@@ -179,15 +162,7 @@
         .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; }
         .report-table td { text-align: center; }
         .report-table td:nth-child(2), .report-table td:nth-child(5) { text-align: left; }
-        
-        /* GRAND TOTAL ROW STYLE */
-        .report-grand-total td { 
-            border-top: 2px solid #000 !important; 
-            font-weight: 700; 
-            font-size: 13px; 
-            background: #f0f0f0 !important;
-        }
-
+        .report-grand-total td { border-top: 2px solid #000 !important; font-weight: 700; font-size: 13px; background: #f0f0f0 !important; }
         .report-footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 12px; page-break-inside: avoid; }
         .sign-line { margin-bottom: 4px; letter-spacing: 2px; border-bottom: 1px solid #000; display: inline-block; width: 150px; }
 
@@ -198,12 +173,13 @@
             .nav-item { justify-content: center; padding: 14px 0; }
             .filter-bar { flex-direction: column; align-items: stretch; }
             .filter-bar input, .filter-bar select { width: 100%; }
+            .slip-actions { gap: 6px; }
+            .slip-actions .btn-sm { font-size: 0.7rem; padding: 5px 8px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN -->
     <div class="login-overlay" id="loginOverlay">
         <div class="login-card">
             <div class="login-brand">
@@ -225,10 +201,7 @@
         </div>
     </div>
 
-    <!-- MAIN APP -->
     <div class="app-container d-none" id="appContainer">
-        
-        <!-- SIDEBAR -->
         <aside class="sidebar">
             <div class="sidebar-brand">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
@@ -259,58 +232,27 @@
             </div>
         </aside>
 
-        <!-- CONTENT AREA -->
         <div class="main-area">
             <header>
                 <div class="brand-title" id="pageTitle">Dashboard</div>
                 <div class="user-info" id="headerUserName">Admin</div>
             </header>
 
-            <!-- 1. DASHBOARD VIEW -->
             <section id="view-dashboard" class="view-section active">
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon blue">🏦</div>
-                        <div class="stat-details">
-                            <h3>Total Banks</h3>
-                            <span id="statTotalBanks">0</span>
-                        </div>
-                    </div>
-                    <div class="stat-card success">
-                        <div class="stat-icon green">💰</div>
-                        <div class="stat-details">
-                            <h3>Total Amount</h3>
-                            <span id="statTotalAmount">৳ 0</span>
-                        </div>
-                    </div>
-                    <div class="stat-card warning">
-                        <div class="stat-icon yellow">📅</div>
-                        <div class="stat-details">
-                            <h3>This Month</h3>
-                            <span id="statMonthAmount">৳ 0</span>
-                        </div>
-                    </div>
-                    <div class="stat-card danger">
-                        <div class="stat-icon red">📋</div>
-                        <div class="stat-details">
-                            <h3>Total Deposits</h3>
-                            <span id="statTotalDeposits">0</span>
-                        </div>
-                    </div>
+                    <div class="stat-card"><div class="stat-icon blue">🏦</div><div class="stat-details"><h3>Total Banks</h3><span id="statTotalBanks">0</span></div></div>
+                    <div class="stat-card success"><div class="stat-icon green">💰</div><div class="stat-details"><h3>Total Amount</h3><span id="statTotalAmount">৳ 0</span></div></div>
+                    <div class="stat-card warning"><div class="stat-icon yellow">📅</div><div class="stat-details"><h3>This Month</h3><span id="statMonthAmount">৳ 0</span></div></div>
+                    <div class="stat-card danger"><div class="stat-icon red">📋</div><div class="stat-details"><h3>Total Deposits</h3><span id="statTotalDeposits">0</span></div></div>
                 </div>
-
                 <div class="card">
                     <div class="card-header">Recent Deposits</div>
                     <div class="table-container">
-                        <table>
-                            <thead><tr><th>Date</th><th>Bank</th><th>Territory</th><th style="text-align:right">Amount</th></tr></thead>
-                            <tbody id="dashRecentDeposits"></tbody>
-                        </table>
+                        <table><thead><tr><th>Date</th><th>Bank</th><th>Territory</th><th style="text-align:right">Amount</th></tr></thead><tbody id="dashRecentDeposits"></tbody></table>
                     </div>
                 </div>
             </section>
 
-            <!-- 2. DEPOSIT ENTRY VIEW -->
             <section id="view-deposit" class="view-section">
                 <div style="max-width: 600px; margin: 0 auto;">
                     <div class="card">
@@ -318,38 +260,17 @@
                         <form id="depositForm">
                             <input type="hidden" id="depositId">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                                <div class="form-group">
-                                    <label>Month</label>
-                                    <input type="month" id="depositMonth" required>
-                                </div>
-                                <div class="form-group">
-                                    <label>Date</label>
-                                    <input type="date" id="depositDate" required>
-                                </div>
+                                <div class="form-group"><label>Month</label><input type="month" id="depositMonth" required></div>
+                                <div class="form-group"><label>Date</label><input type="date" id="depositDate" required></div>
                             </div>
-                            <div class="form-group">
-                                <label>Bank</label>
-                                <select id="depositBank" required><option value="" disabled selected>Select Bank</option></select>
-                            </div>
+                            <div class="form-group"><label>Bank</label><select id="depositBank" required><option value="" disabled selected>Select Bank</option></select></div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                                <div class="form-group">
-                                    <label>Account No</label>
-                                    <input type="text" id="depositAccNo" readonly>
-                                </div>
-                                <div class="form-group">
-                                    <label>Branch</label>
-                                    <input type="text" id="depositBranch" readonly>
-                                </div>
+                                <div class="form-group"><label>Account No</label><input type="text" id="depositAccNo" readonly></div>
+                                <div class="form-group"><label>Branch</label><input type="text" id="depositBranch" readonly></div>
                             </div>
                             <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
-                                <div class="form-group">
-                                    <label>Amount (৳)</label>
-                                    <input type="number" id="depositAmount" step="0.01" min="0" required placeholder="0.00">
-                                </div>
-                                <div class="form-group">
-                                    <label>Territory</label>
-                                    <input type="text" id="depositTerritory" placeholder="e.g., Sadar">
-                                </div>
+                                <div class="form-group"><label>Amount (৳)</label><input type="number" id="depositAmount" step="0.01" min="0" required placeholder="0.00"></div>
+                                <div class="form-group"><label>Territory</label><input type="text" id="depositTerritory" placeholder="e.g., Sadar"></div>
                             </div>
                             <div class="form-group">
                                 <label>Deposit Slip (Image)</label>
@@ -369,23 +290,13 @@
                 </div>
             </section>
 
-            <!-- 3. ADD BANK VIEW -->
             <section id="view-bank" class="view-section">
                 <div style="max-width: 600px; margin: 0 auto;">
                     <div class="card">
                         <div class="card-header">Manage Banks</div>
-                        <div class="form-group">
-                            <label>Bank Name</label>
-                            <input type="text" id="bankNameInput" placeholder="e.g., IBBL">
-                        </div>
-                        <div class="form-group">
-                            <label>Account No</label>
-                            <input type="text" id="bankAccNoInput" placeholder="e.g., 2050...">
-                        </div>
-                        <div class="form-group">
-                            <label>Branch</label>
-                            <input type="text" id="bankBranchInput" placeholder="e.g., Kushtia">
-                        </div>
+                        <div class="form-group"><label>Bank Name</label><input type="text" id="bankNameInput" placeholder="e.g., IBBL"></div>
+                        <div class="form-group"><label>Account No</label><input type="text" id="bankAccNoInput" placeholder="e.g., 2050..."></div>
+                        <div class="form-group"><label>Branch</label><input type="text" id="bankBranchInput" placeholder="e.g., Kushtia"></div>
                         <input type="hidden" id="bankEditId">
                         <div style="display:flex; gap:8px">
                             <button class="btn btn-primary" style="flex:1" onclick="saveBank()">Save Bank</button>
@@ -394,90 +305,56 @@
                     </div>
                     <div class="card">
                         <div class="table-container">
-                            <table>
-                                <thead><tr><th>Bank Details</th><th style="text-align:right">Action</th></tr></thead>
-                                <tbody id="bankListBody"></tbody>
-                            </table>
+                            <table><thead><tr><th>Bank Details</th><th style="text-align:right">Action</th></tr></thead><tbody id="bankListBody"></tbody></table>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- 4. BANK STATEMENT VIEW -->
             <section id="view-statement" class="view-section">
                 <div class="card">
                     <div class="card-header">Bank Statement & Reports</div>
-                    
-                    <!-- FILTER BAR -->
                     <div class="filter-bar">
-                        <div class="filter-item">
-                            <label>Bank</label>
-                            <select id="depositFilterBank">
-                                <option value="">All Banks</option>
-                            </select>
-                        </div>
-                        <div class="filter-item">
-                            <label>From Date</label>
-                            <input type="date" id="depositFilterFromDate">
-                        </div>
-                        <div class="filter-item">
-                            <label>To Date</label>
-                            <input type="date" id="depositFilterToDate">
-                        </div>
-                        <div class="filter-item">
-                            <label>Month (Quick)</label>
-                            <input type="month" id="depositFilterMonth">
-                        </div>
+                        <div class="filter-item"><label>Bank</label><select id="depositFilterBank"><option value="">All Banks</option></select></div>
+                        <div class="filter-item"><label>From Date</label><input type="date" id="depositFilterFromDate"></div>
+                        <div class="filter-item"><label>To Date</label><input type="date" id="depositFilterToDate"></div>
+                        <div class="filter-item"><label>Month (Quick)</label><input type="month" id="depositFilterMonth"></div>
                         <button class="btn btn-secondary" onclick="clearDepositFilter()">Clear</button>
                     </div>
 
-                    <!-- ACTION BAR -->
                     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap: wrap; align-items:center;">
-                        <button class="btn btn-primary" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
-                        
-                        <!-- IMPORT / EXPORT SECTION -->
+                        <button class="btn btn-primary btn-sm" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
                         <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
                         <button class="btn btn-sm" style="background:#2563eb; color:#fff;" onclick="openImportModal()">📥 Import Excel</button>
                         <button class="btn btn-sm" style="background:#64748b; color:#fff;" onclick="downloadTemplate()">⬇️ Template</button>
-                        
-                        <!-- BULK DELETE BUTTON -->
+                        <!-- ★ NEW: Slips Download Button -->
+                        <button class="btn btn-sm" style="background:#7c3aed; color:#fff;" onclick="downloadMonthSlips()">📁 Slips Download</button>
                         <button class="btn btn-danger btn-sm d-none" id="bulkDeleteBtn" onclick="handleBulkDelete()">🗑️ Delete Selected (<span id="selectedCount">0</span>)</button>
-
                         <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp Direct</button>
                     </div>
 
-                    <!-- DATA TABLE -->
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
                                     <th style="width:40px; text-align:center"><input type="checkbox" id="masterCheck" onchange="toggleSelectAll(this)"></th>
-                                    <th>Date</th>
-                                    <th>Bank</th>
-                                    <th>Slip</th>
-                                    <th>Territory</th>
-                                    <th style="text-align:right">Amount</th>
-                                    <th style="text-align:right">Action</th>
+                                    <th>Date</th><th>Bank</th><th>Slip</th><th>Territory</th><th style="text-align:right">Amount</th><th style="text-align:right">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="depositTableBody"></tbody>
                             <tfoot>
                                 <tr style="background: #f1f5f9; font-weight: 700;">
-                                    <td></td>
-                                    <td colspan="4" style="text-align:right">Total:</td>
-                                    <td id="depositTotalAmount" style="text-align:right">৳ 0.00</td>
-                                    <td></td>
+                                    <td></td><td colspan="4" style="text-align:right">Total:</td><td id="depositTotalAmount" style="text-align:right">৳ 0.00</td><td></td>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
             </section>
-
         </div>
     </div>
 
-    <!-- SLIP PREVIEW MODAL (PRINT VIEW) -->
+    <!-- SLIP PREVIEW MODAL -->
     <div class="slip-preview-modal" id="slipPreviewModal">
         <div class="slip-actions">
             <button class="btn btn-primary btn-sm" onclick="printGeneratedSlip()">🖨️ Print Slip</button>
@@ -486,7 +363,6 @@
             <button class="btn btn-danger btn-sm" onclick="closeSlipPreview()">✕ Close</button>
         </div>
         <div class="slip-content-area">
-            <!-- THE PAPER -->
             <div id="bankReportPaper">
                 <div class="report-header">
                     <h3>Monico Pharma Ltd</h3>
@@ -494,37 +370,14 @@
                 </div>
                 <div style="text-align:center; margin-top:8px; font-size:13px"><strong>Name of Depot:</strong> Kushtia</div>
                 <div class="report-title" id="bankRptTitle">Bank Deposit Statement</div>
-                
                 <table class="report-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Name Of Bank</th>
-                            <th>Account No</th>
-                            <th>Amount (Tk.)</th>
-                            <th>Branch</th>
-                            <th>Territory</th>
-                        </tr>
-                    </thead>
-                    <tbody id="bankRptTableBody">
-                        <!-- Rows will go here -->
-                    </tbody>
-                    <!-- REMOVED TFOOT. TOTAL WILL BE LAST ROW IN TBODY -->
+                    <thead><tr><th>Date</th><th>Name Of Bank</th><th>Account No</th><th>Amount (Tk.)</th><th>Branch</th><th>Territory</th></tr></thead>
+                    <tbody id="bankRptTableBody"></tbody>
                 </table>
-
                 <div class="report-footer">
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div> 
-                        <div>Prepared by</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div>
-                        <div>Checked by</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; align-items:center;">
-                        <div class="sign-line"></div>
-                        <div>Approved by</div>
-                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Prepared by</div></div>
+                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Checked by</div></div>
+                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Approved by</div></div>
                 </div>
             </div>
         </div>
@@ -542,18 +395,16 @@
         </div>
     </div>
 
-    <!-- IMPORT EXCEL MODAL -->
+    <!-- IMPORT MODAL -->
     <div class="modal-overlay" id="importModal">
         <div class="modal large">
             <div class="card-header" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #eee;">Import Bank Deposits</div>
-            
             <div class="import-area" onclick="document.getElementById('excelUpload').click()">
                 <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display:none" onchange="handleFileSelect(event)">
                 <div style="font-size:2rem; color:var(--primary)">📂</div>
                 <p><strong>Click to upload Excel File</strong></p>
                 <p class="import-status" id="importFileName">No file selected</p>
             </div>
-
             <div id="importPreviewContainer" class="d-none">
                 <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem; font-weight:600;">
                     <span id="importStatusCount">0 rows found</span>
@@ -561,17 +412,7 @@
                 </div>
                 <div class="import-table-wrapper">
                     <table class="import-table">
-                        <thead>
-                            <tr>
-                                <th>Status</th>
-                                <th>Month (Priority)</th>
-                                <th>Date</th>
-                                <th>Bank Name</th>
-                                <th>Amount</th>
-                                <th>Territory</th>
-                                <th>Error</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Status</th><th>Month</th><th>Date</th><th>Bank Name</th><th>Amount</th><th>Territory</th><th>Error</th></tr></thead>
                         <tbody id="importTableBody"></tbody>
                     </table>
                 </div>
@@ -589,10 +430,20 @@
         <img id="imgPreviewImg" src="" alt="Preview">
     </div>
 
-    <!-- TOAST -->
+    <!-- ★ NEW: DOWNLOAD PROGRESS OVERLAY -->
+    <div class="download-progress-wrap" id="downloadProgressWrap">
+        <div class="download-progress-box">
+            <div style="font-size:2.5rem; margin-bottom:12px">📦</div>
+            <h3 id="dlProgressTitle">Preparing Slips...</h3>
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="dlProgressBar"></div>
+            </div>
+            <div class="progress-text" id="dlProgressText">0 / 0 slips</div>
+        </div>
+    </div>
+
     <div id="toast">Message</div>
 
-    <!-- LOGIC -->
     <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, update, remove, get } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
@@ -609,7 +460,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
-
     const banksRef = ref(db, 'banks');
     const bankDepositsRef = ref(db, 'bankDeposits');
     const usersRef = ref(db, 'users');
@@ -620,1020 +470,511 @@
     let currentUser = null;
     let deleteTarget = { type: null, id: null };
     let depositSlipBase64 = null;
-    const MAX_FILE_SIZE = 2 * 1024 * 1024; 
-
-    let currentSummaryData = {}; 
+    const MAX_FILE_SIZE = 2 * 1024 * 1024;
+    let currentSummaryData = {};
     let currentReportTitle = "";
-    let currentFilteredData = []; 
-    
-    // Import specific variables
+    let currentFilteredData = [];
     let parsedImportData = [];
-
-    // Bulk Delete specific variables
     let selectedDepositIds = new Set();
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-    
-    // NAVIGATION LOGIC
+
     window.navigateTo = (target) => {
         document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
         document.getElementById('view-' + target).classList.add('active');
-        
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector(`.nav-item[data-target="${target}"]`).classList.add('active');
-
         const titles = { dashboard: 'Dashboard', deposit: 'Deposit Entry', bank: 'Add Bank', statement: 'Bank Statement' };
         $('pageTitle').textContent = titles[target] || 'Dashboard';
     };
 
-    // LOGIN LOGIC
+    // LOGIN
     function checkSession() {
         const authData = sessionStorage.getItem('depotAuth');
         if (authData) {
             try {
                 const user = JSON.parse(authData);
-                if (user.userId && user.role === 'DIC') {
-                    currentUser = user;
-                    showApp();
-                    return true;
-                }
+                if (user.userId && user.role === 'DIC') { currentUser = user; showApp(); return true; }
             } catch (e) {}
         }
         return false;
     }
-
     function showApp() {
         $('loginOverlay').classList.add('d-none');
         $('appContainer').classList.remove('d-none');
         $('headerUserName').textContent = currentUser.name || currentUser.userId;
-        
         const now = new Date();
         $('depositMonth').value = now.toISOString().slice(0, 7);
         $('depositDate').value = now.toISOString().slice(0, 10);
     }
-
     $('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const u = $('loginUser').value.trim();
-        const p = $('loginPass').value;
+        const u = $('loginUser').value.trim(), p = $('loginPass').value;
         if (!u || !p) return;
-
         try {
             const snap = await get(usersRef);
             let found = null;
-            
             if (snap.exists()) {
-                const data = snap.val();
-                for (const [key, val] of Object.entries(data)) {
-                    if (val.userId === u && val.password === p && val.role === 'DIC') {
-                        found = { id: key, ...val };
-                        break;
-                    }
+                for (const [key, val] of Object.entries(snap.val())) {
+                    if (val.userId === u && val.password === p && val.role === 'DIC') { found = { id: key, ...val }; break; }
                 }
             } else {
                 await push(usersRef, { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' });
-                if(u === 'K' && p === 'K') {
-                    found = { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' };
-                }
+                if (u === 'K' && p === 'K') found = { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' };
             }
-
-            if (found) {
-                currentUser = found;
-                sessionStorage.setItem('depotAuth', JSON.stringify(currentUser));
-                showApp();
-            } else {
-                $('loginError').style.display = 'block';
-                $('loginError').textContent = 'Access Denied. DIC Role Required.';
-            }
-        } catch (err) {
-            console.error(err);
-            $('loginError').style.display = 'block';
-            $('loginError').textContent = 'Network/DB Error: ' + err.message;
-        }
+            if (found) { currentUser = found; sessionStorage.setItem('depotAuth', JSON.stringify(currentUser)); showApp(); }
+            else { $('loginError').style.display = 'block'; $('loginError').textContent = 'Access Denied. DIC Role Required.'; }
+        } catch (err) { $('loginError').style.display = 'block'; $('loginError').textContent = 'Network Error: ' + err.message; }
     });
-
-    window.handleLogout = () => {
-        sessionStorage.removeItem('depotAuth');
-        location.reload();
-    };
+    window.handleLogout = () => { sessionStorage.removeItem('depotAuth'); location.reload(); };
 
     // DATA LISTENERS
     onValue(banksRef, snap => {
         const d = snap.val();
         banks = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
-        renderBankList();
-        populateBankDropdown();
-        populateBankFilterDropdown(); 
-        renderDashboard();
+        renderBankList(); populateBankDropdown(); populateBankFilterDropdown(); renderDashboard();
     });
-
     onValue(bankDepositsRef, snap => {
         const d = snap.val();
         bankDeposits = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
-        renderDeposits(); 
-        renderDashboard();
+        renderDeposits(); renderDashboard();
     });
-
     onValue(usersRef, snap => {
         const d = snap.val();
         users = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
-        if (!users.some(u => u.userId === 'K')) {
-            push(usersRef, { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' });
-        }
+        if (!users.some(u => u.userId === 'K')) push(usersRef, { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' });
     });
 
-    // DASHBOARD LOGIC
+    // DASHBOARD
     function renderDashboard() {
         $('statTotalBanks').textContent = banks.length;
         $('statTotalDeposits').textContent = bankDeposits.length;
-        
-        const totalAmount = bankDeposits.reduce((s, d) => s + (parseFloat(d.amount)||0), 0);
-        $('statTotalAmount').textContent = fmt(totalAmount);
-
-        const currentMonth = new Date().toISOString().slice(0, 7);
-        const monthAmount = bankDeposits.filter(d => d.month === currentMonth).reduce((s, d) => s + (parseFloat(d.amount)||0), 0);
-        $('statMonthAmount').textContent = fmt(monthAmount);
-
-        const tb = $('dashRecentDeposits');
-        tb.innerHTML = '';
-        const recent = [...bankDeposits].sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 5);
-        
-        if(!recent.length) {
-            tb.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--muted)">No deposits yet</td></tr>';
-        } else {
-            recent.forEach(d => {
-                const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
-                tb.innerHTML += `<tr><td>${dateStr}</td><td>${d.bankName}</td><td>${d.territory || '-'}</td><td style="text-align:right; font-weight:700">${fmt(d.amount)}</td></tr>`;
-            });
-        }
+        $('statTotalAmount').textContent = fmt(bankDeposits.reduce((s, d) => s + (parseFloat(d.amount)||0), 0));
+        const cm = new Date().toISOString().slice(0, 7);
+        $('statMonthAmount').textContent = fmt(bankDeposits.filter(d => d.month === cm).reduce((s, d) => s + (parseFloat(d.amount)||0), 0));
+        const tb = $('dashRecentDeposits'); tb.innerHTML = '';
+        const recent = [...bankDeposits].sort((a, b) => (b.date||'').localeCompare(a.date||'')).slice(0, 5);
+        if (!recent.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No deposits yet</td></tr>'; }
+        else recent.forEach(d => {
+            const ds = d.date ? new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
+            tb.innerHTML += `<tr><td>${ds}</td><td>${d.bankName}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td></tr>`;
+        });
     }
 
-    // BANK MANAGEMENT LOGIC
+    // BANK MANAGEMENT
     function renderBankList() {
-        const tb = $('bankListBody');
-        tb.innerHTML = '';
-        banks.sort((a, b) => a.name.localeCompare(b.name)).forEach(b => {
+        const tb = $('bankListBody'); tb.innerHTML = '';
+        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>
-                    <div style="font-weight:600">${b.name}</div>
-                    <div style="font-size:0.75rem; color:var(--muted)">Acc: ${b.accountNo} | Branch: ${b.branch || 'N/A'}</div>
-                </td>
-                <td style="text-align:right">
-                    <button class="action-btn" onclick="editBank('${b.id}')">&#9998;</button>
-                    <button class="action-btn delete" onclick="confirmDelete('bank','${b.id}')">&#10005;</button>
-                </td>`;
+            tr.innerHTML = `<td><div style="font-weight:600">${b.name}</div><div style="font-size:0.75rem;color:var(--muted)">Acc: ${b.accountNo} | Branch: ${b.branch||'N/A'}</div></td><td style="text-align:right"><button class="action-btn" onclick="editBank('${b.id}')">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('bank','${b.id}')">&#10005;</button></td>`;
             tb.appendChild(tr);
         });
     }
-
     function populateBankDropdown() {
-        const sel = $('depositBank');
-        const currentVal = sel.value;
+        const sel = $('depositBank'), cv = sel.value;
         sel.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-        banks.sort((a, b) => a.name.localeCompare(b.name)).forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b.id;
-            opt.textContent = b.name;
-            sel.appendChild(opt);
-        });
-        if (currentVal) sel.value = currentVal;
+        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
+        if (cv) sel.value = cv;
     }
-
     function populateBankFilterDropdown() {
-        const sel = $('depositFilterBank');
-        const currentVal = sel.value;
+        const sel = $('depositFilterBank'), cv = sel.value;
         sel.innerHTML = '<option value="">All Banks</option>';
-        banks.sort((a, b) => a.name.localeCompare(b.name)).forEach(b => {
-            const opt = document.createElement('option');
-            opt.value = b.id;
-            opt.textContent = b.name;
-            sel.appendChild(opt);
-        });
-        if (currentVal) sel.value = currentVal;
+        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
+        if (cv) sel.value = cv;
     }
-
     window.saveBank = async () => {
-        const id = $('bankEditId').value;
-        const name = $('bankNameInput').value.trim();
-        const acc = $('bankAccNoInput').value.trim();
-        const branch = $('bankBranchInput').value.trim();
-
-        if (!name || !acc) { showToast('Bank Name & Account No required', 'error'); return; }
-
+        const id = $('bankEditId').value, name = $('bankNameInput').value.trim(), acc = $('bankAccNoInput').value.trim(), branch = $('bankBranchInput').value.trim();
+        if (!name || !acc) { showToast('Bank Name & Account No required','error'); return; }
         try {
-            if (id) {
-                await update(ref(db, 'banks/' + id), { name, accountNo: acc, branch });
-                showToast('Bank Updated', 'success');
-            } else {
-                await push(banksRef, { name, accountNo: acc, branch });
-                showToast('Bank Added', 'success');
-            }
+            if (id) { await update(ref(db,'banks/'+id),{name,accountNo:acc,branch}); showToast('Bank Updated','success'); }
+            else { await push(banksRef,{name,accountNo:acc,branch}); showToast('Bank Added','success'); }
             cancelBankEdit();
-        } catch (e) { showToast('Error saving bank', 'error'); }
+        } catch(e) { showToast('Error saving bank','error'); }
     };
-
     window.editBank = (id) => {
-        const b = banks.find(x => x.id === id);
-        if (!b) return;
-        $('bankEditId').value = b.id;
-        $('bankNameInput').value = b.name;
-        $('bankAccNoInput').value = b.accountNo;
-        $('bankBranchInput').value = b.branch || '';
+        const b = banks.find(x=>x.id===id); if(!b) return;
+        $('bankEditId').value = b.id; $('bankNameInput').value = b.name; $('bankAccNoInput').value = b.accountNo; $('bankBranchInput').value = b.branch||'';
         $('cancelBankBtn').classList.remove('d-none');
     };
-
     window.cancelBankEdit = () => {
-        $('bankEditId').value = '';
-        $('bankNameInput').value = '';
-        $('bankAccNoInput').value = '';
-        $('bankBranchInput').value = '';
+        $('bankEditId').value=''; $('bankNameInput').value=''; $('bankAccNoInput').value=''; $('bankBranchInput').value='';
         $('cancelBankBtn').classList.add('d-none');
     };
 
-    // DEPOSIT IMAGE LOGIC
-    function compressImage(file, maxWidth = 800, quality = 0.7) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = (event) => {
-                const img = new Image();
-                img.src = event.target.result;
+    // DEPOSIT IMAGE
+    function compressImage(file, maxWidth=800, quality=0.7) {
+        return new Promise((resolve,reject) => {
+            const reader = new FileReader(); reader.readAsDataURL(file);
+            reader.onload = (e) => {
+                const img = new Image(); img.src = e.target.result;
                 img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    if (width > maxWidth) {
-                        height = Math.round((height * maxWidth) / width);
-                        width = maxWidth;
-                    }
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
+                    const c = document.createElement('canvas');
+                    let w=img.width, h=img.height;
+                    if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}
+                    c.width=w;c.height=h;
+                    c.getContext('2d').drawImage(img,0,0,w,h);
+                    resolve(c.toDataURL('image/jpeg',quality));
                 };
                 img.onerror = reject;
             };
             reader.onerror = reject;
         });
     }
-
     $('depositSlipInput').addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        if (file.size > MAX_FILE_SIZE) {
-            showToast('Image too large! Max 2MB', 'error');
-            $('depositSlipInput').value = '';
-            return;
-        }
+        const file = e.target.files[0]; if(!file) return;
+        if(file.size > MAX_FILE_SIZE){showToast('Image too large! Max 2MB','error');$('depositSlipInput').value='';return;}
         try {
-            const base64 = await compressImage(file);
-            depositSlipBase64 = base64;
-            $('depositSlipThumb').src = base64;
+            depositSlipBase64 = await compressImage(file);
+            $('depositSlipThumb').src = depositSlipBase64;
             $('depositSlipName').textContent = file.name;
             $('depositSlipPreview').classList.add('has-image');
-        } catch (err) {
-            showToast('Error processing image', 'error');
-        }
+        } catch(err) { showToast('Error processing image','error'); }
     });
+    window.clearDepositSlip = () => { depositSlipBase64=null; $('depositSlipInput').value=''; $('depositSlipPreview').classList.remove('has-image'); $('depositSlipThumb').src=''; };
+    window.openDepositModal = () => { if(depositSlipBase64){$('imgPreviewImg').src=depositSlipBase64;$('imgPreviewModal').classList.add('open');} };
 
-    window.clearDepositSlip = () => {
-        depositSlipBase64 = null;
-        $('depositSlipInput').value = '';
-        $('depositSlipPreview').classList.remove('has-image');
-        $('depositSlipThumb').src = '';
-    };
-
-    window.openDepositModal = () => {
-        if (depositSlipBase64) {
-            $('imgPreviewImg').src = depositSlipBase64;
-            $('imgPreviewModal').classList.add('open');
-        }
-    };
-
-    // DEPOSIT FORM LOGIC
+    // DEPOSIT FORM
     $('depositBank').addEventListener('change', () => {
-        const bankId = $('depositBank').value;
-        const bank = banks.find(b => b.id === bankId);
-        if (bank) {
-            $('depositAccNo').value = bank.accountNo || '';
-            $('depositBranch').value = bank.branch || '';
-        } else {
-            $('depositAccNo').value = '';
-            $('depositBranch').value = '';
-        }
+        const bank = banks.find(b=>b.id===$('depositBank').value);
+        $('depositAccNo').value = bank ? bank.accountNo||'' : '';
+        $('depositBranch').value = bank ? bank.branch||'' : '';
     });
-
     $('depositForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = $('depositId').value;
-        const bankId = $('depositBank').value;
-        const bank = banks.find(b => b.id === bankId);
-        if (!bank) { showToast('Select a valid bank', 'error'); return; }
-
-        const data = {
-            month: $('depositMonth').value,
-            date: $('depositDate').value,
-            bankId: bankId,
-            bankName: bank.name,
-            accountNo: $('depositAccNo').value,
-            branch: $('depositBranch').value,
-            amount: parseFloat($('depositAmount').value),
-            territory: $('depositTerritory').value.trim(),
-            slipImage: depositSlipBase64 || null
-        };
-
+        const id = $('depositId').value, bankId = $('depositBank').value;
+        const bank = banks.find(b=>b.id===bankId);
+        if(!bank){showToast('Select a valid bank','error');return;}
+        const data = { month:$('depositMonth').value, date:$('depositDate').value, bankId, bankName:bank.name, accountNo:$('depositAccNo').value, branch:$('depositBranch').value, amount:parseFloat($('depositAmount').value), territory:$('depositTerritory').value.trim(), slipImage:depositSlipBase64||null };
         try {
-            if (id) {
-                await update(ref(db, 'bankDeposits/' + id), data);
-                showToast('Deposit Updated', 'success');
-            } else {
-                await push(bankDepositsRef, data);
-                showToast('Deposit Added', 'success');
-            }
+            if(id){await update(ref(db,'bankDeposits/'+id),data);showToast('Deposit Updated','success');}
+            else{await push(bankDepositsRef,data);showToast('Deposit Added','success');}
             resetDepositForm();
-        } catch (e) { showToast('Error saving deposit', 'error'); }
+        } catch(e) { showToast('Error saving deposit','error'); }
     });
-
     window.editDeposit = (id) => {
-        const d = bankDeposits.find(x => x.id === id);
-        if (!d) return;
-        
-        navigateTo('deposit'); 
-
-        $('depositId').value = d.id;
-        $('depositMonth').value = d.month || '';
-        $('depositDate').value = d.date || '';
-        $('depositBank').value = d.bankId;
-        $('depositBank').dispatchEvent(new Event('change'));
-        $('depositAmount').value = d.amount;
-        $('depositTerritory').value = d.territory || '';
-
-        if (d.slipImage) {
-            depositSlipBase64 = d.slipImage;
-            $('depositSlipThumb').src = d.slipImage;
-            $('depositSlipName').textContent = 'Existing Slip';
-            $('depositSlipPreview').classList.add('has-image');
-        } else {
-            clearDepositSlip();
-        }
-
-        $('depositFormTitle').textContent = 'Edit Deposit';
-        $('submitDepositBtn').textContent = 'Update Deposit';
-        $('cancelDepositBtn').classList.remove('d-none');
+        const d = bankDeposits.find(x=>x.id===id); if(!d) return;
+        navigateTo('deposit');
+        $('depositId').value=d.id; $('depositMonth').value=d.month||''; $('depositDate').value=d.date||'';
+        $('depositBank').value=d.bankId; $('depositBank').dispatchEvent(new Event('change'));
+        $('depositAmount').value=d.amount; $('depositTerritory').value=d.territory||'';
+        if(d.slipImage){depositSlipBase64=d.slipImage;$('depositSlipThumb').src=d.slipImage;$('depositSlipName').textContent='Existing Slip';$('depositSlipPreview').classList.add('has-image');}
+        else clearDepositSlip();
+        $('depositFormTitle').textContent='Edit Deposit'; $('submitDepositBtn').textContent='Update Deposit'; $('cancelDepositBtn').classList.remove('d-none');
     };
-
     window.resetDepositForm = () => {
-        $('depositForm').reset();
-        $('depositId').value = '';
-        const now = new Date();
-        $('depositMonth').value = now.toISOString().slice(0, 7);
-        $('depositDate').value = now.toISOString().slice(0, 10);
-        $('depositAccNo').value = '';
-        $('depositBranch').value = '';
-        $('depositFormTitle').textContent = 'Add New Deposit';
-        $('submitDepositBtn').textContent = 'Save Deposit';
-        $('cancelDepositBtn').classList.add('d-none');
+        $('depositForm').reset(); $('depositId').value='';
+        const now=new Date(); $('depositMonth').value=now.toISOString().slice(0,7); $('depositDate').value=now.toISOString().slice(0,10);
+        $('depositAccNo').value=''; $('depositBranch').value='';
+        $('depositFormTitle').textContent='Add New Deposit'; $('submitDepositBtn').textContent='Save Deposit'; $('cancelDepositBtn').classList.add('d-none');
         clearDepositSlip();
     };
 
-    // BANK STATEMENT LOGIC
+    // STATEMENT
     function getFilteredData() {
-        const fm = $('depositFilterMonth').value;
-        const fromDate = $('depositFilterFromDate').value;
-        const toDate = $('depositFilterToDate').value;
-        const bankId = $('depositFilterBank').value; 
-
-        let f = [...bankDeposits];
-        if (fm) f = f.filter(d => d.month === fm);
-        if (fromDate) f = f.filter(d => (d.date || '') >= fromDate);
-        if (toDate) f = f.filter(d => (d.date || '') <= toDate);
-        if (bankId) f = f.filter(d => d.bankId === bankId); 
-
+        const fm=$('depositFilterMonth').value, fd=$('depositFilterFromDate').value, td=$('depositFilterToDate').value, bid=$('depositFilterBank').value;
+        let f=[...bankDeposits];
+        if(fm) f=f.filter(d=>d.month===fm);
+        if(fd) f=f.filter(d=>(d.date||'')>=fd);
+        if(td) f=f.filter(d=>(d.date||'')<=td);
+        if(bid) f=f.filter(d=>d.bankId===bid);
         return f;
     }
-
     function renderDeposits() {
-        const f = getFilteredData();
-        currentFilteredData = f; 
-
-        const sorted = [...f].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        const tb = $('depositTableBody');
-        tb.innerHTML = '';
-
-        // Reset selections on re-render
-        selectedDepositIds.clear();
-        updateBulkDeleteUI();
-        $('masterCheck').checked = false;
-
-        let total = 0;
-        if (!sorted.length) {
-            tb.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px">No deposits found</td></tr>';
-        } else {
-            sorted.forEach(d => {
-                total += parseFloat(d.amount) || 0;
-                const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
-                let slipHtml = '<span style="color:#cbd5e1">-</span>';
-                if (d.slipImage) {
-                    slipHtml = `<img src="${d.slipImage}" class="table-thumb" onclick="viewDepositImage('${d.id}')" alt="Slip">`;
-                }
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td>
-                    <td>${dateStr}</td>
-                    <td style="font-weight:600">${d.bankName}</td>
-                    <td>${slipHtml}</td>
-                    <td>${d.territory || '-'}</td>
-                    <td style="text-align:right; font-weight:700">${fmt(d.amount)}</td>
-                    <td style="text-align:right">
-                        <button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button>
-                        <button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button>
-                    </td>`;
-                tb.appendChild(tr);
-            });
-        }
+        const f = getFilteredData(); currentFilteredData = f;
+        const sorted = [...f].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const tb = $('depositTableBody'); tb.innerHTML = '';
+        selectedDepositIds.clear(); updateBulkDeleteUI(); $('masterCheck').checked=false;
+        let total=0;
+        if(!sorted.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No deposits found</td></tr>';}
+        else sorted.forEach(d => {
+            total+=parseFloat(d.amount)||0;
+            const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';
+            let slipHtml='<span style="color:#cbd5e1">-</span>';
+            if(d.slipImage) slipHtml=`<img src="${d.slipImage}" class="table-thumb" onclick="viewDepositImage('${d.id}')" alt="Slip">`;
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td><td>${ds}</td><td style="font-weight:600">${d.bankName}</td><td>${slipHtml}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td><td style="text-align:right"><button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
+            tb.appendChild(tr);
+        });
         $('depositTotalAmount').textContent = fmt(total);
     }
+    window.viewDepositImage = (id) => { const d=bankDeposits.find(x=>x.id===id); if(d&&d.slipImage){$('imgPreviewImg').src=d.slipImage;$('imgPreviewModal').classList.add('open');} };
+    window.clearDepositFilter = () => { $('depositFilterMonth').value=''; $('depositFilterFromDate').value=''; $('depositFilterToDate').value=''; $('depositFilterBank').value=''; renderDeposits(); };
 
-    window.viewDepositImage = (id) => {
-        const d = bankDeposits.find(x => x.id === id);
-        if (d && d.slipImage) {
-            $('imgPreviewImg').src = d.slipImage;
-            $('imgPreviewModal').classList.add('open');
-        }
-    };
-
-    window.clearDepositFilter = () => {
-        $('depositFilterMonth').value = '';
-        $('depositFilterFromDate').value = '';
-        $('depositFilterToDate').value = '';
-        $('depositFilterBank').value = ''; 
-        renderDeposits();
-    };
-
-    // ==========================================
-    // BULK DELETE LOGIC
-    // ==========================================
-    window.toggleRowSelection = (checkbox) => {
-        const id = checkbox.dataset.id;
-        if (checkbox.checked) {
-            selectedDepositIds.add(id);
-        } else {
-            selectedDepositIds.delete(id);
-        }
-        updateBulkDeleteUI();
-    };
-
-    window.toggleSelectAll = (source) => {
-        const checkboxes = document.querySelectorAll('.row-check');
-        checkboxes.forEach(cb => {
-            cb.checked = source.checked;
-            const id = cb.dataset.id;
-            if (source.checked) {
-                selectedDepositIds.add(id);
-            } else {
-                selectedDepositIds.delete(id);
-            }
-        });
-        updateBulkDeleteUI();
-    };
-
+    // BULK DELETE
+    window.toggleRowSelection = (cb) => { if(cb.checked) selectedDepositIds.add(cb.dataset.id); else selectedDepositIds.delete(cb.dataset.id); updateBulkDeleteUI(); };
+    window.toggleSelectAll = (src) => { document.querySelectorAll('.row-check').forEach(cb=>{cb.checked=src.checked;if(src.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);}); updateBulkDeleteUI(); };
     function updateBulkDeleteUI() {
-        const count = selectedDepositIds.size;
-        $('selectedCount').textContent = count;
-        const btn = $('bulkDeleteBtn');
-        
-        if (count > 0) {
-            btn.classList.remove('d-none');
-            btn.disabled = false;
-        } else {
-            btn.classList.add('d-none');
-            btn.disabled = true;
-        }
-
-        // Update Master Checkbox state based on individual rows
-        const checkboxes = document.querySelectorAll('.row-check');
-        if (checkboxes.length > 0) {
-            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-            const someChecked = Array.from(checkboxes).some(cb => cb.checked);
-            $('masterCheck').checked = allChecked;
-            $('masterCheck').indeterminate = someChecked && !allChecked;
-        } else {
-            $('masterCheck').checked = false;
-            $('masterCheck').indeterminate = false;
-        }
+        $('selectedCount').textContent = selectedDepositIds.size;
+        const btn=$('bulkDeleteBtn');
+        if(selectedDepositIds.size>0){btn.classList.remove('d-none');btn.disabled=false;}else{btn.classList.add('d-none');btn.disabled=true;}
+        const cbs=document.querySelectorAll('.row-check');
+        if(cbs.length>0){const all=Array.from(cbs).every(c=>c.checked),some=Array.from(cbs).some(c=>c.checked);$('masterCheck').checked=all;$('masterCheck').indeterminate=some&&!all;}
+        else{$('masterCheck').checked=false;$('masterCheck').indeterminate=false;}
     }
-
     window.handleBulkDelete = async () => {
-        const count = selectedDepositIds.size;
-        if (count === 0) return;
-
-        if (!confirm(`Are you sure you want to delete ${count} selected deposits? This cannot be undone.`)) return;
-
-        let successCount = 0;
-        let failCount = 0;
-
-        // Disable button during operation
-        $('bulkDeleteBtn').disabled = true;
-        $('bulkDeleteBtn').textContent = "Deleting...";
-
+        const count=selectedDepositIds.size; if(!count) return;
+        if(!confirm(`Delete ${count} selected deposits?`)) return;
+        let ok=0,fail=0; $('bulkDeleteBtn').disabled=true; $('bulkDeleteBtn').textContent="Deleting...";
         try {
-            for (const id of selectedDepositIds) {
-                try {
-                    await remove(ref(db, 'bankDeposits/' + id));
-                    successCount++;
-                } catch (err) {
-                    console.error(err);
-                    failCount++;
-                }
-            }
-
-            if (failCount === 0) {
-                showToast(`Successfully deleted ${successCount} deposits.`, "success");
-            } else {
-                showToast(`Deleted ${successCount}, Failed ${failCount}`, "warning");
-            }
-            
-            // Clear selection and re-render
-            selectedDepositIds.clear();
-            renderDeposits();
-        } catch (err) {
-            showToast("Delete operation failed: " + err.message, "error");
-        } finally {
-             $('bulkDeleteBtn').disabled = false;
-             $('bulkDeleteBtn').innerHTML = `🗑️ Delete Selected (<span id="selectedCount">0</span>)`;
-        }
+            for(const id of selectedDepositIds){try{await remove(ref(db,'bankDeposits/'+id));ok++;}catch(e){fail++;}}
+            showToast(fail===0?`Deleted ${ok} deposits`:`Deleted ${ok}, Failed ${fail}`,fail===0?'success':'error');
+            selectedDepositIds.clear(); renderDeposits();
+        } catch(e){showToast("Delete failed: "+e.message,'error');}
+        finally{$('bulkDeleteBtn').disabled=false;$('bulkDeleteBtn').innerHTML=`🗑️ Delete Selected (<span id="selectedCount">0</span>)`;}
     };
 
-
-    // GENERATE SLIP LOGIC (Kept for Print Direct functionality)
-    window.generateDepositSlip = (isDirect = false) => {
-        let f = currentFilteredData;
-
-        const fm = $('depositFilterMonth').value;
-        const fromDate = $('depositFilterFromDate').value;
-        const toDate = $('depositFilterToDate').value;
-        const bankId = $('depositFilterBank').value;
-        const bankNameFilter = bankId ? (banks.find(b=>b.id === bankId)?.name || '') : 'All Banks';
-
-        let titleSuffix = '';
-        if (fromDate && toDate) {
-            titleSuffix = `${new Date(fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })} to ${new Date(toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' })}`;
-        } else if (fm) {
-            const [y, m] = fm.split('-');
-            titleSuffix = `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'long' })} ${y}`;
-        } else {
-            titleSuffix = 'All Records';
-        }
-
-        currentReportTitle = `Bank Deposit Slip - ${bankNameFilter} (${titleSuffix})`;
-        $('bankRptTitle').textContent = currentReportTitle;
-        
-        const tb = $('bankRptTableBody');
-        tb.innerHTML = '';
-        let total = 0;
-        currentSummaryData = {};
-
-        const sorted = [...f].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-        sorted.forEach(d => {
-            const amount = parseFloat(d.amount) || 0;
-            total += amount;
-            const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${dateStr}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(amount)}</td><td>${d.branch || ''}</td><td>${d.territory || ''}</td>`;
-            tb.appendChild(tr);
-
-            const key = `${d.bankName}-${d.accountNo}`;
-            if (!currentSummaryData[key]) currentSummaryData[key] = 0;
-            currentSummaryData[key] += amount;
-        });
-
-        // APPEND GRAND TOTAL AS A ROW IN TBODY INSTEAD OF TFOOT
-        // This ensures it flows to the last page only
-        const trTotal = document.createElement('tr');
-        trTotal.className = 'report-grand-total';
-        trTotal.innerHTML = `
-            <td colspan="3" style="text-align:center; font-weight:bold;">Total</td>
-            <td style="text-align:center;">${fmt(total)}</td>
-            <td colspan="2"></td>
-        `;
-        tb.appendChild(trTotal);
-
-        // Remove old footer element if exists (cleanup)
-        const oldTfoot = document.querySelector('#bankReportPaper tfoot');
-        if(oldTfoot) oldTfoot.remove();
-
-        if (isDirect) {
-            window.print();
-        } else {
-            $('slipPreviewModal').classList.add('open');
-        }
+    // SLIP GENERATION
+    window.generateDepositSlip = (isDirect=false) => {
+        let f=currentFilteredData;
+        const fm=$('depositFilterMonth').value,fd=$('depositFilterFromDate').value,td=$('depositFilterToDate').value,bid=$('depositFilterBank').value;
+        const bnf=bid?(banks.find(b=>b.id===bid)?.name||''):'All Banks';
+        let ts='';
+        if(fd&&td) ts=`${new Date(fd).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})} to ${new Date(td).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}`;
+        else if(fm){const[y,m]=fm.split('-');ts=`${new Date(y,m-1,1).toLocaleString('default',{month:'long'})} ${y}`;}
+        else ts='All Records';
+        currentReportTitle=`Bank Deposit Slip - ${bnf} (${ts})`;
+        $('bankRptTitle').textContent=currentReportTitle;
+        const tb=$('bankRptTableBody'); tb.innerHTML=''; let total=0; currentSummaryData={};
+        const sorted=[...f].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+        sorted.forEach(d=>{const a=parseFloat(d.amount)||0;total+=a;const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'';const tr=document.createElement('tr');tr.innerHTML=`<td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(a)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;tb.appendChild(tr);const k=`${d.bankName}-${d.accountNo}`;if(!currentSummaryData[k])currentSummaryData[k]=0;currentSummaryData[k]+=a;});
+        const trT=document.createElement('tr');trT.className='report-grand-total';trT.innerHTML=`<td colspan="3" style="text-align:center;font-weight:bold;">Total</td><td style="text-align:center;">${fmt(total)}</td><td colspan="2"></td>`;tb.appendChild(trT);
+        const oldTfoot=document.querySelector('#bankReportPaper tfoot');if(oldTfoot)oldTfoot.remove();
+        if(isDirect) window.print(); else $('slipPreviewModal').classList.add('open');
     };
+    window.printDirectSlip = () => generateDepositSlip(true);
+    window.printGeneratedSlip = () => window.print();
+    window.closeSlipPreview = () => $('slipPreviewModal').classList.remove('open');
 
-    window.printDirectSlip = () => {
-        generateDepositSlip(true);
-    }
-
-    window.printGeneratedSlip = () => { window.print(); };
-    window.closeSlipPreview = () => { $('slipPreviewModal').classList.remove('open'); };
-
-    // WHATSAPP & EXCEL LOGIC
+    // WHATSAPP & EXCEL
     window.shareSummaryWhatsApp = () => {
-        let text = `*${currentReportTitle}*\nDepot: Kushtia\n\n`;
-        let total = 0;
-        
-        if(Object.keys(currentSummaryData).length === 0) {
-             text += `(No entries found for this selection)\n`;
-        } else {
-            for (const bank in currentSummaryData) {
-                text += `🏦 ${bank}: ৳ ${currentSummaryData[bank].toFixed(2)}\n`;
-                total += currentSummaryData[bank];
-            }
-        }
-        
-        text += `\n*Total Amount: ৳ ${total.toFixed(2)}*`;
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        let text=`*${currentReportTitle}*\nDepot: Kushtia\n\n`, total=0;
+        if(!Object.keys(currentSummaryData).length) text+='(No entries)\n';
+        else for(const b in currentSummaryData){text+=`🏦 ${b}: ৳ ${currentSummaryData[b].toFixed(2)}\n`;total+=currentSummaryData[b];}
+        text+=`\n*Total Amount: ৳ ${total.toFixed(2)}*`;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,'_blank');
     };
-
-    // UPDATED: Direct WhatsApp Share (Month Name in Date, Hide 0 Always)
     window.shareWhatsAppDirect = () => {
-        // 1. Header
-        let text = `*Depot: Kushtia*\n`;
-
-        // 2. Filter Logic for WhatsApp (Independent of Table Filter)
-        let fDate = $('depositFilterFromDate').value;
-        let tDate = $('depositFilterToDate').value;
-        let mVal = $('depositFilterMonth').value;
-        let bId = $('depositFilterBank').value;
-
-        // Start with all data
-        let workingData = [...bankDeposits];
-        if (bId) workingData = workingData.filter(d => d.bankId === bId);
-
-        let headerDateText = "";
-        let footerLabel = "Today Total Bank"; // Default
-        let isAllTime = false;
-        
-        // Logic Hierarchy: Month > Range > Single Day > All Time
-        if (mVal) {
-            // Month Selected
-            workingData = workingData.filter(d => d.month === mVal);
-            const [y, m] = mVal.split('-');
-            headerDateText = `${new Date(y, m - 1, 1).toLocaleString('default', { month: 'long' })} ${y}`;
-            footerLabel = "Total Bank";
-        } else if (fDate && tDate) {
-            // Range Selected
-            workingData = workingData.filter(d => (d.date || '') >= fDate && (d.date || '') <= tDate);
-            headerDateText = `${fDate} to ${tDate}`;
-            footerLabel = "Total Bank";
-        } else if (fDate) {
-            // Single Day Selected
-            workingData = workingData.filter(d => d.date === fDate);
-            const dateObj = new Date(fDate);
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const monthStr = months[dateObj.getMonth()];
-            const year = String(dateObj.getFullYear()).slice(-2);
-            const fullMonthName = new Date(dateObj.getFullYear(), dateObj.getMonth(), 1).toLocaleString('default', { month: 'long' });
-            
-            // Requirement: Date er pase Month Show hobe
-            headerDateText = `${day}-${monthStr}-${year} (${fullMonthName})`;
-            footerLabel = "Today Total Bank";
-        } else {
-            // NO DATE FILTER -> ALL TIME
-            isAllTime = true;
-            headerDateText = "All Time";
-            footerLabel = "Total Bank"; 
-        }
-
-        // Add Header
-        text += `*Date : ${headerDateText}*\n`;
-
-        // 3. Calculate Sums for all banks
-        let bankMap = [];
-        let sortedBanks = [...banks].sort((a, b) => a.name.localeCompare(b.name));
-
-        sortedBanks.forEach(bank => {
-            const sum = workingData
-                .filter(d => d.bankId === bank.id)
-                .reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
-            bankMap.push({ ...bank, sum });
-        });
-
-        // 4. Determine which banks to loop
-        // Requirement: "kono bant deposit 0.00 hoy... sow hobe na" (No matter what)
-        // Filter out 0.00 globally
-        let banksToRender = bankMap.filter(b => b.sum > 0);
-
-        let grandTotal = 0;
-
-        if (banksToRender.length === 0) {
-            text += `(No deposits found for selection)\n`;
-        } else {
-            banksToRender.forEach(bank => {
-                grandTotal += bank.sum;
-                let label = bank.name; // ONLY BANK NAME
-                let amtStr = bank.sum.toFixed(2);
-                text += `🏦 ${label}  = ৳ ${amtStr}\n`;
-            });
-        }
-
-        // 5. Footer
-        let totalStr = grandTotal.toFixed(2);
-        text += `${footerLabel} : ৳ ${totalStr}`;
-        
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        let text=`*Depot: Kushtia*\n`;
+        let fDate=$('depositFilterFromDate').value,tDate=$('depositFilterToDate').value,mVal=$('depositFilterMonth').value,bId=$('depositFilterBank').value;
+        let wd=[...bankDeposits]; if(bId) wd=wd.filter(d=>d.bankId===bId);
+        let hdt='',fl='Today Total Bank';
+        if(mVal){wd=wd.filter(d=>d.month===mVal);const[y,m]=mVal.split('-');hdt=`${new Date(y,m-1,1).toLocaleString('default',{month:'long'})} ${y}`;fl='Total Bank';}
+        else if(fDate&&tDate){wd=wd.filter(d=>(d.date||'')>=fDate&&(d.date||'')<=tDate);hdt=`${fDate} to ${tDate}`;fl='Total Bank';}
+        else if(fDate){wd=wd.filter(d=>d.date===fDate);const dobj=new Date(fDate),day=String(dobj.getDate()).padStart(2,'0'),ms=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],mn=ms[dobj.getMonth()],yr=String(dobj.getFullYear()).slice(-2),fmn=new Date(dobj.getFullYear(),dobj.getMonth(),1).toLocaleString('default',{month:'long'});hdt=`${day}-${mn}-${yr} (${fmn})`;fl='Today Total Bank';}
+        else{hdt='All Time';fl='Total Bank';}
+        text+=`*Date : ${hdt}*\n`;
+        let bm=[];[...banks].sort((a,b)=>a.name.localeCompare(b.name)).forEach(bk=>{const s=wd.filter(d=>d.bankId===bk.id).reduce((a,c)=>a+(parseFloat(c.amount)||0),0);bm.push({...bk,sum:s});});
+        let btr=bm.filter(b=>b.sum>0),gt=0;
+        if(!btr.length) text+='(No deposits found)\n';
+        else btr.forEach(b=>{gt+=b.sum;text+=`🏦 ${b.name}  = ৳ ${b.sum.toFixed(2)}\n`;});
+        text+=`${fl} : ৳ ${gt.toFixed(2)}`;
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,'_blank');
     };
-
     window.exportSummaryExcel = () => {
-        let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000; padding:5px; font-family:Arial; font-size:12px;}</style></head><body>`;
-        html += `<h2 style="text-align:center">${currentReportTitle}</h2><table><thead><tr><th>Bank Name</th><th>Total Amount (Tk.)</th></tr></thead><tbody>`;
-        let total = 0;
-        if(Object.keys(currentSummaryData).length === 0) {
-             html += `<tr><td colspan="2" style="text-align:center">No Data Found</td></tr>`;
-        } else {
-            for (const bank in currentSummaryData) {
-                html += `<tr><td>${bank}</td><td>${currentSummaryData[bank].toFixed(2)}</td></tr>`;
-                total += currentSummaryData[bank];
-            }
-        }
-        html += `<tr style="font-weight:bold; background:#f0f0f0;"><td>Total</td><td>${total.toFixed(2)}</td></tr></tbody></table></body></html>`;
-        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `Bank_Summary_${new Date().getTime()}.xls`;
-        a.click();
+        let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px;}</style></head><body>`;
+        html+=`<h2 style="text-align:center">${currentReportTitle}</h2><table><thead><tr><th>Bank Name</th><th>Total Amount (Tk.)</th></tr></thead><tbody>`;
+        let total=0;
+        if(!Object.keys(currentSummaryData).length) html+=`<tr><td colspan="2" style="text-align:center">No Data</td></tr>`;
+        else for(const b in currentSummaryData){html+=`<tr><td>${b}</td><td>${currentSummaryData[b].toFixed(2)}</td></tr>`;total+=currentSummaryData[b];}
+        html+=`<tr style="font-weight:bold;background:#f0f0f0;"><td>Total</td><td>${total.toFixed(2)}</td></tr></tbody></table></body></html>`;
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel"}));a.download=`Bank_Summary_${Date.now()}.xls`;a.click();
     };
-
     window.exportBankExcel = () => {
-        let f = currentFilteredData;
-        const sorted = [...f].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-
-        let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000; padding:5px; font-family:Arial; font-size:12px;}</style></head><body>`;
-        html += `<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
-        
-        if(!sorted.length) {
-            html += `<tr><td colspan="5" style="text-align:center">No Data Found</td></tr>`;
-        } else {
-            sorted.forEach(d => {
-                const dateStr = d.date ? new Date(d.date).toLocaleDateString('en-GB') : '';
-                html += `<tr><td>${dateStr}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;
-            });
-        }
-        html += `</tbody></table></body></html>`;
-        const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = `Bank_Statement_${new Date().getTime()}.xls`;
-        a.click();
+        const sorted=[...currentFilteredData].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+        let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px;}</style></head><body>`;
+        html+=`<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
+        if(!sorted.length) html+=`<tr><td colspan="5" style="text-align:center">No Data</td></tr>`;
+        else sorted.forEach(d=>{const ds=d.date?new Date(d.date).toLocaleDateString('en-GB'):'';html+=`<tr><td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;});
+        html+=`</tbody></table></body></html>`;
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel"}));a.download=`Bank_Statement_${Date.now()}.xls`;a.click();
     };
 
-    // ==========================================
-    // EXCEL IMPORT LOGIC
-    // ==========================================
-    
-    // 1. Download Template
-    window.downloadTemplate = () => {
-        const templateData = [
-            { "Month": "2023-10", "Date": "2023-10-27", "Bank Name": "Sonali Bank", "Amount": 5000.00, "Territory": "Sadar" },
-            { "Month": "", "Date": "2023-12-25", "Bank Name": "Dutch Bangla Bank", "Amount": 12000.50, "Territory": "Kushtia" }
-        ];
-        const ws = XLSX.utils.json_to_sheet(templateData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Template");
-        XLSX.writeFile(wb, "Deposit_Import_Template.xlsx");
-    };
+    // ================================================================
+    // ★★★ NEW: MONTH-WISE SLIPS DOWNLOAD AS ZIP ★★★
+    // ================================================================
+    window.downloadMonthSlips = async () => {
+        const monthVal = $('depositFilterMonth').value;
 
-    // 2. Open Modal
-    window.openImportModal = () => {
-        $('importModal').classList.add('open');
-        $('importPreviewContainer').classList.add('d-none');
-        $('importFileName').textContent = "No file selected";
-        $('excelUpload').value = "";
-    };
-
-    window.closeImportModal = () => {
-        $('importModal').classList.remove('open');
-        parsedImportData = [];
-    };
-
-    // 3. Handle File Selection
-    window.handleFileSelect = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        $('importFileName').textContent = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
-            
-            processImportData(jsonData);
-        };
-        reader.readAsArrayBuffer(file);
-    };
-
-    // 4. Process and Validate Data
-    function processImportData(data) {
-        parsedImportData = [];
-        const tbody = $('importTableBody');
-        tbody.innerHTML = '';
-
-        let validCount = 0;
-
-        data.forEach((row, index) => {
-            // Normalization
-            let rawMonthCol = (row['Month'] || row['month'] || '').trim(); 
-            let rawDate = row['Date'] || row['date'] || '';
-            let bankName = (row['Bank Name'] || row['Bank'] || row['bankName'] || '').trim();
-            let rawAmount = row['Amount'] || row['amount'] || 0;
-            let territory = (row['Territory'] || row['territory'] || '').trim();
-
-            // Validation
-            let errors = [];
-            let isValid = true;
-            
-            let finalDate = "";
-            let finalMonth = "";
-
-            // NEW LOGIC: MONTH COLUMN PRIORITY
-            // Priority 1: Use Month Column if present
-            if (rawMonthCol && /^\d{4}-\d{2}$/.test(rawMonthCol)) {
-                finalMonth = rawMonthCol;
-                // Date Logic: If Month is provided but Date is missing -> default to 1st
-                // If Date is provided -> Use it (even if it conflicts with month)
-                const dateObj = new Date(rawDate);
-                if (!isNaN(dateObj.getTime())) {
-                    finalDate = dateObj.toISOString().split('T')[0];
-                } else {
-                    // Month present but Date missing/invalid -> Default to Month-01
-                    finalDate = finalMonth + "-01";
-                }
-
-            } else if (rawMonthCol) {
-                // Month column has text but is invalid format
-                errors.push("Invalid Month Format (YYYY-MM)");
-                isValid = false;
-
-            } else {
-                // Priority 2: Month column empty -> Use Date to Calculate Month
-                const dateObj = new Date(rawDate);
-                if (!isNaN(dateObj.getTime())) {
-                    finalDate = dateObj.toISOString().split('T')[0];
-                    finalMonth = finalDate.substring(0, 7); 
-                } else {
-                    errors.push("Missing Valid Date OR Month");
-                    isValid = false;
-                }
-            }
-
-            // Bank Validation
-            const bankObj = banks.find(b => b.name.toLowerCase() === bankName.toLowerCase());
-            if (!bankName) {
-                errors.push("Missing Bank");
-                isValid = false;
-            } else if (!bankObj) {
-                errors.push("Bank not found");
-                isValid = false;
-            }
-
-            // Amount Validation
-            let amount = parseFloat(rawAmount);
-            if (isNaN(amount) || amount <= 0) {
-                errors.push("Invalid Amount");
-                isValid = false;
-            }
-
-            if (isValid) validCount++;
-
-            const resultRow = {
-                originalIndex: index,
-                month: finalMonth,
-                date: finalDate,
-                bankId: bankObj ? bankObj.id : null,
-                bankName: bankName,
-                accountNo: bankObj ? bankObj.accountNo : '',
-                branch: bankObj ? bankObj.branch : '',
-                amount: amount,
-                territory: territory,
-                isValid: isValid,
-                errors: errors.join(", ")
-            };
-
-            parsedImportData.push(resultRow);
-
-            // Render Preview Row
-            const tr = document.createElement('tr');
-            tr.className = isValid ? 'row-valid' : 'row-error';
-            tr.innerHTML = `
-                <td style="text-align:center">${isValid ? '✅' : '❌'}</td>
-                <td>${finalMonth}</td>
-                <td>${finalDate}</td>
-                <td>${bankName}</td>
-                <td>${amount.toFixed(2)}</td>
-                <td>${territory}</td>
-                <td style="color:red; font-size:0.8rem">${errors.join(', ')}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        $('importStatusCount').textContent = `${data.length} rows found`;
-        $('importValidCount').textContent = `${validCount} Ready to Import`;
-        
-        $('importPreviewContainer').classList.remove('d-none');
-    }
-
-    // 5. Confirm Import to DB
-    window.processImport = async () => {
-        const validRows = parsedImportData.filter(r => r.isValid);
-        if (validRows.length === 0) {
-            showToast("No valid rows to import", "error");
+        // Validation: Month must be selected
+        if (!monthVal) {
+            showToast('Please select a Month first from the filter', 'error');
             return;
         }
 
-        if (!confirm(`Are you sure you want to import ${validRows.length} deposits?`)) return;
+        // Filter deposits for this month that have slip images
+        let monthDeposits = bankDeposits.filter(d => d.month === monthVal && d.slipImage);
 
-        let successCount = 0;
-        let failCount = 0;
+        // Also apply bank filter if selected
+        const bankId = $('depositFilterBank').value;
+        if (bankId) monthDeposits = monthDeposits.filter(d => d.bankId === bankId);
+
+        if (monthDeposits.length === 0) {
+            showToast('No slips found for this month', 'error');
+            return;
+        }
+
+        // Sort by date DESCENDING (Z to A → newest first)
+        monthDeposits.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+        // Generate folder name: "Bank Deposit Slip May-26"
+        const [year, month] = monthVal.split('-');
+        const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
+        const shortYear = year.slice(-2);
+        const folderName = `Bank Deposit Slip ${monthName}-${shortYear}`;
+        const zipFileName = `${folderName}.zip`;
+
+        // Show progress
+        const progressWrap = $('downloadProgressWrap');
+        const progressBar = $('dlProgressBar');
+        const progressText = $('dlProgressText');
+        const progressTitle = $('dlProgressTitle');
+        progressWrap.classList.add('open');
+        progressTitle.textContent = `Preparing ${monthDeposits.length} slips...`;
+        progressBar.style.width = '0%';
+        progressText.textContent = `0 / ${monthDeposits.length} slips`;
 
         try {
-            for (const row of validRows) {
-                try {
-                    await push(bankDepositsRef, {
-                        month: row.month,
-                        date: row.date,
-                        bankId: row.bankId,
-                        bankName: row.bankName,
-                        accountNo: row.accountNo,
-                        branch: row.branch,
-                        amount: row.amount,
-                        territory: row.territory,
-                        slipImage: null 
-                    });
-                    successCount++;
-                } catch (err) {
-                    console.error(err);
-                    failCount++;
+            const zip = new JSZip();
+            const folder = zip.folder(folderName);
+
+            // Track same-date-same-bank to avoid filename collision
+            const nameCount = {};
+
+            for (let i = 0; i < monthDeposits.length; i++) {
+                const d = monthDeposits[i];
+
+                // Extract base64 data (remove data:image/xxx;base64, prefix)
+                const base64Data = d.slipImage.split(',')[1];
+                
+                // Determine extension from mime type
+                const mimeMatch = d.slipImage.match(/data:(image\/\w+);/);
+                const ext = mimeMatch ? mimeMatch[1].split('/')[1] : 'jpg';
+                const safeExt = (ext === 'jpeg') ? 'jpg' : ext;
+
+                // Build filename: YYYY-MM-DD_BankName.jpg
+                const datePart = d.date || '0000-00-00';
+                // Clean bank name for filename
+                let cleanBank = (d.bankName || 'Unknown').replace(/[^a-zA-Z0-9]/g, '');
+                let fileName = `${datePart}_${cleanBank}.${safeExt}`;
+
+                // Handle duplicate filenames (same date + same bank)
+                const key = fileName;
+                if (nameCount[key] !== undefined) {
+                    nameCount[key]++;
+                    const dotIdx = fileName.lastIndexOf('.');
+                    fileName = fileName.substring(0, dotIdx) + `_${nameCount[key]}` + fileName.substring(dotIdx);
+                } else {
+                    nameCount[key] = 0;
                 }
+
+                // Add to zip
+                folder.file(fileName, base64Data, { base64: true });
+
+                // Update progress
+                const pct = Math.round(((i + 1) / monthDeposits.length) * 100);
+                progressBar.style.width = pct + '%';
+                progressText.textContent = `${i + 1} / ${monthDeposits.length} slips`;
             }
 
-            if (failCount === 0) {
-                showToast(`Successfully imported ${successCount} deposits!`, "success");
-                closeImportModal();
-            } else {
-                showToast(`Imported ${successCount}, Failed ${failCount}`, "warning");
-                closeImportModal();
-            }
+            progressTitle.textContent = 'Generating ZIP file...';
+
+            // Generate and download
+            const blob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 }
+            }, (metadata) => {
+                // Zip generation progress
+                const pct = Math.round(metadata.percent);
+                progressBar.style.width = pct + '%';
+                progressText.textContent = `Compressing... ${pct}%`;
+            });
+
+            // Trigger download
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = zipFileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast(`Downloaded ${monthDeposits.length} slips as ${zipFileName}`, 'success');
+
         } catch (err) {
-            showToast("Import failed: " + err.message, "error");
+            console.error('ZIP Error:', err);
+            showToast('Error creating ZIP: ' + err.message, 'error');
+        } finally {
+            progressWrap.classList.remove('open');
         }
+    };
+
+    // IMPORT EXCEL
+    window.downloadTemplate = () => {
+        const td=[{"Month":"2023-10","Date":"2023-10-27","Bank Name":"Sonali Bank","Amount":5000,"Territory":"Sadar"},{"Month":"","Date":"2023-12-25","Bank Name":"Dutch Bangla Bank","Amount":12000.5,"Territory":"Kushtia"}];
+        const ws=XLSX.utils.json_to_sheet(td),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,"Deposit_Import_Template.xlsx");
+    };
+    window.openImportModal = () => { $('importModal').classList.add('open'); $('importPreviewContainer').classList.add('d-none'); $('importFileName').textContent="No file selected"; $('excelUpload').value=""; };
+    window.closeImportModal = () => { $('importModal').classList.remove('open'); parsedImportData=[]; };
+    window.handleFileSelect = (e) => {
+        const file=e.target.files[0]; if(!file) return;
+        $('importFileName').textContent=file.name;
+        const reader=new FileReader();
+        reader.onload=(evt)=>{const wb=XLSX.read(new Uint8Array(evt.target.result),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],json=XLSX.utils.sheet_to_json(ws,{raw:false,dateNF:'yyyy-mm-dd'});processImportData(json);};
+        reader.readAsArrayBuffer(file);
+    };
+    function processImportData(data) {
+        parsedImportData=[];const tbody=$('importTableBody');tbody.innerHTML='';let vc=0;
+        data.forEach((row,idx)=>{
+            let rm=(row['Month']||row['month']||'').trim(),rd=row['Date']||row['date']||'',bn=(row['Bank Name']||row['Bank']||row['bankName']||'').trim(),ra=row['Amount']||row['amount']||0,ter=(row['Territory']||row['territory']||'').trim();
+            let errs=[],valid=true,fd='',fm='';
+            if(rm&&/^\d{4}-\d{2}$/.test(rm)){fm=rm;const dobj=new Date(rd);if(!isNaN(dobj.getTime()))fd=dobj.toISOString().split('T')[0];else fd=fm+"-01";}
+            else if(rm){errs.push("Invalid Month (YYYY-MM)");valid=false;}
+            else{const dobj=new Date(rd);if(!isNaN(dobj.getTime())){fd=dobj.toISOString().split('T')[0];fm=fd.substring(0,7);}else{errs.push("Missing Date/Month");valid=false;}}
+            const bo=banks.find(b=>b.name.toLowerCase()===bn.toLowerCase());
+            if(!bn){errs.push("Missing Bank");valid=false;}else if(!bo){errs.push("Bank not found");valid=false;}
+            let amt=parseFloat(ra);if(isNaN(amt)||amt<=0){errs.push("Invalid Amount");valid=false;}
+            if(valid)vc++;
+            const pr={originalIndex:idx,month:fm,date:fd,bankId:bo?bo.id:null,bankName:bn,accountNo:bo?bo.accountNo:'',branch:bo?bo.branch:'',amount:amt,territory:ter,isValid:valid,errors:errs.join(", ")};
+            parsedImportData.push(pr);
+            const tr=document.createElement('tr');tr.className=valid?'row-valid':'row-error';
+            tr.innerHTML=`<td style="text-align:center">${valid?'✅':'❌'}</td><td>${fm}</td><td>${fd}</td><td>${bn}</td><td>${amt.toFixed(2)}</td><td>${ter}</td><td style="color:red;font-size:0.8rem">${errs.join(', ')}</td>`;
+            tbody.appendChild(tr);
+        });
+        $('importStatusCount').textContent=`${data.length} rows found`; $('importValidCount').textContent=`${vc} Ready to Import`;
+        $('importPreviewContainer').classList.remove('d-none');
+    }
+    window.processImport = async () => {
+        const vr=parsedImportData.filter(r=>r.isValid); if(!vr.length){showToast("No valid rows",'error');return;}
+        if(!confirm(`Import ${vr.length} deposits?`)) return;
+        let ok=0,fail=0;
+        try{for(const r of vr){try{await push(bankDepositsRef,{month:r.month,date:r.date,bankId:r.bankId,bankName:r.bankName,accountNo:r.accountNo,branch:r.branch,amount:r.amount,territory:r.territory,slipImage:null});ok++;}catch(e){fail++;}}
+        showToast(fail===0?`Imported ${ok} deposits`:`Imported ${ok}, Failed ${fail}`,fail===0?'success':'error');closeImportModal();}
+        catch(e){showToast("Import failed: "+e.message,'error');}
     };
 
     // DELETE & MODALS
-    window.confirmDelete = (type, id) => {
-        deleteTarget = { type, id };
-        $('deleteModal').classList.add('open');
-    };
+    window.confirmDelete = (type,id) => { deleteTarget={type,id}; $('deleteModal').classList.add('open'); };
     window.closeModal = () => $('deleteModal').classList.remove('open');
     $('confirmDeleteBtn').onclick = async () => {
-        try {
-            if (deleteTarget.type === 'bank') await remove(ref(db, 'banks/' + deleteTarget.id));
-            if (deleteTarget.type === 'deposit') await remove(ref(db, 'bankDeposits/' + deleteTarget.id));
-            showToast('Deleted successfully', 'success');
-            closeModal();
-        } catch (e) { showToast('Error deleting', 'error'); }
+        try{if(deleteTarget.type==='bank')await remove(ref(db,'banks/'+deleteTarget.id));if(deleteTarget.type==='deposit')await remove(ref(db,'bankDeposits/'+deleteTarget.id));showToast('Deleted','success');closeModal();}
+        catch(e){showToast('Error deleting','error');}
     };
-    window.closeImgPreview = (e) => {
-        if (!e || e.target === e.currentTarget || e.target.classList.contains('img-preview-close')) {
-            $('imgPreviewModal').classList.remove('open');
-        }
-    };
+    window.closeImgPreview = (e) => { if(!e||e.target===e.currentTarget||e.target.classList.contains('img-preview-close')) $('imgPreviewModal').classList.remove('open'); };
 
-    function showToast(msg, type = '') {
-        const t = $('toast');
-        t.textContent = msg;
-        t.className = 'show ' + type;
-        setTimeout(() => t.className = '', 3000);
+    function showToast(msg, type='') {
+        const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (!checkSession()) {
-            $('loginOverlay').classList.remove('d-none');
-        }
+        if(!checkSession()) $('loginOverlay').classList.remove('d-none');
         $('depositFilterMonth').addEventListener('change', renderDeposits);
         $('depositFilterFromDate').addEventListener('change', renderDeposits);
         $('depositFilterToDate').addEventListener('change', renderDeposits);
-        $('depositFilterBank').addEventListener('change', renderDeposits); 
+        $('depositFilterBank').addEventListener('change', renderDeposits);
     });
-
     </script>
 </body>
 </html>
