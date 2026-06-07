@@ -6,6 +6,7 @@
     <title>Bank Deposit Portal | Monico Pharma</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f1f5f9;
@@ -122,8 +123,8 @@
         .img-preview-modal.open { display: flex; }
         .img-preview-modal img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
         .img-preview-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,.2); border: none; color: #fff; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; }
-        
-        #toast { visibility: hidden; min-width: 250px; background: #1e293b; color: #fff; text-align: center; border-radius: 8px; padding: 14px; position: fixed; z-index: 3000; bottom: 30px; right: 30px; font-weight: 500; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1); transition: 0.3s; }
+
+        #toast { visibility: hidden; min-width: 280px; background: #1e293b; color: #fff; text-align: center; border-radius: 8px; padding: 14px; position: fixed; z-index: 3000; bottom: 30px; right: 30px; font-weight: 500; box-shadow: 0 10px 15px -3px rgba(0,0,0,.1); transition: 0.3s; }
         #toast.show { visibility: visible; bottom: 50px; }
         #toast.success { border-left: 4px solid var(--success); }
         #toast.error { border-left: 4px solid var(--danger); }
@@ -132,8 +133,7 @@
         .slip-preview-modal.open { display: flex; }
         .slip-actions { background: #fff; padding: 15px; width: 100%; box-shadow: 0 2px 4px rgba(0,0,0,.1); display: flex; justify-content: center; gap: 10px; z-index: 10; flex-shrink: 0; position: sticky; top: 0; flex-wrap: wrap; }
         .slip-content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; width: 100%; background: #525659; }
-        
-        /* DOWNLOAD PROGRESS BAR */
+
         .download-progress-wrap { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 5000; display: none; justify-content: center; align-items: center; }
         .download-progress-wrap.open { display: flex; }
         .download-progress-box { background: #fff; padding: 30px 40px; border-radius: 16px; text-align: center; min-width: 320px; box-shadow: 0 25px 50px rgba(0,0,0,.3); }
@@ -141,6 +141,96 @@
         .progress-bar-track { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
         .progress-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--primary), var(--success)); border-radius: 4px; transition: width 0.3s; }
         .progress-text { margin-top: 10px; font-size: 0.85rem; color: var(--muted); }
+
+        .toggle-switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 26px; transition: 0.3s; }
+        .toggle-slider::before { content: ""; position: absolute; height: 20px; width: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+        .toggle-switch input:checked + .toggle-slider { background: var(--success); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+        .toggle-switch input:focus + .toggle-slider { box-shadow: 0 0 0 3px rgba(16,185,129,.2); }
+
+        .bank-row-inactive td { opacity: 0.45; }
+        .bank-row-inactive td .bank-name-text { text-decoration: line-through; }
+        .bank-status-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .bank-status-badge.active { background: #d1fae5; color: #065f46; }
+        .bank-status-badge.inactive { background: #fee2e2; color: #991b1b; }
+
+        .trx-no-cell { font-family: 'Consolas', 'Monaco', monospace; font-size: 0.8rem; color: var(--primary); font-weight: 600; letter-spacing: 0.3px; background: #eff6ff; padding: 3px 8px; border-radius: 4px; display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .trx-input-icon { position: relative; }
+        .trx-input-icon input { padding-left: 36px; }
+        .trx-input-icon .trx-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 1rem; pointer-events: none; }
+
+        @keyframes ocrPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        @keyframes ocrSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .ocr-status-bar {
+            margin-top: 6px; padding: 8px 12px; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 500;
+            display: flex; align-items: center; gap: 8px;
+            transition: all 0.3s;
+        }
+        .ocr-status-bar.scanning {
+            background: linear-gradient(90deg, #eff6ff, #dbeafe, #eff6ff);
+            border: 1px solid #bfdbfe; color: #1d4ed8;
+            animation: ocrPulse 1.5s ease-in-out infinite;
+        }
+        .ocr-status-bar.scanning .ocr-spin { animation: ocrSpin 1s linear infinite; display: inline-block; }
+        .ocr-status-bar.found {
+            background: #f0fdf4; border: 1px solid #bbf7d0; color: #065f46;
+        }
+        .ocr-status-bar.not-found {
+            background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+        }
+        .ocr-status-bar.error {
+            background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
+        }
+        .ocr-value {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-weight: 700; font-size: 0.85rem;
+            background: rgba(16,185,129,.1); padding: 2px 8px;
+            border-radius: 4px; letter-spacing: 0.5px;
+        }
+        .ocr-rescan {
+            margin-left: auto; cursor: pointer;
+            color: var(--primary); font-weight: 600;
+            text-decoration: underline; font-size: 0.75rem;
+            background: none; border: none; padding: 2px 6px;
+        }
+        .ocr-rescan:hover { color: var(--primary-hover); }
+        .ocr-raw-toggle {
+            margin-left: auto; cursor: pointer;
+            color: var(--muted); font-weight: 500;
+            text-decoration: underline; font-size: 0.7rem;
+            background: none; border: none; padding: 2px 6px;
+        }
+        .ocr-raw-text {
+            margin-top: 6px; padding: 8px; background: #f8fafc;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', monospace; font-size: 0.7rem;
+            color: var(--muted); max-height: 80px; overflow-y: auto;
+            white-space: pre-wrap; word-break: break-all;
+            display: none;
+        }
+        .ocr-raw-text.visible { display: block; }
+        .trx-auto-filled {
+            border-color: var(--success) !important;
+            box-shadow: 0 0 0 3px rgba(16,185,129,.15) !important;
+        }
+
+        /* ★ OCR detected bank/channel label display */
+        .ocr-bank-label {
+            display: inline-block; padding: 1px 8px; border-radius: 4px;
+            font-size: 0.7rem; font-weight: 600;
+            background: rgba(37,99,235,.08); color: var(--primary);
+            border: 1px solid rgba(37,99,235,.2);
+            margin-left: 6px; vertical-align: middle;
+        }
 
         @media print {
             body * { visibility: hidden; }
@@ -157,12 +247,13 @@
         .report-header h3 { font-size: 18px; margin-bottom: 4px; color: #000; text-transform: uppercase; }
         .report-header p { font-size: 12px; margin: 2px 0; color: #000; }
         .report-title { font-size: 16px; font-weight: 700; text-align: center; margin: 10px 0; text-transform: uppercase; text-decoration: underline; color: #000; }
-        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        .report-table th, .report-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; color: #000; }
-        .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; }
-        .report-table td { text-align: center; }
-        .report-table td:nth-child(2), .report-table td:nth-child(5) { text-align: left; }
-        .report-grand-total td { border-top: 2px solid #000 !important; font-weight: 700; font-size: 13px; background: #f0f0f0 !important; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 5px 6px; text-align: left; color: #000; }
+        .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; font-size: 10px; }
+        .report-table td { text-align: center; font-size: 11px; }
+        .report-table td:nth-child(3), .report-table td:nth-child(7) { text-align: left; }
+        .report-table td:nth-child(2) { font-family: 'Consolas', monospace; font-size: 10px; }
+        .report-grand-total td { border-top: 2px solid #000 !important; font-weight: 700; font-size: 12px; background: #f0f0f0 !important; }
         .report-footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 12px; page-break-inside: avoid; }
         .sign-line { margin-bottom: 4px; letter-spacing: 2px; border-bottom: 1px solid #000; display: inline-block; width: 150px; }
 
@@ -188,14 +279,8 @@
             </div>
             <div class="login-error" id="loginError">Invalid Credentials</div>
             <form id="loginForm">
-                <div class="login-field">
-                    <label>User ID</label>
-                    <input type="text" id="loginUser" placeholder="Enter User ID (e.g. K)" autocomplete="off">
-                </div>
-                <div class="login-field">
-                    <label>Password</label>
-                    <input type="password" id="loginPass" placeholder="Enter Password (e.g. K)">
-                </div>
+                <div class="login-field"><label>User ID</label><input type="text" id="loginUser" placeholder="Enter User ID (e.g. K)" autocomplete="off"></div>
+                <div class="login-field"><label>Password</label><input type="password" id="loginPass" placeholder="Enter Password (e.g. K)"></div>
                 <button type="submit" class="login-btn">Sign In</button>
             </form>
         </div>
@@ -218,17 +303,15 @@
                 </div>
                 <div class="nav-item" data-target="bank" onclick="navigateTo('bank')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-                    <span class="nav-text">Add Bank</span>
+                    <span class="nav-text">Manage Banks</span>
                 </div>
                 <div class="nav-item" data-target="statement" onclick="navigateTo('statement')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     <span class="nav-text">Bank Statement</span>
                 </div>
             </nav>
             <div class="sidebar-footer">
-                <button class="btn-logout" onclick="handleLogout()">
-                    <span class="user-info-text">Sign Out&nbsp;&nbsp;</span>⏻
-                </button>
+                <button class="btn-logout" onclick="handleLogout()"><span class="user-info-text">Sign Out&nbsp;&nbsp;</span>⏻</button>
             </div>
         </aside>
 
@@ -240,7 +323,7 @@
 
             <section id="view-dashboard" class="view-section active">
                 <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-icon blue">🏦</div><div class="stat-details"><h3>Total Banks</h3><span id="statTotalBanks">0</span></div></div>
+                    <div class="stat-card"><div class="stat-icon blue">🏦</div><div class="stat-details"><h3>Active Banks</h3><span id="statTotalBanks">0</span></div></div>
                     <div class="stat-card success"><div class="stat-icon green">💰</div><div class="stat-details"><h3>Total Amount</h3><span id="statTotalAmount">৳ 0</span></div></div>
                     <div class="stat-card warning"><div class="stat-icon yellow">📅</div><div class="stat-details"><h3>This Month</h3><span id="statMonthAmount">৳ 0</span></div></div>
                     <div class="stat-card danger"><div class="stat-icon red">📋</div><div class="stat-details"><h3>Total Deposits</h3><span id="statTotalDeposits">0</span></div></div>
@@ -248,13 +331,13 @@
                 <div class="card">
                     <div class="card-header">Recent Deposits</div>
                     <div class="table-container">
-                        <table><thead><tr><th>Date</th><th>Bank</th><th>Territory</th><th style="text-align:right">Amount</th></tr></thead><tbody id="dashRecentDeposits"></tbody></table>
+                        <table><thead><tr><th>Date</th><th>Bank</th><th>Trx No</th><th>Territory</th><th style="text-align:right">Amount</th></tr></thead><tbody id="dashRecentDeposits"></tbody></table>
                     </div>
                 </div>
             </section>
 
             <section id="view-deposit" class="view-section">
-                <div style="max-width: 600px; margin: 0 auto;">
+                <div style="max-width: 680px; margin: 0 auto;">
                     <div class="card">
                         <div class="card-header" id="depositFormTitle">Add New Deposit</div>
                         <form id="depositForm">
@@ -268,17 +351,29 @@
                                 <div class="form-group"><label>Account No</label><input type="text" id="depositAccNo" readonly></div>
                                 <div class="form-group"><label>Branch</label><input type="text" id="depositBranch" readonly></div>
                             </div>
+                            <div class="form-group">
+                                <label>Trx No / Slip No <span style="color:var(--danger);font-weight:400;font-size:0.8rem">(লেনদেনের নম্বর)</span></label>
+                                <div class="trx-input-icon">
+                                    <span class="trx-icon">🔗</span>
+                                    <input type="text" id="depositTrxNo" placeholder="স্লিপ আপলোড করলে Auto নিবে, অথবা ম্যানুয়ালি দিন" style="font-family:'Consolas',monospace; letter-spacing:0.5px;">
+                                </div>
+                                <div id="ocrStatusBar" class="ocr-status-bar d-none"></div>
+                                <div id="ocrRawText" class="ocr-raw-text"></div>
+                            </div>
                             <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px">
                                 <div class="form-group"><label>Amount (৳)</label><input type="number" id="depositAmount" step="0.01" min="0" required placeholder="0.00"></div>
                                 <div class="form-group"><label>Territory</label><input type="text" id="depositTerritory" placeholder="e.g., Sadar"></div>
                             </div>
                             <div class="form-group">
-                                <label>Deposit Slip (Image)</label>
+                                <label>Deposit Slip (Image) <span style="color:var(--primary);font-weight:400;font-size:0.75rem">— আপলোড করলে Trx No Auto Extract হবে</span></label>
                                 <input type="file" id="depositSlipInput" accept="image/*" style="font-size:0.85rem">
                                 <div id="depositSlipPreview" class="deposit-slip-container">
                                     <div class="deposit-slip-preview">
                                         <img src="" id="depositSlipThumb" class="deposit-slip-thumb" onclick="openDepositModal()">
-                                        <div style="flex:1; overflow:hidden"><div style="font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis" id="depositSlipName">slip.jpg</div></div>
+                                        <div style="flex:1; overflow:hidden">
+                                            <div style="font-size:0.8rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis" id="depositSlipName">slip.jpg</div>
+                                            <div style="font-size:0.7rem; color:var(--muted)" id="depositSlipSize"></div>
+                                        </div>
                                         <div class="deposit-slip-remove" onclick="clearDepositSlip()">Remove</div>
                                     </div>
                                 </div>
@@ -291,12 +386,14 @@
             </section>
 
             <section id="view-bank" class="view-section">
-                <div style="max-width: 600px; margin: 0 auto;">
+                <div style="max-width: 650px; margin: 0 auto;">
                     <div class="card">
-                        <div class="card-header">Manage Banks</div>
+                        <div class="card-header">Add / Edit Bank</div>
                         <div class="form-group"><label>Bank Name</label><input type="text" id="bankNameInput" placeholder="e.g., IBBL"></div>
-                        <div class="form-group"><label>Account No</label><input type="text" id="bankAccNoInput" placeholder="e.g., 2050..."></div>
-                        <div class="form-group"><label>Branch</label><input type="text" id="bankBranchInput" placeholder="e.g., Kushtia"></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+                            <div class="form-group"><label>Account No</label><input type="text" id="bankAccNoInput" placeholder="e.g., 2050..."></div>
+                            <div class="form-group"><label>Branch</label><input type="text" id="bankBranchInput" placeholder="e.g., Kushtia"></div>
+                        </div>
                         <input type="hidden" id="bankEditId">
                         <div style="display:flex; gap:8px">
                             <button class="btn btn-primary" style="flex:1" onclick="saveBank()">Save Bank</button>
@@ -304,8 +401,15 @@
                         </div>
                     </div>
                     <div class="card">
+                        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>All Banks</span>
+                            <span style="font-size:0.8rem; color:var(--muted); font-weight:400;" id="bankCountLabel">0 banks</span>
+                        </div>
                         <div class="table-container">
-                            <table><thead><tr><th>Bank Details</th><th style="text-align:right">Action</th></tr></thead><tbody id="bankListBody"></tbody></table>
+                            <table>
+                                <thead><tr><th style="width:50px; text-align:center">Status</th><th>Bank Details</th><th style="width:100px; text-align:center">Toggle</th><th style="text-align:right; width:80px">Action</th></tr></thead>
+                                <tbody id="bankListBody"></tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -321,30 +425,27 @@
                         <div class="filter-item"><label>Month (Quick)</label><input type="month" id="depositFilterMonth"></div>
                         <button class="btn btn-secondary" onclick="clearDepositFilter()">Clear</button>
                     </div>
-
                     <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap: wrap; align-items:center;">
-                        <button class="btn btn-primary btn-sm" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip Direct</button>
-                        <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Export Excel</button>
-                        <button class="btn btn-sm" style="background:#2563eb; color:#fff;" onclick="openImportModal()">📥 Import Excel</button>
+                        <button class="btn btn-primary btn-sm" style="background:#000;" onclick="printDirectSlip()">🖨️ Print Slip</button>
+                        <button class="btn btn-sm" style="background:#10b981; color:#fff;" onclick="exportBankExcel()">📊 Excel</button>
+                        <button class="btn btn-sm" style="background:#2563eb; color:#fff;" onclick="openImportModal()">📥 Import</button>
                         <button class="btn btn-sm" style="background:#64748b; color:#fff;" onclick="downloadTemplate()">⬇️ Template</button>
-                        <!-- ★ NEW: Slips Download Button -->
-                        <button class="btn btn-sm" style="background:#7c3aed; color:#fff;" onclick="downloadMonthSlips()">📁 Slips Download</button>
-                        <button class="btn btn-danger btn-sm d-none" id="bulkDeleteBtn" onclick="handleBulkDelete()">🗑️ Delete Selected (<span id="selectedCount">0</span>)</button>
-                        <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp Direct</button>
+                        <button class="btn btn-sm" style="background:#7c3aed; color:#fff;" onclick="downloadMonthSlips()">📁 Slips ZIP</button>
+                        <button class="btn btn-danger btn-sm d-none" id="bulkDeleteBtn" onclick="handleBulkDelete()">🗑️ Delete (<span id="selectedCount">0</span>)</button>
+                        <button class="btn btn-sm" style="background:#25D366; color:#fff;" onclick="shareWhatsAppDirect()">💬 WhatsApp</button>
                     </div>
-
                     <div class="table-container">
                         <table>
                             <thead>
                                 <tr>
                                     <th style="width:40px; text-align:center"><input type="checkbox" id="masterCheck" onchange="toggleSelectAll(this)"></th>
-                                    <th>Date</th><th>Bank</th><th>Slip</th><th>Territory</th><th style="text-align:right">Amount</th><th style="text-align:right">Action</th>
+                                    <th>Date</th><th>Bank</th><th>Trx No</th><th>Slip</th><th>Territory</th><th style="text-align:right">Amount</th><th style="text-align:right">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="depositTableBody"></tbody>
                             <tfoot>
                                 <tr style="background: #f1f5f9; font-weight: 700;">
-                                    <td></td><td colspan="4" style="text-align:right">Total:</td><td id="depositTotalAmount" style="text-align:right">৳ 0.00</td><td></td>
+                                    <td></td><td colspan="5" style="text-align:right">Total:</td><td id="depositTotalAmount" style="text-align:right">৳ 0.00</td><td></td>
                                 </tr>
                             </tfoot>
                         </table>
@@ -354,12 +455,11 @@
         </div>
     </div>
 
-    <!-- SLIP PREVIEW MODAL -->
     <div class="slip-preview-modal" id="slipPreviewModal">
         <div class="slip-actions">
             <button class="btn btn-primary btn-sm" onclick="printGeneratedSlip()">🖨️ Print Slip</button>
-            <button class="btn btn-sm" style="background: #25D366; color: white;" onclick="shareSummaryWhatsApp()">💬 WhatsApp Summary</button>
-            <button class="btn btn-sm" style="background: #10b981; color: white;" onclick="exportSummaryExcel()">📊 Summary Excel</button>
+            <button class="btn btn-sm" style="background:#25D366;color:white;" onclick="shareSummaryWhatsApp()">💬 WhatsApp</button>
+            <button class="btn btn-sm" style="background:#10b981;color:white;" onclick="exportSummaryExcel()">📊 Summary</button>
             <button class="btn btn-danger btn-sm" onclick="closeSlipPreview()">✕ Close</button>
         </div>
         <div class="slip-content-area">
@@ -371,19 +471,18 @@
                 <div style="text-align:center; margin-top:8px; font-size:13px"><strong>Name of Depot:</strong> Kushtia</div>
                 <div class="report-title" id="bankRptTitle">Bank Deposit Statement</div>
                 <table class="report-table">
-                    <thead><tr><th>Date</th><th>Name Of Bank</th><th>Account No</th><th>Amount (Tk.)</th><th>Branch</th><th>Territory</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Trx No / Slip No</th><th>Name Of Bank</th><th>Account No</th><th>Amount (Tk.)</th><th>Branch</th><th>Territory</th></tr></thead>
                     <tbody id="bankRptTableBody"></tbody>
                 </table>
                 <div class="report-footer">
-                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Prepared by</div></div>
-                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Checked by</div></div>
-                    <div style="display:flex; flex-direction:column; align-items:center;"><div class="sign-line"></div><div>Approved by</div></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;"><div class="sign-line"></div><div>Prepared by</div></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;"><div class="sign-line"></div><div>Checked by</div></div>
+                    <div style="display:flex;flex-direction:column;align-items:center;"><div class="sign-line"></div><div>Approved by</div></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- DELETE MODAL -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal">
             <h3>Delete Item?</h3>
@@ -395,10 +494,9 @@
         </div>
     </div>
 
-    <!-- IMPORT MODAL -->
     <div class="modal-overlay" id="importModal">
         <div class="modal large">
-            <div class="card-header" style="margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid #eee;">Import Bank Deposits</div>
+            <div class="card-header" style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #eee;">Import Bank Deposits</div>
             <div class="import-area" onclick="document.getElementById('excelUpload').click()">
                 <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display:none" onchange="handleFileSelect(event)">
                 <div style="font-size:2rem; color:var(--primary)">📂</div>
@@ -406,13 +504,13 @@
                 <p class="import-status" id="importFileName">No file selected</p>
             </div>
             <div id="importPreviewContainer" class="d-none">
-                <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.9rem; font-weight:600;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:5px;font-size:0.9rem;font-weight:600;">
                     <span id="importStatusCount">0 rows found</span>
                     <span id="importValidCount" style="color:var(--success)">0 Valid</span>
                 </div>
                 <div class="import-table-wrapper">
                     <table class="import-table">
-                        <thead><tr><th>Status</th><th>Month</th><th>Date</th><th>Bank Name</th><th>Amount</th><th>Territory</th><th>Error</th></tr></thead>
+                        <thead><tr><th>Status</th><th>Month</th><th>Date</th><th>Bank</th><th>Trx No</th><th>Amount</th><th>Territory</th><th>Error</th></tr></thead>
                         <tbody id="importTableBody"></tbody>
                     </table>
                 </div>
@@ -424,20 +522,16 @@
         </div>
     </div>
 
-    <!-- IMAGE PREVIEW -->
     <div class="img-preview-modal" id="imgPreviewModal" onclick="closeImgPreview(event)">
         <button class="img-preview-close" onclick="closeImgPreview()">&times;</button>
         <img id="imgPreviewImg" src="" alt="Preview">
     </div>
 
-    <!-- ★ NEW: DOWNLOAD PROGRESS OVERLAY -->
     <div class="download-progress-wrap" id="downloadProgressWrap">
         <div class="download-progress-box">
             <div style="font-size:2.5rem; margin-bottom:12px">📦</div>
             <h3 id="dlProgressTitle">Preparing Slips...</h3>
-            <div class="progress-bar-track">
-                <div class="progress-bar-fill" id="dlProgressBar"></div>
-            </div>
+            <div class="progress-bar-track"><div class="progress-bar-fill" id="dlProgressBar"></div></div>
             <div class="progress-text" id="dlProgressText">0 / 0 slips</div>
         </div>
     </div>
@@ -464,18 +558,14 @@
     const bankDepositsRef = ref(db, 'bankDeposits');
     const usersRef = ref(db, 'users');
 
-    let banks = [];
-    let bankDeposits = [];
-    let users = [];
-    let currentUser = null;
+    let banks = [], bankDeposits = [], users = [], currentUser = null;
     let deleteTarget = { type: null, id: null };
     let depositSlipBase64 = null;
+    let lastOcrRawText = '';
+    let isOcrRunning = false;
     const MAX_FILE_SIZE = 2 * 1024 * 1024;
-    let currentSummaryData = {};
-    let currentReportTitle = "";
-    let currentFilteredData = [];
-    let parsedImportData = [];
-    let selectedDepositIds = new Set();
+    let currentSummaryData = {}, currentReportTitle = "", currentFilteredData = [];
+    let parsedImportData = [], selectedDepositIds = new Set();
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -485,227 +575,577 @@
         document.getElementById('view-' + target).classList.add('active');
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.querySelector(`.nav-item[data-target="${target}"]`).classList.add('active');
-        const titles = { dashboard: 'Dashboard', deposit: 'Deposit Entry', bank: 'Add Bank', statement: 'Bank Statement' };
+        const titles = { dashboard:'Dashboard', deposit:'Deposit Entry', bank:'Manage Banks', statement:'Bank Statement' };
         $('pageTitle').textContent = titles[target] || 'Dashboard';
     };
 
-    // LOGIN
     function checkSession() {
-        const authData = sessionStorage.getItem('depotAuth');
-        if (authData) {
-            try {
-                const user = JSON.parse(authData);
-                if (user.userId && user.role === 'DIC') { currentUser = user; showApp(); return true; }
-            } catch (e) {}
-        }
+        const a = sessionStorage.getItem('depotAuth');
+        if (a) { try { const u = JSON.parse(a); if (u.userId && u.role==='DIC') { currentUser=u; showApp(); return true; } } catch(e){} }
         return false;
     }
     function showApp() {
-        $('loginOverlay').classList.add('d-none');
-        $('appContainer').classList.remove('d-none');
+        $('loginOverlay').classList.add('d-none'); $('appContainer').classList.remove('d-none');
         $('headerUserName').textContent = currentUser.name || currentUser.userId;
-        const now = new Date();
-        $('depositMonth').value = now.toISOString().slice(0, 7);
-        $('depositDate').value = now.toISOString().slice(0, 10);
+        const n=new Date(); $('depositMonth').value=n.toISOString().slice(0,7); $('depositDate').value=n.toISOString().slice(0,10);
     }
     $('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const u = $('loginUser').value.trim(), p = $('loginPass').value;
-        if (!u || !p) return;
+        const u=$('loginUser').value.trim(), p=$('loginPass').value;
+        if(!u||!p) return;
         try {
-            const snap = await get(usersRef);
-            let found = null;
-            if (snap.exists()) {
-                for (const [key, val] of Object.entries(snap.val())) {
-                    if (val.userId === u && val.password === p && val.role === 'DIC') { found = { id: key, ...val }; break; }
-                }
-            } else {
-                await push(usersRef, { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' });
-                if (u === 'K' && p === 'K') found = { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' };
-            }
-            if (found) { currentUser = found; sessionStorage.setItem('depotAuth', JSON.stringify(currentUser)); showApp(); }
-            else { $('loginError').style.display = 'block'; $('loginError').textContent = 'Access Denied. DIC Role Required.'; }
-        } catch (err) { $('loginError').style.display = 'block'; $('loginError').textContent = 'Network Error: ' + err.message; }
+            const s=await get(usersRef); let f=null;
+            if(s.exists()){for(const[k,v]of Object.entries(s.val())){if(v.userId===u&&v.password===p&&v.role==='DIC'){f={id:k,...v};break;}}}
+            else{await push(usersRef,{userId:'K',password:'K',name:'Admin',role:'DIC'});if(u==='K'&&p==='K')f={userId:'K',password:'K',name:'Admin',role:'DIC'};}
+            if(f){currentUser=f;sessionStorage.setItem('depotAuth',JSON.stringify(currentUser));showApp();}
+            else{$('loginError').style.display='block';$('loginError').textContent='Access Denied. DIC Role Required.';}
+        }catch(err){$('loginError').style.display='block';$('loginError').textContent='Network Error: '+err.message;}
     });
     window.handleLogout = () => { sessionStorage.removeItem('depotAuth'); location.reload(); };
 
-    // DATA LISTENERS
     onValue(banksRef, snap => {
-        const d = snap.val();
-        banks = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
+        const d=snap.val(); banks=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
+        banks.forEach(b=>{if(b.isActive===undefined)b.isActive=true;});
         renderBankList(); populateBankDropdown(); populateBankFilterDropdown(); renderDashboard();
     });
     onValue(bankDepositsRef, snap => {
-        const d = snap.val();
-        bankDeposits = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
+        const d=snap.val(); bankDeposits=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
         renderDeposits(); renderDashboard();
     });
     onValue(usersRef, snap => {
-        const d = snap.val();
-        users = d ? Object.entries(d).map(([k, v]) => ({ id: k, ...v })) : [];
-        if (!users.some(u => u.userId === 'K')) push(usersRef, { userId: 'K', password: 'K', name: 'Admin', role: 'DIC' });
+        const d=snap.val(); users=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
+        if(!users.some(u=>u.userId==='K'))push(usersRef,{userId:'K',password:'K',name:'Admin',role:'DIC'});
     });
 
-    // DASHBOARD
     function renderDashboard() {
-        $('statTotalBanks').textContent = banks.length;
-        $('statTotalDeposits').textContent = bankDeposits.length;
-        $('statTotalAmount').textContent = fmt(bankDeposits.reduce((s, d) => s + (parseFloat(d.amount)||0), 0));
-        const cm = new Date().toISOString().slice(0, 7);
-        $('statMonthAmount').textContent = fmt(bankDeposits.filter(d => d.month === cm).reduce((s, d) => s + (parseFloat(d.amount)||0), 0));
-        const tb = $('dashRecentDeposits'); tb.innerHTML = '';
-        const recent = [...bankDeposits].sort((a, b) => (b.date||'').localeCompare(a.date||'')).slice(0, 5);
-        if (!recent.length) { tb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--muted)">No deposits yet</td></tr>'; }
-        else recent.forEach(d => {
-            const ds = d.date ? new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '';
-            tb.innerHTML += `<tr><td>${ds}</td><td>${d.bankName}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td></tr>`;
+        const ab=banks.filter(b=>b.isActive!==false);
+        $('statTotalBanks').textContent=ab.length+' / '+banks.length;
+        $('statTotalDeposits').textContent=bankDeposits.length;
+        $('statTotalAmount').textContent=fmt(bankDeposits.reduce((s,d)=>s+(parseFloat(d.amount)||0),0));
+        const cm=new Date().toISOString().slice(0,7);
+        $('statMonthAmount').textContent=fmt(bankDeposits.filter(d=>d.month===cm).reduce((s,d)=>s+(parseFloat(d.amount)||0),0));
+        const tb=$('dashRecentDeposits'); tb.innerHTML='';
+        const recent=[...bankDeposits].sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,5);
+        if(!recent.length)tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted)">No deposits yet</td></tr>';
+        else recent.forEach(d=>{
+            const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'';
+            const tx=d.trxNo?`<span class="trx-no-cell">${d.trxNo}</span>`:'<span style="color:#cbd5e1">-</span>';
+            tb.innerHTML+=`<tr><td>${ds}</td><td>${d.bankName}</td><td>${tx}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td></tr>`;
         });
     }
 
-    // BANK MANAGEMENT
     function renderBankList() {
-        const tb = $('bankListBody'); tb.innerHTML = '';
-        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td><div style="font-weight:600">${b.name}</div><div style="font-size:0.75rem;color:var(--muted)">Acc: ${b.accountNo} | Branch: ${b.branch||'N/A'}</div></td><td style="text-align:right"><button class="action-btn" onclick="editBank('${b.id}')">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('bank','${b.id}')">&#10005;</button></td>`;
+        const tb=$('bankListBody'); tb.innerHTML='';
+        const sorted=[...banks].sort((a,b)=>{
+            if((a.isActive!==false)!==(b.isActive!==false))return(a.isActive!==false)?-1:1;
+            return a.name.localeCompare(b.name);
+        });
+        const ac=banks.filter(b=>b.isActive!==false).length;
+        $('bankCountLabel').textContent=`${ac} active / ${banks.length} total`;
+        sorted.forEach(b=>{
+            const ia=b.isActive!==false, rc=ia?'':'bank-row-inactive', bc=ia?'active':'inactive', bt=ia?'Active':'Inactive';
+            const tr=document.createElement('tr'); tr.className=rc;
+            tr.innerHTML=`<td style="text-align:center"><span class="bank-status-badge ${bc}">${bt}</span></td><td><div class="bank-name-text" style="font-weight:600">${b.name}</div><div style="font-size:0.75rem;color:var(--muted)">Acc: ${b.accountNo} | Branch: ${b.branch||'N/A'}</div></td><td style="text-align:center"><label class="toggle-switch" title="${ia?'Click to Deactivate':'Click to Activate'}"><input type="checkbox" ${ia?'checked':''} onchange="toggleBankActive('${b.id}',this.checked)"><span class="toggle-slider"></span></label></td><td style="text-align:right"><button class="action-btn" onclick="editBank('${b.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('bank','${b.id}')" title="Delete">&#10005;</button></td>`;
             tb.appendChild(tr);
         });
     }
+    window.toggleBankActive = async (id,ia) => {
+        try{await update(ref(db,'banks/'+id),{isActive:ia});showToast(ia?'Bank Activated':'Bank Deactivated','success');}
+        catch(e){showToast('Error updating status','error');renderBankList();}
+    };
     function populateBankDropdown() {
-        const sel = $('depositBank'), cv = sel.value;
-        sel.innerHTML = '<option value="" disabled selected>Select Bank</option>';
-        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
-        if (cv) sel.value = cv;
+        const s=$('depositBank'),cv=s.value; s.innerHTML='<option value="" disabled selected>Select Bank</option>';
+        banks.filter(b=>b.isActive!==false).sort((a,b)=>a.name.localeCompare(b.name)).forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.name;s.appendChild(o);});
+        if(cv&&banks.filter(b=>b.isActive!==false).some(b=>b.id===cv))s.value=cv;
+        else{s.value='';$('depositAccNo').value='';$('depositBranch').value='';}
     }
     function populateBankFilterDropdown() {
-        const sel = $('depositFilterBank'), cv = sel.value;
-        sel.innerHTML = '<option value="">All Banks</option>';
-        banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b => { const o = document.createElement('option'); o.value = b.id; o.textContent = b.name; sel.appendChild(o); });
-        if (cv) sel.value = cv;
+        const s=$('depositFilterBank'),cv=s.value; s.innerHTML='<option value="">All Banks</option>';
+        banks.filter(b=>b.isActive!==false).sort((a,b)=>a.name.localeCompare(b.name)).forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.name;s.appendChild(o);});
+        if(cv&&banks.filter(b=>b.isActive!==false).some(b=>b.id===cv))s.value=cv;
     }
     window.saveBank = async () => {
-        const id = $('bankEditId').value, name = $('bankNameInput').value.trim(), acc = $('bankAccNoInput').value.trim(), branch = $('bankBranchInput').value.trim();
-        if (!name || !acc) { showToast('Bank Name & Account No required','error'); return; }
-        try {
-            if (id) { await update(ref(db,'banks/'+id),{name,accountNo:acc,branch}); showToast('Bank Updated','success'); }
-            else { await push(banksRef,{name,accountNo:acc,branch}); showToast('Bank Added','success'); }
+        const id=$('bankEditId').value,n=$('bankNameInput').value.trim(),a=$('bankAccNoInput').value.trim(),br=$('bankBranchInput').value.trim();
+        if(!n||!a){showToast('Bank Name & Account No required','error');return;}
+        try{
+            if(id){const ex=banks.find(b=>b.id===id);await update(ref(db,'banks/'+id),{name:n,accountNo:a,branch:br,isActive:ex?(ex.isActive!==false):true});showToast('Bank Updated','success');}
+            else{await push(banksRef,{name:n,accountNo:a,branch:br,isActive:true});showToast('Bank Added','success');}
             cancelBankEdit();
-        } catch(e) { showToast('Error saving bank','error'); }
+        }catch(e){showToast('Error saving bank','error');}
     };
-    window.editBank = (id) => {
-        const b = banks.find(x=>x.id===id); if(!b) return;
-        $('bankEditId').value = b.id; $('bankNameInput').value = b.name; $('bankAccNoInput').value = b.accountNo; $('bankBranchInput').value = b.branch||'';
-        $('cancelBankBtn').classList.remove('d-none');
-    };
-    window.cancelBankEdit = () => {
-        $('bankEditId').value=''; $('bankNameInput').value=''; $('bankAccNoInput').value=''; $('bankBranchInput').value='';
-        $('cancelBankBtn').classList.add('d-none');
+    window.editBank = (id) => {const b=banks.find(x=>x.id===id);if(!b)return;$('bankEditId').value=b.id;$('bankNameInput').value=b.name;$('bankAccNoInput').value=b.accountNo;$('bankBranchInput').value=b.branch||'';$('cancelBankBtn').classList.remove('d-none');$('bankNameInput').focus();};
+    window.cancelBankEdit = () => {$('bankEditId').value='';$('bankNameInput').value='';$('bankAccNoInput').value='';$('bankBranchInput').value='';$('cancelBankBtn').classList.add('d-none');};
+
+    // ================================================================
+    // ★★★ OCR: EXTRACT TRX NO FROM DEPOSIT SLIP IMAGE ★★★
+    // ================================================================
+
+    function showOcrStatus(state, extra, bankLabel) {
+        const bar = $('ocrStatusBar');
+        bar.classList.remove('d-none','scanning','found','not-found','error');
+        const rawEl = $('ocrRawText');
+        rawEl.classList.remove('visible');
+
+        // Helper for bank label badge
+        const bankBadge = bankLabel ? `<span class="ocr-bank-label">${bankLabel}</span>` : '';
+
+        switch(state) {
+            case 'scanning':
+                bar.className = 'ocr-status-bar scanning';
+                bar.innerHTML = `<span class="ocr-spin">🔍</span><span>স্লিপ থেকে Trx No বের করা হচ্ছে...</span>`;
+                break;
+            case 'found':
+                bar.className = 'ocr-status-bar found';
+                bar.innerHTML = `✅ <span>Trx No পাওয়া গেছে:</span> <span class="ocr-value">${extra}</span>${bankBadge}<button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`;
+                $('depositTrxNo').value = extra;
+                $('depositTrxNo').classList.add('trx-auto-filled');
+                break;
+            case 'notFound':
+                bar.className = 'ocr-status-bar not-found';
+                bar.innerHTML = `⚠️ <span>স্লিপে Trx No পাওয়া যায়নি</span>${bankBadge}<button class="ocr-rescan" onclick="reRunOcr()">🔄 Re-scan</button><button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`;
+                break;
+            case 'error':
+                bar.className = 'ocr-status-bar error';
+                bar.innerHTML = `❌ <span>${extra || 'OCR ব্যর্থ হয়েছে'}</span>${lastOcrRawText ? '<button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>' : ''}`;
+                break;
+            case 'loading':
+                bar.className = 'ocr-status-bar scanning';
+                bar.innerHTML = `<span class="ocr-spin">⏳</span><span>OCR Engine লোড হচ্ছে (প্রথমবার 10-15 সেকেন্ড লাগতে পারে)...</span>`;
+                break;
+        }
+    }
+
+    window.toggleOcrRaw = () => {
+        const el = $('ocrRawText');
+        el.classList.toggle('visible');
+        if (el.classList.contains('visible')) el.textContent = lastOcrRawText || '(No text extracted)';
     };
 
-    // DEPOSIT IMAGE
-    function compressImage(file, maxWidth=800, quality=0.7) {
+    window.reRunOcr = () => {
+        if (depositSlipBase64 && !isOcrRunning) runOcrExtraction(depositSlipBase64);
+    };
+
+    async function runOcrExtraction(imageData) {
+        if (isOcrRunning) return;
+        isOcrRunning = true;
+        lastOcrRawText = '';
+
+        if (typeof Tesseract === 'undefined') {
+            showOcrStatus('error', 'OCR Library লোড হয়নি। ইন্টারনেট সংযোগ চেক করুন।');
+            isOcrRunning = false;
+            return;
+        }
+
+        try {
+            showOcrStatus('loading');
+
+            const worker = await Tesseract.createWorker('eng', 1, {
+                logger: m => {}
+            });
+
+            showOcrStatus('scanning');
+
+            const { data: { text } } = await worker.recognize(imageData);
+            await worker.terminate();
+
+            lastOcrRawText = text;
+
+            if (!text || text.trim().length < 3) {
+                showOcrStatus('notFound');
+                isOcrRunning = false;
+                return;
+            }
+
+            // ★ Returns { value, label } or { value: null, label: null }
+            const result = findTransactionId(text);
+
+            if (result.value) {
+                showOcrStatus('found', result.value, result.label);
+                showToast('Trx No Auto Extract: ' + result.value, 'success');
+            } else {
+                // Show which bank label was detected (if any) even without value
+                showOcrStatus('notFound', null, result.label);
+            }
+
+        } catch (err) {
+            console.error('OCR Error:', err);
+            showOcrStatus('error', 'OCR Error: ' + (err.message || 'Unknown error'));
+        } finally {
+            isOcrRunning = false;
+        }
+    }
+
+    /**
+     * ★★★ CORE: Multi-strategy Trx ID extraction for Bangladeshi bank slips ★★★
+     *
+     * Supported labels (Strategy 1 — highest priority):
+     *   ┌──────────────────────────┬─────────────────────┐
+     *   │ Bank / Channel           │ Label on Slip        │
+     *   ├──────────────────────────┼─────────────────────┤
+     *   │ Islami Bank Agent Banking│ লেনদেনের আইডি      │
+     *   │ Islami Bank Branch       │ No.G                │
+     *   │ Islami Bank Branch-2     │ নং-C                │
+     *   │ Dutch-Bangla CRM         │ TXN NO.             │
+     *   │ Dutch-Bangla NexusPay    │ Transaction ID      │
+     *   │ Dutch-Bangla Agent Banking│ Transaction ID     │
+     *   │ Pubali Bank              │ স্ক্রল নং           │
+     *   └──────────────────────────┴─────────────────────┘
+     *
+     * @param {string} text — raw OCR output
+     * @returns {{ value: string|null, label: string|null }}
+     */
+    function findTransactionId(text) {
+        const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        // Value pattern: starts with alphanumeric, 4-30 chars of common ID characters
+        const VP = '([A-Za-z0-9][A-Za-z0-9\\/\\-_\\.]' + '{3,29})';
+
+        // False-positive words (common on slips but NOT transaction IDs)
+        const FP = /^(date|time|amount|total|name|account|branch|taka|tk|bdt|none|nil|n\/a|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|active|inactive|cash|cheque|deposit|withd|withdraw|balance|available|type|code|mobile|phone|customer|signature|authorized|verified|received|paid|credit|debit)$/i;
+
+        function isFP(v) { return FP.test(v); }
+
+        /**
+         * Collapse spaces between digits (OCR artifact: "2025 0115 001" → "20250115001")
+         */
+        function cleanDigits(v) { return v.replace(/(\d)\s+(\d)/g, '$1$2'); }
+
+        /**
+         * Try to extract a value after a label using 3 methods:
+         *   1) label + separator + value  (same regex match)
+         *   2) label on line → remainder of same line after label
+         *   3) label on line → next line
+         */
+        function afterLabel(labelRegexStr) {
+            const lr = new RegExp(labelRegexStr, 'i');
+            const sepVP = new RegExp(labelRegexStr + '[\\s]*[:\\-\\.\\/\\\\=]?\\s*' + VP, 'i');
+
+            // Method 1: Single regex — label + optional separator + value
+            let m = sepVP.exec(clean);
+            if (m) {
+                const v = cleanDigits(m[1].trim().replace(/[\s\\.]+$/, ''));
+                if (v.length >= 4 && !isFP(v)) return v;
+            }
+
+            // Method 2 & 3: Line-by-line
+            for (let i = 0; i < lines.length; i++) {
+                if (!lr.test(lines[i])) continue;
+
+                // Method 2: Remove label+separator from this line, take first value token
+                const stripPat = new RegExp('.*?' + labelRegexStr + '[\\s]*[:\\-\\.\\/\\\\=]*\\s*', 'i');
+                const remainder = lines[i].replace(stripPat, '').trim();
+                if (remainder.length >= 4) {
+                    const vm = remainder.match(new RegExp('^' + VP, 'i'));
+                    if (vm) {
+                        const v = cleanDigits(vm[1].trim().replace(/[\s\\.]+$/, ''));
+                        if (v.length >= 4 && !isFP(v)) return v;
+                    }
+                }
+
+                // Method 3: Next line
+                if (i + 1 < lines.length && lines[i + 1].length >= 4) {
+                    const vm = lines[i + 1].match(new RegExp('^' + VP, 'i'));
+                    if (vm) {
+                        const v = cleanDigits(vm[1].trim().replace(/[\s\\.]+$/, ''));
+                        if (v.length >= 4 && !isFP(v)) return v;
+                    }
+                }
+            }
+            return null;
+        }
+
+        // Track which bank label was detected (even if value extraction failed)
+        let detectedLabel = null;
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 1: Known Bangladeshi Bank Labels — HIGHEST PRIORITY
+        // ════════════════════════════════════════════════════════════════
+        const knownLabels = [
+            // লেনদেনের আইডি — Islami Bank Agent Banking
+            { label: 'লেনদেনের\\s*আইডি',                     name: 'IBBL Agent Banking' },
+            // স্ক্রল নং — Pubali Bank
+            { label: 'স্ক্রল\\s*নং',                        name: 'Pubali Bank' },
+            // নং-C (or নং-c, নং.C, নং C) — Islami Bank Branch variant
+            { label: 'নং[\\s]*[\\-\\.]?[\\s]*[Cc]',            name: 'IBBL Branch (নং-C)' },
+            // No.G (or No. G, No.G:, No .G) — Islami Bank Branch
+            { label: 'No\\.?\\s*G(?![a-zA-Z])',                name: 'IBBL Branch (No.G)' },
+            // TXN NO. (or TXN NO, TXN NO:) — Dutch-Bangla CRM
+            { label: 'TXN\\s*NO\\.?',                          name: 'DBBL CRM' },
+            // Transaction ID — Dutch-Bangla NexusPay & Agent Banking
+            { label: 'Transaction\\s*ID',                     name: 'DBBL NexusPay/Agent' },
+        ];
+
+        for (const { label, name } of knownLabels) {
+            // Quick check: is this label present at all?
+            const lr = new RegExp(label, 'i');
+            if (lr.test(clean)) {
+                detectedLabel = name;  // Remember which label we saw
+                const val = afterLabel(label);
+                if (val) return { value: val, label: name };
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 2: Generic English Labels
+        // ════════════════════════════════════════════════════════════════
+        const engLabels = [
+            'Trx\\s*(?:No|No\\.|Number|#)',
+            'Txn\\s*(?:No|No\\.|Number|#)',
+            'Transaction\\s*(?:No\\.?|Number|#)',
+            'Reference\\s*(?:No\\.?|Number|#)',
+            'Ref\\s*(?:No\\.?|#)',
+            'RRN\\s*(?:No\\.?)?',
+            'Scroll\\s*(?:No\\.?|Number)?',
+            'Serial\\s*(?:No\\.?|Number)?',
+            'Challan\\s*(?:No\\.?)?',
+            'Slip\\s*(?:No\\.?)?',
+            'Receipt\\s*(?:No\\.?)?',
+            'Deposit\\s*(?:Slip\\s*)?(?:No\\.?)?',
+        ];
+
+        for (const label of engLabels) {
+            const lr = new RegExp(label, 'i');
+            if (lr.test(clean)) {
+                if (!detectedLabel) {
+                    // Derive a readable name from the regex
+                    const match = label.match(/^([A-Za-z]+)/);
+                    detectedLabel = match ? match[1] + ' (generic)' : 'Generic Label';
+                }
+                const val = afterLabel(label);
+                if (val) return { value: val, label: detectedLabel };
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 3: Generic Bengali Labels (lower confidence)
+        // ════════════════════════════════════════════════════════════════
+        const bengLabels = [
+            'তারিখ\\s*নং',
+            'লেনদেন\\s*(?:আইডি|নং|নম্বর)',
+            'আইডি',
+        ];
+
+        for (const label of bengLabels) {
+            const lr = new RegExp(label, 'i');
+            if (lr.test(clean)) {
+                if (!detectedLabel) detectedLabel = 'Bengali Label';
+                const val = afterLabel(label);
+                if (val) return { value: val, label: detectedLabel };
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 4: Standalone transaction-like patterns
+        // ════════════════════════════════════════════════════════════════
+        // 2-5 uppercase letters + 8-20 digits (e.g., TRX20250115001)
+        let m;
+        const standalone = /\b([A-Z]{2,5}[\-\/]?[0-9]{8,20})\b/g;
+        while ((m = standalone.exec(clean)) !== null) {
+            const v = cleanDigits(m[1]);
+            if (!/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/.test(v) &&
+                !/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(v)) {
+                return { value: v, label: 'Standalone Pattern' };
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 5: Long numeric sequences (bare TXN numbers)
+        // ════════════════════════════════════════════════════════════════
+        // Many BD banks use 10-18 digit numeric IDs
+        const numPatterns = [
+            /(?<!\d)(\d{14,18})(?!\d)/g,   // Most common range
+            /(?<!\d)(\d{10,13})(?!\d)/g,   // Shorter range
+            /(?<!\d)(\d{19,20})(?!\d)/g,   // Longer range
+        ];
+        for (const pat of numPatterns) {
+            while ((m = pat.exec(clean)) !== null) {
+                const v = cleanDigits(m[1]);
+                // Skip phone numbers (01...), dates (20250115... if 8 digits), amounts
+                if (!v.startsWith('01') &&
+                    !/^20\d{6}$/.test(v)) {  // 8-digit date-like
+                    return { value: v, label: 'Numeric Sequence' };
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 6: IBBL specific format (TRX/YYYY/NNN)
+        // ════════════════════════════════════════════════════════════════
+        const ibblPat = /(?:IBBL|ibbl)?\s*[\/\-]?\s*(?:TRX|trx)[\/\-](\d{4})[\/\-](\d{1,5})/g;
+        while ((m = ibblPat.exec(clean)) !== null) {
+            return { value: `TRX/${m[1]}/${m[2]}`, label: 'IBBL Format' };
+        }
+
+        // ════════════════════════════════════════════════════════════════
+        // STRATEGY 7: "No." followed by long number (fallback)
+        // ════════════════════════════════════════════════════════════════
+        const noPat = /(?:No\.?|No)\s*[\.\-:]\s*(\d{6,20})/gi;
+        while ((m = noPat.exec(clean)) !== null) {
+            return { value: cleanDigits(m[1]), label: 'No. Pattern' };
+        }
+
+        // Nothing found — return detected label (if any) for diagnostic display
+        return { value: null, label: detectedLabel };
+    }
+
+    // ================================================================
+    // DEPOSIT IMAGE HANDLING + AUTO OCR
+    // ================================================================
+    function compressImage(file, maxWidth=900, quality=0.75) {
         return new Promise((resolve,reject) => {
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = (e) => {
-                const img = new Image(); img.src = e.target.result;
-                img.onload = () => {
-                    const c = document.createElement('canvas');
-                    let w=img.width, h=img.height;
+            const reader=new FileReader(); reader.readAsDataURL(file);
+            reader.onload=(e)=>{
+                const img=new Image(); img.src=e.target.result;
+                img.onload=()=>{
+                    const c=document.createElement('canvas');
+                    let w=img.width,h=img.height;
                     if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}
                     c.width=w;c.height=h;
                     c.getContext('2d').drawImage(img,0,0,w,h);
                     resolve(c.toDataURL('image/jpeg',quality));
                 };
-                img.onerror = reject;
+                img.onerror=reject;
             };
-            reader.onerror = reject;
+            reader.onerror=reject;
         });
     }
+
     $('depositSlipInput').addEventListener('change', async (e) => {
         const file = e.target.files[0]; if(!file) return;
         if(file.size > MAX_FILE_SIZE){showToast('Image too large! Max 2MB','error');$('depositSlipInput').value='';return;}
         try {
+            const sizeKB = (file.size / 1024).toFixed(1);
+            $('depositSlipSize').textContent = sizeKB + ' KB';
             depositSlipBase64 = await compressImage(file);
             $('depositSlipThumb').src = depositSlipBase64;
             $('depositSlipName').textContent = file.name;
             $('depositSlipPreview').classList.add('has-image');
-        } catch(err) { showToast('Error processing image','error'); }
+            if (!$('depositTrxNo').value.trim()) {
+                runOcrExtraction(depositSlipBase64);
+            }
+        } catch(err) {
+            showToast('Error processing image','error');
+            console.error(err);
+        }
     });
-    window.clearDepositSlip = () => { depositSlipBase64=null; $('depositSlipInput').value=''; $('depositSlipPreview').classList.remove('has-image'); $('depositSlipThumb').src=''; };
+
+    $('depositTrxNo').addEventListener('input', () => {
+        $('depositTrxNo').classList.remove('trx-auto-filled');
+    });
+
+    window.clearDepositSlip = () => {
+        depositSlipBase64=null; $('depositSlipInput').value='';
+        $('depositSlipPreview').classList.remove('has-image');
+        $('depositSlipThumb').src=''; $('depositSlipSize').textContent='';
+        $('ocrStatusBar').className = 'ocr-status-bar d-none';
+        $('ocrRawText').classList.remove('visible');
+        lastOcrRawText = '';
+    };
     window.openDepositModal = () => { if(depositSlipBase64){$('imgPreviewImg').src=depositSlipBase64;$('imgPreviewModal').classList.add('open');} };
 
+    // ================================================================
     // DEPOSIT FORM
+    // ================================================================
     $('depositBank').addEventListener('change', () => {
-        const bank = banks.find(b=>b.id===$('depositBank').value);
-        $('depositAccNo').value = bank ? bank.accountNo||'' : '';
-        $('depositBranch').value = bank ? bank.branch||'' : '';
+        const bank=banks.find(b=>b.id===$('depositBank').value);
+        $('depositAccNo').value=bank?bank.accountNo||'':'';
+        $('depositBranch').value=bank?bank.branch||'':'';
     });
     $('depositForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const id = $('depositId').value, bankId = $('depositBank').value;
-        const bank = banks.find(b=>b.id===bankId);
+        const id=$('depositId').value, bankId=$('depositBank').value;
+        const bank=banks.find(b=>b.id===bankId);
         if(!bank){showToast('Select a valid bank','error');return;}
-        const data = { month:$('depositMonth').value, date:$('depositDate').value, bankId, bankName:bank.name, accountNo:$('depositAccNo').value, branch:$('depositBranch').value, amount:parseFloat($('depositAmount').value), territory:$('depositTerritory').value.trim(), slipImage:depositSlipBase64||null };
-        try {
+        const data={
+            month:$('depositMonth').value, date:$('depositDate').value,
+            bankId, bankName:bank.name, accountNo:$('depositAccNo').value, branch:$('depositBranch').value,
+            amount:parseFloat($('depositAmount').value), territory:$('depositTerritory').value.trim(),
+            slipImage:depositSlipBase64||null, trxNo:$('depositTrxNo').value.trim()||null
+        };
+        try{
             if(id){await update(ref(db,'bankDeposits/'+id),data);showToast('Deposit Updated','success');}
             else{await push(bankDepositsRef,data);showToast('Deposit Added','success');}
             resetDepositForm();
-        } catch(e) { showToast('Error saving deposit','error'); }
+        }catch(e){showToast('Error saving deposit','error');}
     });
     window.editDeposit = (id) => {
-        const d = bankDeposits.find(x=>x.id===id); if(!d) return;
+        const d=bankDeposits.find(x=>x.id===id); if(!d) return;
         navigateTo('deposit');
         $('depositId').value=d.id; $('depositMonth').value=d.month||''; $('depositDate').value=d.date||'';
         $('depositBank').value=d.bankId; $('depositBank').dispatchEvent(new Event('change'));
         $('depositAmount').value=d.amount; $('depositTerritory').value=d.territory||'';
-        if(d.slipImage){depositSlipBase64=d.slipImage;$('depositSlipThumb').src=d.slipImage;$('depositSlipName').textContent='Existing Slip';$('depositSlipPreview').classList.add('has-image');}
-        else clearDepositSlip();
+        $('depositTrxNo').value=d.trxNo||'';
+        if(d.trxNo)$('depositTrxNo').classList.add('trx-auto-filled');
+        else $('depositTrxNo').classList.remove('trx-auto-filled');
+        if(d.slipImage){
+            depositSlipBase64=d.slipImage;
+            $('depositSlipThumb').src=d.slipImage;
+            $('depositSlipName').textContent='Existing Slip';
+            $('depositSlipSize').textContent='';
+            $('depositSlipPreview').classList.add('has-image');
+            if(d.trxNo){
+                $('ocrStatusBar').className='ocr-status-bar found';
+                $('ocrStatusBar').innerHTML=`✅ <span>Existing Trx No:</span> <span class="ocr-value">${d.trxNo}</span>`;
+            } else {
+                $('ocrStatusBar').className='ocr-status-bar d-none';
+            }
+        } else clearDepositSlip();
         $('depositFormTitle').textContent='Edit Deposit'; $('submitDepositBtn').textContent='Update Deposit'; $('cancelDepositBtn').classList.remove('d-none');
     };
     window.resetDepositForm = () => {
         $('depositForm').reset(); $('depositId').value='';
-        const now=new Date(); $('depositMonth').value=now.toISOString().slice(0,7); $('depositDate').value=now.toISOString().slice(0,10);
-        $('depositAccNo').value=''; $('depositBranch').value='';
+        const n=new Date(); $('depositMonth').value=n.toISOString().slice(0,7); $('depositDate').value=n.toISOString().slice(0,10);
+        $('depositAccNo').value=''; $('depositBranch').value=''; $('depositTrxNo').value='';
+        $('depositTrxNo').classList.remove('trx-auto-filled');
         $('depositFormTitle').textContent='Add New Deposit'; $('submitDepositBtn').textContent='Save Deposit'; $('cancelDepositBtn').classList.add('d-none');
+        $('ocrStatusBar').className='ocr-status-bar d-none';
+        $('ocrRawText').classList.remove('visible');
+        lastOcrRawText='';
         clearDepositSlip();
     };
 
-    // STATEMENT
+    // ================================================================
+    // STATEMENT TABLE
+    // ================================================================
     function getFilteredData() {
-        const fm=$('depositFilterMonth').value, fd=$('depositFilterFromDate').value, td=$('depositFilterToDate').value, bid=$('depositFilterBank').value;
+        const fm=$('depositFilterMonth').value,fd=$('depositFilterFromDate').value,td=$('depositFilterToDate').value,bid=$('depositFilterBank').value;
         let f=[...bankDeposits];
-        if(fm) f=f.filter(d=>d.month===fm);
-        if(fd) f=f.filter(d=>(d.date||'')>=fd);
-        if(td) f=f.filter(d=>(d.date||'')<=td);
-        if(bid) f=f.filter(d=>d.bankId===bid);
+        if(fm)f=f.filter(d=>d.month===fm);
+        if(fd)f=f.filter(d=>(d.date||'')>=fd);
+        if(td)f=f.filter(d=>(d.date||'')<=td);
+        if(bid)f=f.filter(d=>d.bankId===bid);
         return f;
     }
     function renderDeposits() {
-        const f = getFilteredData(); currentFilteredData = f;
-        const sorted = [...f].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-        const tb = $('depositTableBody'); tb.innerHTML = '';
+        const f=getFilteredData(); currentFilteredData=f;
+        const sorted=[...f].sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const tb=$('depositTableBody'); tb.innerHTML='';
         selectedDepositIds.clear(); updateBulkDeleteUI(); $('masterCheck').checked=false;
         let total=0;
-        if(!sorted.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No deposits found</td></tr>';}
-        else sorted.forEach(d => {
+        if(!sorted.length)tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No deposits found</td></tr>';
+        else sorted.forEach(d=>{
             total+=parseFloat(d.amount)||0;
             const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'';
             let slipHtml='<span style="color:#cbd5e1">-</span>';
-            if(d.slipImage) slipHtml=`<img src="${d.slipImage}" class="table-thumb" onclick="viewDepositImage('${d.id}')" alt="Slip">`;
+            if(d.slipImage)slipHtml=`<img src="${d.slipImage}" class="table-thumb" onclick="viewDepositImage('${d.id}')" alt="Slip">`;
+            const tx=d.trxNo?`<span class="trx-no-cell" title="${d.trxNo}">${d.trxNo}</span>`:'<span style="color:#cbd5e1">-</span>';
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td><td>${ds}</td><td style="font-weight:600">${d.bankName}</td><td>${slipHtml}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td><td style="text-align:right"><button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
+            tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td><td>${ds}</td><td style="font-weight:600">${d.bankName}</td><td>${tx}</td><td>${slipHtml}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td><td style="text-align:right"><button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
             tb.appendChild(tr);
         });
-        $('depositTotalAmount').textContent = fmt(total);
+        $('depositTotalAmount').textContent=fmt(total);
     }
-    window.viewDepositImage = (id) => { const d=bankDeposits.find(x=>x.id===id); if(d&&d.slipImage){$('imgPreviewImg').src=d.slipImage;$('imgPreviewModal').classList.add('open');} };
-    window.clearDepositFilter = () => { $('depositFilterMonth').value=''; $('depositFilterFromDate').value=''; $('depositFilterToDate').value=''; $('depositFilterBank').value=''; renderDeposits(); };
+    window.viewDepositImage = (id) => {const d=bankDeposits.find(x=>x.id===id);if(d&&d.slipImage){$('imgPreviewImg').src=d.slipImage;$('imgPreviewModal').classList.add('open');}};
+    window.clearDepositFilter = () => {$('depositFilterMonth').value='';$('depositFilterFromDate').value='';$('depositFilterToDate').value='';$('depositFilterBank').value='';renderDeposits();};
 
+    // ================================================================
     // BULK DELETE
-    window.toggleRowSelection = (cb) => { if(cb.checked) selectedDepositIds.add(cb.dataset.id); else selectedDepositIds.delete(cb.dataset.id); updateBulkDeleteUI(); };
-    window.toggleSelectAll = (src) => { document.querySelectorAll('.row-check').forEach(cb=>{cb.checked=src.checked;if(src.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);}); updateBulkDeleteUI(); };
+    // ================================================================
+    window.toggleRowSelection = (cb) => {if(cb.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);updateBulkDeleteUI();};
+    window.toggleSelectAll = (src) => {document.querySelectorAll('.row-check').forEach(cb=>{cb.checked=src.checked;if(src.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);});updateBulkDeleteUI();};
     function updateBulkDeleteUI() {
-        $('selectedCount').textContent = selectedDepositIds.size;
+        $('selectedCount').textContent=selectedDepositIds.size;
         const btn=$('bulkDeleteBtn');
         if(selectedDepositIds.size>0){btn.classList.remove('d-none');btn.disabled=false;}else{btn.classList.add('d-none');btn.disabled=true;}
         const cbs=document.querySelectorAll('.row-check');
@@ -713,213 +1153,137 @@
         else{$('masterCheck').checked=false;$('masterCheck').indeterminate=false;}
     }
     window.handleBulkDelete = async () => {
-        const count=selectedDepositIds.size; if(!count) return;
-        if(!confirm(`Delete ${count} selected deposits?`)) return;
-        let ok=0,fail=0; $('bulkDeleteBtn').disabled=true; $('bulkDeleteBtn').textContent="Deleting...";
-        try {
-            for(const id of selectedDepositIds){try{await remove(ref(db,'bankDeposits/'+id));ok++;}catch(e){fail++;}}
-            showToast(fail===0?`Deleted ${ok} deposits`:`Deleted ${ok}, Failed ${fail}`,fail===0?'success':'error');
-            selectedDepositIds.clear(); renderDeposits();
-        } catch(e){showToast("Delete failed: "+e.message,'error');}
-        finally{$('bulkDeleteBtn').disabled=false;$('bulkDeleteBtn').innerHTML=`🗑️ Delete Selected (<span id="selectedCount">0</span>)`;}
+        const c=selectedDepositIds.size;if(!c)return;
+        if(!confirm(`Delete ${c} selected deposits?`))return;
+        let ok=0,fail=0;$('bulkDeleteBtn').disabled=true;$('bulkDeleteBtn').textContent="Deleting...";
+        try{for(const id of selectedDepositIds){try{await remove(ref(db,'bankDeposits/'+id));ok++;}catch(e){fail++;}}
+        showToast(fail===0?`Deleted ${ok} deposits`:`Deleted ${ok}, Failed ${fail}`,fail===0?'success':'error');selectedDepositIds.clear();renderDeposits();}
+        catch(e){showToast("Delete failed: "+e.message,'error');}
+        finally{$('bulkDeleteBtn').disabled=false;$('bulkDeleteBtn').innerHTML=`🗑️ Delete (<span id="selectedCount">0</span>)`;}
     };
 
+    // ================================================================
     // SLIP GENERATION
+    // ================================================================
     window.generateDepositSlip = (isDirect=false) => {
         let f=currentFilteredData;
         const fm=$('depositFilterMonth').value,fd=$('depositFilterFromDate').value,td=$('depositFilterToDate').value,bid=$('depositFilterBank').value;
         const bnf=bid?(banks.find(b=>b.id===bid)?.name||''):'All Banks';
         let ts='';
-        if(fd&&td) ts=`${new Date(fd).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})} to ${new Date(td).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}`;
+        if(fd&&td)ts=`${new Date(fd).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})} to ${new Date(td).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'})}`;
         else if(fm){const[y,m]=fm.split('-');ts=`${new Date(y,m-1,1).toLocaleString('default',{month:'long'})} ${y}`;}
         else ts='All Records';
         currentReportTitle=`Bank Deposit Slip - ${bnf} (${ts})`;
         $('bankRptTitle').textContent=currentReportTitle;
-        const tb=$('bankRptTableBody'); tb.innerHTML=''; let total=0; currentSummaryData={};
+        const tb=$('bankRptTableBody');tb.innerHTML='';let total=0;currentSummaryData={};
         const sorted=[...f].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-        sorted.forEach(d=>{const a=parseFloat(d.amount)||0;total+=a;const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'';const tr=document.createElement('tr');tr.innerHTML=`<td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(a)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;tb.appendChild(tr);const k=`${d.bankName}-${d.accountNo}`;if(!currentSummaryData[k])currentSummaryData[k]=0;currentSummaryData[k]+=a;});
-        const trT=document.createElement('tr');trT.className='report-grand-total';trT.innerHTML=`<td colspan="3" style="text-align:center;font-weight:bold;">Total</td><td style="text-align:center;">${fmt(total)}</td><td colspan="2"></td>`;tb.appendChild(trT);
-        const oldTfoot=document.querySelector('#bankReportPaper tfoot');if(oldTfoot)oldTfoot.remove();
-        if(isDirect) window.print(); else $('slipPreviewModal').classList.add('open');
+        sorted.forEach(d=>{
+            const a=parseFloat(d.amount)||0;total+=a;
+            const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'';
+            const tr=document.createElement('tr');
+            tr.innerHTML=`<td>${ds}</td><td style="font-family:'Consolas',monospace;font-size:10px;letter-spacing:0.3px">${d.trxNo||''}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(a)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;
+            tb.appendChild(tr);
+            const k=`${d.bankName}-${d.accountNo}`;if(!currentSummaryData[k])currentSummaryData[k]=0;currentSummaryData[k]+=a;
+        });
+        const trT=document.createElement('tr');trT.className='report-grand-total';
+        trT.innerHTML=`<td colspan="4" style="text-align:center;font-weight:bold;">Total</td><td style="text-align:center;">${fmt(total)}</td><td colspan="2"></td>`;
+        tb.appendChild(trT);
+        if(isDirect)window.print();else $('slipPreviewModal').classList.add('open');
     };
-    window.printDirectSlip = () => generateDepositSlip(true);
-    window.printGeneratedSlip = () => window.print();
-    window.closeSlipPreview = () => $('slipPreviewModal').classList.remove('open');
+    window.printDirectSlip=()=>generateDepositSlip(true);
+    window.printGeneratedSlip=()=>window.print();
+    window.closeSlipPreview=()=>$('slipPreviewModal').classList.remove('open');
 
+    // ================================================================
     // WHATSAPP & EXCEL
+    // ================================================================
     window.shareSummaryWhatsApp = () => {
-        let text=`*${currentReportTitle}*\nDepot: Kushtia\n\n`, total=0;
-        if(!Object.keys(currentSummaryData).length) text+='(No entries)\n';
+        let text=`*${currentReportTitle}*\nDepot: Kushtia\n\n`,total=0;
+        if(!Object.keys(currentSummaryData).length)text+='(No entries)\n';
         else for(const b in currentSummaryData){text+=`🏦 ${b}: ৳ ${currentSummaryData[b].toFixed(2)}\n`;total+=currentSummaryData[b];}
-        text+=`\n*Total Amount: ৳ ${total.toFixed(2)}*`;
+        text+=`\n*Total: ৳ ${total.toFixed(2)}*`;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,'_blank');
     };
     window.shareWhatsAppDirect = () => {
         let text=`*Depot: Kushtia*\n`;
-        let fDate=$('depositFilterFromDate').value,tDate=$('depositFilterToDate').value,mVal=$('depositFilterMonth').value,bId=$('depositFilterBank').value;
-        let wd=[...bankDeposits]; if(bId) wd=wd.filter(d=>d.bankId===bId);
+        let fD=$('depositFilterFromDate').value,tD=$('depositFilterToDate').value,mV=$('depositFilterMonth').value,bI=$('depositFilterBank').value;
+        let wd=[...bankDeposits];if(bI)wd=wd.filter(d=>d.bankId===bI);
         let hdt='',fl='Today Total Bank';
-        if(mVal){wd=wd.filter(d=>d.month===mVal);const[y,m]=mVal.split('-');hdt=`${new Date(y,m-1,1).toLocaleString('default',{month:'long'})} ${y}`;fl='Total Bank';}
-        else if(fDate&&tDate){wd=wd.filter(d=>(d.date||'')>=fDate&&(d.date||'')<=tDate);hdt=`${fDate} to ${tDate}`;fl='Total Bank';}
-        else if(fDate){wd=wd.filter(d=>d.date===fDate);const dobj=new Date(fDate),day=String(dobj.getDate()).padStart(2,'0'),ms=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],mn=ms[dobj.getMonth()],yr=String(dobj.getFullYear()).slice(-2),fmn=new Date(dobj.getFullYear(),dobj.getMonth(),1).toLocaleString('default',{month:'long'});hdt=`${day}-${mn}-${yr} (${fmn})`;fl='Today Total Bank';}
+        if(mV){wd=wd.filter(d=>d.month===mV);const[y,m]=mV.split('-');hdt=`${new Date(y,m-1,1).toLocaleString('default',{month:'long'})} ${y}`;fl='Total Bank';}
+        else if(fD&&tD){wd=wd.filter(d=>(d.date||'')>=fD&&(d.date||'')<=tD);hdt=`${fD} to ${tD}`;fl='Total Bank';}
+        else if(fD){wd=wd.filter(d=>d.date===fD);const o=new Date(fD),dy=String(o.getDate()).padStart(2,'0'),ms=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],mn=ms[o.getMonth()],yr=String(o.getFullYear()).slice(-2);hdt=`${dy}-${mn}-${yr}`;fl='Today Total Bank';}
         else{hdt='All Time';fl='Total Bank';}
         text+=`*Date : ${hdt}*\n`;
         let bm=[];[...banks].sort((a,b)=>a.name.localeCompare(b.name)).forEach(bk=>{const s=wd.filter(d=>d.bankId===bk.id).reduce((a,c)=>a+(parseFloat(c.amount)||0),0);bm.push({...bk,sum:s});});
         let btr=bm.filter(b=>b.sum>0),gt=0;
-        if(!btr.length) text+='(No deposits found)\n';
+        if(!btr.length)text+='(No deposits found)\n';
         else btr.forEach(b=>{gt+=b.sum;text+=`🏦 ${b.name}  = ৳ ${b.sum.toFixed(2)}\n`;});
         text+=`${fl} : ৳ ${gt.toFixed(2)}`;
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`,'_blank');
     };
     window.exportSummaryExcel = () => {
-        let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px;}</style></head><body>`;
-        html+=`<h2 style="text-align:center">${currentReportTitle}</h2><table><thead><tr><th>Bank Name</th><th>Total Amount (Tk.)</th></tr></thead><tbody>`;
-        let total=0;
-        if(!Object.keys(currentSummaryData).length) html+=`<tr><td colspan="2" style="text-align:center">No Data</td></tr>`;
-        else for(const b in currentSummaryData){html+=`<tr><td>${b}</td><td>${currentSummaryData[b].toFixed(2)}</td></tr>`;total+=currentSummaryData[b];}
-        html+=`<tr style="font-weight:bold;background:#f0f0f0;"><td>Total</td><td>${total.toFixed(2)}</td></tr></tbody></table></body></html>`;
-        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel"}));a.download=`Bank_Summary_${Date.now()}.xls`;a.click();
+        let h=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px}</style></head><body>`;
+        h+=`<h2 style="text-align:center">${currentReportTitle}</h2><table><thead><tr><th>Bank Name</th><th>Total (Tk.)</th></tr></thead><tbody>`;
+        let t=0;if(!Object.keys(currentSummaryData).length)h+='<tr><td colspan="2" style="text-align:center">No Data</td></tr>';
+        else for(const b in currentSummaryData){h+=`<tr><td>${b}</td><td>${currentSummaryData[b].toFixed(2)}</td></tr>`;t+=currentSummaryData[b];}
+        h+=`<tr style="font-weight:bold;background:#f0f0f0"><td>Total</td><td>${t.toFixed(2)}</td></tr></tbody></table></body></html>`;
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:"application/vnd.ms-excel"}));a.download=`Bank_Summary_${Date.now()}.xls`;a.click();
     };
     window.exportBankExcel = () => {
         const sorted=[...currentFilteredData].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-        let html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse;}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px;}</style></head><body>`;
-        html+=`<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
-        if(!sorted.length) html+=`<tr><td colspan="5" style="text-align:center">No Data</td></tr>`;
-        else sorted.forEach(d=>{const ds=d.date?new Date(d.date).toLocaleDateString('en-GB'):'';html+=`<tr><td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;});
-        html+=`</tbody></table></body></html>`;
-        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([html],{type:"application/vnd.ms-excel"}));a.download=`Bank_Statement_${Date.now()}.xls`;a.click();
+        let h=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px}</style></head><body>`;
+        h+=`<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Trx No</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
+        if(!sorted.length)h+='<tr><td colspan="6" style="text-align:center">No Data</td></tr>';
+        else sorted.forEach(d=>{const ds=d.date?new Date(d.date).toLocaleDateString('en-GB'):'';h+=`<tr><td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.trxNo||''}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;});
+        h+=`</tbody></table></body></html>`;
+        const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:"application/vnd.ms-excel"}));a.download=`Bank_Statement_${Date.now()}.xls`;a.click();
     };
 
     // ================================================================
-    // ★★★ NEW: MONTH-WISE SLIPS DOWNLOAD AS ZIP ★★★
+    // SLIPS ZIP DOWNLOAD
     // ================================================================
     window.downloadMonthSlips = async () => {
-        const monthVal = $('depositFilterMonth').value;
-
-        // Validation: Month must be selected
-        if (!monthVal) {
-            showToast('Please select a Month first from the filter', 'error');
-            return;
-        }
-
-        // Filter deposits for this month that have slip images
-        let monthDeposits = bankDeposits.filter(d => d.month === monthVal && d.slipImage);
-
-        // Also apply bank filter if selected
-        const bankId = $('depositFilterBank').value;
-        if (bankId) monthDeposits = monthDeposits.filter(d => d.bankId === bankId);
-
-        if (monthDeposits.length === 0) {
-            showToast('No slips found for this month', 'error');
-            return;
-        }
-
-        // Sort by date DESCENDING (Z to A → newest first)
-        monthDeposits.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
-        // Generate folder name: "Bank Deposit Slip May-26"
-        const [year, month] = monthVal.split('-');
-        const monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'long' });
-        const shortYear = year.slice(-2);
-        const folderName = `Bank Deposit Slip ${monthName}-${shortYear}`;
-        const zipFileName = `${folderName}.zip`;
-
-        // Show progress
-        const progressWrap = $('downloadProgressWrap');
-        const progressBar = $('dlProgressBar');
-        const progressText = $('dlProgressText');
-        const progressTitle = $('dlProgressTitle');
-        progressWrap.classList.add('open');
-        progressTitle.textContent = `Preparing ${monthDeposits.length} slips...`;
-        progressBar.style.width = '0%';
-        progressText.textContent = `0 / ${monthDeposits.length} slips`;
-
-        try {
-            const zip = new JSZip();
-            const folder = zip.folder(folderName);
-
-            // Track same-date-same-bank to avoid filename collision
-            const nameCount = {};
-
-            for (let i = 0; i < monthDeposits.length; i++) {
-                const d = monthDeposits[i];
-
-                // Extract base64 data (remove data:image/xxx;base64, prefix)
-                const base64Data = d.slipImage.split(',')[1];
-                
-                // Determine extension from mime type
-                const mimeMatch = d.slipImage.match(/data:(image\/\w+);/);
-                const ext = mimeMatch ? mimeMatch[1].split('/')[1] : 'jpg';
-                const safeExt = (ext === 'jpeg') ? 'jpg' : ext;
-
-                // Build filename: YYYY-MM-DD_BankName.jpg
-                const datePart = d.date || '0000-00-00';
-                // Clean bank name for filename
-                let cleanBank = (d.bankName || 'Unknown').replace(/[^a-zA-Z0-9]/g, '');
-                let fileName = `${datePart}_${cleanBank}.${safeExt}`;
-
-                // Handle duplicate filenames (same date + same bank)
-                const key = fileName;
-                if (nameCount[key] !== undefined) {
-                    nameCount[key]++;
-                    const dotIdx = fileName.lastIndexOf('.');
-                    fileName = fileName.substring(0, dotIdx) + `_${nameCount[key]}` + fileName.substring(dotIdx);
-                } else {
-                    nameCount[key] = 0;
-                }
-
-                // Add to zip
-                folder.file(fileName, base64Data, { base64: true });
-
-                // Update progress
-                const pct = Math.round(((i + 1) / monthDeposits.length) * 100);
-                progressBar.style.width = pct + '%';
-                progressText.textContent = `${i + 1} / ${monthDeposits.length} slips`;
+        const mv=$('depositFilterMonth').value;
+        if(!mv){showToast('Please select a Month first','error');return;}
+        let md=bankDeposits.filter(d=>d.month===mv&&d.slipImage);
+        const bi=$('depositFilterBank').value;if(bi)md=md.filter(d=>d.bankId===bi);
+        if(!md.length){showToast('No slips found for this month','error');return;}
+        md.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+        const[y,mo]=mv.split('-'),mn=new Date(y,mo-1,1).toLocaleString('default',{month:'long'}),sy=y.slice(-2);
+        const fn=`Bank Deposit Slip ${mn}-${sy}`,zf=fn+'.zip';
+        const pw=$('downloadProgressWrap'),pb=$('dlProgressBar'),pt=$('dlProgressText'),pi=$('dlProgressTitle');
+        pw.classList.add('open');pi.textContent=`Preparing ${md.length} slips...`;pb.style.width='0%';pt.textContent=`0 / ${md.length} slips`;
+        try{
+            const zip=new JSZip(),folder=zip.folder(fn);const nc={};
+            for(let i=0;i<md.length;i++){
+                const d=md[i],b64=d.slipImage.split(',')[1];
+                const mm=d.slipImage.match(/data:(image\/\w+);/),ext=mm?mm[1].split('/')[1]:'jpg',se=ext==='jpeg'?'jpg':ext;
+                const dp=d.date||'0000-00-00',cb=(d.bankName||'Unknown').replace(/[^a-zA-Z0-9]/g,'');
+                let fileName=d.trxNo?`${dp}_${cb}_${d.trxNo.replace(/[^a-zA-Z0-9\-_]/g,'')}.${se}`:`${dp}_${cb}.${se}`;
+                if(nc[fileName]!==undefined){nc[fileName]++;const di=fileName.lastIndexOf('.');fileName=fileName.substring(0,di)+`_${nc[fileName]}`+fileName.substring(di);}
+                else nc[fileName]=0;
+                folder.file(fileName,b64,{base64:true});
+                const p=Math.round(((i+1)/md.length)*100);pb.style.width=p+'%';pt.textContent=`${i+1} / ${md.length} slips`;
             }
-
-            progressTitle.textContent = 'Generating ZIP file...';
-
-            // Generate and download
-            const blob = await zip.generateAsync({
-                type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
-            }, (metadata) => {
-                // Zip generation progress
-                const pct = Math.round(metadata.percent);
-                progressBar.style.width = pct + '%';
-                progressText.textContent = `Compressing... ${pct}%`;
-            });
-
-            // Trigger download
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = zipFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showToast(`Downloaded ${monthDeposits.length} slips as ${zipFileName}`, 'success');
-
-        } catch (err) {
-            console.error('ZIP Error:', err);
-            showToast('Error creating ZIP: ' + err.message, 'error');
-        } finally {
-            progressWrap.classList.remove('open');
-        }
+            pi.textContent='Generating ZIP...';
+            const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},m=>{pb.style.width=Math.round(m.percent)+'%';pt.textContent=`Compressing... ${Math.round(m.percent)}%`;});
+            const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=zf;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+            showToast(`Downloaded ${md.length} slips as ${zf}`,'success');
+        }catch(err){console.error('ZIP Error:',err);showToast('Error: '+err.message,'error');}
+        finally{pw.classList.remove('open');}
     };
 
+    // ================================================================
     // IMPORT EXCEL
+    // ================================================================
     window.downloadTemplate = () => {
-        const td=[{"Month":"2023-10","Date":"2023-10-27","Bank Name":"Sonali Bank","Amount":5000,"Territory":"Sadar"},{"Month":"","Date":"2023-12-25","Bank Name":"Dutch Bangla Bank","Amount":12000.5,"Territory":"Kushtia"}];
+        const td=[{"Month":"2025-01","Date":"2025-01-15","Bank Name":"Sonali Bank","Trx No":"TRX20250115001","Amount":5000,"Territory":"Sadar"},{"Month":"2025-01","Date":"2025-01-16","Bank Name":"Dutch Bangla Bank","Trx No":"DBBL8801234","Amount":12000.5,"Territory":"Kushtia"}];
         const ws=XLSX.utils.json_to_sheet(td),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,"Deposit_Import_Template.xlsx");
     };
-    window.openImportModal = () => { $('importModal').classList.add('open'); $('importPreviewContainer').classList.add('d-none'); $('importFileName').textContent="No file selected"; $('excelUpload').value=""; };
-    window.closeImportModal = () => { $('importModal').classList.remove('open'); parsedImportData=[]; };
+    window.openImportModal = () => {$('importModal').classList.add('open');$('importPreviewContainer').classList.add('d-none');$('importFileName').textContent="No file selected";$('excelUpload').value="";};
+    window.closeImportModal = () => {$('importModal').classList.remove('open');parsedImportData=[];};
     window.handleFileSelect = (e) => {
-        const file=e.target.files[0]; if(!file) return;
+        const file=e.target.files[0];if(!file)return;
         $('importFileName').textContent=file.name;
         const reader=new FileReader();
         reader.onload=(evt)=>{const wb=XLSX.read(new Uint8Array(evt.target.result),{type:'array'}),ws=wb.Sheets[wb.SheetNames[0]],json=XLSX.utils.sheet_to_json(ws,{raw:false,dateNF:'yyyy-mm-dd'});processImportData(json);};
@@ -928,46 +1292,52 @@
     function processImportData(data) {
         parsedImportData=[];const tbody=$('importTableBody');tbody.innerHTML='';let vc=0;
         data.forEach((row,idx)=>{
-            let rm=(row['Month']||row['month']||'').trim(),rd=row['Date']||row['date']||'',bn=(row['Bank Name']||row['Bank']||row['bankName']||'').trim(),ra=row['Amount']||row['amount']||0,ter=(row['Territory']||row['territory']||'').trim();
+            let rm=(row['Month']||row['month']||'').trim(),rd=row['Date']||row['date']||'',bn=(row['Bank Name']||row['Bank']||row['bankName']||'').trim();
+            let trx=(row['Trx No']||row['TrxNo']||row['trxNo']||row['Slip No']||row['SlipNo']||row['slipNo']||'').trim();
+            let ra=row['Amount']||row['amount']||0,ter=(row['Territory']||row['territory']||'').trim();
             let errs=[],valid=true,fd='',fm='';
-            if(rm&&/^\d{4}-\d{2}$/.test(rm)){fm=rm;const dobj=new Date(rd);if(!isNaN(dobj.getTime()))fd=dobj.toISOString().split('T')[0];else fd=fm+"-01";}
-            else if(rm){errs.push("Invalid Month (YYYY-MM)");valid=false;}
-            else{const dobj=new Date(rd);if(!isNaN(dobj.getTime())){fd=dobj.toISOString().split('T')[0];fm=fd.substring(0,7);}else{errs.push("Missing Date/Month");valid=false;}}
+            if(rm&&/^\d{4}-\d{2}$/.test(rm)){fm=rm;const d=new Date(rd);if(!isNaN(d.getTime()))fd=d.toISOString().split('T')[0];else fd=fm+"-01";}
+            else if(rm){errs.push("Invalid Month");valid=false;}
+            else{const d=new Date(rd);if(!isNaN(d.getTime())){fd=d.toISOString().split('T')[0];fm=fd.substring(0,7);}else{errs.push("Missing Date/Month");valid=false;}}
             const bo=banks.find(b=>b.name.toLowerCase()===bn.toLowerCase());
             if(!bn){errs.push("Missing Bank");valid=false;}else if(!bo){errs.push("Bank not found");valid=false;}
             let amt=parseFloat(ra);if(isNaN(amt)||amt<=0){errs.push("Invalid Amount");valid=false;}
             if(valid)vc++;
-            const pr={originalIndex:idx,month:fm,date:fd,bankId:bo?bo.id:null,bankName:bn,accountNo:bo?bo.accountNo:'',branch:bo?bo.branch:'',amount:amt,territory:ter,isValid:valid,errors:errs.join(", ")};
-            parsedImportData.push(pr);
+            parsedImportData.push({originalIndex:idx,month:fm,date:fd,bankId:bo?bo.id:null,bankName:bn,accountNo:bo?bo.accountNo:'',branch:bo?bo.branch:'',amount:amt,territory:ter,trxNo:trx||null,isValid:valid,errors:errs.join(", ")});
             const tr=document.createElement('tr');tr.className=valid?'row-valid':'row-error';
-            tr.innerHTML=`<td style="text-align:center">${valid?'✅':'❌'}</td><td>${fm}</td><td>${fd}</td><td>${bn}</td><td>${amt.toFixed(2)}</td><td>${ter}</td><td style="color:red;font-size:0.8rem">${errs.join(', ')}</td>`;
+            tr.innerHTML=`<td style="text-align:center">${valid?'✅':'❌'}</td><td>${fm}</td><td>${fd}</td><td>${bn}</td><td style="font-family:Consolas,monospace;font-size:0.8rem">${trx||'-'}</td><td>${amt.toFixed(2)}</td><td>${ter}</td><td style="color:red;font-size:0.8rem">${errs.join(', ')}</td>`;
             tbody.appendChild(tr);
         });
-        $('importStatusCount').textContent=`${data.length} rows found`; $('importValidCount').textContent=`${vc} Ready to Import`;
+        $('importStatusCount').textContent=`${data.length} rows found`;$('importValidCount').textContent=`${vc} Ready`;
         $('importPreviewContainer').classList.remove('d-none');
     }
     window.processImport = async () => {
-        const vr=parsedImportData.filter(r=>r.isValid); if(!vr.length){showToast("No valid rows",'error');return;}
-        if(!confirm(`Import ${vr.length} deposits?`)) return;
+        const vr=parsedImportData.filter(r=>r.isValid);if(!vr.length){showToast("No valid rows",'error');return;}
+        if(!confirm(`Import ${vr.length} deposits?`))return;
         let ok=0,fail=0;
-        try{for(const r of vr){try{await push(bankDepositsRef,{month:r.month,date:r.date,bankId:r.bankId,bankName:r.bankName,accountNo:r.accountNo,branch:r.branch,amount:r.amount,territory:r.territory,slipImage:null});ok++;}catch(e){fail++;}}
+        try{for(const r of vr){try{await push(bankDepositsRef,{month:r.month,date:r.date,bankId:r.bankId,bankName:r.bankName,accountNo:r.accountNo,branch:r.branch,amount:r.amount,territory:r.territory,slipImage:null,trxNo:r.trxNo||null});ok++;}catch(e){fail++;}}
         showToast(fail===0?`Imported ${ok} deposits`:`Imported ${ok}, Failed ${fail}`,fail===0?'success':'error');closeImportModal();}
         catch(e){showToast("Import failed: "+e.message,'error');}
     };
 
+    // ================================================================
     // DELETE & MODALS
-    window.confirmDelete = (type,id) => { deleteTarget={type,id}; $('deleteModal').classList.add('open'); };
+    // ================================================================
+    window.confirmDelete = (type,id) => {deleteTarget={type,id};$('deleteModal').classList.add('open');};
     window.closeModal = () => $('deleteModal').classList.remove('open');
     $('confirmDeleteBtn').onclick = async () => {
         try{if(deleteTarget.type==='bank')await remove(ref(db,'banks/'+deleteTarget.id));if(deleteTarget.type==='deposit')await remove(ref(db,'bankDeposits/'+deleteTarget.id));showToast('Deleted','success');closeModal();}
         catch(e){showToast('Error deleting','error');}
     };
-    window.closeImgPreview = (e) => { if(!e||e.target===e.currentTarget||e.target.classList.contains('img-preview-close')) $('imgPreviewModal').classList.remove('open'); };
+    window.closeImgPreview = (e) => {if(!e||e.target===e.currentTarget||e.target.classList.contains('img-preview-close'))$('imgPreviewModal').classList.remove('open');};
 
     function showToast(msg, type='') {
-        const t=$('toast'); t.textContent=msg; t.className='show '+type; setTimeout(()=>t.className='',3000);
+        const t=$('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',3500);
     }
 
+    // ================================================================
+    // INIT
+    // ================================================================
     document.addEventListener('DOMContentLoaded', () => {
         if(!checkSession()) $('loginOverlay').classList.remove('d-none');
         $('depositFilterMonth').addEventListener('change', renderDeposits);
