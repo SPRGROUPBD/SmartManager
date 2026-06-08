@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monico Pharma - Invoice System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root{--primary:#0D7C66;--primary-dark:#095E4D;--primary-light:#E6F5F0;--accent:#D97706;--accent-light:#FEF3C7;--bg:#F1F3F6;--card:#FFFFFF;--text:#1F2937;--muted:#6B7280;--border:#E2E5EA;--danger:#DC2626;--danger-light:#FEE2E2;--success:#059669;--success-light:#D1FAE5;--sidebar-w:260px;--radius:10px}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden}h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+.login-screen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#061F19 0%,#0A2E25 30%,#0D7C66 100%);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:#fff;border-radius:18px;width:100%;max-width:420px;box-shadow:0 30px 80px rgba(0,0,0,.4);overflow:hidden;animation:loginCardIn .5s ease .1s both}
+@keyframes loginCardIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.login-brand{background:linear-gradient(135deg,#0A2E25,#0D7C66);padding:36px 32px 28px;text-align:center}
+.login-brand i{font-size:38px;color:#4ADE80;margin-bottom:12px;display:block}
+.login-brand h1{color:#fff;font-size:22px;letter-spacing:2px}
+.login-brand p{color:rgba(255,255,255,.6);font-size:12px;margin-top:6px;letter-spacing:.5px}
+.login-body{padding:32px}
+.login-tabs{display:flex;gap:0;margin-bottom:24px;background:var(--bg);border-radius:10px;padding:4px}
+.login-tab{flex:1;padding:12px;border:none;background:transparent;border-radius:8px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;color:var(--muted);transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.login-tab.active{background:var(--primary);color:#fff;box-shadow:0 2px 8px rgba(13,124,102,.3)}
+.login-footer{text-align:center;padding:0 32px 24px;font-size:11px;color:#bbb}
+.login-footer .db-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#0A2E25 0%,#0D7C66 100%);color:#fff;position:fixed;top:0;left:0;bottom:0;z-index:100;display:flex;flex-direction:column;transition:transform .3s ease}
+.sidebar-logo{padding:20px 20px 14px;border-bottom:1px solid rgba(255,255,255,.1)}
+.sidebar-logo h2{font-size:16px;letter-spacing:1px}
+.sidebar-logo span{font-size:10px;opacity:.55;display:block;margin-top:3px}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.1)}
+.user-avatar{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;opacity:.55;display:block}
+.sidebar-user .btn-ghost{color:rgba(255,255,255,.5);padding:6px;border-radius:6px}
+.sidebar-user .btn-ghost:hover{color:#fff;background:rgba(255,255,255,.1)}
+.sidebar-nav{flex:1;padding:12px 12px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.sidebar-nav a{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:8px;color:rgba(255,255,255,.65);cursor:pointer;transition:all .2s;font-size:13px;font-weight:500;text-decoration:none;position:relative;overflow:hidden}
+.sidebar-nav a:hover{background:rgba(255,255,255,.1);color:#fff}
+.sidebar-nav a.active{background:rgba(255,255,255,.15);color:#fff;font-weight:600}
+.sidebar-nav a.active::before{content:'';position:absolute;left:0;top:20%;bottom:20%;width:3px;background:var(--accent);border-radius:0 3px 3px 0}
+.sidebar-nav a i{width:20px;text-align:center;font-size:14px}
+.sidebar-footer{padding:14px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;opacity:.5}
+.hamburger{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--primary);color:#fff;border:none;width:42px;height:42px;border-radius:8px;font-size:18px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+.main{margin-left:var(--sidebar-w);flex:1;padding:28px 32px;min-height:100vh}
+.tab-content{display:none;animation:fadeUp .35s ease}.tab-content.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.tab-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+.tab-header h2{font-size:24px;font-weight:700}
+.tab-header-actions{display:flex;gap:10px;flex-wrap:wrap}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.stat-card{background:var(--card);border-radius:var(--radius);padding:18px;border:1px solid var(--border);display:flex;align-items:center;gap:14px;transition:transform .2s,box-shadow .2s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.06)}
+.stat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.stat-icon.green{background:var(--primary-light);color:var(--primary)}.stat-icon.amber{background:var(--accent-light);color:var(--accent)}
+.stat-icon.red{background:var(--danger-light);color:var(--danger)}.stat-icon.blue{background:#DBEAFE;color:#2563EB}.stat-icon.purple{background:#EDE9FE;color:#7C3AED}
+.stat-info h3{font-size:20px;font-weight:800;line-height:1.2}
+.stat-info p{font-size:11px;color:var(--muted);margin-top:2px}
+.filter-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.search-bar{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 14px;flex:1;max-width:400px}
+.search-bar i{color:var(--muted);font-size:14px}
+.search-bar input{border:none;outline:none;flex:1;font-size:14px;font-family:inherit;background:transparent;color:var(--text)}
+.table-wrap{overflow-x:auto;background:var(--card);border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+table th{background:#F7F8FA;padding:11px 14px;text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap}
+table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+table tbody tr{transition:background .15s}table tbody tr:hover{background:#F9FAFB}table tbody tr:last-child td{border-bottom:none}
+.text-center{text-align:center}.text-right{text-align:right}.text-muted{color:var(--muted)}
+.font-mono{font-family:'Space Grotesk',monospace;font-weight:600}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--success-light);color:var(--success)}.badge-red{background:var(--danger-light);color:var(--danger)}
+.badge-amber{background:var(--accent-light);color:var(--accent)}.badge-blue{background:#DBEAFE;color:#2563EB}.badge-purple{background:#EDE9FE;color:#7C3AED}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;border:none;transition:all .2s;white-space:nowrap}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 4px 12px rgba(13,124,102,.3)}
+.btn-accent{background:var(--accent);color:#fff}.btn-accent:hover{background:#B45309;transform:translateY(-1px)}
+.btn-danger{background:var(--danger);color:#fff}.btn-danger:hover{background:#B91C1C}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:#F3F4F6}
+.btn-sm{padding:6px 12px;font-size:12px}.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:6px}
+.btn-ghost{background:transparent;color:var(--muted);border:none;cursor:pointer}.btn-ghost:hover{color:var(--text);background:#F3F4F6}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.3px}
+.form-control{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;color:var(--text);background:#fff;transition:border-color .2s,box-shadow .2s;outline:none}
+.form-control:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(13,124,102,.1)}
+.form-control[readonly]{background:#f3f4f6}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:20px;animation:modalBgIn .2s ease}
+.modal-overlay.show{display:flex}
+@keyframes modalBgIn{from{opacity:0}to{opacity:1}}
+.modal{background:var(--card);border-radius:14px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:modalIn .25s ease}
+.modal-lg{max-width:900px}
+@keyframes modalIn{from{opacity:0;transform:scale(.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:18px;font-weight:700}
+.modal-body{padding:24px}.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.toast-container{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:10px}
+.toast{padding:14px 20px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;display:flex;align-items:center;gap:10px;min-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.15);animation:toastIn .3s ease}
+.toast.success{background:var(--success)}.toast.error{background:var(--danger)}.toast.info{background:#2563EB}
+@keyframes toastIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(40px)}}
+.invoice-builder{display:grid;grid-template-columns:1fr 360px;gap:24px}
+.invoice-left,.invoice-right{display:flex;flex-direction:column;gap:20px}
+.invoice-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.invoice-card h4{font-size:14px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.invoice-card h4 i{color:var(--primary);font-size:15px}
+.product-search-wrap{position:relative}
+.product-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:0 0 8px 8px;max-height:240px;overflow-y:auto;z-index:50;display:none;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+.product-dropdown.show{display:block}
+.product-dropdown-item{padding:10px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #F3F4F6;transition:background .15s;font-size:13px}
+.product-dropdown-item:hover{background:var(--primary-light)}
+.product-dropdown-item .pd-code{font-family:'Space Grotesk',monospace;font-weight:600;color:var(--primary);width:60px}
+.product-dropdown-item .pd-name{flex:1;margin-left:10px}
+.product-dropdown-item .pd-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.pd-stock{font-size:11px;color:var(--muted)}.pd-bonus{font-size:10px;color:var(--accent);font-weight:600}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:14px}
+.summary-row.total{font-weight:800;font-size:16px;border-top:2px solid var(--text);padding-top:14px;margin-top:6px}
+.summary-row .label{color:var(--muted)}.summary-row .value{font-family:'Space Grotesk',monospace;font-weight:600}
+.in-words{font-size:12px;color:var(--muted);margin-top:10px;padding:10px;background:#F9FAFB;border-radius:6px;line-height:1.5}
+.inv-items-table th,.inv-items-table td{padding:7px 8px;font-size:11px}
+.inv-items-table .form-control{padding:5px 6px;font-size:11px;text-align:center}
+.mpo-tag{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--primary-light);border-radius:8px;font-size:13px;color:var(--primary-dark);font-weight:600}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-state i{font-size:40px;margin-bottom:12px;opacity:.4}.empty-state p{font-size:14px}
+.info-banner{padding:12px 16px;border-radius:8px;font-size:13px;display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;line-height:1.5}
+.info-banner.amber{background:var(--accent-light);color:#92400E}
+.info-banner.green{background:var(--success-light);color:#065F46}
+.info-banner i{margin-top:2px;flex-shrink:0}
+.rule-indicator{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap}
+.rule-bonus{background:#DBEAFE;color:#1D4ED8}.rule-disc{background:#FEF3C7;color:#92400E}.rule-none{background:#F3F4F6;color:#9CA3AF}
+
+/* Excel Upload */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFBFC}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:var(--primary-light)}
+.upload-zone i{font-size:40px;color:var(--primary);margin-bottom:12px;display:block}
+.upload-zone p{font-size:14px;color:var(--muted);margin-bottom:4px}
+.upload-zone .fmt{font-size:11px;color:var(--accent);font-weight:600}
+.excel-preview{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin-top:16px}
+.excel-preview table{font-size:11px}
+.excel-preview th{background:var(--primary-light);color:var(--primary);font-size:10px}
+.excel-preview tr.dup td{background:#FEF2F2}
+.excel-preview tr.new td{background:var(--success-light)}
+
+#print-area{display:none}
+@media print{
+    body *{visibility:hidden}
+    #print-area,#print-area *{visibility:visible}
+    #print-area{display:block!important;position:absolute;left:0;top:0;width:100%;padding:1.5cm 1.5cm 1cm;background:#fff}
+    #print-area .pi{font-family:'Times New Roman',Times,serif;font-size:12px;color:#000;line-height:1.5}
+    #print-area .pi-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:12px;border:1px solid #000}
+    #print-area .pi-info-col{padding:6px 10px}
+    #print-area .pi-info-col:nth-child(2){border-left:1px solid #000;border-right:1px solid #000}
+    #print-area .pi-info-col p{margin:2px 0;font-size:11px}
+    #print-area .pi-info-col .lbl{font-weight:bold}
+    #print-area .pi-table{width:100%;border-collapse:collapse;margin-bottom:12px}
+    #print-area .pi-table th,#print-area .pi-table td{border:1px solid #000;padding:5px 6px;font-size:10px;text-align:center;vertical-align:middle}
+    #print-area .pi-table th{background:#E8E8E8;font-weight:bold;text-transform:uppercase;font-size:9px;letter-spacing:.3px}
+    #print-area .pi-table .t-left{text-align:left}
+    #print-area .pi-summary{margin-left:auto;width:280px;border:1px solid #000}
+    #print-area .pi-summary td{border:none;padding:4px 10px;font-size:11px}
+    #print-area .pi-summary .eq{border-bottom:1px dotted #000}
+    #print-area .pi-summary .net-row{border-top:2px solid #000;font-weight:bold;font-size:13px}
+    #print-area .pi-words{margin-top:10px;font-size:11px;font-style:italic}
+}
+@media(max-width:1024px){.invoice-builder{grid-template-columns:1fr}.form-row-3{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.hamburger{display:flex;align-items:center;justify-content:center}.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.sidebar-overlay.show{display:block}.main{margin-left:0;padding:70px 16px 28px}.tab-header{flex-direction:column;align-items:flex-start}.stats-row{grid-template-columns:1fr 1fr}.form-row,.form-row-3{grid-template-columns:1fr}}
+@keyframes lowPulse{0%,100%{opacity:1}50%{opacity:.6}}.low-stock{animation:lowPulse 2s infinite}
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="loginScreen">
+<div class="login-card">
+    <div class="login-brand"><i class="fas fa-capsules"></i><h1>MONICO PHARMA</h1><p>Kushtia Depot - Invoice System</p></div>
+    <div class="login-body">
+        <div class="login-tabs">
+            <button class="login-tab active" data-mode="admin" onclick="setLoginMode('admin')"><i class="fas fa-shield-halved"></i> System Admin</button>
+            <button class="login-tab" data-mode="mpo" onclick="setLoginMode('mpo')"><i class="fas fa-user-tie"></i> MPO Login</button>
+        </div>
+        <div class="form-group"><label id="loginIdLabel">Admin ID</label><input type="text" class="form-control" id="loginId" placeholder="Enter Admin ID" autofocus></div>
+        <div class="form-group"><label>Password</label><input type="password" class="form-control" id="loginPwd" placeholder="Enter password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <button class="btn btn-primary" id="loginBtn" onclick="doLogin()" style="width:100%;justify-content:center;padding:14px;font-size:15px;border-radius:10px"><i class="fas fa-sign-in-alt"></i> Login</button>
+    </div>
+    <div class="login-footer" id="loginFooter"></div>
+</div>
+</div>
+
+<button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" style="display:none"><i class="fas fa-bars"></i></button>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app" id="appContainer" style="display:none">
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><h2>MONICO PHARMA</h2><span>Kushtia Depot</span></div>
+    <div class="sidebar-user">
+        <div class="user-avatar"><i class="fas fa-user"></i></div>
+        <div class="user-info"><span class="user-name" id="loggedUserName">-</span><span class="user-role" id="loggedUserRole">-</span></div>
+        <button class="btn-ghost btn-icon" onclick="doLogout()" title="Logout"><i class="fas fa-right-from-bracket"></i></button>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+        <a class="active" data-tab="products" onclick="switchTab('products')"><i class="fas fa-pills"></i> Products</a>
+        <a data-tab="mpo" onclick="switchTab('mpo')"><i class="fas fa-user-tie"></i> MPO Management</a>
+        <a data-tab="customers" onclick="switchTab('customers')"><i class="fas fa-user-group"></i> Customers</a>
+        <a data-tab="invoice" onclick="switchTab('invoice')"><i class="fas fa-file-invoice-dollar"></i> New Invoice</a>
+        <a data-tab="history" onclick="switchTab('history')"><i class="fas fa-clock-rotate-left"></i> Invoice History</a>
+    </nav>
+    <div class="sidebar-footer" id="sidebarFooter"></div>
+</aside>
+<div class="main">
+
+<!-- PRODUCTS -->
+<section id="tab-products" class="tab-content active">
+    <div class="tab-header"><h2>Products</h2><div class="tab-header-actions" id="productActions"></div></div>
+    <div class="stats-row" id="productStats"></div>
+    <div class="filter-row"><div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search by code or name..." id="productSearch" oninput="renderProducts()"></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Product Name</th><th>Pack Size</th><th class="text-center">TP Rate</th><th class="text-center">VAT/Unit</th><th class="text-center">Bonus Rule</th><th class="text-center">Discount Rule</th><th class="text-center">Stock</th><th class="text-center">Actions</th></tr></thead><tbody id="productTableBody"></tbody></table></div>
+</section>
+
+<!-- MPO -->
+<section id="tab-mpo" class="tab-content">
+    <div class="tab-header"><h2>MPO Management</h2><div class="tab-header-actions"><button class="btn btn-primary" onclick="openMPOModal()"><i class="fas fa-plus"></i> Add MPO</button></div></div>
+    <div class="stats-row" id="mpoStats"></div>
+    <div class="filter-row"><div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search MPOs..." id="mpoSearch" oninput="renderMPOs()"></div>
+    <select class="form-control" id="mpoStatusFilter" onchange="renderMPOs()" style="max-width:160px"><option value="">All Status</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Password</th><th>Phone</th><th>Territory</th><th class="text-center">Status</th><th class="text-center">Customers</th><th class="text-center">Actions</th></tr></thead><tbody id="mpoTableBody"></tbody></table></div>
+</section>
+
+<!-- CUSTOMERS -->
+<section id="tab-customers" class="tab-content">
+    <div class="tab-header"><h2>Customers</h2><div class="tab-header-actions" id="customerActions"></div></div>
+    <div class="stats-row" id="customerStats"></div>
+    <div class="filter-row"><div class="search-bar"><i class="fas fa-search"></i><input type="text" placeholder="Search customers..." id="customerSearch" oninput="renderCustomers()"></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Code</th><th>Name</th><th>Address</th><th>Phone</th><th class="text-center">Route/Territory</th><th class="text-center">MPO</th><th class="text-center">Actions</th></tr></thead><tbody id="customerTableBody"></tbody></table></div>
+</section>
+
+<!-- INVOICE -->
+<section id="tab-invoice" class="tab-content">
+    <div class="tab-header"><h2>Create Invoice</h2><div class="tab-header-actions"><button class="btn btn-outline" onclick="clearInvoice()"><i class="fas fa-rotate"></i> Clear</button><button class="btn btn-accent" onclick="saveInvoice()"><i class="fas fa-save"></i> Save</button><button class="btn btn-primary" onclick="printInvoice()"><i class="fas fa-print"></i> Print</button></div></div>
+    <div class="info-banner amber"><i class="fas fa-circle-info"></i><div><strong>Bonus-Discount Rule:</strong> If order qty qualifies for bonus, <strong>discount = 0%</strong>. Below bonus threshold, <strong>default discount %</strong> applies.</div></div>
+    <div class="invoice-builder"><div class="invoice-left">
+        <div class="invoice-card"><h4><i class="fas fa-file-lines"></i> Invoice Info</h4>
+            <div class="form-row"><div class="form-group"><label>Invoice No</label><input type="text" class="form-control" id="invNo" readonly></div><div class="form-group"><label>Invoice Date</label><input type="date" class="form-control" id="invDate"></div></div>
+            <div class="form-row"><div class="form-group"><label>Order No</label><input type="text" class="form-control" id="invOrderNo" placeholder="e.g. 27585"></div><div class="form-group"><label>Delivery Date</label><input type="date" class="form-control" id="invDelivDate"></div></div>
+            <div class="form-row-3"><div class="form-group"><label>Route</label><input type="text" class="form-control" id="invRoute" placeholder="e.g. BAMUNDI-A1"></div><div class="form-group"><label>Summary No</label><input type="text" class="form-control" id="invSummaryNo" placeholder="e.g. SN26000551"></div><div class="form-group"><label>Type</label><select class="form-control" id="invType"><option value="R">R (Regular)</option><option value="C">C</option></select></div></div>
+            <div class="form-row"><div class="form-group"><label>Customer</label><select class="form-control" id="invCustomer"><option value="">-- Select Customer --</option></select></div><div class="form-group" id="invNewCustCell"></div></div>
+            <div id="invMPOInfo" style="display:none;margin-top:4px"><div class="mpo-tag"><i class="fas fa-user-tie"></i> <span id="invMPOName">-</span></div></div>
+        </div>
+        <div class="invoice-card"><h4><i class="fas fa-cart-plus"></i> Add Product</h4>
+            <div class="product-search-wrap"><input type="text" class="form-control" id="invProductSearch" placeholder="Search by code or name..." oninput="searchInvoiceProduct()" onfocus="searchInvoiceProduct()"><div class="product-dropdown" id="invProductDropdown"></div></div>
+            <div class="form-row" style="margin-top:12px"><div class="form-group"><label>Order Qty</label><input type="number" class="form-control" id="invQty" min="1" value="1"></div><div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary" onclick="addInvoiceItem()" style="width:100%"><i class="fas fa-plus"></i> Add</button></div></div>
+        </div>
+        <div class="invoice-card" style="padding:0;overflow:hidden"><div style="padding:14px 20px;border-bottom:1px solid var(--border)"><h4 style="margin:0"><i class="fas fa-list"></i> Items</h4></div>
+            <div class="table-wrap" style="border:none;border-radius:0"><table class="inv-items-table"><thead><tr><th>Code</th><th>Product</th><th>Pack</th><th>Order</th><th>Bonus</th><th>Rule</th><th>TP Rate</th><th>VAT/u</th><th>TP Amt</th><th>VAT Amt</th><th>Disc%</th><th>Disc Amt</th><th>Net</th><th></th></tr></thead><tbody id="invItemsBody"></tbody></table></div>
+            <div id="invEmptyState" class="empty-state" style="display:none"><i class="fas fa-box-open"></i><p>No items added yet.</p></div>
+        </div>
+    </div><div class="invoice-right">
+        <div class="invoice-card" style="position:sticky;top:28px"><h4><i class="fas fa-calculator"></i> Summary</h4>
+            <div><div class="summary-row"><span class="label">Total TP</span><span class="value" id="sumTP">0.00</span></div><div class="summary-row"><span class="label">Total VAT</span><span class="value" id="sumVAT">0.00</span></div><div class="summary-row"><span class="label">Total Discount</span><span class="value" id="sumDisc">0.00</span></div><div class="summary-row total"><span class="label">Grand Total</span><span class="value" id="sumGrand">0.00</span></div></div>
+            <div class="in-words" id="invWords">In Words: Taka Zero Only.</div>
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)"><div class="summary-row"><span class="label">Items</span><span class="value" id="sumItems">0</span></div><div class="summary-row"><span class="label">Bonus Units</span><span class="value" id="sumBonus">0</span></div><div class="summary-row"><span class="label">Bonus Lines</span><span class="value" id="sumBonusLines">0</span></div><div class="summary-row"><span class="label">Discount Lines</span><span class="value" id="sumDiscLines">0</span></div></div>
+        </div>
+    </div></div>
+</section>
+
+<!-- HISTORY -->
+<section id="tab-history" class="tab-content">
+    <div class="tab-header"><h2>Invoice History</h2></div>
+    <div class="stats-row" id="historyStats"></div>
+    <div class="table-wrap"><table><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th><th>MPO</th><th class="text-center">Items</th><th class="text-right">TP</th><th class="text-right">VAT</th><th class="text-right">Disc</th><th class="text-right">Grand Total</th><th class="text-center">Actions</th></tr></thead><tbody id="historyTableBody"></tbody></table></div>
+    <div id="historyEmpty" class="empty-state" style="display:none"><i class="fas fa-folder-open"></i><p>No invoices found.</p></div>
+</section>
+
+</div></div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="event.target===this&&closeModal()"><div class="modal" id="modalBox"><div class="modal-header"><h3 id="modalTitle">Modal</h3><button class="btn-ghost btn-icon" onclick="closeModal()"><i class="fas fa-xmark"></i></button></div><div class="modal-body" id="modalBody"></div><div class="modal-footer" id="modalFooter"></div></div></div>
+<div class="toast-container" id="toastContainer"></div>
+<div id="print-area"></div>
+
+<script>
+/* =================== FIREBASE =================== */
+const firebaseConfig={apiKey:"AIzaSyBmogqpXzirZC-aUHZrFMwutSJ5fmbyDXk",authDomain:"e-commarcebd.firebaseapp.com",databaseURL:"https://e-commarcebd-default-rtdb.europe-west1.firebasedatabase.app",projectId:"e-commarcebd",storageBucket:"e-commarcebd.firebasestorage.app",messagingSenderId:"799252588942",appId:"1:799252588942:web:985396062c3a1823c6dcdf",measurementId:"G-FM6BH07VPM"};
+firebase.initializeApp(firebaseConfig);const db=firebase.database();
+db.ref('.info/connected').on('value',function(s){const t=s.val()?'<span class="db-dot" style="background:#4ADE80"></span> Connected':'<span class="db-dot" style="background:#EF4444"></span> Offline';const f=document.getElementById('loginFooter');const sb=document.getElementById('sidebarFooter');if(f)f.innerHTML=t+' &middot; &copy; 2026 Monico Pharma Ltd.';if(sb)sb.innerHTML=t;});
+
+/* =================== STATE =================== */
+let state={products:[],mpos:[],customers:[],invoices:[],currentInvoice:{items:[]},selectedProduct:null};
+let loggedInMPO=null,loginMode='admin';
+
+/* =================== HELPERS =================== */
+const isAdmin=()=>loggedInMPO==='admin',isMPO=()=>loggedInMPO&&loggedInMPO!=='admin';
+const getMPO=()=>isMPO()?state.mpos.find(m=>m.id===loggedInMPO):null;
+const getMPOCustomers=()=>isAdmin()?state.customers:state.customers.filter(c=>c.mpoId===loggedInMPO);
+const getMPOInvoices=()=>isAdmin()?state.invoices:state.invoices.filter(inv=>inv.mpoId===loggedInMPO);
+const round2=n=>Math.round(n*100)/100,fmt=n=>round2(n).toFixed(2);
+function numberToWords(num){if(num===0)return'Zero';const o=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine'],t=['Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'],te=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];let iP=Math.floor(num),dP=Math.round((num-iP)*100);function c(n){if(n<10)return o[n];if(n<20)return t[n-10];if(n<100)return te[Math.floor(n/10)]+(n%10?' '+o[n%10]:'');if(n<1000)return o[Math.floor(n/100)]+' Hundred'+(n%100?' and '+c(n%100):'');if(n<100000)return c(Math.floor(n/1000))+' Thousand'+(n%1000?' '+c(n%1000):'');if(n<10000000)return c(Math.floor(n/100000))+' Lakh'+(n%100000?' '+c(n%100000):'');if(n<1000000000)return c(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+c(n%10000000):'');return c(Math.floor(n/1000000000))+' Billion';}let r='Taka '+c(iP);if(dP>0)r+=' and '+c(dP)+' Paisa';return r+' Only';}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function formatDate(ds){const d=new Date(ds);const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return String(d.getDate()).padStart(2,'0')+'-'+m[d.getMonth()]+'-'+d.getFullYear();}
+function getNextCode(prefix,list,key){let max=0;list.forEach(item=>{const n=parseInt((item[key]||'').replace(/\D/g,''));if(!isNaN(n)&&n>max)max=n;});return prefix+String(max+1).padStart(3,'0');}
+function getNextInvNo(){let max=0;state.invoices.forEach(inv=>{const n=parseInt((inv.no||'').replace(/\D/g,''));if(!isNaN(n)&&n>max)max=n;});return 'INV-'+String(max+1).padStart(4,'0');}
+function applyBonusDiscountRule(item){if(item.bonusEvery>0&&item.bonusFree>0){if(item.bonusQty>0){item.discPercent=0;item.ruleApplied='bonus';}else{item.discPercent=item.defaultDiscount;item.ruleApplied='discount';}}else{item.discPercent=item.defaultDiscount;item.ruleApplied=item.defaultDiscount>0?'discount':'none';}}
+function calcLineAmounts(item){const tp=round2(item.orderQty*item.tpRate),vat=round2(item.orderQty*item.vatFlat),disc=round2(tp*item.discPercent/100);return{tpAmount:tp,vatAmount:vat,discAmount:disc,netAmount:round2(tp+vat-disc)};}
+function ruleBadge(r){return r==='bonus'?'<span class="rule-indicator rule-bonus"><i class="fas fa-gift"></i> Bonus</span>':r==='discount'?'<span class="rule-indicator rule-disc"><i class="fas fa-percent"></i> Disc</span>':'<span class="rule-indicator rule-none">--</span>';}
+function discountRulePreview(p){return p.bonusFree>0?`<span class="badge badge-blue">${p.bonusEvery}:${p.bonusFree} &rarr; 0% | &lt;${p.bonusEvery} &rarr; ${p.defaultDiscount}%</span>`:`<span class="badge badge-amber">${p.defaultDiscount}% always</span>`;}
+
+/* =================== TOAST & MODAL =================== */
+function showToast(msg,type='success'){const c=document.getElementById('toastContainer'),t=document.createElement('div');t.className='toast '+type;t.innerHTML=`<i class="fas ${{success:'fa-check-circle',error:'fa-exclamation-circle',info:'fa-info-circle'}[type]||'fa-info-circle'}"></i> ${msg}`;c.appendChild(t);setTimeout(()=>{t.style.animation='toastOut .3s ease forwards';setTimeout(()=>t.remove(),300);},3000);}
+function openModal(title,body,footer,large){document.getElementById('modalTitle').textContent=title;document.getElementById('modalBody').innerHTML=body;document.getElementById('modalFooter').innerHTML=footer||'';document.getElementById('modalBox').classList.toggle('modal-lg',!!large);document.getElementById('modalOverlay').classList.add('show');}
+function closeModal(){document.getElementById('modalOverlay').classList.remove('show');}
+
+/* =================== FIREBASE OPS =================== */
+async function loadAllData(){try{const[ps,ms,cs,ins]=await Promise.all([db.ref('pharma/products').once('value'),db.ref('pharma/mpos').once('value'),db.ref('pharma/customers').once('value'),db.ref('pharma/invoices').once('value')]);state.products=ps.val()?Object.values(ps.val()):[];state.mpos=ms.val()?Object.values(ms.val()):[];state.customers=cs.val()?Object.values(cs.val()):[];state.invoices=ins.val()?Object.values(ins.val()):[];state.invoices.sort((a,b)=>(a.no||'').localeCompare(b.no||''));state.currentInvoice={items:[]};state.selectedProduct=null;}catch(e){console.error(e);showToast('Failed to load data.','error');}}
+function saveToFirebase(sections){const p=[];if(sections.includes('products')){const o={};state.products.forEach(x=>o[x.code]=x);p.push(db.ref('pharma/products').set(o));}if(sections.includes('mpos')){const o={};state.mpos.forEach(x=>o[x.id]={...x});p.push(db.ref('pharma/mpos').set(o));}if(sections.includes('customers')){const o={};state.customers.forEach(x=>o[x.id]=x);p.push(db.ref('pharma/customers').set(o));}if(sections.includes('invoices')){const o={};state.invoices.forEach(x=>o[x.no]=x);p.push(db.ref('pharma/invoices').set(o));}Promise.all(p).catch(e=>{console.error(e);showToast('Save failed.','error');});}
+
+/* =================== LOGIN =================== */
+function setLoginMode(mode){loginMode=mode;document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));document.querySelector(`.login-tab[data-mode="${mode}"]`).classList.add('active');document.getElementById('loginIdLabel').textContent=mode==='admin'?'Admin ID':'MPO ID';document.getElementById('loginId').placeholder=mode==='admin'?'Enter Admin ID':'Enter MPO ID';document.getElementById('loginId').value='';document.getElementById('loginPwd').value='';document.getElementById('loginId').focus();}
+function showLoginLoading(s){const b=document.getElementById('loginBtn');if(s){b.innerHTML='<i class="fas fa-spinner fa-spin"></i> Verifying...';b.disabled=true;}else{b.innerHTML='<i class="fas fa-sign-in-alt"></i> Login';b.disabled=false;}}
+async function doLogin(){const id=document.getElementById('loginId').value.trim(),pwd=document.getElementById('loginPwd').value;if(!id||!pwd){showToast('Enter ID and Password.','error');return;}showLoginLoading(true);
+if(loginMode==='admin'){if(id==='KS'&&pwd==='Monico@Ku007'){loggedInMPO='admin';sessionStorage.setItem('mpoLogin','admin');await loadAllData();applyLoginUI();showToast('Welcome, Admin!');}else showToast('Invalid Admin credentials.','error');}
+else{try{const s=await db.ref('pharma/mpos/'+id).once('value');const m=s.val();if(m&&m.password===pwd){if(m.status==='inactive')showToast('Account inactive.','error');else{loggedInMPO=id;sessionStorage.setItem('mpoLogin',id);await loadAllData();applyLoginUI();showToast('Welcome, '+m.name+'!');}}else showToast('Invalid MPO ID or Password.','error');}catch(e){showToast('Connection error.','error');}}showLoginLoading(false);}
+function doLogout(){loggedInMPO=null;sessionStorage.removeItem('mpoLogin');document.getElementById('loginScreen').style.display='flex';document.getElementById('appContainer').style.display='none';document.getElementById('hamburgerBtn').style.display='none';document.getElementById('loginId').value='';document.getElementById('loginPwd').value='';}
+function applyLoginUI(){document.getElementById('loginScreen').style.display='none';document.getElementById('appContainer').style.display='flex';document.getElementById('hamburgerBtn').style.display='';if(isAdmin()){document.getElementById('loggedUserName').textContent='Depot Admin';document.getElementById('loggedUserRole').textContent='Full Access';}else{const m=getMPO();if(m){document.getElementById('loggedUserName').textContent=m.name;document.getElementById('loggedUserRole').textContent=m.id+' - '+m.area;}}document.querySelector('.sidebar-nav a[data-tab="mpo"]').style.display=isAdmin()?'':'none';switchTab('products');}
+
+/* =================== NAVIGATION =================== */
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarOverlay').classList.toggle('show');}
+function switchTab(tab){document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));document.querySelectorAll('.sidebar-nav a').forEach(el=>el.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');const n=document.querySelector(`.sidebar-nav a[data-tab="${tab}"]`);if(n)n.classList.add('active');document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebarOverlay').classList.remove('show');if(tab==='products')renderProducts();if(tab==='mpo')renderMPOs();if(tab==='customers')renderCustomers();if(tab==='invoice')initInvoiceTab();if(tab==='history')renderHistory();}
+
+/* =================== MPO =================== */
+function renderMPOs(){const s=(document.getElementById('mpoSearch').value||'').toLowerCase(),sf=document.getElementById('mpoStatusFilter').value;const f=state.mpos.filter(m=>{if(sf&&m.status!==sf)return false;return m.id.toLowerCase().includes(s)||m.name.toLowerCase().includes(s)||m.area.toLowerCase().includes(s);});document.getElementById('mpoStats').innerHTML=`<div class="stat-card"><div class="stat-icon green"><i class="fas fa-user-tie"></i></div><div class="stat-info"><h3>${state.mpos.length}</h3><p>Total MPOs</p></div></div><div class="stat-card"><div class="stat-icon blue"><i class="fas fa-circle-check"></i></div><div class="stat-info"><h3>${state.mpos.filter(m=>m.status==='active').length}</h3><p>Active</p></div></div><div class="stat-card"><div class="stat-icon amber"><i class="fas fa-link"></i></div><div class="stat-info"><h3>${state.customers.filter(c=>c.mpoId).length}</h3><p>Assigned</p></div></div>`;const tb=document.getElementById('mpoTableBody');if(!f.length){tb.innerHTML='<tr><td colspan="8" class="empty-state" style="padding:32px"><i class="fas fa-user-tie"></i><p>No MPOs. Add MPOs first.</p></td></tr>';return;}tb.innerHTML=f.map(m=>`<tr><td class="font-mono">${m.id}</td><td><strong>${m.name}</strong></td><td><span class="text-muted" style="font-size:11px;letter-spacing:2px">•••••••</span></td><td>${m.phone||'-'}</td><td>${m.area}</td><td class="text-center"><span class="badge ${m.status==='active'?'badge-green':'badge-red'}">${m.status}</span></td><td class="text-center"><span class="badge badge-purple">${state.customers.filter(c=>c.mpoId===m.id).length}</span></td><td class="text-center"><button class="btn-ghost btn-icon btn-sm" onclick="openMPOModal('${m.id}')"><i class="fas fa-pen"></i></button><button class="btn-ghost btn-icon btn-sm" onclick="deleteMPO('${m.id}')"><i class="fas fa-trash" style="color:var(--danger)"></i></button></td></tr>`).join('');}
+function openMPOModal(id){const m=id?state.mpos.find(x=>x.id===id):null;const e=!!m;openModal(e?'Edit MPO':'Add MPO',`<div class="form-row"><div class="form-group"><label>MPO ID</label><input type="text" class="form-control" id="fMpoId" value="${m?m.id:getNextCode('M',state.mpos,'id')}" ${e?'readonly':''}></div><div class="form-group"><label>Status</label><select class="form-control" id="fMpoStatus"><option value="active" ${m&&m.status==='active'?'selected':''}>Active</option><option value="inactive" ${m&&m.status==='inactive'?'selected':''}>Inactive</option></select></div></div><div class="form-group"><label>Full Name</label><input type="text" class="form-control" id="fMpoName" value="${m?m.name:''}" placeholder="e.g. Rahim Uddin"></div><div class="form-row"><div class="form-group"><label>Phone</label><input type="text" class="form-control" id="fMpoPhone" value="${m?m.phone||'':''}"></div><div class="form-group"><label>Territory</label><input type="text" class="form-control" id="fMpoArea" value="${m?m.area:''}" placeholder="e.g. Kushtia Sadar"></div></div><div style="background:var(--accent-light);border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px;text-transform:uppercase"><i class="fas fa-lock"></i> Login Credentials</p><div class="form-group" style="margin-bottom:0"><label>Password</label><input type="text" class="form-control" id="fMpoPwd" value="${m?m.password:''}" placeholder="${e?'Leave empty to keep current':'Set login password'}"><p style="font-size:11px;color:var(--muted);margin-top:4px">${e?'Leave blank to keep current password.':'MPO uses ID + Password to login.'}</p></div></div>`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveMPO('${id||''}')">${e?'Update':'Add MPO'}</button>`);}
+function saveMPO(eid){const id=document.getElementById('fMpoId').value.trim(),name=document.getElementById('fMpoName').value.trim(),phone=document.getElementById('fMpoPhone').value.trim(),area=document.getElementById('fMpoArea').value.trim(),status=document.getElementById('fMpoStatus').value,pwd=document.getElementById('fMpoPwd').value.trim();if(!id||!name||!area){showToast('Fill ID, Name, Territory.','error');return;}if(eid){const old=state.mpos.find(m=>m.id===eid);const fp=pwd||old.password;const i=state.mpos.findIndex(m=>m.id===eid);if(i>=0)state.mpos[i]={...state.mpos[i],name,phone,area,status,password:fp};showToast('MPO updated.');}else{if(!pwd){showToast('Password required.','error');return;}if(state.mpos.find(m=>m.id===id)){showToast('ID exists.','error');return;}state.mpos.push({id,name,phone,area,status,password:pwd});showToast('MPO added.');}saveToFirebase(['mpos']);closeModal();renderMPOs();}
+function deleteMPO(id){const m=state.mpos.find(x=>x.id===id);if(!m)return;const n=state.customers.filter(c=>c.mpoId===id).length;openModal('Confirm Delete',`<p>Delete <strong>${m.name}</strong>?</p>${n?`<p style="color:var(--danger);margin-top:8px"><i class="fas fa-triangle-exclamation"></i> ${n} customer(s) unassigned.</p>`:''}`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-danger" onclick="state.customers.forEach(c=>{if(c.mpoId==='${id}')c.mpoId='';});state.mpos=state.mpos.filter(m=>m.id!=='${id}');saveToFirebase(['mpos','customers']);closeModal();renderMPOs();showToast('MPO deleted.','info');">Delete</button>`);}
+
+/* =================== PRODUCTS =================== */
+function renderProducts(){const s=(document.getElementById('productSearch').value||'').toLowerCase();const f=state.products.filter(p=>p.code.toLowerCase().includes(s)||p.name.toLowerCase().includes(s));const ts=state.products.reduce((a,p)=>a+p.stock,0),ls=state.products.filter(p=>p.stock<50).length;document.getElementById('productStats').innerHTML=`<div class="stat-card"><div class="stat-icon green"><i class="fas fa-pills"></i></div><div class="stat-info"><h3>${state.products.length}</h3><p>Products</p></div></div><div class="stat-card"><div class="stat-icon blue"><i class="fas fa-warehouse"></i></div><div class="stat-info"><h3>${ts.toLocaleString()}</h3><p>Stock</p></div></div><div class="stat-card"><div class="stat-icon ${ls>0?'red':'purple'}"><i class="fas fa-triangle-exclamation"></i></div><div class="stat-info"><h3>${ls}</h3><p>Low Stock</p></div></div>`;document.getElementById('productActions').innerHTML=isAdmin()?`<button class="btn btn-outline" onclick="openExcelUpload()"><i class="fas fa-file-excel"></i> Upload Excel</button><button class="btn btn-primary" onclick="openProductModal()"><i class="fas fa-plus"></i> Add Product</button>`:'<span class="text-muted" style="font-size:13px"><i class="fas fa-lock"></i> Read-only</span>';const tb=document.getElementById('productTableBody');if(!f.length){tb.innerHTML='<tr><td colspan="9" class="empty-state" style="padding:32px"><i class="fas fa-box-open"></i><p>No products. Add manually or upload Excel.</p></td></tr>';return;}tb.innerHTML=f.map(p=>{const sc=p.stock<50?'badge-red low-stock':(p.stock<150?'badge-amber':'badge-green'),bt=p.bonusFree>0?`${p.bonusEvery}:${p.bonusFree}`:'None';const a=isAdmin()?`<button class="btn-ghost btn-icon btn-sm" onclick="openReceiveModal('${p.code}')"><i class="fas fa-truck-ramp-box"></i></button><button class="btn-ghost btn-icon btn-sm" onclick="openProductModal('${p.code}')"><i class="fas fa-pen"></i></button><button class="btn-ghost btn-icon btn-sm" onclick="deleteProduct('${p.code}')"><i class="fas fa-trash" style="color:var(--danger)"></i></button>`:'<span class="text-muted" style="font-size:11px">View</span>';return`<tr><td class="font-mono">${p.code}</td><td><strong>${p.name}</strong></td><td>${p.packSize}</td><td class="text-center font-mono">${fmt(p.tpRate)}</td><td class="text-center"><span class="badge badge-blue">${fmt(p.vatFlat)}/u</span></td><td class="text-center"><span class="badge badge-green">${bt}</span></td><td class="text-center">${discountRulePreview(p)}</td><td class="text-center"><span class="badge ${sc}">${p.stock}</span></td><td class="text-center">${a}</td></tr>`;}).join('');}
+
+/* =================== EXCEL UPLOAD =================== */
+let excelParsedData = [];
+
+function openExcelUpload() {
+    openModal('Upload Products from Excel', `
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('excelFile').click()" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');handleExcelFile(event.dataTransfer.files[0])">
+            <i class="fas fa-cloud-arrow-up"></i>
+            <p>Click to select or drag & drop Excel file here</p>
+            <p class="fmt">.xlsx, .xls, .csv</p>
+        </div>
+        <input type="file" id="excelFile" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleExcelFile(this.files[0])">
+        <div style="background:var(--primary-light);border-radius:8px;padding:14px;margin-top:16px;">
+            <p style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:8px;text-transform:uppercase"><i class="fas fa-info-circle"></i> Required Columns in Excel</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;color:#065F46;">
+                <span><strong>Code</strong> - Product code</span>
+                <span><strong>Name</strong> - Product name</span>
+                <span><strong>PackSize</strong> - e.g. 10x10</span>
+                <span><strong>TPRate</strong> - Trading price</span>
+                <span><strong>VATFlat</strong> - VAT per unit</span>
+                <span><strong>BonusEvery</strong> - Bonus X</span>
+                <span><strong>BonusFree</strong> - Free Y</span>
+                <span><strong>DefaultDiscount</strong> - Disc %</span>
+                <span><strong>Stock</strong> - Initial stock</span>
+            </div>
+        </div>
+        <div id="excelPreviewArea"></div>
+    `, '', true);
+}
+
+function handleExcelFile(file) {
+    if (!file) return;
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!['xlsx','xls','csv'].includes(ext)) {
+        showToast('Please select a valid Excel file (.xlsx, .xls, .csv)', 'error');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            if (!json.length) {
+                showToast('Excel file is empty.', 'error');
+                return;
+            }
+            excelParsedData = json.map((row, i) => ({
+                row: i + 1,
+                code: String(row['Code'] || row['code'] || '').trim(),
+                name: String(row['Name'] || row['name'] || '').trim(),
+                packSize: String(row['PackSize'] || row['packsize'] || row['Pack Size'] || '').trim(),
+                tpRate: parseFloat(row['TPRate'] || row['tprate'] || row['TP Rate'] || row['tp_rate'] || 0) || 0,
+                vatFlat: parseFloat(row['VATFlat'] || row['vatflat'] || row['VAT Flat'] || row['vat_flat'] || 0) || 0,
+                bonusEvery: parseInt(row['BonusEvery'] || row['bonusevery'] || row['Bonus Every'] || row['bonus_every'] || 0) || 0,
+                bonusFree: parseInt(row['BonusFree'] || row['bonusfree'] || row['Bonus Free'] || row['bonus_free'] || 0) || 0,
+                defaultDiscount: parseFloat(row['DefaultDiscount'] || row['defaultdiscount'] || row['Default Discount'] || row['default_discount'] || 0) || 0,
+                stock: parseInt(row['Stock'] || row['stock'] || 0) || 0,
+                valid: false,
+                error: ''
+            }));
+            // Validate
+            excelParsedData.forEach(item => {
+                if (!item.code) { item.error = 'Missing Code'; return; }
+                if (!item.name) { item.error = 'Missing Name'; return; }
+                if (!item.packSize) { item.error = 'Missing Pack Size'; return; }
+                if (item.tpRate <= 0) { item.error = 'Invalid TPRate'; return; }
+                item.valid = true;
+            });
+            renderExcelPreview();
+        } catch (err) {
+            console.error(err);
+            showToast('Failed to parse Excel file.', 'error');
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function renderExcelPreview() {
+    const area = document.getElementById('excelPreviewArea');
+    const validCount = excelParsedData.filter(r => r.valid).length;
+    const dupCodes = excelParsedData.filter(r => r.valid && state.products.find(p => p.code === r.code)).map(r => r.code);
+    const newItems = excelParsedData.filter(r => r.valid && !state.products.find(p => p.code === r.code));
+
+    let html = `<div style="margin-bottom:12px;display:flex;gap:12px;flex-wrap:wrap;">
+        <span class="badge ${validCount > 0 ? 'badge-green' : 'badge-red'}">${validCount} valid rows</span>
+        <span class="badge ${dupCodes.length > 0 ? 'badge-amber' : 'badge-green'}">${dupCodes.length} duplicates</span>
+        <span class="badge ${newItems.length > 0 ? 'badge-blue' : 'badge-red'}">${newItems.length} new to import</span>
+    </div>`;
+
+    if (dupCodes.length > 0) {
+        html += `<div style="background:var(--accent-light);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400E;"><i class="fas fa-triangle-exclamation"></i> Duplicate codes will be skipped: <strong>${dupCodes.join(', ')}</strong></div>`;
+    }
+
+    html += `<div class="excel-preview"><table><thead><tr><th>Row</th><th>Code</th><th>Name</th><th>Pack</th><th>TP</th><th>VAT</th><th>Bonus</th><th>Disc%</th><th>Stock</th><th>Status</th></tr></thead><tbody>`;
+    excelParsedData.forEach(item => {
+        const cls = !item.valid ? 'dup' : (state.products.find(p => p.code === item.code) ? 'dup' : 'new');
+        const status = !item.valid ? `<span style="color:var(--danger);font-weight:600">${item.error}</span>` : (state.products.find(p => p.code === item.code) ? '<span style="color:var(--accent)">Duplicate</span>' : '<span style="color:var(--success)">New</span>');
+        html += `<tr class="${cls}"><td>${item.row}</td><td class="font-mono">${item.code}</td><td>${item.name}</td><td>${item.packSize}</td><td>${fmt(item.tpRate)}</td><td>${fmt(item.vatFlat)}</td><td>${item.bonusEvery}:${item.bonusFree}</td><td>${item.defaultDiscount}%</td><td>${item.stock}</td><td>${status}</td></tr>`;
+    });
+    html += `</tbody></table></div>`;
+
+    if (newItems.length > 0) {
+        html = `<div class="modal-footer" style="padding:0;margin-top:16px;display:flex;justify-content:flex-end;gap:10px;border:none;">${html}<button class="btn btn-primary" onclick="confirmExcelImport()"><i class="fas fa-file-import"></i> Import ${newItems.length} Products</button></div>`;
+    }
+
+    area.innerHTML = html;
+}
+
+function confirmExcelImport() {
+    const newItems = excelParsedData.filter(r => r.valid && !state.products.find(p => p.code === r.code));
+    if (!newItems.length) { showToast('No new products to import.', 'error'); return; }
+    newItems.forEach(item => {
+        state.products.push({
+            code: item.code, name: item.name, packSize: item.packSize,
+            tpRate: item.tpRate, vatFlat: item.vatFlat,
+            bonusEvery: item.bonusEvery, bonusFree: item.bonusFree,
+            stock: item.stock, defaultDiscount: item.defaultDiscount
+        });
+    });
+    saveToFirebase(['products']);
+    closeModal();
+    renderProducts();
+    excelParsedData = [];
+    showToast(`${newItems.length} products imported successfully from Excel.`);
+}
+
+/* =================== PRODUCT CRUD =================== */
+function openProductModal(code){const p=code?state.products.find(x=>x.code===code):null;const e=!!p;openModal(e?'Edit Product':'Add Product',`<div class="form-row"><div class="form-group"><label>Code</label><input type="text" class="form-control" id="fProdCode" value="${p?p.code:getNextCode('P',state.products,'code')}" ${e?'readonly':''}></div><div class="form-group"><label>Name</label><input type="text" class="form-control" id="fProdName" value="${p?p.name:''}" placeholder="e.g. Napa 500 mg"></div></div><div class="form-row-3"><div class="form-group"><label>Pack Size</label><input type="text" class="form-control" id="fProdPack" value="${p?p.packSize:''}"></div><div class="form-group"><label>TP Rate</label><input type="number" class="form-control" id="fProdTP" value="${p?p.tpRate:''}" step="0.01" min="0"></div><div class="form-group"><label>VAT Flat / Unit</label><input type="number" class="form-control" id="fProdVAT" value="${p?p.vatFlat:0}" step="0.01" min="0"></div></div><div style="background:var(--primary-light);border-radius:8px;padding:16px;margin-bottom:16px"><p style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:12px;text-transform:uppercase"><i class="fas fa-gift"></i> Bonus</p><div class="form-row" style="margin-bottom:0"><div class="form-group"><label>Every X Units</label><input type="number" class="form-control" id="fBonusEvery" value="${p?p.bonusEvery:10}" min="0" oninput="updateBP()"></div><div class="form-group"><label>Get Y Free</label><input type="number" class="form-control" id="fBonusFree" value="${p?p.bonusFree:0}" min="0" oninput="updateBP()"></div></div></div><div style="background:var(--accent-light);border-radius:8px;padding:16px;margin-bottom:16px"><p style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase"><i class="fas fa-scale-balanced"></i> Discount Rule</p><div class="form-group" style="margin-bottom:8px"><label>Default Disc %</label><input type="number" class="form-control" id="fProdDisc" value="${p?p.defaultDiscount:0}" min="0" max="100" step="0.1" oninput="updateBP()"></div><div id="bpText" style="font-size:13px;color:#92400E;line-height:1.6"></div></div>${!e?'<div class="form-group"><label>Initial Stock</label><input type="number" class="form-control" id="fProdStock" value="0" min="0"></div>':''}`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveProduct('${code||''}')">${e?'Update':'Add'}</button>`);setTimeout(updateBP,50);}
+function updateBP(){const be=parseInt(document.getElementById('fBonusEvery').value)||0,bf=parseInt(document.getElementById('fBonusFree').value)||0,dd=parseFloat(document.getElementById('fProdDisc').value)||0;document.getElementById('bpText').innerHTML=be>0&&bf>0?`<i class="fas fa-check-circle" style="color:var(--success)"></i> <strong>Order &ge; ${be}:</strong> Bonus ${bf}, <strong style="color:var(--danger)">Disc = 0%</strong><br><i class="fas fa-check-circle" style="color:var(--accent)"></i> <strong>Order &lt; ${be}:</strong> No bonus, <strong>Disc = ${dd}%</strong>`:`<i class="fas fa-info-circle"></i> No bonus. <strong>Disc = ${dd}%</strong> always.`;}
+function saveProduct(ec){const code=document.getElementById('fProdCode').value.trim(),name=document.getElementById('fProdName').value.trim(),packSize=document.getElementById('fProdPack').value.trim(),tpRate=parseFloat(document.getElementById('fProdTP').value)||0,vatFlat=parseFloat(document.getElementById('fProdVAT').value)||0,defaultDiscount=parseFloat(document.getElementById('fProdDisc').value)||0,bonusEvery=parseInt(document.getElementById('fBonusEvery').value)||0,bonusFree=parseInt(document.getElementById('fBonusFree').value)||0;if(!code||!name||!packSize){showToast('Fill Code, Name, Pack Size.','error');return;}if(tpRate<=0){showToast('TP Rate > 0.','error');return;}if(ec){const i=state.products.findIndex(p=>p.code===ec);if(i>=0)state.products[i]={...state.products[i],name,packSize,tpRate,vatFlat,bonusEvery,bonusFree,stock:state.products[i].stock,defaultDiscount};showToast('Updated.');}else{if(state.products.find(p=>p.code===code)){showToast('Code exists.','error');return;}state.products.push({code,name,packSize,tpRate,vatFlat,bonusEvery,bonusFree,stock:parseInt(document.getElementById('fProdStock').value)||0,defaultDiscount});showToast('Added.');}saveToFirebase(['products']);closeModal();renderProducts();}
+function deleteProduct(code){const p=state.products.find(x=>x.code===code);if(!p)return;openModal('Confirm Delete',`<p>Delete <strong>${p.name}</strong>?</p>`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-danger" onclick="state.products=state.products.filter(p=>p.code!=='${code}');saveToFirebase(['products']);closeModal();renderProducts();showToast('Deleted.');">Delete</button>`);}
+function openReceiveModal(code){const p=state.products.find(x=>x.code===code);if(!p)return;openModal('Receive Stock - '+p.name,`<div style="background:#F7F8FA;border-radius:8px;padding:16px;margin-bottom:16px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span class="font-mono" style="color:var(--primary);font-weight:700">${p.code}</span><span class="badge badge-green">Stock: ${p.stock}</span></div><strong>${p.name}</strong> <span style="color:var(--muted);margin-left:8px">${p.packSize}</span></div><div class="form-row"><div class="form-group"><label>Quantity</label><input type="number" class="form-control" id="fRecvQty" min="1" value="100"></div><div class="form-group"><label>Date</label><input type="date" class="form-control" id="fRecvDate" value="${todayStr()}"></div></div>`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="const q=parseInt(document.getElementById('fRecvQty').value);if(!q||q<=0){showToast('Invalid qty.','error');return;}const p=state.products.find(x=>x.code==='${code}');if(p){p.stock+=q;saveToFirebase(['products']);closeModal();renderProducts();showToast('Received '+q+'. Stock: '+p.stock);}"><i class="fas fa-check"></i> Receive</button>`);}
+
+/* =================== CUSTOMERS =================== */
+function renderCustomers(){const cList=getMPOCustomers(),s=(document.getElementById('customerSearch').value||'').toLowerCase(),f=cList.filter(c=>c.id.toLowerCase().includes(s)||c.name.toLowerCase().includes(s)||c.address.toLowerCase().includes(s));document.getElementById('customerStats').innerHTML=`<div class="stat-card"><div class="stat-icon green"><i class="fas fa-user-group"></i></div><div class="stat-info"><h3>${cList.length}</h3><p>${isAdmin()?'Total':'My'} Customers</p></div></div><div class="stat-card"><div class="stat-icon blue"><i class="fas fa-link"></i></div><div class="stat-info"><h3>${state.customers.filter(c=>c.mpoId).length}</h3><p>Assigned</p></div></div>${isMPO()?`<div class="stat-card"><div class="stat-icon purple"><i class="fas fa-file-invoice"></i></div><div class="stat-info"><h3>${getMPOInvoices().length}</h3><p>My Invoices</p></div></div>`:''}`;document.getElementById('customerActions').innerHTML=isAdmin()?'<button class="btn btn-primary" onclick="openCustomerModal()"><i class="fas fa-plus"></i> Add Customer</button>':'<span class="text-muted" style="font-size:13px"><i class="fas fa-lock"></i> Contact admin</span>';const tb=document.getElementById('customerTableBody');if(!f.length){tb.innerHTML=`<tr><td colspan="7" class="empty-state" style="padding:32px"><i class="fas fa-users"></i><p>${isMPO()?'No customers assigned.':'No customers yet.'}</p></td></tr>`;return;}tb.innerHTML=f.map(c=>{const mpo=c.mpoId?state.mpos.find(m=>m.id===c.mpoId):null;const md=mpo?`<span class="badge badge-green"><i class="fas fa-user-tie" style="margin-right:4px"></i>${mpo.name}</span>`:'<span class="badge badge-red">Unassigned</span>';const a=isAdmin()?`<button class="btn-ghost btn-icon btn-sm" onclick="openCustomerModal('${c.id}')"><i class="fas fa-pen"></i></button><button class="btn-ghost btn-icon btn-sm" onclick="deleteCustomer('${c.id}')"><i class="fas fa-trash" style="color:var(--danger)"></i></button>`:'<span class="text-muted" style="font-size:11px">View</span>';return`<tr><td class="font-mono">${c.id}</td><td><strong>${c.name}</strong></td><td>${c.address}</td><td>${c.phone||'-'}</td><td class="text-center"><span class="badge badge-blue">${c.route||'-'}</span></td><td class="text-center">${md}</td><td class="text-center">${a}</td></tr>`;}).join('');}
+function openCustomerModal(id){const c=id?state.customers.find(x=>x.id===id):null;const e=!!c;const am=state.mpos.filter(m=>m.status==='active');openModal(e?'Edit Customer':'Add Customer',`<div class="form-row"><div class="form-group"><label>Code</label><input type="text" class="form-control" id="fCustId" value="${c?c.id:getNextCode('C',state.customers,'id')}" ${e?'readonly':''}></div><div class="form-group"><label>Name</label><input type="text" class="form-control" id="fCustName" value="${c?c.name:''}" placeholder="e.g. Mediline Pharmacy"></div></div><div class="form-group"><label>Address</label><input type="text" class="form-control" id="fCustAddr" value="${c?c.address:''}"></div><div class="form-row"><div class="form-group"><label>Phone</label><input type="text" class="form-control" id="fCustPhone" value="${c?c.phone||'':''}"></div><div class="form-group"><label>Route / Territory</label><input type="text" class="form-control" id="fCustRoute" value="${c?c.route||'':''}" placeholder="e.g. BAMUNDI-A1"></div></div><div style="background:var(--primary-light);border-radius:8px;padding:16px"><p style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:12px;text-transform:uppercase"><i class="fas fa-user-tie"></i> MPO Assignment</p><div class="form-group" style="margin-bottom:0"><label>Assign MPO</label><select class="form-control" id="fCustMpo"><option value="">-- No MPO --</option>${am.length?am.map(m=>`<option value="${m.id}" ${c&&c.mpoId===m.id?'selected':''}>${m.id} - ${m.name} (${m.area})</option>`).join(''):'<option value="" disabled>No active MPOs.</option>'}</select></div></div>`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="saveCustomer('${id||''}')">${e?'Update':'Add'}</button>`);}
+function saveCustomer(eid){const id=document.getElementById('fCustId').value.trim(),name=document.getElementById('fCustName').value.trim(),address=document.getElementById('fCustAddr').value.trim(),phone=document.getElementById('fCustPhone').value.trim(),route=document.getElementById('fCustRoute').value.trim(),mpoId=document.getElementById('fCustMpo').value;if(!id||!name){showToast('Fill Code and Name.','error');return;}if(eid){const i=state.customers.findIndex(c=>c.id===eid);if(i>=0)state.customers[i]={...state.customers[i],name,address,phone,route,mpoId};showToast('Updated.');}else{if(state.customers.find(c=>c.id===id)){showToast('Code exists.','error');return;}state.customers.push({id,name,address,phone,route,mpoId});showToast('Added.');}saveToFirebase(['customers']);closeModal();renderCustomers();}
+function deleteCustomer(id){const c=state.customers.find(x=>x.id===id);if(!c)return;openModal('Confirm Delete',`<p>Delete <strong>${c.name}</strong>?</p>`,`<button class="btn btn-outline" onclick="closeModal()">Cancel</button><button class="btn btn-danger" onclick="state.customers=state.customers.filter(c=>c.id!=='${id}');saveToFirebase(['customers']);closeModal();renderCustomers();showToast('Deleted.');">Delete</button>`);}
+function populateCustomerDropdown(){const s=document.getElementById('invCustomer'),c=s.value;const cl=getMPOCustomers();s.innerHTML='<option value="">-- Select Customer --</option>'+cl.map(c=>{const mpo=c.mpoId?state.mpos.find(m=>m.id===c.mpoId):null;return`<option value="${c.id}">${c.id} - ${c.name}${mpo?' ['+mpo.name+']':''}</option>`;}).join('');s.value=c;}
+
+/* =================== INVOICE =================== */
+function initInvoiceTab(){document.getElementById('invNo').value=getNextInvNo();if(!document.getElementById('invDate').value)document.getElementById('invDate').value=todayStr();populateCustomerDropdown();document.getElementById('invNewCustCell').innerHTML=isAdmin()?'<button class="btn btn-outline btn-sm" onclick="openCustomerModal()" style="width:100%"><i class="fas fa-plus"></i> New Customer</button>':'';renderInvoiceItems();state.selectedProduct=null;updateInvMPODisplay();document.getElementById('invCustomer').onchange=function(){updateInvMPODisplay();autoFillRoute();};}
+function autoFillRoute(){const cid=document.getElementById('invCustomer').value;if(!cid)return;const c=state.customers.find(x=>x.id===cid);if(c&&c.route)document.getElementById('invRoute').value=c.route;}
+function updateInvMPODisplay(){const info=document.getElementById('invMPOInfo');if(isMPO()){const m=getMPO();if(m){document.getElementById('invMPOName').textContent=m.id+' - '+m.name+' - '+m.area;info.style.display='block';return;}}info.style.display='none';}
+function searchInvoiceProduct(){const q=(document.getElementById('invProductSearch').value||'').toLowerCase(),dd=document.getElementById('invProductDropdown');const l=q?state.products.filter(p=>(p.code.toLowerCase().includes(q)||p.name.toLowerCase().includes(q))&&p.stock>0):state.products.filter(p=>p.stock>0);if(!l.length){dd.innerHTML='<div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">No products</div>';dd.classList.add('show');return;}dd.innerHTML=l.slice(0,15).map(p=>`<div class="product-dropdown-item" onclick="selectInvoiceProduct('${p.code}')"><span class="pd-code">${p.code}</span><span class="pd-name">${p.name}</span><span class="pd-right"><span class="pd-stock">Stock: ${p.stock}</span>${p.bonusFree>0?`<span class="pd-bonus">${p.bonusEvery}:${p.bonusFree}</span>`:''}</span></div>`).join('');dd.classList.add('show');}
+function selectInvoiceProduct(code){const p=state.products.find(x=>x.code===code);if(!p)return;state.selectedProduct=p;document.getElementById('invProductSearch').value=`${p.code} - ${p.name}`;document.getElementById('invProductDropdown').classList.remove('show');document.getElementById('invQty').focus();}
+document.addEventListener('click',function(e){const w=document.querySelector('.product-search-wrap');if(w&&!w.contains(e.target))document.getElementById('invProductDropdown').classList.remove('show');});
+function addInvoiceItem(){const p=state.selectedProduct;if(!p){showToast('Select product.','error');return;}const qty=parseInt(document.getElementById('invQty').value)||0;if(qty<=0){showToast('Enter valid qty.','error');return;}if(state.currentInvoice.items.find(i=>i.productCode===p.code)){showToast('Already added.','info');return;}const bq=p.bonusEvery>0?Math.floor(qty/p.bonusEvery)*p.bonusFree:0;if(qty+bq>p.stock){showToast(`Insufficient stock. Need ${qty+bq}, have ${p.stock}.`,'error');return;}const item={productCode:p.code,productName:p.name,packSize:p.packSize,orderQty:qty,bonusQty:bq,tpRate:p.tpRate,vatFlat:p.vatFlat,bonusEvery:p.bonusEvery,bonusFree:p.bonusFree,defaultDiscount:p.defaultDiscount,discPercent:0,ruleApplied:'none'};applyBonusDiscountRule(item);Object.assign(item,calcLineAmounts(item));state.currentInvoice.items.push(item);renderInvoiceItems();state.selectedProduct=null;document.getElementById('invProductSearch').value='';document.getElementById('invQty').value=1;if(item.ruleApplied==='bonus')showToast(`${p.name}: Bonus ${item.bonusQty}, disc=0%.`,'info');else if(item.ruleApplied==='discount')showToast(`${p.name}: No bonus, disc=${item.discPercent}%.`,'info');else showToast(`${p.name} added.`);}
+function updateInvLine(i,f,v){const item=state.currentInvoice.items[i];if(!item)return;if(f==='orderQty'){const q=parseInt(v)||0;if(q<=0)return;const nb=item.bonusEvery>0?Math.floor(q/item.bonusEvery)*item.bonusFree:0;const p=state.products.find(x=>x.code===item.productCode);if(p&&q+nb>p.stock){showToast('Insufficient stock.','error');return;}item.orderQty=q;item.bonusQty=nb;applyBonusDiscountRule(item);}else if(f==='bonusQty'){item.bonusQty=Math.max(0,parseInt(v)||0);applyBonusDiscountRule(item);}else if(f==='discPercent'){item.discPercent=Math.max(0,Math.min(100,parseFloat(v)||0));item.ruleApplied=item.discPercent>0?'discount':(item.bonusQty>0?'bonus':'none');}Object.assign(item,calcLineAmounts(item));renderInvoiceItems();}
+function removeInvLine(i){state.currentInvoice.items.splice(i,1);renderInvoiceItems();showToast('Removed.','info');}
+function renderInvoiceItems(){const items=state.currentInvoice.items,tb=document.getElementById('invItemsBody'),em=document.getElementById('invEmptyState');if(!items.length){tb.innerHTML='';em.style.display='block';}else{em.style.display='none';tb.innerHTML=items.map((item,i)=>`<tr><td class="font-mono">${item.productCode}</td><td>${item.productName}</td><td>${item.packSize}</td><td><input type="number" class="form-control" value="${item.orderQty}" min="1" style="width:55px" onchange="updateInvLine(${i},'orderQty',this.value)"></td><td><input type="number" class="form-control" value="${item.bonusQty}" min="0" style="width:55px" onchange="updateInvLine(${i},'bonusQty',this.value)"></td><td>${ruleBadge(item.ruleApplied)}</td><td class="font-mono">${fmt(item.tpRate)}</td><td class="font-mono">${fmt(item.vatFlat)}</td><td class="font-mono">${fmt(item.tpAmount)}</td><td class="font-mono">${fmt(item.vatAmount)}</td><td><input type="number" class="form-control" value="${item.discPercent}" min="0" max="100" step="0.1" style="width:50px" onchange="updateInvLine(${i},'discPercent',this.value)"></td><td class="font-mono">${fmt(item.discAmount)}</td><td class="font-mono" style="font-weight:700;color:var(--primary)">${fmt(item.netAmount)}</td><td><button class="btn-ghost btn-icon btn-sm" onclick="removeInvLine(${i})"><i class="fas fa-xmark" style="color:var(--danger)"></i></button></td></tr>`).join('');}const t=calcTotals();document.getElementById('sumTP').textContent=fmt(t.tp);document.getElementById('sumVAT').textContent=fmt(t.vat);document.getElementById('sumDisc').textContent=fmt(t.disc);document.getElementById('sumGrand').textContent=fmt(t.grand);document.getElementById('sumItems').textContent=items.length;document.getElementById('sumBonus').textContent=items.reduce((s,it)=>s+it.bonusQty,0);document.getElementById('sumBonusLines').textContent=items.filter(it=>it.ruleApplied==='bonus').length;document.getElementById('sumDiscLines').textContent=items.filter(it=>it.ruleApplied==='discount').length;document.getElementById('invWords').textContent='In Words: '+numberToWords(t.grand)+'.';}
+function calcTotals(){const items=state.currentInvoice.items;const tp=items.reduce((s,i)=>s+i.tpAmount,0),vat=items.reduce((s,i)=>s+i.vatAmount,0),disc=items.reduce((s,i)=>s+i.discAmount,0);return{tp:round2(tp),vat:round2(vat),disc:round2(disc),grand:round2(tp+vat-disc)};}
+function clearInvoice(){state.currentInvoice.items=[];state.selectedProduct=null;initInvoiceTab();showToast('Cleared.','info');}
+function saveInvoice(){const items=state.currentInvoice.items;if(!items.length){showToast('Add items.','error');return;}const custId=document.getElementById('invCustomer').value;if(!custId){showToast('Select customer.','error');return;}const customer=state.customers.find(c=>c.id===custId);const totals=calcTotals();let mpoId='',mpoName='',mpoArea='';if(isMPO()){const m=getMPO();mpoId=m.id;mpoName=m.name;mpoArea=m.area;}else if(customer&&customer.mpoId){const m=state.mpos.find(x=>x.id===customer.mpoId);if(m){mpoId=m.id;mpoName=m.name;mpoArea=m.area;}}for(const item of items){const p=state.products.find(x=>x.code===item.productCode);if(p){p.stock-=(item.orderQty+item.bonusQty);if(p.stock<0)p.stock=0;}}const invoice={no:getNextInvNo(),date:document.getElementById('invDate').value,orderNo:document.getElementById('invOrderNo').value,delivDate:document.getElementById('invDelivDate').value,route:document.getElementById('invRoute').value,summaryNo:document.getElementById('invSummaryNo').value,invType:document.getElementById('invType').value,customerId:custId,customerName:customer?customer.name:'',customerAddress:customer?customer.address:'',customerPhone:customer?customer.phone:'',customerCode:custId,mpoId,mpoName,mpoArea,items:JSON.parse(JSON.stringify(items)),totals:{...totals},inWords:numberToWords(totals.grand)};state.invoices.push(invoice);const invO={};state.invoices.forEach(x=>invO[x.no]=x);const prdO={};state.products.forEach(x=>prdO[x.code]=x);db.ref('pharma/invoices').set(invO).catch(e=>{console.error(e);});db.ref('pharma/products').set(prdO).catch(e=>{console.error(e);});state.currentInvoice.items=[];state.selectedProduct=null;initInvoiceTab();showToast('Invoice '+invoice.no+' saved.');}
+
+/* =================== HISTORY =================== */
+function renderHistory(){const invoices=[...getMPOInvoices()].reverse();document.getElementById('historyStats').innerHTML=`<div class="stat-card"><div class="stat-icon green"><i class="fas fa-file-invoice-dollar"></i></div><div class="stat-info"><h3>${invoices.length}</h3><p>${isMPO()?'My':'Total'} Invoices</p></div></div><div class="stat-card"><div class="stat-icon blue"><i class="fas fa-coins"></i></div><div class="stat-info"><h3>${fmt(invoices.reduce((s,i)=>s+i.totals.grand,0))}</h3><p>Revenue</p></div></div><div class="stat-card"><div class="stat-icon amber"><i class="fas fa-percent"></i></div><div class="stat-info"><h3>${fmt(invoices.reduce((s,i)=>s+i.totals.disc,0))}</h3><p>Discounts</p></div></div>`;const tb=document.getElementById('historyTableBody'),em=document.getElementById('historyEmpty');if(!invoices.length){tb.innerHTML='';em.style.display='block';return;}em.style.display='none';tb.innerHTML=invoices.map(inv=>{const ri=state.invoices.indexOf(inv);const db=isAdmin()?`<button class="btn-ghost btn-icon btn-sm" onclick="deleteInvoice(${ri})"><i class="fas fa-trash" style="color:var(--danger)"></i></button>`:'';return`<tr><td class="font-mono"><strong>${inv.no}</strong></td><td>${formatDate(inv.date)}</td><td>${inv.customerName}</td><td>${inv.mpoName?'<span class="badge badge-green">'+inv.mpoName+'</span>':'<span class="text-muted">-</span>'}</td><td class="text-center">${inv.items.length}</td><td class="text-right font-mono">${fmt(inv.totals.tp)}</td><td class="text-right font-mono">${fmt(inv.totals.vat)}</td><td class="text-right font-mono">${fmt(inv.totals.disc)}</td><td class="text-right font-mono" style="font-weight:700;color:var(--primary)">${fmt(inv.totals.grand)}</td><td class="text-center"><button class="btn-ghost btn-icon btn-sm" onclick="viewInvoice(${ri})"><i class="fas fa-eye"></i></button><button class="btn-ghost btn-icon btn-sm" onclick="printSavedInvoice(${ri})"><i class="fas fa-print"></i></button>${db}</td></tr>`;}).join('');}
+function viewInvoice(idx){const inv=state.invoices[idx];if(!inv)return;let rows=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td class="t-left">${it.productName}</td><td>${it.packSize}</td><td>${it.orderQty}</td><td>${it.bonusQty}</td><td>${fmt(it.tpRate)}</td><td>${fmt(it.vatFlat)}</td><td>${fmt(it.tpAmount)}</td><td>${fmt(it.vatAmount)}</td><td>${it.discPercent}%</td><td>${fmt(it.discAmount)}</td><td>${fmt(it.netAmount)}</td></tr>`).join('');openModal('Invoice '+inv.no,`<div class="pi">${buildPrintInfoBlock(inv)}<table class="pi-table"><thead><tr><th>S.N.</th><th class="t-left">Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus Unit</th><th>Unit TP</th><th>VAT</th><th>Total TP</th><th>Total VAT</th><th>Disc.%</th><th>Disc.</th><th>Net Value</th></tr></thead><tbody>${rows}</tbody></table>${buildPrintSummary(inv)}<div class="pi-words"><strong>In word :</strong> ${inv.inWords}.</div></div>`,`<button class="btn btn-outline" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="closeModal();printSavedInvoice(${idx})"><i class="fas fa-print"></i> Print</button>`,true);}
+function deleteInvoice(idx){const inv=state.invoices[idx];if(!inv)return;for(const item of inv.items){const p=state.products.find(x=>x.code===item.productCode);if(p)p.stock+=(item.orderQty+item.bonusQty);}state.invoices.splice(idx,1);db.ref('pharma/invoices/'+inv.no).remove();saveToFirebase(['products']);renderHistory();showToast('Deleted. Stock restored.','info');}
+
+/* =================== PRINT — NO HEADER, NO SIGNATURE, 1.5cm TOP MARGIN =================== */
+function buildPrintInfoBlock(inv){
+    return `<div class="pi-info">
+        <div class="pi-info-col">
+            <p><span class="lbl">Customer Code :</span> ${inv.customerCode||''}</p>
+            <p><span class="lbl">Customer Name :</span> ${inv.customerName||'____________________'}</p>
+            <p><span class="lbl">Address :</span> ${inv.customerAddress||'________________________'}</p>
+            <p><span class="lbl">Phone No :</span> ${inv.customerPhone||'________________________'}</p>
+        </div>
+        <div class="pi-info-col">
+            <p><span class="lbl">MPO Code :</span> ${inv.mpoId||''}</p>
+            <p><span class="lbl">MPO Name :</span> ${inv.mpoName||'-'}</p>
+            <p><span class="lbl">Territory :</span> ${inv.mpoArea||'-'}</p>
+        </div>
+        <div class="pi-info-col">
+            <p><span class="lbl">Invoice No. :</span> ${inv.no}</p>
+            <p><span class="lbl">Invoice Date :</span> ${formatDate(inv.date)}</p>
+            <p><span class="lbl">Route = Territory :</span> ${inv.route||inv.mpoArea||'-'}</p>
+        </div>
+    </div>`;
+}
+function buildPrintSummary(inv){
+    return `<table class="pi-summary">
+        <tr><td style="text-align:left">Total TP Sales</td><td style="text-align:right">${fmt(inv.totals.tp)}</td></tr>
+        <tr class="eq"><td colspan="2"></td></tr>
+        <tr><td style="text-align:left">Total VAT</td><td style="text-align:right">${fmt(inv.totals.vat)}</td></tr>
+        <tr class="eq"><td colspan="2"></td></tr>
+        <tr><td style="text-align:left">Total Discount</td><td style="text-align:right">${fmt(inv.totals.disc)}</td></tr>
+        <tr class="eq"><td colspan="2"></td></tr>
+        <tr class="net-row"><td style="text-align:left">${fmt(inv.totals.grand)}Net Payable Amount =</td><td style="text-align:right">${fmt(inv.totals.grand)}</td></tr>
+    </table>`;
+}
+function buildPrintHTML(inv){
+    let rows=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td class="t-left">${it.productName}</td><td>${it.packSize}</td><td>${it.orderQty}</td><td>${it.bonusQty}</td><td>${fmt(it.tpRate)}</td><td>${fmt(it.vatFlat)}</td><td>${fmt(it.tpAmount)}</td><td>${fmt(it.vatAmount)}</td><td>${it.discPercent}%</td><td>${fmt(it.discAmount)}</td><td>${fmt(it.netAmount)}</td></tr>`).join('');
+    return `<div class="pi">
+        ${buildPrintInfoBlock(inv)}
+        <table class="pi-table">
+            <thead><tr><th>S.N.</th><th class="t-left">Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus Unit</th><th>Unit TP</th><th>VAT</th><th>Total TP</th><th>Total VAT</th><th>Disc.%</th><th>Disc.</th><th>Net Value</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        ${buildPrintSummary(inv)}
+        <div class="pi-words"><strong>In word :</strong> ${inv.inWords}.</div>
+    </div>`;
+}
+function printInvoice(){const items=state.currentInvoice.items;if(!items.length){showToast('No items.','error');return;}const custId=document.getElementById('invCustomer').value;const customer=state.customers.find(c=>c.id===custId);let mpoId='',mpoName='',mpoArea='';if(isMPO()){const m=getMPO();mpoId=m.id;mpoName=m.name;mpoArea=m.area;}else if(customer&&customer.mpoId){const m=state.mpos.find(x=>x.id===customer.mpoId);if(m){mpoId=m.id;mpoName=m.name;mpoArea=m.area;}}const totals=calcTotals();const invData={no:getNextInvNo(),date:document.getElementById('invDate').value,orderNo:document.getElementById('invOrderNo').value,delivDate:document.getElementById('invDelivDate').value,route:document.getElementById('invRoute').value,summaryNo:document.getElementById('invSummaryNo').value,invType:document.getElementById('invType').value,customerId:custId,customerName:customer?customer.name:'____________________',customerAddress:customer?customer.address:'________________________',customerPhone:customer?customer.phone:'',customerCode:custId,mpoId,mpoName,mpoArea,items,totals,inWords:numberToWords(totals.grand)};document.getElementById('print-area').innerHTML=buildPrintHTML(invData);setTimeout(()=>window.print(),200);}
+function printSavedInvoice(idx){const inv=state.invoices[idx];if(!inv)return;document.getElementById('print-area').innerHTML=buildPrintHTML(inv);setTimeout(()=>window.print(),200);}
+
+/* =================== KEYBOARD =================== */
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();if(e.key==='Enter'&&document.activeElement.id==='invQty'){e.preventDefault();addInvoiceItem();}});
+
+/* =================== INIT =================== */
+(async function(){const saved=sessionStorage.getItem('mpoLogin');if(saved){if(saved==='admin'){loggedInMPO='admin';await loadAllData();applyLoginUI();}else{try{const s=await db.ref('pharma/mpos/'+saved).once('value');const m=s.val();if(m&&m.status==='active'){loggedInMPO=saved;await loadAllData();applyLoginUI();}else sessionStorage.removeItem('mpoLogin');}catch(e){sessionStorage.removeItem('mpoLogin');}}}})();
+</script>
+</body>
+</html>
