@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<!-- SheetJS for Excel Upload -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--primary:#0D7C66;--primary-dark:#095E4D;--primary-light:#E6F5F0;--accent:#D97706;--accent-light:#FEF3C7;--bg:#F1F3F6;--card:#FFFFFF;--text:#1F2937;--muted:#6B7280;--border:#E2E5EA;--danger:#DC2626;--danger-light:#FEE2E2;--success:#059669;--success-light:#D1FAE5;--sidebar-w:260px;--radius:10px}
@@ -133,7 +134,7 @@ table tbody tr{transition:background .15s}table tbody tr:hover{background:#F9FAF
 .rule-indicator{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap}
 .rule-bonus{background:#DBEAFE;color:#1D4ED8}.rule-disc{background:#FEF3C7;color:#92400E}.rule-none{background:#F3F4F6;color:#9CA3AF}
 
-/* Excel Upload */
+/* Excel Upload Styles */
 .upload-zone{border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .2s;background:#FAFBFC}
 .upload-zone:hover,.upload-zone.dragover{border-color:var(--primary);background:var(--primary-light)}
 .upload-zone i{font-size:40px;color:var(--primary);margin-bottom:12px;display:block}
@@ -149,21 +150,31 @@ table tbody tr{transition:background .15s}table tbody tr:hover{background:#F9FAF
 @media print{
     body *{visibility:hidden}
     #print-area,#print-area *{visibility:visible}
-    #print-area{display:block!important;position:absolute;left:0;top:0;width:100%;padding:1.5cm 1.5cm 1cm;background:#fff}
-    #print-area .pi{font-family:'Times New Roman',Times,serif;font-size:12px;color:#000;line-height:1.5}
+    #print-area{display:block!important;position:absolute;left:0;top:0;width:100%;padding:0; background:#fff}
+    #print-area .pi{font-family:'Times New Roman',Times,serif;font-size:12px;color:#000;line-height:1.4}
+    
+    /* Custom Print Header */
+    #print-area .pi-header{text-align:center;margin-bottom:15px}
+    #print-area .pi-header h1{font-size:26px;font-weight:bold;margin:0;text-transform:uppercase;letter-spacing:1px}
+    #print-area .pi-header h2{font-size:14px;font-weight:normal;margin:5px 0 0;text-transform:capitalize}
+    #print-area .pi-header .doc-title{margin-top:10px;font-weight:bold;text-transform:uppercase;font-size:16px;border-top:1px solid #000;border-bottom:1px solid #000;padding:5px 0;letter-spacing:2px}
+
     #print-area .pi-info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-bottom:12px;border:1px solid #000}
     #print-area .pi-info-col{padding:6px 10px}
     #print-area .pi-info-col:nth-child(2){border-left:1px solid #000;border-right:1px solid #000}
     #print-area .pi-info-col p{margin:2px 0;font-size:11px}
     #print-area .pi-info-col .lbl{font-weight:bold}
+    
     #print-area .pi-table{width:100%;border-collapse:collapse;margin-bottom:12px}
     #print-area .pi-table th,#print-area .pi-table td{border:1px solid #000;padding:5px 6px;font-size:10px;text-align:center;vertical-align:middle}
     #print-area .pi-table th{background:#E8E8E8;font-weight:bold;text-transform:uppercase;font-size:9px;letter-spacing:.3px}
     #print-area .pi-table .t-left{text-align:left}
+    
     #print-area .pi-summary{margin-left:auto;width:280px;border:1px solid #000}
     #print-area .pi-summary td{border:none;padding:4px 10px;font-size:11px}
     #print-area .pi-summary .eq{border-bottom:1px dotted #000}
     #print-area .pi-summary .net-row{border-top:2px solid #000;font-weight:bold;font-size:13px}
+    
     #print-area .pi-words{margin-top:10px;font-size:11px;font-style:italic}
 }
 @media(max-width:1024px){.invoice-builder{grid-template-columns:1fr}.form-row-3{grid-template-columns:1fr 1fr}}
@@ -497,7 +508,26 @@ function renderHistory(){const invoices=[...getMPOInvoices()].reverse();document
 function viewInvoice(idx){const inv=state.invoices[idx];if(!inv)return;let rows=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td class="t-left">${it.productName}</td><td>${it.packSize}</td><td>${it.orderQty}</td><td>${it.bonusQty}</td><td>${fmt(it.tpRate)}</td><td>${fmt(it.vatFlat)}</td><td>${fmt(it.tpAmount)}</td><td>${fmt(it.vatAmount)}</td><td>${it.discPercent}%</td><td>${fmt(it.discAmount)}</td><td>${fmt(it.netAmount)}</td></tr>`).join('');openModal('Invoice '+inv.no,`<div class="pi">${buildPrintInfoBlock(inv)}<table class="pi-table"><thead><tr><th>S.N.</th><th class="t-left">Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus Unit</th><th>Unit TP</th><th>VAT</th><th>Total TP</th><th>Total VAT</th><th>Disc.%</th><th>Disc.</th><th>Net Value</th></tr></thead><tbody>${rows}</tbody></table>${buildPrintSummary(inv)}<div class="pi-words"><strong>In word :</strong> ${inv.inWords}.</div></div>`,`<button class="btn btn-outline" onclick="closeModal()">Close</button><button class="btn btn-primary" onclick="closeModal();printSavedInvoice(${idx})"><i class="fas fa-print"></i> Print</button>`,true);}
 function deleteInvoice(idx){const inv=state.invoices[idx];if(!inv)return;for(const item of inv.items){const p=state.products.find(x=>x.code===item.productCode);if(p)p.stock+=(item.orderQty+item.bonusQty);}state.invoices.splice(idx,1);db.ref('pharma/invoices/'+inv.no).remove();saveToFirebase(['products']);renderHistory();showToast('Deleted. Stock restored.','info');}
 
-/* =================== PRINT — NO HEADER, NO SIGNATURE, 1.5cm TOP MARGIN =================== */
+/* =================== PRINT - CUSTOM HEADER =================== */
+function buildPrintHTML(inv){
+    let rows=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td class="t-left">${it.productName}</td><td>${it.packSize}</td><td>${it.orderQty}</td><td>${it.bonusQty}</td><td>${fmt(it.tpRate)}</td><td>${fmt(it.vatFlat)}</td><td>${fmt(it.tpAmount)}</td><td>${fmt(it.vatAmount)}</td><td>${it.discPercent}%</td><td>${fmt(it.discAmount)}</td><td>${fmt(it.netAmount)}</td></tr>`).join('');
+    
+    return `<div class="pi">
+        <div class="pi-header">
+            <h1>MONICO PHARMA LTD</h1>
+            <h2>92 Kama Biler Mor, Kushtia</h2>
+            <div class="doc-title">Sales Invoice</div>
+        </div>
+        ${buildPrintInfoBlock(inv)}
+        <table class="pi-table">
+            <thead><tr><th>S.N.</th><th class="t-left">Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus Unit</th><th>Unit TP</th><th>VAT</th><th>Total TP</th><th>Total VAT</th><th>Disc.%</th><th>Disc.</th><th>Net Value</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+        ${buildPrintSummary(inv)}
+        <div class="pi-words"><strong>In word :</strong> ${inv.inWords}.</div>
+    </div>`;
+}
+
 function buildPrintInfoBlock(inv){
     return `<div class="pi-info">
         <div class="pi-info-col">
@@ -518,6 +548,7 @@ function buildPrintInfoBlock(inv){
         </div>
     </div>`;
 }
+
 function buildPrintSummary(inv){
     return `<table class="pi-summary">
         <tr><td style="text-align:left">Total TP Sales</td><td style="text-align:right">${fmt(inv.totals.tp)}</td></tr>
@@ -529,18 +560,7 @@ function buildPrintSummary(inv){
         <tr class="net-row"><td style="text-align:left">${fmt(inv.totals.grand)}Net Payable Amount =</td><td style="text-align:right">${fmt(inv.totals.grand)}</td></tr>
     </table>`;
 }
-function buildPrintHTML(inv){
-    let rows=inv.items.map((it,i)=>`<tr><td>${i+1}</td><td class="t-left">${it.productName}</td><td>${it.packSize}</td><td>${it.orderQty}</td><td>${it.bonusQty}</td><td>${fmt(it.tpRate)}</td><td>${fmt(it.vatFlat)}</td><td>${fmt(it.tpAmount)}</td><td>${fmt(it.vatAmount)}</td><td>${it.discPercent}%</td><td>${fmt(it.discAmount)}</td><td>${fmt(it.netAmount)}</td></tr>`).join('');
-    return `<div class="pi">
-        ${buildPrintInfoBlock(inv)}
-        <table class="pi-table">
-            <thead><tr><th>S.N.</th><th class="t-left">Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus Unit</th><th>Unit TP</th><th>VAT</th><th>Total TP</th><th>Total VAT</th><th>Disc.%</th><th>Disc.</th><th>Net Value</th></tr></thead>
-            <tbody>${rows}</tbody>
-        </table>
-        ${buildPrintSummary(inv)}
-        <div class="pi-words"><strong>In word :</strong> ${inv.inWords}.</div>
-    </div>`;
-}
+
 function printInvoice(){const items=state.currentInvoice.items;if(!items.length){showToast('No items.','error');return;}const custId=document.getElementById('invCustomer').value;const customer=state.customers.find(c=>c.id===custId);let mpoId='',mpoName='',mpoArea='';if(isMPO()){const m=getMPO();mpoId=m.id;mpoName=m.name;mpoArea=m.area;}else if(customer&&customer.mpoId){const m=state.mpos.find(x=>x.id===customer.mpoId);if(m){mpoId=m.id;mpoName=m.name;mpoArea=m.area;}}const totals=calcTotals();const invData={no:getNextInvNo(),date:document.getElementById('invDate').value,orderNo:document.getElementById('invOrderNo').value,delivDate:document.getElementById('invDelivDate').value,route:document.getElementById('invRoute').value,summaryNo:document.getElementById('invSummaryNo').value,invType:document.getElementById('invType').value,customerId:custId,customerName:customer?customer.name:'____________________',customerAddress:customer?customer.address:'________________________',customerPhone:customer?customer.phone:'',customerCode:custId,mpoId,mpoName,mpoArea,items,totals,inWords:numberToWords(totals.grand)};document.getElementById('print-area').innerHTML=buildPrintHTML(invData);setTimeout(()=>window.print(),200);}
 function printSavedInvoice(idx){const inv=state.invoices[idx];if(!inv)return;document.getElementById('print-area').innerHTML=buildPrintHTML(inv);setTimeout(()=>window.print(),200);}
 
