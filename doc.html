@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Honorarium Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#effefb',100:'#c8fff4',200:'#91fee9',300:'#53f5d9',400:'#20e0c4',500:'#0bbfaa',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a' },
+                        navy: { 800:'#1a2332',900:'#0F172A',950:'#0a0f1a' },
+                        gold: { 400:'#FBBF24',500:'#F59E0B',600:'#D97706' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+        .sidebar { width: 270px; min-height: 100vh; transition: transform 0.3s ease; }
+        .main-content { margin-left: 270px; min-height: 100vh; transition: margin 0.3s ease; }
+
+        .nav-link { transition: all 0.2s ease; border-left: 3px solid transparent; }
+        .nav-link:hover { background: rgba(13,148,136,0.1); border-left-color: rgba(13,148,136,0.3); }
+        .nav-link.active { background: rgba(13,148,136,0.15); border-left-color: #0d9488; color: #0d9488; font-weight: 600; }
+        .nav-sub { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+        .nav-sub.open { max-height: 200px; }
+        .nav-parent.open .chevron { transform: rotate(90deg); }
+        .chevron { transition: transform 0.3s ease; }
+
+        .stat-card { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.1); }
+
+        .page-content { animation: fadeUp 0.35s ease; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .table-row { transition: background 0.15s ease; }
+        .table-row:hover { background: #f0fdfa; }
+
+        .btn-primary { background: linear-gradient(135deg, #0d9488, #0f766e); transition: all 0.2s ease; }
+        .btn-primary:hover { background: linear-gradient(135deg, #0f766e, #115e59); transform: translateY(-1px); box-shadow: 0 4px 15px rgba(13,148,136,0.3); }
+        .btn-danger { transition: all 0.2s ease; }
+        .btn-danger:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+
+        .toast { animation: slideIn 0.4s ease, fadeOut 0.4s ease 2.6s forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { to { transform: translateX(100%); opacity: 0; } }
+
+        .modal-overlay { animation: modalBgIn 0.25s ease; }
+        @keyframes modalBgIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-box { animation: modalIn 0.3s ease; }
+        @keyframes modalIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .conn-ok { background: linear-gradient(90deg, #059669, #047857); }
+        .conn-err { background: linear-gradient(90deg, #dc2626, #b91c1c); }
+
+        @media (max-width: 1024px) {
+            .sidebar { position: fixed; z-index: 50; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+        }
+
+        @media print {
+            .sidebar, .top-bar, .no-print, .conn-ok, .conn-err { display: none !important; }
+            .main-content { margin-left: 0 !important; }
+            .print-area { padding: 0 !important; }
+            .print-table { font-size: 10px; }
+            .print-table th, .print-table td { padding: 4px 6px !important; border: 1px solid #333 !important; }
+            body { background: white !important; }
+        }
+
+        .input-focus:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <!-- Firebase Connection Status Banner -->
+    <div id="connBanner" class="conn-ok text-white text-center py-2 px-4 text-sm font-medium no-print">
+        <i class="fas fa-spinner fa-spin mr-1"></i>
+        Firebase কানেক্ট হচ্ছে...
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar fixed top-0 left-0 bg-navy-900 text-white flex flex-col z-40 no-print" id="sidebar">
+        <div class="px-5 py-5 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+                    <i class="fas fa-stethoscope text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold leading-tight">Honorarium</h1>
+                    <p class="text-[10px] text-slate-400 tracking-wider uppercase">Management System</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-4 overflow-y-auto">
+            <div class="px-4 mb-2"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Main</span></div>
+            <a href="#" class="nav-link active flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" data-page="dashboard" onclick="showPage('dashboard');return false;">
+                <i class="fas fa-chart-pie w-5 text-center text-brand-400"></i> Dashboard
+            </a>
+
+            <div class="px-4 mt-5 mb-2"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Management</span></div>
+
+            <div class="nav-parent">
+                <a href="#" class="nav-link flex items-center justify-between px-5 py-2.5 text-sm text-slate-300" onclick="toggleSubMenu(this);return false;">
+                    <span class="flex items-center gap-3"><i class="fas fa-user-doctor w-5 text-center text-brand-400"></i> Doctor Management</span>
+                    <i class="fas fa-chevron-right chevron text-[10px] text-slate-500"></i>
+                </a>
+                <div class="nav-sub">
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="add-doctor" onclick="showPage('add-doctor');return false;"><i class="fas fa-plus w-4 text-center"></i> Add Doctor</a>
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="doctor-list" onclick="showPage('doctor-list');return false;"><i class="fas fa-list w-4 text-center"></i> Doctor List</a>
+                </div>
+            </div>
+
+            <div class="nav-parent">
+                <a href="#" class="nav-link flex items-center justify-between px-5 py-2.5 text-sm text-slate-300" onclick="toggleSubMenu(this);return false;">
+                    <span class="flex items-center gap-3"><i class="fas fa-user-tie w-5 text-center text-brand-400"></i> MPO Management</span>
+                    <i class="fas fa-chevron-right chevron text-[10px] text-slate-500"></i>
+                </a>
+                <div class="nav-sub">
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="add-mpo" onclick="showPage('add-mpo');return false;"><i class="fas fa-plus w-4 text-center"></i> Add MPO</a>
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="mpo-list" onclick="showPage('mpo-list');return false;"><i class="fas fa-list w-4 text-center"></i> MPO List</a>
+                </div>
+            </div>
+
+            <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300 mt-1" data-page="honorarium-entry" onclick="showPage('honorarium-entry');return false;">
+                <i class="fas fa-money-bill-wave w-5 text-center text-brand-400"></i> Honorarium Entry
+            </a>
+
+            <div class="px-4 mt-5 mb-2"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Reports</span></div>
+
+            <div class="nav-parent">
+                <a href="#" class="nav-link flex items-center justify-between px-5 py-2.5 text-sm text-slate-300" onclick="toggleSubMenu(this);return false;">
+                    <span class="flex items-center gap-3"><i class="fas fa-file-lines w-5 text-center text-brand-400"></i> Reports</span>
+                    <i class="fas fa-chevron-right chevron text-[10px] text-slate-500"></i>
+                </a>
+                <div class="nav-sub">
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="report-monthly" onclick="showPage('report-monthly');return false;"><i class="fas fa-calendar w-4 text-center"></i> Monthly</a>
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="report-mpo" onclick="showPage('report-mpo');return false;"><i class="fas fa-user-tie w-4 text-center"></i> MPO Wise</a>
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="report-territory" onclick="showPage('report-territory');return false;"><i class="fas fa-map-marker-alt w-4 text-center"></i> Territory Wise</a>
+                    <a href="#" class="nav-link flex items-center gap-3 pl-12 pr-5 py-2 text-xs text-slate-400" data-page="report-doctor" onclick="showPage('report-doctor');return false;"><i class="fas fa-user-doctor w-4 text-center"></i> Doctor Wise</a>
+                </div>
+            </div>
+
+            <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300 mt-1" data-page="print-sheet" onclick="showPage('print-sheet');return false;">
+                <i class="fas fa-print w-5 text-center text-gold-500"></i> Print Honorarium Sheet
+            </a>
+        </nav>
+
+        <div class="px-5 py-4 border-t border-white/10 text-[11px] text-slate-500">
+            <div class="flex items-center gap-2" id="sidebarStatus">
+                <span class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></span>
+                Connecting...
+            </div>
+        </div>
+    </aside>
+
+    <!-- Mobile Overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden no-print" onclick="closeSidebar()"></div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="mainContent">
+        <header class="top-bar bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-20 no-print">
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden text-slate-600 hover:text-brand-600" onclick="openSidebar()">
+                    <i class="fas fa-bars text-lg"></i>
+                </button>
+                <h2 class="text-lg font-bold text-slate-800" id="pageTitle">Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-400" id="currentDateTime"></span>
+                <div class="w-8 h-8 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center text-sm font-bold">A</div>
+            </div>
+        </header>
+
+        <div class="p-6 print-area">
+
+            <!-- ==================== DASHBOARD ==================== -->
+            <div id="page-dashboard" class="page-content">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Doctors</span>
+                            <div class="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center"><i class="fas fa-user-doctor text-brand-600"></i></div>
+                        </div>
+                        <div class="text-3xl font-extrabold text-slate-800" id="statDoctors">0</div>
+                        <div class="text-xs text-slate-400 mt-1">Registered doctors</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total MPOs</span>
+                            <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><i class="fas fa-user-tie text-blue-600"></i></div>
+                        </div>
+                        <div class="text-3xl font-extrabold text-slate-800" id="statMPOs">0</div>
+                        <div class="text-xs text-slate-400 mt-1">Field officers</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Disbursed</span>
+                            <div class="w-10 h-10 rounded-lg bg-gold-500/10 flex items-center justify-center"><i class="fas fa-bangladeshi-taka-sign text-gold-600"></i></div>
+                        </div>
+                        <div class="text-3xl font-extrabold text-slate-800" id="statTotal">0</div>
+                        <div class="text-xs text-slate-400 mt-1">All time honorarium</div>
+                    </div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">This Month</span>
+                            <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center"><i class="fas fa-calendar-check text-emerald-600"></i></div>
+                        </div>
+                        <div class="text-3xl font-extrabold text-slate-800" id="statMonth">0</div>
+                        <div class="text-xs text-slate-400 mt-1" id="statMonthLabel">Current month</div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-700">Recent Honorarium Entries</h3>
+                        <a href="#" class="text-xs text-brand-600 hover:underline" onclick="showPage('honorarium-entry');return false;">View All</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left px-5 py-3">Doctor</th>
+                                    <th class="text-left px-5 py-3">MPO</th>
+                                    <th class="text-left px-5 py-3">Amount</th>
+                                    <th class="text-left px-5 py-3">Month</th>
+                                    <th class="text-left px-5 py-3">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentEntriesBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="recentEmpty" class="hidden px-5 py-12 text-center text-slate-400 text-sm">
+                        <i class="fas fa-inbox text-3xl mb-3 block text-slate-300"></i> No entries yet
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== ADD DOCTOR ==================== -->
+            <div id="page-add-doctor" class="page-content hidden">
+                <div class="max-w-2xl">
+                    <div class="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fas fa-user-doctor text-brand-600"></i> Add New Doctor</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Doctor Name *</label>
+                                <input type="text" id="docName" placeholder="Enter full name" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Degree *</label>
+                                <input type="text" id="docDegree" placeholder="MBBS, FCPS, MD..." class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Specialty *</label>
+                                <input type="text" id="docSpecialty" placeholder="Medicine, Cardiology..." class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Chamber Address *</label>
+                                <input type="text" id="docChamber" placeholder="Full chamber address" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Mobile Number *</label>
+                                <input type="text" id="docMobile" placeholder="01XXXXXXXXX" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Territory *</label>
+                                <input type="text" id="docTerritory" list="territoryList" placeholder="e.g. Chuadanga-1" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                <datalist id="territoryList"></datalist>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="saveDoctor()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Doctor</button>
+                            <button onclick="resetDoctorForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== DOCTOR LIST ==================== -->
+            <div id="page-doctor-list" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">All Doctors</h3>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <div class="relative flex-1 sm:flex-initial">
+                                <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                                <input type="text" id="doctorSearch" oninput="filterDoctors()" placeholder="Search doctors..." class="input-focus pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none transition w-full sm:w-64">
+                            </div>
+                            <a href="#" onclick="showPage('add-doctor');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Add</a>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left px-5 py-3">#</th>
+                                    <th class="text-left px-5 py-3">Name</th>
+                                    <th class="text-left px-5 py-3">Degree</th>
+                                    <th class="text-left px-5 py-3">Specialty</th>
+                                    <th class="text-left px-5 py-3">Chamber</th>
+                                    <th class="text-left px-5 py-3">Mobile</th>
+                                    <th class="text-left px-5 py-3">Territory</th>
+                                    <th class="text-center px-5 py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="doctorEmpty" class="hidden px-5 py-12 text-center text-slate-400 text-sm"><i class="fas fa-user-doctor text-3xl mb-3 block text-slate-300"></i>No doctors found</div>
+                </div>
+            </div>
+
+            <!-- ==================== ADD MPO ==================== -->
+            <div id="page-add-mpo" class="page-content hidden">
+                <div class="max-w-2xl">
+                    <div class="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fas fa-user-tie text-brand-600"></i> Add New MPO</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">MPO Name *</label>
+                                <input type="text" id="mpoName" placeholder="Enter full name" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Employee ID *</label>
+                                <input type="text" id="mpoEmpId" placeholder="e.g. MPO001" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Territory *</label>
+                                <input type="text" id="mpoTerritory" list="territoryListMpo" placeholder="e.g. Chuadanga-1" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                                <datalist id="territoryListMpo"></datalist>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Mobile Number *</label>
+                                <input type="text" id="mpoMobile" placeholder="01XXXXXXXXX" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Joining Date *</label>
+                                <input type="date" id="mpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="saveMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save MPO</button>
+                            <button onclick="resetMPOForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Reset</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== MPO LIST ==================== -->
+            <div id="page-mpo-list" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">All MPOs</h3>
+                        <a href="#" onclick="showPage('add-mpo');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap"><i class="fas fa-plus mr-1"></i> Add MPO</a>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left px-5 py-3">#</th>
+                                    <th class="text-left px-5 py-3">Name</th>
+                                    <th class="text-left px-5 py-3">Employee ID</th>
+                                    <th class="text-left px-5 py-3">Territory</th>
+                                    <th class="text-left px-5 py-3">Mobile</th>
+                                    <th class="text-left px-5 py-3">Joining Date</th>
+                                    <th class="text-center px-5 py-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mpoListBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="mpoEmpty" class="hidden px-5 py-12 text-center text-slate-400 text-sm"><i class="fas fa-user-tie text-3xl mb-3 block text-slate-300"></i>No MPOs found</div>
+                </div>
+            </div>
+
+            <!-- ==================== HONORARIUM ENTRY ==================== -->
+            <div id="page-honorarium-entry" class="page-content hidden">
+                <div class="max-w-2xl">
+                    <div class="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2"><i class="fas fa-money-bill-wave text-brand-600"></i> New Honorarium Entry</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Select Doctor *</label>
+                                <select id="honDoctor" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition bg-white"><option value="">-- Choose Doctor --</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Select MPO *</label>
+                                <select id="honMPO" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition bg-white"><option value="">-- Choose MPO --</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Amount (BDT) *</label>
+                                <input type="number" id="honAmount" placeholder="Enter amount" min="0" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Month *</label>
+                                <select id="honMonth" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition bg-white"></select>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Remarks</label>
+                                <input type="text" id="honRemarks" placeholder="Optional remarks" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition">
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-6">
+                            <button onclick="saveHonorarium()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Entry</button>
+                            <button onclick="resetHonorForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Reset</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-6">
+                    <div class="px-5 py-4 border-b border-slate-100"><h3 class="font-bold text-slate-700">All Honorarium Entries</h3></div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left px-5 py-3">#</th>
+                                    <th class="text-left px-5 py-3">Doctor</th>
+                                    <th class="text-left px-5 py-3">MPO</th>
+                                    <th class="text-left px-5 py-3">Amount</th>
+                                    <th class="text-left px-5 py-3">Month</th>
+                                    <th class="text-left px-5 py-3">Remarks</th>
+                                    <th class="text-left px-5 py-3">Date</th>
+                                    <th class="text-center px-5 py-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="honListBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                    <div id="honEmpty" class="hidden px-5 py-12 text-center text-slate-400 text-sm"><i class="fas fa-money-bill-wave text-3xl mb-3 block text-slate-300"></i>No entries yet</div>
+                </div>
+            </div>
+
+            <!-- ==================== REPORT MONTHLY ==================== -->
+            <div id="page-report-monthly" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">Monthly Report</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <select id="rptMonthlyMonth" onchange="loadMonthlyReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"></select>
+                            <button onclick="exportReportPDF('monthly')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="printCurrentReport()" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-print mr-1"></i> Print</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto" id="monthlyReportTable"></div>
+                    <div id="monthlyReportFooter" class="px-5 py-3 border-t border-slate-200 bg-slate-50 font-bold text-sm"></div>
+                </div>
+            </div>
+
+            <!-- ==================== REPORT MPO WISE ==================== -->
+            <div id="page-report-mpo" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">MPO Wise Report</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <select id="rptMpoSelect" onchange="loadMPOReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"><option value="">-- All MPOs --</option></select>
+                            <select id="rptMpoMonth" onchange="loadMPOReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"></select>
+                            <button onclick="exportReportPDF('mpo')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="printCurrentReport()" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-print mr-1"></i> Print</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto" id="mpoReportTable"></div>
+                    <div id="mpoReportFooter" class="px-5 py-3 border-t border-slate-200 bg-slate-50 font-bold text-sm"></div>
+                </div>
+            </div>
+
+            <!-- ==================== REPORT TERRITORY WISE ==================== -->
+            <div id="page-report-territory" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">Territory Wise Report</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <select id="rptTerritorySelect" onchange="loadTerritoryReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"><option value="">-- All Territories --</option></select>
+                            <select id="rptTerritoryMonth" onchange="loadTerritoryReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"></select>
+                            <button onclick="exportReportPDF('territory')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="printCurrentReport()" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-print mr-1"></i> Print</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto" id="territoryReportTable"></div>
+                    <div id="territoryReportFooter" class="px-5 py-3 border-t border-slate-200 bg-slate-50 font-bold text-sm"></div>
+                </div>
+            </div>
+
+            <!-- ==================== REPORT DOCTOR WISE ==================== -->
+            <div id="page-report-doctor" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <h3 class="font-bold text-slate-700">Doctor Wise Report</h3>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <select id="rptDoctorSelect" onchange="loadDoctorReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"><option value="">-- All Doctors --</option></select>
+                            <select id="rptDoctorMonth" onchange="loadDoctorReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"></select>
+                            <button onclick="exportReportPDF('doctor')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-file-pdf mr-1"></i> PDF</button>
+                            <button onclick="printCurrentReport()" class="bg-slate-600 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-print mr-1"></i> Print</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto" id="doctorReportTable"></div>
+                    <div id="doctorReportFooter" class="px-5 py-3 border-t border-slate-200 bg-slate-50 font-bold text-sm"></div>
+                </div>
+            </div>
+
+            <!-- ==================== PRINT HONORARIUM SHEET ==================== -->
+            <div id="page-print-sheet" class="page-content hidden">
+                <div class="no-print bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fas fa-print text-gold-500"></i> Print Honorarium Sheet</h3>
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Month</label>
+                            <select id="printMonth" onchange="loadPrintSheet()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Territory</label>
+                            <select id="printTerritory" onchange="loadPrintSheet()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none transition bg-white"><option value="">All Territories</option></select>
+                        </div>
+                        <button onclick="window.print()" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i> Print Sheet</button>
+                        <button onclick="exportPrintSheetPDF()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg text-sm font-semibold transition"><i class="fas fa-file-pdf mr-1"></i> Export PDF</button>
+                    </div>
+                </div>
+                <div id="printSheetArea" class="bg-white rounded-xl border border-slate-200 p-8"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ==================== EDIT DOCTOR MODAL ==================== -->
+    <div id="modalEditDoctor" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0 bg-black/50" onclick="closeModal('modalEditDoctor')"></div>
+        <div class="modal-box absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-edit text-brand-600 mr-2"></i>Edit Doctor</h3>
+                <button onclick="closeModal('modalEditDoctor')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="editDocId">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Doctor Name</label><input type="text" id="editDocName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Degree</label><input type="text" id="editDocDegree" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Specialty</label><input type="text" id="editDocSpecialty" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Chamber Address</label><input type="text" id="editDocChamber" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile</label><input type="text" id="editDocMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><input type="text" id="editDocTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="updateDoctor()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i> Update</button>
+                <button onclick="closeModal('modalEditDoctor')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== EDIT MPO MODAL ==================== -->
+    <div id="modalEditMPO" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0 bg-black/50" onclick="closeModal('modalEditMPO')"></div>
+        <div class="modal-box absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-edit text-brand-600 mr-2"></i>Edit MPO</h3>
+                <button onclick="closeModal('modalEditMPO')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="editMpoId">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">MPO Name</label><input type="text" id="editMpoName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Employee ID</label><input type="text" id="editMpoEmpId" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><input type="text" id="editMpoTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile</label><input type="text" id="editMpoMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Joining Date</label><input type="date" id="editMpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none transition"></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="updateMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i> Update</button>
+                <button onclick="closeModal('modalEditMPO')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== DELETE CONFIRM MODAL ==================== -->
+    <div id="modalConfirmDelete" class="fixed inset-0 z-50 hidden">
+        <div class="modal-overlay absolute inset-0 bg-black/50" onclick="closeModal('modalConfirmDelete')"></div>
+        <div class="modal-box absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center">
+            <div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><i class="fas fa-trash-alt text-red-500 text-xl"></i></div>
+            <h3 class="text-lg font-bold text-slate-800 mb-2">Confirm Delete</h3>
+            <p class="text-sm text-slate-500 mb-6" id="deleteConfirmText">Are you sure you want to delete this item?</p>
+            <input type="hidden" id="deleteTargetId">
+            <input type="hidden" id="deleteTargetType">
+            <div class="flex gap-3 justify-center">
+                <button onclick="confirmDelete()" class="btn-danger bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-trash mr-1"></i> Delete</button>
+                <button onclick="closeModal('modalConfirmDelete')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600 hover:bg-slate-50 transition">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 no-print"></div>
+
+    <!-- ==================== FIREBASE & APP LOGIC ==================== -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getDatabase, ref, set, push, update, remove, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+        // ============================================================
+        // আপনার Firebase কনফিগারেশন (databaseURL যোগ করা হয়েছে)
+        // ============================================================
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD9VXe5YBofZ2O4yCzTmRutTlfy-tRSruw",
+  authDomain: "octor-aad88.firebaseapp.com",
+  databaseURL: "https://octor-aad88-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "octor-aad88",
+  storageBucket: "octor-aad88.firebasestorage.app",
+  messagingSenderId: "606146627263",
+  appId: "1:606146627263:web:0a4cbb4bc02c939d59280a",
+  measurementId: "G-8TVW66W460"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // কানেকশন স্ট্যাটাস চেক
+        let firebaseConnected = false;
+        const connBanner = document.getElementById('connBanner');
+        const sidebarStatus = document.getElementById('sidebarStatus');
+
+        // একটি রেফারেন্স থেকে .info/connected চেক করা যায়
+        onValue(ref(db, '.info/connected'), (snap) => {
+            firebaseConnected = snap.val() === true;
+            if (firebaseConnected) {
+                connBanner.className = 'conn-ok text-white text-center py-2 px-4 text-sm font-medium no-print';
+                connBanner.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Firebase Realtime Database সফলভাবে কানেক্টেড';
+                setTimeout(() => { connBanner.style.display = 'none'; }, 3000);
+                sidebarStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Firebase Connected';
+            } else {
+                connBanner.className = 'conn-err text-white text-center py-2 px-4 text-sm font-medium no-print';
+                connBanner.innerHTML = '<i class="fas fa-exclamation-triangle mr-1"></i> Firebase থেকে ডিসকানেক্টেড — ইন্টারনেট কানেকশন চেক করুন';
+                connBanner.style.display = '';
+                sidebarStatus.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400 pulse-dot"></span> Disconnected';
+            }
+        });
+
+        // ক্যাশে ডাটা
+        let doctorsCache = {};
+        let mposCache = {};
+        let honorariumCache = {};
+
+        // ইউটিলিটি
+        function formatBDT(n) { return '\u09F3 ' + Number(n || 0).toLocaleString('en-BD'); }
+        function formatDate(ts) {
+            if (!ts) return '-';
+            const d = new Date(ts);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function getMonthOptions() {
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const opts = [];
+            const now = new Date();
+            for (let y = now.getFullYear() - 2; y <= now.getFullYear() + 1; y++) {
+                months.forEach((m) => { opts.push(m + '-' + String(y).slice(-2)); });
+            }
+            return opts;
+        }
+        function getCurrentMonth() {
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const now = new Date();
+            return months[now.getMonth()] + '-' + String(now.getFullYear()).slice(-2);
+        }
+        function populateMonthSelects() {
+            const opts = getMonthOptions();
+            const current = getCurrentMonth();
+            ['honMonth','rptMonthlyMonth','rptMpoMonth','rptTerritoryMonth','rptDoctorMonth','printMonth'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = '';
+                opts.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m; opt.textContent = m;
+                    if (m === current) opt.selected = true;
+                    el.appendChild(opt);
+                });
+            });
+        }
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const colors = { success: 'bg-emerald-600', error: 'bg-red-600', warning: 'bg-amber-500', info: 'bg-blue-600' };
+            const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+            const toast = document.createElement('div');
+            toast.className = `toast ${colors[type]} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 text-sm font-medium min-w-[280px]`;
+            toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        function getDoctorName(id) { return doctorsCache[id] ? doctorsCache[id].name : 'Unknown'; }
+        function getMPOName(id) { return mposCache[id] ? mposCache[id].name : 'Unknown'; }
+        function getDoctorTerritory(id) { return doctorsCache[id] ? doctorsCache[id].territory : ''; }
+
+        function updateTerritoryDatalist() {
+            const territories = new Set();
+            Object.values(doctorsCache).forEach(d => { if(d.territory) territories.add(d.territory); });
+            Object.values(mposCache).forEach(m => { if(m.territory) territories.add(m.territory); });
+            const html = [...territories].map(t => `<option value="${t}">`).join('');
+            document.getElementById('territoryList').innerHTML = html;
+            document.getElementById('territoryListMpo').innerHTML = html;
+            ['rptTerritorySelect', 'printTerritory'].forEach(sid => {
+                const sel = document.getElementById(sid);
+                if (!sel) return;
+                const current = sel.value;
+                sel.innerHTML = '<option value="">All Territories</option>' + [...territories].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+                sel.value = current;
+            });
+        }
+
+        // নেভিগেশন
+        const pageTitles = {
+            'dashboard':'Dashboard','add-doctor':'Add Doctor','doctor-list':'Doctor List',
+            'add-mpo':'Add MPO','mpo-list':'MPO List','honorarium-entry':'Honorarium Entry',
+            'report-monthly':'Monthly Report','report-mpo':'MPO Wise Report',
+            'report-territory':'Territory Wise Report','report-doctor':'Doctor Wise Report',
+            'print-sheet':'Print Honorarium Sheet'
+        };
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+            const page = document.getElementById('page-' + pageId);
+            if (page) page.classList.remove('hidden');
+            document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+            const navLink = document.querySelector(`.nav-link[data-page="${pageId}"]`);
+            if (navLink) navLink.classList.add('active');
+            document.getElementById('pageTitle').textContent = pageTitles[pageId] || 'Dashboard';
+            switch (pageId) {
+                case 'dashboard': loadDashboard(); break;
+                case 'doctor-list': loadDoctors(); break;
+                case 'mpo-list': loadMPOs(); break;
+                case 'honorarium-entry': loadHonorariumList(); populateHonDropdowns(); break;
+                case 'report-monthly': loadMonthlyReport(); break;
+                case 'report-mpo': loadMPOReport(); populateReportDropdowns(); break;
+                case 'report-territory': loadTerritoryReport(); populateReportDropdowns(); break;
+                case 'report-doctor': loadDoctorReport(); populateReportDropdowns(); break;
+                case 'print-sheet': loadPrintSheet(); break;
+            }
+            closeSidebar();
+        }
+        window.showPage = showPage;
+
+        function toggleSubMenu(el) {
+            const parent = el.closest('.nav-parent');
+            parent.classList.toggle('open');
+            parent.querySelector('.nav-sub').classList.toggle('open');
+        }
+        window.toggleSubMenu = toggleSubMenu;
+
+        function openSidebar() {
+            document.getElementById('sidebar').classList.add('open');
+            document.getElementById('sidebarOverlay').classList.remove('hidden');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+        }
+        window.closeSidebar = closeSidebar;
+        window.openSidebar = openSidebar;
+
+        // ============================================================
+        // রিয়েলটাইম ডাটা লিসেনার
+        // ============================================================
+        onValue(ref(db, 'doctors'), (snapshot) => {
+            doctorsCache = snapshot.val() || {};
+            updateTerritoryDatalist();
+            if (!document.getElementById('page-doctor-list').classList.contains('hidden')) loadDoctors();
+        });
+
+        onValue(ref(db, 'mpos'), (snapshot) => {
+            mposCache = snapshot.val() || {};
+            updateTerritoryDatalist();
+            if (!document.getElementById('page-mpo-list').classList.contains('hidden')) loadMPOs();
+        });
+
+        onValue(ref(db, 'honorarium'), (snapshot) => {
+            honorariumCache = snapshot.val() || {};
+            if (!document.getElementById('page-honorarium-entry').classList.contains('hidden')) loadHonorariumList();
+            if (!document.getElementById('page-dashboard').classList.contains('hidden')) loadDashboard();
+        });
+
+        // ============================================================
+        // ডক্টর CRUD
+        // ============================================================
+        function saveDoctor() {
+            const name = document.getElementById('docName').value.trim();
+            const degree = document.getElementById('docDegree').value.trim();
+            const specialty = document.getElementById('docSpecialty').value.trim();
+            const chamber = document.getElementById('docChamber').value.trim();
+            const mobile = document.getElementById('docMobile').value.trim();
+            const territory = document.getElementById('docTerritory').value.trim();
+            if (!name || !degree || !specialty || !chamber || !mobile || !territory) { showToast('সব ফিল্ড পূরণ করুন', 'error'); return; }
+            push(ref(db, 'doctors'), { name, degree, specialty, chamber, mobile, territory, createdAt: Date.now() })
+                .then(() => { showToast('ডাক্তার সফলভাবে সেভ হয়েছে'); resetDoctorForm(); })
+                .catch(err => showToast('সেভ করতে সমস্যা: ' + err.message, 'error'));
+        }
+        window.saveDoctor = saveDoctor;
+
+        function resetDoctorForm() {
+            ['docName','docDegree','docSpecialty','docChamber','docMobile','docTerritory'].forEach(id => document.getElementById(id).value = '');
+        }
+        window.resetDoctorForm = resetDoctorForm;
+
+        function loadDoctors() {
+            const body = document.getElementById('doctorListBody');
+            const empty = document.getElementById('doctorEmpty');
+            const entries = Object.entries(doctorsCache);
+            if (entries.length === 0) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            body.innerHTML = entries.map(([id, d], i) => `
+                <tr class="table-row">
+                    <td class="px-5 py-3 text-slate-400 text-xs">${i + 1}</td>
+                    <td class="px-5 py-3 font-semibold text-slate-800">${d.name}</td>
+                    <td class="px-5 py-3 text-slate-600">${d.degree}</td>
+                    <td class="px-5 py-3 text-slate-600">${d.specialty}</td>
+                    <td class="px-5 py-3 text-slate-600 text-xs max-w-[200px] truncate" title="${d.chamber || ''}">${d.chamber}</td>
+                    <td class="px-5 py-3 text-slate-600">${d.mobile}</td>
+                    <td class="px-5 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2.5 py-1 rounded-full">${d.territory}</span></td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="openEditDoctor('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button onclick="requestDelete('${id}','doctor')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function filterDoctors() {
+            const q = document.getElementById('doctorSearch').value.toLowerCase();
+            document.getElementById('doctorListBody').querySelectorAll('tr').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        }
+        window.filterDoctors = filterDoctors;
+
+        function openEditDoctor(id) {
+            const d = doctorsCache[id]; if (!d) return;
+            document.getElementById('editDocId').value = id;
+            document.getElementById('editDocName').value = d.name || '';
+            document.getElementById('editDocDegree').value = d.degree || '';
+            document.getElementById('editDocSpecialty').value = d.specialty || '';
+            document.getElementById('editDocChamber').value = d.chamber || '';
+            document.getElementById('editDocMobile').value = d.mobile || '';
+            document.getElementById('editDocTerritory').value = d.territory || '';
+            openModal('modalEditDoctor');
+        }
+        window.openEditDoctor = openEditDoctor;
+
+        function updateDoctor() {
+            const id = document.getElementById('editDocId').value;
+            const data = {
+                name: document.getElementById('editDocName').value.trim(),
+                degree: document.getElementById('editDocDegree').value.trim(),
+                specialty: document.getElementById('editDocSpecialty').value.trim(),
+                chamber: document.getElementById('editDocChamber').value.trim(),
+                mobile: document.getElementById('editDocMobile').value.trim(),
+                territory: document.getElementById('editDocTerritory').value.trim()
+            };
+            if (!data.name || !data.degree || !data.specialty || !data.chamber || !data.mobile || !data.territory) { showToast('সব ফিল্ড পূরণ করুন', 'error'); return; }
+            update(ref(db, 'doctors/' + id), data)
+                .then(() => { showToast('ডাক্তার তথ্য আপডেট হয়েছে'); closeModal('modalEditDoctor'); })
+                .catch(err => showToast('আপডেট সমস্যা: ' + err.message, 'error'));
+        }
+        window.updateDoctor = updateDoctor;
+
+        // ============================================================
+        // MPO CRUD
+        // ============================================================
+        function saveMPO() {
+            const name = document.getElementById('mpoName').value.trim();
+            const employeeId = document.getElementById('mpoEmpId').value.trim();
+            const territory = document.getElementById('mpoTerritory').value.trim();
+            const mobile = document.getElementById('mpoMobile').value.trim();
+            const joiningDate = document.getElementById('mpoJoinDate').value;
+            if (!name || !employeeId || !territory || !mobile || !joiningDate) { showToast('সব ফিল্ড পূরণ করুন', 'error'); return; }
+            push(ref(db, 'mpos'), { name, employeeId, territory, mobile, joiningDate, createdAt: Date.now() })
+                .then(() => { showToast('MPO সফলভাবে সেভ হয়েছে'); resetMPOForm(); })
+                .catch(err => showToast('সেভ করতে সমস্যা: ' + err.message, 'error'));
+        }
+        window.saveMPO = saveMPO;
+
+        function resetMPOForm() { ['mpoName','mpoEmpId','mpoTerritory','mpoMobile','mpoJoinDate'].forEach(id => document.getElementById(id).value = ''); }
+        window.resetMPOForm = resetMPOForm;
+
+        function loadMPOs() {
+            const body = document.getElementById('mpoListBody');
+            const empty = document.getElementById('mpoEmpty');
+            const entries = Object.entries(mposCache);
+            if (entries.length === 0) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            body.innerHTML = entries.map(([id, m], i) => `
+                <tr class="table-row">
+                    <td class="px-5 py-3 text-slate-400 text-xs">${i + 1}</td>
+                    <td class="px-5 py-3 font-semibold text-slate-800">${m.name}</td>
+                    <td class="px-5 py-3 text-slate-600"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs">${m.employeeId}</code></td>
+                    <td class="px-5 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2.5 py-1 rounded-full">${m.territory}</span></td>
+                    <td class="px-5 py-3 text-slate-600">${m.mobile}</td>
+                    <td class="px-5 py-3 text-slate-600">${m.joiningDate}</td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="openEditMPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button>
+                        <button onclick="requestDelete('${id}','mpo')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function openEditMPO(id) {
+            const m = mposCache[id]; if (!m) return;
+            document.getElementById('editMpoId').value = id;
+            document.getElementById('editMpoName').value = m.name || '';
+            document.getElementById('editMpoEmpId').value = m.employeeId || '';
+            document.getElementById('editMpoTerritory').value = m.territory || '';
+            document.getElementById('editMpoMobile').value = m.mobile || '';
+            document.getElementById('editMpoJoinDate').value = m.joiningDate || '';
+            openModal('modalEditMPO');
+        }
+        window.openEditMPO = openEditMPO;
+
+        function updateMPO() {
+            const id = document.getElementById('editMpoId').value;
+            const data = {
+                name: document.getElementById('editMpoName').value.trim(),
+                employeeId: document.getElementById('editMpoEmpId').value.trim(),
+                territory: document.getElementById('editMpoTerritory').value.trim(),
+                mobile: document.getElementById('editMpoMobile').value.trim(),
+                joiningDate: document.getElementById('editMpoJoinDate').value
+            };
+            if (!data.name || !data.employeeId || !data.territory || !data.mobile || !data.joiningDate) { showToast('সব ফিল্ড পূরণ করুন', 'error'); return; }
+            update(ref(db, 'mpos/' + id), data)
+                .then(() => { showToast('MPO তথ্য আপডেট হয়েছে'); closeModal('modalEditMPO'); })
+                .catch(err => showToast('আপডেট সমস্যা: ' + err.message, 'error'));
+        }
+        window.updateMPO = updateMPO;
+
+        // ============================================================
+        // ডিলিট
+        // ============================================================
+        function requestDelete(id, type) {
+            const name = type === 'doctor' ? getDoctorName(id) : getMPOName(id);
+            document.getElementById('deleteConfirmText').textContent = `"${name}" ডিলিট করতে চান? এটি ফিরিয়ে আনা যাবে না।`;
+            document.getElementById('deleteTargetId').value = id;
+            document.getElementById('deleteTargetType').value = type;
+            openModal('modalConfirmDelete');
+        }
+        window.requestDelete = requestDelete;
+
+        function confirmDelete() {
+            const id = document.getElementById('deleteTargetId').value;
+            const type = document.getElementById('deleteTargetType').value;
+            remove(ref(db, (type === 'doctor' ? 'doctors/' : 'mpos/') + id))
+                .then(() => { showToast('সফলভাবে ডিলিট হয়েছে'); closeModal('modalConfirmDelete'); })
+                .catch(err => showToast('ডিলিট সমস্যা: ' + err.message, 'error'));
+        }
+        window.confirmDelete = confirmDelete;
+
+        function deleteHonorariumEntry(id) {
+            remove(ref(db, 'honorarium/' + id))
+                .then(() => showToast('এন্ট্রি ডিলিট হয়েছে'))
+                .catch(err => showToast('ডিলিট সমস্যা: ' + err.message, 'error'));
+        }
+        window.deleteHonorariumEntry = deleteHonorariumEntry;
+
+        // ============================================================
+        // অনারেরিয়াম এন্ট্রি
+        // ============================================================
+        function populateHonDropdowns() {
+            const docSel = document.getElementById('honDoctor');
+            const mpoSel = document.getElementById('honMPO');
+            const docVal = docSel.value, mpoVal = mpoSel.value;
+            docSel.innerHTML = '<option value="">-- Choose Doctor --</option>' + Object.entries(doctorsCache).map(([id, d]) => `<option value="${id}">${d.name} (${d.specialty})</option>`).join('');
+            mpoSel.innerHTML = '<option value="">-- Choose MPO --</option>' + Object.entries(mposCache).map(([id, m]) => `<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');
+            docSel.value = docVal; mpoSel.value = mpoVal;
+        }
+
+        function saveHonorarium() {
+            const doctorId = document.getElementById('honDoctor').value;
+            const mpoId = document.getElementById('honMPO').value;
+            const amount = parseFloat(document.getElementById('honAmount').value);
+            const month = document.getElementById('honMonth').value;
+            const remarks = document.getElementById('honRemarks').value.trim();
+            if (!doctorId || !mpoId || !amount || !month) { showToast('সব ফিল্ড পূরণ করুন', 'error'); return; }
+            if (amount <= 0) { showToast('পরিমাণ শূন্য বা ঋণাত্মক হতে পারে না', 'error'); return; }
+            push(ref(db, 'honorarium'), { doctorId, mpoId, amount, month, remarks, date: Date.now(), createdAt: Date.now() })
+                .then(() => { showToast('অনারেরিয়াম এন্ট্রি সেভ হয়েছে'); resetHonorForm(); })
+                .catch(err => showToast('সেভ সমস্যা: ' + err.message, 'error'));
+        }
+        window.saveHonorarium = saveHonorarium;
+
+        function resetHonorForm() { document.getElementById('honDoctor').value = ''; document.getElementById('honMPO').value = ''; document.getElementById('honAmount').value = ''; document.getElementById('honRemarks').value = ''; }
+        window.resetHonorForm = resetHonorForm;
+
+        function loadHonorariumList() {
+            const body = document.getElementById('honListBody');
+            const empty = document.getElementById('honEmpty');
+            const entries = Object.entries(honorariumCache).sort((a, b) => (b[1].date || b[1].createdAt || 0) - (a[1].date || a[1].createdAt || 0));
+            if (entries.length === 0) { body.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            body.innerHTML = entries.map(([id, h], i) => `
+                <tr class="table-row">
+                    <td class="px-5 py-3 text-slate-400 text-xs">${i + 1}</td>
+                    <td class="px-5 py-3 font-semibold text-slate-800">${getDoctorName(h.doctorId)}</td>
+                    <td class="px-5 py-3 text-slate-600">${getMPOName(h.mpoId)}</td>
+                    <td class="px-5 py-3 font-semibold text-brand-700">${formatBDT(h.amount)}</td>
+                    <td class="px-5 py-3"><span class="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">${h.month}</span></td>
+                    <td class="px-5 py-3 text-slate-500 text-xs">${h.remarks || '-'}</td>
+                    <td class="px-5 py-3 text-slate-500 text-xs">${formatDate(h.date || h.createdAt)}</td>
+                    <td class="px-5 py-3 text-center">
+                        <button onclick="deleteHonorariumEntry('${id}')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        // ============================================================
+        // ড্যাশবোর্ড
+        // ============================================================
+        function loadDashboard() {
+            const docCount = Object.keys(doctorsCache).length;
+            const mpoCount = Object.keys(mposCache).length;
+            const honEntries = Object.values(honorariumCache);
+            const totalAmount = honEntries.reduce((sum, h) => sum + (h.amount || 0), 0);
+            const currentMonth = getCurrentMonth();
+            const monthAmount = honEntries.filter(h => h.month === currentMonth).reduce((sum, h) => sum + (h.amount || 0), 0);
+            document.getElementById('statDoctors').textContent = docCount;
+            document.getElementById('statMPOs').textContent = mpoCount;
+            document.getElementById('statTotal').textContent = formatBDT(totalAmount);
+            document.getElementById('statMonth').textContent = formatBDT(monthAmount);
+            document.getElementById('statMonthLabel').textContent = currentMonth;
+
+            const recent = honEntries.sort((a, b) => (b.date || b.createdAt || 0) - (a.date || a.createdAt || 0)).slice(0, 5);
+            const recentBody = document.getElementById('recentEntriesBody');
+            const recentEmpty = document.getElementById('recentEmpty');
+            if (recent.length === 0) { recentBody.innerHTML = ''; recentEmpty.classList.remove('hidden'); }
+            else {
+                recentEmpty.classList.add('hidden');
+                recentBody.innerHTML = recent.map(h => `
+                    <tr class="table-row">
+                        <td class="px-5 py-3 font-semibold text-slate-800">${getDoctorName(h.doctorId)}</td>
+                        <td class="px-5 py-3 text-slate-600">${getMPOName(h.mpoId)}</td>
+                        <td class="px-5 py-3 font-semibold text-brand-700">${formatBDT(h.amount)}</td>
+                        <td class="px-5 py-3"><span class="bg-slate-100 text-slate-700 text-xs font-semibold px-2.5 py-1 rounded-full">${h.month}</span></td>
+                        <td class="px-5 py-3 text-slate-500 text-xs">${formatDate(h.date || h.createdAt)}</td>
+                    </tr>`).join('');
+            }
+        }
+
+        // ============================================================
+        // রিপোর্ট হেল্পার
+        // ============================================================
+        function populateReportDropdowns() {
+            const mpoSel = document.getElementById('rptMpoSelect');
+            const mpoVal = mpoSel.value;
+            mpoSel.innerHTML = '<option value="">-- All MPOs --</option>' + Object.entries(mposCache).map(([id, m]) => `<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');
+            mpoSel.value = mpoVal;
+
+            const docSel = document.getElementById('rptDoctorSelect');
+            const docVal = docSel.value;
+            docSel.innerHTML = '<option value="">-- All Doctors --</option>' + Object.entries(doctorsCache).map(([id, d]) => `<option value="${id}">${d.name} (${d.specialty})</option>`).join('');
+            docSel.value = docVal;
+
+            const printTerrSel = document.getElementById('printTerritory');
+            const ptVal = printTerrSel.value;
+            const territories = new Set();
+            Object.values(doctorsCache).forEach(d => { if(d.territory) territories.add(d.territory); });
+            printTerrSel.innerHTML = '<option value="">All Territories</option>' + [...territories].sort().map(t => `<option value="${t}">${t}</option>`).join('');
+            printTerrSel.value = ptVal;
+        }
+
+        function buildReportTable(data, columns) {
+            if (data.length === 0) return `<div class="px-5 py-12 text-center text-slate-400 text-sm"><i class="fas fa-inbox text-3xl mb-3 block text-slate-300"></i>No data found</div>`;
+            return `<table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider"><tr>` +
+                columns.map(c => `<th class="text-left px-5 py-3">${c}</th>`).join('') +
+                `</tr></thead><tbody class="divide-y divide-slate-100">` +
+                data.map(row => `<tr class="table-row">` + row.map(cell => `<td class="px-5 py-3">${cell}</td>`).join('') + `</tr>`).join('') +
+                `</tbody></table>`;
+        }
+
+        // মাসিক রিপোর্ট
+        function loadMonthlyReport() {
+            const month = document.getElementById('rptMonthlyMonth').value;
+            const entries = Object.entries(honorariumCache).filter(([, h]) => h.month === month);
+            const rows = entries.map(([id, h], i) => [i + 1, getDoctorName(h.doctorId), getMPOName(h.mpoId), `<span class="font-semibold text-brand-700">${formatBDT(h.amount)}</span>`, h.remarks || '-', formatDate(h.date || h.createdAt)]);
+            document.getElementById('monthlyReportTable').innerHTML = buildReportTable(rows, ['#', 'Doctor', 'MPO', 'Amount', 'Remarks', 'Date']);
+            const total = entries.reduce((s, [, h]) => s + (h.amount || 0), 0);
+            document.getElementById('monthlyReportFooter').innerHTML = `Total: ${formatBDT(total)} &nbsp;|&nbsp; Entries: ${entries.length}`;
+        }
+        window.loadMonthlyReport = loadMonthlyReport;
+
+        // MPO ওয়াইজ রিপোর্ট
+        function loadMPOReport() {
+            const mpoId = document.getElementById('rptMpoSelect').value;
+            const month = document.getElementById('rptMpoMonth').value;
+            let entries = Object.entries(honorariumCache);
+            if (mpoId) entries = entries.filter(([, h]) => h.mpoId === mpoId);
+            if (month) entries = entries.filter(([, h]) => h.month === month);
+            const groups = {};
+            entries.forEach(([id, h]) => { if (!groups[h.mpoId]) groups[h.mpoId] = []; groups[h.mpoId].push(h); });
+            let rows = [], grandTotal = 0;
+            Object.entries(groups).forEach(([mid, items]) => {
+                const st = items.reduce((s, h) => s + (h.amount || 0), 0); grandTotal += st;
+                rows.push([getMPOName(mid), mposCache[mid]?.employeeId || '-', mposCache[mid]?.territory || '-', items.length, `<span class="font-semibold text-brand-700">${formatBDT(st)}</span>`]);
+            });
+            document.getElementById('mpoReportTable').innerHTML = buildReportTable(rows, ['MPO Name', 'Employee ID', 'Territory', 'Entries', 'Total Amount']);
+            document.getElementById('mpoReportFooter').innerHTML = `Grand Total: ${formatBDT(grandTotal)} &nbsp;|&nbsp; MPOs: ${Object.keys(groups).length}`;
+        }
+        window.loadMPOReport = loadMPOReport;
+
+        // টেরিটরি ওয়াইজ রিপোর্ট
+        function loadTerritoryReport() {
+            const territory = document.getElementById('rptTerritorySelect').value;
+            const month = document.getElementById('rptTerritoryMonth').value;
+            let entries = Object.entries(honorariumCache);
+            if (month) entries = entries.filter(([, h]) => h.month === month);
+            const groups = {};
+            entries.forEach(([id, h]) => {
+                const t = getDoctorTerritory(h.doctorId);
+                if (territory && t !== territory) return;
+                if (!groups[t]) groups[t] = []; groups[t].push(h);
+            });
+            let rows = [], grandTotal = 0;
+            Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0])).forEach(([t, items]) => {
+                const st = items.reduce((s, h) => s + (h.amount || 0), 0); grandTotal += st;
+                rows.push([t || 'Unknown', items.length, `<span class="font-semibold text-brand-700">${formatBDT(st)}</span>`]);
+            });
+            document.getElementById('territoryReportTable').innerHTML = buildReportTable(rows, ['Territory', 'Entries', 'Total Amount']);
+            document.getElementById('territoryReportFooter').innerHTML = `Grand Total: ${formatBDT(grandTotal)} &nbsp;|&nbsp; Territories: ${Object.keys(groups).length}`;
+        }
+        window.loadTerritoryReport = loadTerritoryReport;
+
+        // ডাক্তার ওয়াইজ রিপোর্ট
+        function loadDoctorReport() {
+            const docId = document.getElementById('rptDoctorSelect').value;
+            const month = document.getElementById('rptDoctorMonth').value;
+            let entries = Object.entries(honorariumCache);
+            if (docId) entries = entries.filter(([, h]) => h.doctorId === docId);
+            if (month) entries = entries.filter(([, h]) => h.month === month);
+            const groups = {};
+            entries.forEach(([id, h]) => { if (!groups[h.doctorId]) groups[h.doctorId] = []; groups[h.doctorId].push(h); });
+            let rows = [], grandTotal = 0;
+            Object.entries(groups).forEach(([did, items]) => {
+                const d = doctorsCache[did] || {};
+                const st = items.reduce((s, h) => s + (h.amount || 0), 0); grandTotal += st;
+                rows.push([d.name || 'Unknown', d.specialty || '-', d.territory || '-', items.map(h => h.month).join(', '), items.length, `<span class="font-semibold text-brand-700">${formatBDT(st)}</span>`]);
+            });
+            document.getElementById('doctorReportTable').innerHTML = buildReportTable(rows, ['Doctor Name', 'Specialty', 'Territory', 'Months', 'Entries', 'Total Amount']);
+            document.getElementById('doctorReportFooter').innerHTML = `Grand Total: ${formatBDT(grandTotal)} &nbsp;|&nbsp; Doctors: ${Object.keys(groups).length}`;
+        }
+        window.loadDoctorReport = loadDoctorReport;
+
+        // ============================================================
+        // প্রিন্ট অনারেরিয়াম শিট
+        // ============================================================
+        function loadPrintSheet() {
+            const month = document.getElementById('printMonth').value;
+            const territory = document.getElementById('printTerritory').value;
+            let entries = Object.entries(honorariumCache).filter(([, h]) => h.month === month);
+            if (territory) entries = entries.filter(([, h]) => getDoctorTerritory(h.doctorId) === territory);
+            entries.sort((a, b) => {
+                const ta = getDoctorTerritory(a[1].doctorId), tb = getDoctorTerritory(b[1].doctorId);
+                return ta.localeCompare(tb) || getDoctorName(a[1].doctorId).localeCompare(getDoctorName(b[1].doctorId));
+            });
+            const total = entries.reduce((s, [, h]) => s + (h.amount || 0), 0);
+            const now = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+            let html = `<div style="font-family:'Inter',sans-serif;color:#1e293b;">
+                <div style="text-align:center;border-bottom:3px double #0d9488;padding-bottom:16px;margin-bottom:20px;">
+                    <h2 style="font-size:20px;font-weight:800;color:#0d9488;margin:0 0 4px 0;">DOCTOR HONORARIUM SHEET</h2>
+                    <p style="font-size:12px;color:#64748b;margin:0;">Month: <strong>${month}</strong> &nbsp;|&nbsp; Territory: <strong>${territory || 'All'}</strong> &nbsp;|&nbsp; Date: ${now}</p>
+                </div>
+                <table class="print-table" style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead><tr style="background:#0d9488;color:white;">
+                        <th style="padding:8px 6px;text-align:center;border:1px solid #0f766e;">SL</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Doctor Name</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Degree</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Specialty</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Chamber Address</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Mobile</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Territory</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">MPO Name</th>
+                        <th style="padding:8px 6px;text-align:right;border:1px solid #0f766e;">Amount (BDT)</th>
+                        <th style="padding:8px 6px;text-align:left;border:1px solid #0f766e;">Remarks</th>
+                    </tr></thead><tbody>`;
+            if (entries.length === 0) {
+                html += `<tr><td colspan="10" style="padding:30px;text-align:center;color:#94a3b8;">No entries found for this selection</td></tr>`;
+            } else {
+                entries.forEach(([id, h], i) => {
+                    const doc = doctorsCache[h.doctorId] || {}, mpo = mposCache[h.mpoId] || {};
+                    const bg = i % 2 === 0 ? '#f8fafc' : '#ffffff';
+                    html += `<tr style="background:${bg};">
+                        <td style="padding:6px;text-align:center;border:1px solid #e2e8f0;">${i+1}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;font-weight:600;">${doc.name||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;">${doc.degree||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;">${doc.specialty||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;font-size:10px;">${doc.chamber||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;">${doc.mobile||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;">${doc.territory||'-'}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;">${mpo.name||'-'}</td>
+                        <td style="padding:6px;text-align:right;border:1px solid #e2e8f0;font-weight:600;">${Number(h.amount||0).toLocaleString()}</td>
+                        <td style="padding:6px;border:1px solid #e2e8f0;font-size:10px;">${h.remarks||'-'}</td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody><tfoot><tr style="background:#f0fdfa;font-weight:800;font-size:13px;">
+                <td colspan="8" style="padding:10px 6px;text-align:right;border:1px solid #e2e8f0;">TOTAL:</td>
+                <td style="padding:10px 6px;text-align:right;border:1px solid #e2e8f0;color:#0d9488;">${Number(total).toLocaleString()}</td>
+                <td style="padding:10px 6px;border:1px solid #e2e8f0;"></td>
+            </tr></tfoot></table>
+            <div style="margin-top:50px;display:flex;justify-content:space-between;font-size:12px;">
+                <div style="text-align:center;width:30%;"><div style="border-top:1px solid #333;padding-top:6px;margin-top:40px;">Prepared By</div><div style="color:#94a3b8;font-size:10px;margin-top:4px;">Date: _______________</div></div>
+                <div style="text-align:center;width:30%;"><div style="border-top:1px solid #333;padding-top:6px;margin-top:40px;">Checked By</div><div style="color:#94a3b8;font-size:10px;margin-top:4px;">Date: _______________</div></div>
+                <div style="text-align:center;width:30%;"><div style="border-top:1px solid #333;padding-top:6px;margin-top:40px;">Approved By</div><div style="color:#94a3b8;font-size:10px;margin-top:4px;">Date: _______________</div></div>
+            </div></div>`;
+            document.getElementById('printSheetArea').innerHTML = html;
+        }
+        window.loadPrintSheet = loadPrintSheet;
+
+        // ============================================================
+        // প্রিন্ট
+        // ============================================================
+        function printCurrentReport() { window.print(); }
+        window.printCurrentReport = printCurrentReport;
+
+        // ============================================================
+        // PDF এক্সপোর্ট
+        // ============================================================
+        function exportReportPDF(type) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            let title = '', tableData = [], headers = [];
+
+            if (type === 'monthly') {
+                title = 'Monthly Honorarium Report - ' + document.getElementById('rptMonthlyMonth').value;
+                headers = [['#', 'Doctor', 'MPO', 'Amount (BDT)', 'Remarks', 'Date']];
+                const month = document.getElementById('rptMonthlyMonth').value;
+                const entries = Object.entries(honorariumCache).filter(([, h]) => h.month === month);
+                tableData = entries.map(([id, h], i) => [i+1, getDoctorName(h.doctorId), getMPOName(h.mpoId), h.amount||0, h.remarks||'-', formatDate(h.date||h.createdAt)]);
+                tableData.push(['', '', '', '', 'Total:', entries.reduce((s,[,h])=>s+(h.amount||0),0)]);
+            } else if (type === 'mpo') {
+                title = 'MPO Wise Report';
+                headers = [['MPO Name', 'Employee ID', 'Territory', 'Entries', 'Total Amount']];
+                const mpoId = document.getElementById('rptMpoSelect').value;
+                const month = document.getElementById('rptMpoMonth').value;
+                let entries = Object.entries(honorariumCache);
+                if (mpoId) entries = entries.filter(([,h])=>h.mpoId===mpoId);
+                if (month) entries = entries.filter(([,h])=>h.month===month);
+                const groups = {}; entries.forEach(([id,h])=>{if(!groups[h.mpoId])groups[h.mpoId]=[];groups[h.mpoId].push(h);});
+                let gt = 0;
+                Object.entries(groups).forEach(([mid,items])=>{const st=items.reduce((s,h)=>s+(h.amount||0),0);gt+=st;tableData.push([getMPOName(mid),mposCache[mid]?.employeeId||'-',mposCache[mid]?.territory||'-',items.length,st]);});
+                tableData.push(['','','','Grand Total:',gt]);
+            } else if (type === 'territory') {
+                title = 'Territory Wise Report';
+                headers = [['Territory', 'Entries', 'Total Amount']];
+                const territory = document.getElementById('rptTerritorySelect').value;
+                const month = document.getElementById('rptTerritoryMonth').value;
+                let entries = Object.entries(honorariumCache);
+                if (month) entries = entries.filter(([,h])=>h.month===month);
+                const groups = {}; entries.forEach(([id,h])=>{const t=getDoctorTerritory(h.doctorId);if(territory&&t!==territory)return;if(!groups[t])groups[t]=[];groups[t].push(h);});
+                let gt = 0;
+                Object.entries(groups).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([t,items])=>{const st=items.reduce((s,h)=>s+(h.amount||0),0);gt+=st;tableData.push([t||'Unknown',items.length,st]);});
+                tableData.push(['','Grand Total:',gt]);
+            } else if (type === 'doctor') {
+                title = 'Doctor Wise Report';
+                headers = [['Doctor Name', 'Specialty', 'Territory', 'Entries', 'Total Amount']];
+                const docId = document.getElementById('rptDoctorSelect').value;
+                const month = document.getElementById('rptDoctorMonth').value;
+                let entries = Object.entries(honorariumCache);
+                if (docId) entries = entries.filter(([,h])=>h.doctorId===docId);
+                if (month) entries = entries.filter(([,h])=>h.month===month);
+                const groups = {}; entries.forEach(([id,h])=>{if(!groups[h.doctorId])groups[h.doctorId]=[];groups[h.doctorId].push(h);});
+                let gt = 0;
+                Object.entries(groups).forEach(([did,items])=>{const d=doctorsCache[did]||{};const st=items.reduce((s,h)=>s+(h.amount||0),0);gt+=st;tableData.push([d.name||'-',d.specialty||'-',d.territory||'-',items.length,st]);});
+                tableData.push(['','','','Grand Total:',gt]);
+            }
+
+            doc.setFontSize(14); doc.setTextColor(13,148,136); doc.text(title, 14, 15);
+            doc.setFontSize(9); doc.setTextColor(100,116,139); doc.text('Generated: ' + new Date().toLocaleString(), 14, 22);
+            doc.autoTable({
+                head: headers, body: tableData, startY: 28,
+                styles: { fontSize: 9, cellPadding: 3 },
+                headStyles: { fillColor: [13,148,136], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248,250,252] },
+                footStyles: { fontStyle: 'bold', fillColor: [240,253,250] }
+            });
+            doc.save(`${type}_report_${Date.now()}.pdf`);
+            showToast('PDF ডাউনলোড হচ্ছে', 'info');
+        }
+        window.exportReportPDF = exportReportPDF;
+
+        function exportPrintSheetPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const month = document.getElementById('printMonth').value;
+            const territory = document.getElementById('printTerritory').value;
+            doc.setFontSize(16); doc.setTextColor(13,148,136);
+            doc.text('DOCTOR HONORARIUM SHEET', 148, 15, { align: 'center' });
+            doc.setFontSize(9); doc.setTextColor(100,116,139);
+            doc.text(`Month: ${month}  |  Territory: ${territory||'All'}  |  Date: ${new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long',year:'numeric'})}`, 148, 22, { align: 'center' });
+
+            let entries = Object.entries(honorariumCache).filter(([,h])=>h.month===month);
+            if (territory) entries = entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
+            entries.sort((a,b)=>{const ta=getDoctorTerritory(a[1].doctorId),tb=getDoctorTerritory(b[1].doctorId);return ta.localeCompare(tb)||getDoctorName(a[1].doctorId).localeCompare(getDoctorName(b[1].doctorId));});
+            const total = entries.reduce((s,[,h])=>s+(h.amount||0),0);
+            const tableData = entries.map(([id,h],i)=>{const d=doctorsCache[h.doctorId]||{},m=mposCache[h.mpoId]||{};return [i+1,d.name||'-',d.degree||'-',d.specialty||'-',d.chamber||'-',d.mobile||'-',d.territory||'-',m.name||'-',h.amount||0,h.remarks||'-'];});
+            tableData.push(['','','','','','','','TOTAL:',total,'']);
+
+            doc.autoTable({
+                head: [['SL','Doctor Name','Degree','Specialty','Chamber','Mobile','Territory','MPO Name','Amount(BDT)','Remarks']],
+                body: tableData, startY: 28,
+                styles: { fontSize: 7.5, cellPadding: 2 },
+                headStyles: { fillColor: [13,148,136], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248,250,252] },
+                columnStyles: { 0:{cellWidth:8}, 8:{halign:'right',fontStyle:'bold'} },
+                footStyles: { fontStyle: 'bold', fillColor: [240,253,250] }
+            });
+            const fy = doc.lastAutoTable.finalY + 20;
+            doc.setFontSize(9); doc.setTextColor(30,41,59);
+            doc.text('Prepared By: _______________', 30, fy); doc.text('Date: _______________', 30, fy+6);
+            doc.text('Checked By: _______________', 150, fy); doc.text('Date: _______________', 150, fy+6);
+            doc.text('Approved By: _______________', 240, fy); doc.text('Date: _______________', 240, fy+6);
+            doc.save(`honorarium_sheet_${month}_${Date.now()}.pdf`);
+            showToast('Honorarium Sheet PDF ডাউনলোড হচ্ছে', 'info');
+        }
+        window.exportPrintSheetPDF = exportPrintSheetPDF;
+
+        // ক্লক
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentDateTime').textContent = now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) + ' ' + now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        // ইনিশিয়ালাইজ
+        populateMonthSelects();
+        loadDashboard();
+    </script>
+</body>
+</html>
