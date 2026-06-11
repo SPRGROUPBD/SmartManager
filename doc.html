@@ -72,8 +72,29 @@
         .sig-box { min-width: 140px; height: 100px; display: inline-flex; flex-direction: column; justify-content: flex-end; align-items: center; font-size: 10px; font-weight: 600; flex-shrink: 0; }
         .sig-box .sig-line { width: 100%; border-top: 1px solid #333; padding-top: 5px; text-align: center; }
         @media (max-width: 1024px) { .sidebar { position: fixed; z-index: 50; transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .main-content { margin-left: 0; } }
-        @media print { .sidebar, .top-bar, .no-print, .conn-ok, .conn-err, .edit-mode-banner, .edit-mode-banner-purple { display: none !important; } .main-content { margin-left: 0 !important; } .print-area { padding: 0 !important; } body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;font-size: 14px; } }
+        @media print { 
+    .sidebar, .top-bar, .no-print, .conn-ok, .conn-err, .edit-mode-banner, .edit-mode-banner-purple { display: none !important; } 
+    .main-content { margin-left: 0 !important; } 
+    .print-area { padding: 0 !important; } 
+    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } 
+    @page { size: A4 landscape; margin: 10mm; } /* এই লাইনটি ল্যান্ডস্কেপ করবে */
+}
         .input-focus:focus { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }
+        /* ===== ALL TABLE BORDER STYLES ===== */
+table:not(.app-table):not(.po-print-table) {
+    border-collapse: collapse;
+}
+table:not(.app-table):not(.po-print-table) th {
+    border: 1px solid #cbd5e1;
+}
+table:not(.app-table):not(.po-print-table) td {
+    border: 1px solid #e2e8f0;
+}
+/* Table Row Hover with border fix */
+.table-row:hover td {
+    background: #f0fdfa !important;
+}
+        
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800">
@@ -452,7 +473,82 @@
     const grandTotal=totalAmount+totalCommission;
     const today=formatDateDMY(new Date());
 
-    let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1400px;margin:0 auto;">
+    // ★ Pagination Logic - প্রতি পেজে ঠিক ১০টি করে রো থাকবে
+    const ROWS_PER_PAGE = 12; 
+    let paginatedEntries = [];
+    
+    if (entries.length > 0) {
+        let offset = 0;
+        while (offset < entries.length) {
+            paginatedEntries.push(entries.slice(offset, offset + ROWS_PER_PAGE));
+            offset += ROWS_PER_PAGE;
+        }
+    }
+
+    let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1400px;margin:0 auto;font-size:15px;">`;
+    
+    let globalIndex = 0;
+
+    // ★ Loop through each page's data
+    paginatedEntries.forEach((pageEntries, pageIndex) => {
+        const isLastPage = (pageIndex === paginatedEntries.length - 1);
+        const pageTotal = pageEntries.reduce((s,[,h])=>s+(h.amount||0),0);
+
+        html+=`
+        <div style="${!isLastPage ? 'page-break-after: always;' : ''}">
+            <div style="text-align:center;margin-bottom:15px;">
+                <h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1>
+                <p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
+                <p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
+            </div>
+            <div style="text-align:center;margin-bottom:15px;">
+                <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}</h2>
+                ${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}
+            </div>
+            <table class="po-print-table">
+                <thead>
+                    <tr>
+                        <th style="width:15px;text-align:center;padding:10px 5px;">SL NO</th>
+                        <th style="width:150px;padding:10px 5px;">Pay Order NO</th>
+                        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of Doctor</th>
+                        <th style="width:auto;padding:10px 5px;text-align:right;white-space:nowrap;">Amount</th>
+                        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of MPO</th>
+                        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Territory</th>
+                        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Remarks</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        pageEntries.forEach(([id,h])=>{
+            globalIndex++;
+            const doc=doctorsCache[h.doctorId]||{}, mpo=mposCache[h.mpoId]||{};
+            html+=`<tr>
+                <td style="text-align:center;">${globalIndex}</td>
+                <td style="font-weight:600;font-size:14px;">${h.payOrderNo||''}</td>
+                <td style="font-weight:500;">${doc.name||'-'}</td>
+                <td style="text-align:right;font-weight:700;">${Number(h.amount||0).toLocaleString()}</td>
+                <td>${mpo.name||'-'}</td>
+                <td>${doc.territory||'-'}</td>
+                <td style="font-size:13px;">${h.remarks||''}</td>
+            </tr>`;
+        });
+
+        // ★ Per Page Total Footer (Showing exact row count)
+        html+=`</tbody>
+            <tfoot>
+                <tr style="background:#eff6ff;height:50px;">
+                    <td colspan="3" style="font-weight:700;text-align:right;padding:8px 5px;border:1px solid #999;">Page ${pageIndex + 1} Total (${pageEntries.length} Items)</td>
+                    <td style="text-align:right;font-weight:700;font-size:13px;padding:8px 5px;border:1px solid #999;">${Number(pageTotal).toLocaleString()}</td>
+                    <td colspan="3" style="border:1px solid #999;"></td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>`;
+    });
+
+    // ★ If No Data
+    if(entries.length === 0){
+        html+=`
         <div style="text-align:center;margin-bottom:15px;">
             <h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1>
             <p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
@@ -463,40 +559,20 @@
             ${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}
         </div>
         <table class="po-print-table">
-            <thead>
-                <tr>
-                    <th style="width:15px;text-align:center;padding:10px 5px;">SL NO</th>
-                    <th style="width:170px;padding:10px 5px;">Pay Order NO</th>
-                   <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of Doctor</th>
-        <th style="width:auto;padding:10px 5px;text-align:right;white-space:nowrap;">Amount</th>
-        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of MPO</th>
-        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Territory</th>
-        <th style="width:auto;padding:10px 5px;white-space:nowrap;">Remarks</th>
-    </tr>
-            </thead>
-            <tbody>`;
-
-    if(!entries.length){
-        html+='<tr><td colspan="7" style="padding:30px;text-align:center;border:1px solid #999;color:#666;height:50px;">No data found</td></tr>';
-    }else{
-        entries.forEach(([id,h],i)=>{
-            const doc=doctorsCache[h.doctorId]||{}, mpo=mposCache[h.mpoId]||{};
-            html+=`<tr>
-                <td style="text-align:center;vertical-align:middle;height:50px;">${i+1}</td>
-                <td style="font-weight:600;vertical-align:middle;height:50px;font-size:14px;">${h.payOrderNo||''}</td>
-                <td style="font-weight:500;vertical-align:middle;height:50px;">${doc.name||'-'}</td>
-                <td style="text-align:right;font-weight:700;vertical-align:middle;height:50px;">${Number(h.amount||0).toLocaleString()}</td>
-                <td style="vertical-align:middle;height:50px;">${mpo.name||'-'}</td>
-                <td style="vertical-align:middle;height:50px;">${doc.territory||'-'}</td>
-                <td style="font-size:13px;vertical-align:middle;height:50px;">${h.remarks||''}</td>
-            </tr>`;
-        });
+            <thead><tr>
+                <th style="width:15px;text-align:center;padding:10px 5px;">SL NO</th>
+                <th style="width:150px;padding:10px 5px;">Pay Order NO</th>
+                <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of Doctor</th>
+                <th style="width:auto;padding:10px 5px;text-align:right;white-space:nowrap;">Amount</th>
+                <th style="width:auto;padding:10px 5px;white-space:nowrap;">Name of MPO</th>
+                <th style="width:auto;padding:10px 5px;white-space:nowrap;">Territory</th>
+                <th style="width:auto;padding:10px 5px;white-space:nowrap;">Remarks</th>
+            </tr></thead>
+            <tbody><tr><td colspan="7" style="padding:30px;text-align:center;border:1px solid #999;color:#666;height:120px;">No data found</td></tr></tbody>
+        </table>`;
     }
 
-    // ★ টেবিল এখানে শেষ হচ্ছে, টেবিলের ভেতর কোনো Tfoot নেই
-    html+=`</tbody></table>`;
-
-    // ★ Grand Total Summary Box - এটি শুধু শেষ পেজে দেখাবে, রিপিট হবে না
+    // ★ Grand Total Box (Only at the bottom of the last page)
     if(entries.length > 0){
         html+=`
         <div style="margin-top:15px; background:#fef3c7; border:1px solid #999; border-top:3px solid #333; padding:12px 15px; font-size:15px;">
