@@ -743,6 +743,10 @@ function handleUnifiedLogin(){
     }
     var d=lookedUpUser.data;
     currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};
+    
+    // পেজ রিফ্রেশ দিলে যাতে লগআউট না হয় তার জন্য লোকাল স্টোরেজে সেভ করা হলো
+    localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    
     showDashboard();
 }
 
@@ -829,7 +833,13 @@ function addExpenseRowWithData(exp){var tb=document.getElementById('expense_tabl
 function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;currentIouId=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_iou_amount').value=0;document.getElementById('form_remarks').value='';var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';calculateSoldValue();clearLocalDraft();if(currentUser&&currentUser.role==='user'){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;}}
 
 // ========== LOGOUT ==========
-function logout(){if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();currentUser=null;document.body.className='';location.reload();}
+function logout(){
+    if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();
+    localStorage.removeItem('auth_user'); // লগআউট করলে সেশন মুছে ফেলা হলো
+    currentUser=null;
+    document.body.className='';
+    location.reload();
+}
 function resetAllTabs(){document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});}
 
 // ========== PROFILE ==========
@@ -884,12 +894,17 @@ function loadUserDashboardData(){
     ab.innerHTML='';ub.innerHTML='';
     var totalIouCount=0,activeIouCount=0;
     
-    Object.keys(iouListGlobal).forEach(function(id){
+        Object.keys(iouListGlobal).forEach(function(id){
         var d=iouListGlobal[id];
         if(d.daName!==myName)return;
         if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
         
-        // Total IOU কাউন্ট করা হচ্ছে (সব ধরনের আইওইউ)
+        var type=d.type||'Delivery';
+        
+        // No Bill টাইপের আইওইউ লিস্টে দেখানো এবং কাউন্ট করা থেকে বিরত থাকা হলো
+        if(isNoBillIOU(type)) return; 
+        
+        // Total IOU কাউন্ট করা হচ্ছে (শুধুমাত্র Bill প্রয়োজন এমন আইওইউ)
         totalIouCount++; 
         
         var type=d.type||'Delivery';
@@ -1855,6 +1870,18 @@ function saveNewUser(){
 
 // ========== Tab change listeners ==========
 document.addEventListener('DOMContentLoaded',function(){
+    
+    // পেজ রিফ্রেশ দিলে যাতে লগআউট না হয় তার জন্য চেক করা হলো
+    var savedUser = localStorage.getItem('auth_user');
+    if(savedUser){
+        try {
+            currentUser = JSON.parse(savedUser);
+            showDashboard();
+        } catch(e){
+            localStorage.removeItem('auth_user');
+        }
+    }
+
     var summaryTabEl=document.getElementById('summaryTab');
     var iouTabEl=document.getElementById('iouTab');
     var billTabEl=document.getElementById('billTab');
