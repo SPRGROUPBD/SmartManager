@@ -26,10 +26,11 @@
             --chat-bubble-me: #d9fdd3; --chat-bubble-them: #ffffff; --border-color: #e9edef;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-primary); height: 100vh; width: 100vw; overflow: hidden; display: flex; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+        body { background-color: var(--bg-color); color: var(--text-primary); display: flex; }
         button { cursor: pointer; border: none; outline: none; background: transparent; color: inherit; }
-        input { outline: none; border: none; background: transparent; color: inherit; }
+        input, textarea { outline: none; border: none; background: transparent; color: inherit; font-size: 16px; /* Prevents iOS zoom */ }
         ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--bg-panel-2); border-radius: 3px; }
 
@@ -95,9 +96,9 @@
         .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
         .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
 
-        .chat-input-area { background: var(--bg-panel-2); padding: 10px 16px; display: flex; align-items: center; gap: 10px; position: relative; min-height: 60px; }
+        .chat-input-area { background: var(--bg-panel-2); padding: 10px 16px; display: flex; align-items: center; gap: 10px; position: relative; min-height: 60px; flex-shrink: 0; }
         .chat-input { flex: 1; background: var(--bg-panel); border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
-        .chat-input input { flex: 1; font-size: 14px; }
+        .chat-input input { flex: 1; font-size: 16px; }
         .send-btn { background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
         .attach-menu { position: absolute; bottom: 60px; left: 20px; background: var(--bg-panel); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 10px; z-index: 100; display: none; }
         .attach-item { padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
@@ -114,7 +115,7 @@
         .option-btn:hover { background: var(--border-color); }
 
         .user-select-list .list-item.selected { background: var(--accent); color: white; }
-        .group-name-input { margin-bottom: 15px; padding: 15px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border-color); width: 100%; color: var(--text-primary); }
+        .group-name-input { margin-bottom: 15px; padding: 15px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border-color); width: 100%; color: var(--text-primary); font-size: 16px; }
 
         .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
         .profile-avatar { width: 120px; height: 120px; font-size: 40px; margin-bottom: 10px; cursor: pointer; border: 2px solid var(--accent); }
@@ -132,8 +133,15 @@
             .sidebar.hidden { transform: translateX(-100%); }
             .main-content { width: 100%; }
             .chat-header .back-btn { display: block; }
-            .modal-overlay { padding: 0; align-items: flex-end; }
-            .modal-box { width: 100%; max-width: 100%; border-radius: 12px 12px 0 0; max-height: 95vh; }
+            
+            /* Modals are Full Screen on Mobile */
+            .modal-overlay { padding: 0; }
+            .modal-box { 
+                width: 100%; max-width: 100%; 
+                height: 100dvh; max-height: 100dvh; 
+                border-radius: 0; padding-top: 60px; 
+            }
+            
             .message { max-width: 80%; }
         }
 
@@ -141,7 +149,7 @@
             .chat-messages { padding: 10px; }
             .chat-input-area { padding: 8px 10px; gap: 5px; }
             .send-btn { width: 40px; height: 40px; }
-            .modal-box { padding: 20px; }
+            .modal-box { padding: 15px; padding-top: 60px; }
             .header-icons { gap: 15px; }
             .chat-header-actions { gap: 10px; }
             #localVideo { width: 100px; height: 140px; bottom: 70px; right: 10px; }
@@ -355,15 +363,26 @@
     </div>
 
     <!-- Call Modal -->
-    <div id="callModal" class="modal-overlay">
-        <div class="modal-box" style="width: 90%; height: 90%; display: flex; flex-direction: column; padding: 0; position:relative;">
-            <div style="flex: 1; background: black; display: flex; align-items: center; justify-content: center; color: white;" id="remoteVideoContainer">
-                <span id="callStatusText">Connecting...</span>
-                <video id="remoteVideo" autoplay style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+    <div id="callModal" class="modal-overlay" style="z-index: 3000;">
+        <div class="modal-box" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; padding: 0; position:relative; border-radius: 0;">
+            <div style="flex: 1; background: black; display: flex; align-items: center; justify-content: center; color: white; position: relative;" id="remoteVideoContainer">
+                <span id="callStatusText" style="font-size: 20px; font-weight: bold;">Connecting...</span>
+                <video id="remoteVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; display:none;"></video>
             </div>
-            <video id="localVideo" autoplay muted style="width: 150px; height: 200px; position: absolute; bottom: 80px; right: 20px; background: #333; border-radius: 8px; object-fit: cover; border: 2px solid white;"></video>
-            <div style="padding: 20px; background: var(--bg-panel-2); display: flex; justify-content: center; gap: 20px;">
-                <button id="endCallBtn" style="background: #ff0000; color: white; padding: 10px 20px; border-radius: 5px;">End Call</button>
+            <video id="localVideo" autoplay muted playsinline style="width: 150px; height: 200px; position: absolute; bottom: 100px; right: 20px; background: #333; border-radius: 8px; object-fit: cover; border: 2px solid white; z-index: 10;"></video>
+            <div style="padding: 20px; background: var(--bg-panel-2); display: flex; justify-content: center; gap: 20px; align-items: center;">
+                <div id="incomingCallActions" style="display: none; gap: 30px;">
+                    <button id="rejectCallBtn" style="background: #ff0000; color: white; padding: 15px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+                    </button>
+                    <button id="acceptCallBtn" style="background: #00a884; color: white; padding: 15px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                    </button>
+                </div>
+                <button id="endCallBtn" style="background: #ff0000; color: white; padding: 15px 20px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+                    End Call
+                </button>
             </div>
         </div>
     </div>
@@ -411,6 +430,7 @@
         let peerConnection = null;
         let currentCallId = null;
         let isCallCreator = false;
+        let callTimeout = null;
         const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
         // ==========================================
@@ -463,7 +483,6 @@
             document.getElementById('profileBackBtn').addEventListener('click', () => closePopUp('profileModal'));
             document.getElementById('settingsBackBtn').addEventListener('click', () => closePopUp('settingsModal'));
             document.getElementById('groupInfoBackBtn').addEventListener('click', () => {
-                // If inside add member view, go back to main view instead of closing modal
                 if (document.getElementById('addMemberView').style.display === 'block') {
                     document.getElementById('addMemberView').style.display = 'none';
                     document.getElementById('groupInfoMainView').style.display = 'block';
@@ -472,7 +491,6 @@
                 }
             });
 
-            // Close modal when clicking outside the box
             document.querySelectorAll('.modal-overlay').forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal && modal.id !== 'callModal') {
@@ -481,7 +499,6 @@
                 });
             });
 
-            // Lightbox Close
             document.getElementById('imageLightbox').addEventListener('click', () => {
                 document.getElementById('imageLightbox').style.display = 'none';
             });
@@ -518,7 +535,6 @@
             document.getElementById('editInfoPerm').addEventListener('change', (e) => updateGroupPermission('canEditInfo', e.target.checked));
             document.getElementById('sendMsgPerm').addEventListener('change', (e) => updateGroupPermission('canSendMessages', e.target.checked));
             
-            // Group Info Edit Listeners
             document.getElementById('addMemberBtn').addEventListener('click', openAddMemberView);
             document.getElementById('favoriteGroupBtn').addEventListener('click', toggleFavoriteGroup);
             document.getElementById('changeGroupInfoPicBtn').addEventListener('click', () => document.getElementById('groupInfoPicInput').click());
@@ -539,13 +555,14 @@
             document.getElementById('videoCallBtn').addEventListener('click', () => startCall(true));
             document.getElementById('voiceCallBtn').addEventListener('click', () => startCall(false));
             document.getElementById('endCallBtn').addEventListener('click', endCall);
+            document.getElementById('acceptCallBtn').addEventListener('click', acceptCall);
+            document.getElementById('rejectCallBtn').addEventListener('click', () => rejectCall());
 
             // Tabs
             document.querySelectorAll('.nav-tab').forEach(tab => {
                 tab.addEventListener('click', () => switchTab(tab.dataset.tab));
             });
             
-            // Window resize listener to reset mobile/desktop views
             window.addEventListener('resize', () => {
                 if (window.innerWidth > 768) {
                     document.getElementById('sidebar').classList.remove('hidden');
@@ -651,7 +668,7 @@
         }
 
         // ==========================================
-        // 6. TABS & GLOBAL LIST (USERS + GROUPS)
+        // 6. TABS & GLOBAL LIST
         // ==========================================
         function switchTab(tab) {
             activeTab = tab;
@@ -672,9 +689,8 @@
                     container.innerHTML = '';
                     
                     let combinedList = [];
-                    let userChatsMap = {}; // Map to prevent duplicate users
+                    let userChatsMap = {};
 
-                    // 1. Add existing Groups and 1-on-1 chats
                     chatsSnap.forEach(c => {
                         const chat = c.val();
                         if (chat.isGroup) {
@@ -684,7 +700,6 @@
                         }
                     });
 
-                    // 2. Add all registered users (avoiding duplicates)
                     usersSnap.forEach(u => {
                         if (u.key !== currentUser.uid) {
                             if (userChatsMap[u.key]) {
@@ -743,7 +758,7 @@
         }
 
         // ==========================================
-        // 7. NEW CHAT, GROUP & MESSAGING
+        // 7. MESSAGING
         // ==========================================
         function openNewChatModal() {
             document.getElementById('newChatModal').style.display = 'flex';
@@ -909,6 +924,9 @@
             if (!text || !currentChatId) return;
             pushMessage({ type: 'text', text });
             input.value = '';
+            // Fix for mobile keyboard causing scroll issues
+            window.scrollTo(0, 0);
+            input.focus();
         }
 
         function pushMessage(msgData) {
@@ -940,7 +958,7 @@
         }
 
         // ==========================================
-        // 8. FILE & IMAGE UPLOADS (Base64)
+        // 8. FILE & IMAGE UPLOADS
         // ==========================================
         function handleFileUpload(e, type) {
             const file = e.target.files[0];
@@ -1038,11 +1056,9 @@
                 if (!snap.exists()) return;
                 currentGroupInfo = snap.val();
                 
-                // Reset Views
                 document.getElementById('groupInfoMainView').style.display = 'block';
                 document.getElementById('addMemberView').style.display = 'none';
                 
-                // Reset Name Edit UI
                 document.getElementById('groupInfoName').style.display = 'block';
                 document.getElementById('editGroupNameBtn').style.display = 'none';
                 document.getElementById('editGroupNameInput').style.display = 'none';
@@ -1058,7 +1074,6 @@
                 document.getElementById('changeGroupInfoPicBtn').style.display = isAdmin ? 'inline-block' : 'none';
                 document.getElementById('editGroupNameBtn').style.display = isAdmin ? 'inline-block' : 'none';
                 
-                // Favorite Button state
                 db.ref(`userChats/${currentUser.uid}/${currentChatId}/isFavorite`).once('value', favSnap => {
                     const isFav = favSnap.val();
                     const btn = document.getElementById('favoriteGroupBtn');
@@ -1139,13 +1154,12 @@
             });
         }
 
-        // --- NEW GROUP FUNCTIONS ---
         function toggleFavoriteGroup() {
             if (!currentChatId) return;
             const favRef = db.ref(`userChats/${currentUser.uid}/${currentChatId}/isFavorite`);
             favRef.once('value', snap => {
                 favRef.set(!snap.val());
-                openGroupInfo(); // Refresh view
+                openGroupInfo();
             });
         }
 
@@ -1167,7 +1181,6 @@
                     
                     db.ref(`chats/${currentChatId}/info/picUrl`).set(base64);
                     
-                    // Update for all members
                     const memberIds = Object.keys(currentGroupInfo.members || {});
                     memberIds.forEach(uid => {
                         db.ref(`userChats/${uid}/${currentChatId}/picUrl`).set(base64);
@@ -1194,7 +1207,7 @@
             });
             
             document.getElementById('chatName').innerText = newName;
-            openGroupInfo(); // Refresh UI
+            openGroupInfo();
         }
 
         function openAddMemberView() {
@@ -1212,7 +1225,7 @@
                 snapshot.forEach(child => {
                     const user = child.val();
                     const uid = child.key;
-                    if (currentMembers[uid] || blockedUsers[uid]) return; // Skip existing or blocked
+                    if (currentMembers[uid] || blockedUsers[uid]) return;
 
                     const div = document.createElement('div');
                     div.className = 'list-item';
@@ -1244,7 +1257,7 @@
             db.ref(`userChats/${uid}/${currentChatId}`).set(groupData);
             
             alert(user.name + " added to group.");
-            openGroupInfo(); // Go back and refresh
+            openGroupInfo();
         }
 
         function removeMember(uid) {
@@ -1269,8 +1282,13 @@
             if (!currentChatId) return alert("Open a chat first");
             isCallCreator = true;
             currentCallId = db.ref('calls').push().key;
+            
             document.getElementById('callModal').style.display = 'flex';
             document.getElementById('callStatusText').innerText = "Calling...";
+            document.getElementById('callStatusText').style.display = 'block';
+            document.getElementById('endCallBtn').style.display = 'flex';
+            document.getElementById('incomingCallActions').style.display = 'none';
+            document.getElementById('remoteVideo').style.display = 'none';
             
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
@@ -1278,16 +1296,27 @@
                 document.getElementById('localVideo').style.display = isVideo ? 'block' : 'none';
                 
                 db.ref(`calls/${currentCallId}`).set({ callerId: currentUser.uid, chatId: currentChatId, isVideo, status: 'ringing' });
+                
+                // Timeout if not answered in 30s
+                callTimeout = setTimeout(() => {
+                    if (currentCallId) {
+                        alert("No answer");
+                        endCall();
+                    }
+                }, 30000);
+
                 db.ref(`calls/${currentCallId}`).on('value', async (snap) => {
                     const callData = snap.val();
-                    if (!callData) return;
+                    if (!callData) { endCall(); return; }
                     if (callData.status === 'accepted' && !peerConnection) {
+                        clearTimeout(callTimeout);
                         document.getElementById('callStatusText').innerText = "Connected";
                         await createPeerConnection();
                         const offer = await peerConnection.createOffer();
                         await peerConnection.setLocalDescription(offer);
                         db.ref(`calls/${currentCallId}/offer`).set({ sdp: offer.sdp, type: offer.type });
                     } else if (callData.status === 'rejected') {
+                        clearTimeout(callTimeout);
                         endCall();
                         alert("Call rejected");
                     }
@@ -1302,30 +1331,58 @@
             const callData = snap.val();
             const callId = snap.key;
             if (callData.callerId !== currentUser.uid) {
-                const chatSnap = await db.ref(`userChats/${currentUser.uid}/${callData.chatId}`).once('value');
-                if (chatSnap.exists() && confirm("Incoming call. Accept?")) {
-                    currentCallId = callId;
-                    isCallCreator = false;
-                    document.getElementById('callModal').style.display = 'flex';
-                    document.getElementById('callStatusText').innerText = "Connecting...";
-                    localStream = await navigator.mediaDevices.getUserMedia({ video: callData.isVideo, audio: true });
-                    document.getElementById('localVideo').srcObject = localStream;
-                    db.ref(`calls/${callId}`).update({ status: 'accepted' });
-                    
-                    db.ref(`calls/${callId}/offer`).on('value', async (offSnap) => {
-                        if (offSnap.exists() && !peerConnection) {
-                            await createPeerConnection();
-                            await peerConnection.setRemoteDescription(new RTCSessionDescription(offSnap.val()));
-                            const answer = await peerConnection.createAnswer();
-                            await peerConnection.setLocalDescription(answer);
-                            db.ref(`calls/${callId}/answer`).set({ sdp: answer.sdp, type: answer.type });
-                        }
-                    });
-                } else if (chatSnap.exists()) {
-                    db.ref(`calls/${callId}`).update({ status: 'rejected' });
-                }
+                if (currentCallId === callId) return; 
+                
+                currentCallId = callId;
+                isCallCreator = false;
+                
+                document.getElementById('callModal').style.display = 'flex';
+                document.getElementById('callStatusText').innerText = "Incoming call...";
+                document.getElementById('callStatusText').style.display = 'block';
+                
+                document.getElementById('endCallBtn').style.display = 'none';
+                document.getElementById('incomingCallActions').style.display = 'flex';
+                document.getElementById('remoteVideo').style.display = 'none';
+
+                // Store temporarily to use in acceptCall
+                window.incomingCallData = callData;
             }
         });
+
+        async function acceptCall() {
+            const callData = window.incomingCallData;
+            if (!callData) return;
+
+            document.getElementById('incomingCallActions').style.display = 'none';
+            document.getElementById('endCallBtn').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "Connecting...";
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: callData.isVideo, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').style.display = callData.isVideo ? 'block' : 'none';
+                
+                db.ref(`calls/${currentCallId}`).update({ status: 'accepted' });
+                
+                db.ref(`calls/${currentCallId}/offer`).on('value', async (offSnap) => {
+                    if (offSnap.exists() && !peerConnection) {
+                        await createPeerConnection();
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(offSnap.val()));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        db.ref(`calls/${currentCallId}/answer`).set({ sdp: answer.sdp, type: answer.type });
+                    }
+                });
+            } catch (err) {
+                alert("Camera/Mic access denied.");
+                endCall();
+            }
+        }
+
+        function rejectCall() {
+            if (currentCallId) db.ref(`calls/${currentCallId}`).update({ status: 'rejected' });
+            endCall();
+        }
 
         async function createPeerConnection() {
             peerConnection = new RTCPeerConnection(configuration);
@@ -1344,13 +1401,19 @@
         }
 
         function endCall() {
+            if (callTimeout) clearTimeout(callTimeout);
             if (localStream) localStream.getTracks().forEach(track => track.stop());
             if (peerConnection) peerConnection.close();
             if (currentCallId) db.ref(`calls/${currentCallId}`).remove();
-            peerConnection = null; currentCallId = null;
+            
+            peerConnection = null; 
+            currentCallId = null;
+            window.incomingCallData = null;
+            
             document.getElementById('callModal').style.display = 'none';
             document.getElementById('remoteVideo').style.display = 'none';
             document.getElementById('callStatusText').style.display = 'block';
+            document.getElementById('localVideo').style.display = 'none';
         }
 
         // ==========================================
