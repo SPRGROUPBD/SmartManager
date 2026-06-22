@@ -7,6 +7,9 @@
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Cropper.js CDN added for Image Cropping -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
     <style>
         :root {
             --primary: #2563eb; --primary-hover: #1d4ed8; --bg: #f1f5f9;
@@ -107,7 +110,7 @@
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
         .modal-overlay.open { display: flex; }
         .modal { background: #fff; padding: 24px; border-radius: 12px; width: 90%; max-width: 500px; text-align: center; max-height: 90vh; overflow-y: auto; }
-        .modal.large { max-width: 900px; text-align: left; }
+        .modal.large { max-width: 1000px; text-align: left; }
         .modal-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         .modal-footer-actions { border-top: 1px solid var(--border); padding-top: 15px; margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px; }
 
@@ -161,76 +164,38 @@
         .trx-input-icon input { padding-left: 36px; }
         .trx-input-icon .trx-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 1rem; pointer-events: none; }
 
-        @keyframes ocrPulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        @keyframes ocrSpin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .ocr-status-bar {
-            margin-top: 6px; padding: 8px 12px; border-radius: 8px;
-            font-size: 0.8rem; font-weight: 500;
-            display: flex; align-items: center; gap: 8px;
-            transition: all 0.3s;
-        }
-        .ocr-status-bar.scanning {
-            background: linear-gradient(90deg, #eff6ff, #dbeafe, #eff6ff);
-            border: 1px solid #bfdbfe; color: #1d4ed8;
-            animation: ocrPulse 1.5s ease-in-out infinite;
-        }
+        @keyframes ocrPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes ocrSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .ocr-status-bar { margin-top: 6px; padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: all 0.3s; flex-wrap: wrap; }
+        .ocr-status-bar.scanning { background: linear-gradient(90deg, #eff6ff, #dbeafe, #eff6ff); border: 1px solid #bfdbfe; color: #1d4ed8; animation: ocrPulse 1.5s ease-in-out infinite; }
         .ocr-status-bar.scanning .ocr-spin { animation: ocrSpin 1s linear infinite; display: inline-block; }
-        .ocr-status-bar.found {
-            background: #f0fdf4; border: 1px solid #bbf7d0; color: #065f46;
-        }
-        .ocr-status-bar.not-found {
-            background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
-        }
-        .ocr-status-bar.error {
-            background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
-        }
-        .ocr-value {
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-weight: 700; font-size: 0.85rem;
-            background: rgba(16,185,129,.1); padding: 2px 8px;
-            border-radius: 4px; letter-spacing: 0.5px;
-        }
-        .ocr-rescan {
-            margin-left: auto; cursor: pointer;
-            color: var(--primary); font-weight: 600;
-            text-decoration: underline; font-size: 0.75rem;
-            background: none; border: none; padding: 2px 6px;
-        }
+        .ocr-status-bar.found { background: #f0fdf4; border: 1px solid #bbf7d0; color: #065f46; }
+        .ocr-status-bar.not-found { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+        .ocr-status-bar.error { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+        .ocr-value { font-family: 'Consolas', 'Monaco', monospace; font-weight: 700; font-size: 0.85rem; background: rgba(16,185,129,.1); padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px; }
+        .ocr-rescan { margin-left: auto; cursor: pointer; color: var(--primary); font-weight: 600; text-decoration: underline; font-size: 0.75rem; background: none; border: none; padding: 2px 6px; }
         .ocr-rescan:hover { color: var(--primary-hover); }
-        .ocr-raw-toggle {
-            margin-left: auto; cursor: pointer;
-            color: var(--muted); font-weight: 500;
-            text-decoration: underline; font-size: 0.7rem;
-            background: none; border: none; padding: 2px 6px;
-        }
-        .ocr-raw-text {
-            margin-top: 6px; padding: 8px; background: #f8fafc;
-            border: 1px solid var(--border); border-radius: 6px;
-            font-family: 'Consolas', monospace; font-size: 0.7rem;
-            color: var(--muted); max-height: 80px; overflow-y: auto;
-            white-space: pre-wrap; word-break: break-all;
-            display: none;
-        }
+        .ocr-raw-toggle { margin-left: auto; cursor: pointer; color: var(--muted); font-weight: 500; text-decoration: underline; font-size: 0.7rem; background: none; border: none; padding: 2px 6px; }
+        .ocr-raw-text { margin-top: 6px; padding: 8px; background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; font-family: 'Consolas', monospace; font-size: 0.7rem; color: var(--muted); max-height: 80px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; display: none; }
         .ocr-raw-text.visible { display: block; }
-        .trx-auto-filled {
-            border-color: var(--success) !important;
-            box-shadow: 0 0 0 3px rgba(16,185,129,.15) !important;
-        }
+        .trx-auto-filled { border-color: var(--success) !important; box-shadow: 0 0 0 3px rgba(16,185,129,.15) !important; }
+        .ocr-bank-label { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; background: rgba(37,99,235,.08); color: var(--primary); border: 1px solid rgba(37,99,235,.2); margin-left: 6px; vertical-align: middle; }
 
-        /* ★ OCR detected bank/channel label display */
-        .ocr-bank-label {
-            display: inline-block; padding: 1px 8px; border-radius: 4px;
-            font-size: 0.7rem; font-weight: 600;
-            background: rgba(37,99,235,.08); color: var(--primary);
-            border: 1px solid rgba(37,99,235,.2);
-            margin-left: 6px; vertical-align: middle;
-        }
+        /* Cropper & Enhancer Modal Styles */
+        .crop-container { display: flex; gap: 20px; flex-wrap: wrap; height: 70vh; }
+        /* Fixed height and specific overflow for crop area to make crop lines visible */
+        .crop-image-area { flex: 1; min-width: 300px; height: 60vh; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; position: relative; }
+        .crop-image-area img { max-width: 100%; display: block; }
+        .crop-controls { width: 240px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow-y: auto; }
+        .crop-controls .form-group { margin-bottom: 0; }
+        .crop-controls input[type="range"] { width: 100%; }
+        .btn-rotate-group { display: flex; gap: 10px; }
+        .btn-rotate { flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text); }
+        .btn-rotate:hover { background: #cbd5e1; }
+
+        /* Ensure Cropper lines are always visible */
+        .cropper-line, .cropper-point { background-color: #fff !important; }
+        .cropper-view-box { outline-color: #2563eb !important; }
 
         @media print {
             body * { visibility: hidden; }
@@ -251,8 +216,7 @@
         .report-table th, .report-table td { border: 1px solid #000; padding: 5px 6px; text-align: left; color: #000; }
         .report-table th { background: #f0f0f0 !important; font-weight: 700; text-align: center; font-size: 10px; }
         .report-table td { text-align: center; font-size: 11px; }
-        .report-table td:nth-child(3), .report-table td:nth-child(7) { text-align: left; }
-        .report-table td:nth-child(2) { font-family: 'Consolas', monospace; font-size: 10px; }
+        .report-table td:nth-child(2), .report-table td:nth-child(5) { text-align: left; }
         .report-grand-total td { border-top: 2px solid #000 !important; font-weight: 700; font-size: 12px; background: #f0f0f0 !important; }
         .report-footer { margin-top: 60px; display: flex; justify-content: space-between; text-align: center; font-size: 12px; page-break-inside: avoid; }
         .sign-line { margin-bottom: 4px; letter-spacing: 2px; border-bottom: 1px solid #000; display: inline-block; width: 150px; }
@@ -266,6 +230,9 @@
             .filter-bar input, .filter-bar select { width: 100%; }
             .slip-actions { gap: 6px; }
             .slip-actions .btn-sm { font-size: 0.7rem; padding: 5px 8px; }
+            .crop-container { flex-direction: column; height: auto; }
+            .crop-image-area { height: 50vh; }
+            .crop-controls { width: 100%; height: auto; }
         }
     </style>
 </head>
@@ -348,7 +315,8 @@
                             </div>
                             <div class="form-group"><label>Bank</label><select id="depositBank" required><option value="" disabled selected>Select Bank</option></select></div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                                <div class="form-group"><label>Account No</label><input type="text" id="depositAccNo" readonly></div>
+                                <!-- Removed readonly so user can manually input/edit Account No -->
+                                <div class="form-group"><label>Account No</label><input type="text" id="depositAccNo" placeholder="Enter Account No"></div>
                                 <div class="form-group"><label>Branch</label><input type="text" id="depositBranch" readonly></div>
                             </div>
                             <div class="form-group">
@@ -365,7 +333,7 @@
                                 <div class="form-group"><label>Territory</label><input type="text" id="depositTerritory" placeholder="e.g., Sadar"></div>
                             </div>
                             <div class="form-group">
-                                <label>Deposit Slip (Image) <span style="color:var(--primary);font-weight:400;font-size:0.75rem">— আপলোড করলে Trx No Auto Extract হবে</span></label>
+                                <label>Deposit Slip (Image) <span style="color:var(--primary);font-weight:400;font-size:0.75rem">— আপলোড করলে শুধু Trx No Auto Extract হবে</span></label>
                                 <input type="file" id="depositSlipInput" accept="image/*" style="font-size:0.85rem">
                                 <div id="depositSlipPreview" class="deposit-slip-container">
                                     <div class="deposit-slip-preview">
@@ -378,8 +346,11 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%" id="submitDepositBtn">Save Deposit</button>
-                            <button type="button" class="btn btn-secondary d-none" style="width:100%; margin-top:10px" id="cancelDepositBtn" onclick="resetDepositForm()">Cancel</button>
+                            <div style="display:flex; gap:10px;">
+                                <button type="submit" class="btn btn-primary" style="flex:1" id="submitDepositBtn">Save Deposit</button>
+                                <button type="button" class="btn btn-danger" style="flex:1" id="resetFormBtn" onclick="resetDepositForm()">Reset Form</button>
+                            </div>
+                            <button type="button" class="btn btn-secondary d-none" style="width:100%; margin-top:10px" id="cancelDepositBtn" onclick="resetDepositForm()">Cancel Edit</button>
                         </form>
                     </div>
                 </div>
@@ -471,7 +442,7 @@
                 <div style="text-align:center; margin-top:8px; font-size:13px"><strong>Name of Depot:</strong> Kushtia</div>
                 <div class="report-title" id="bankRptTitle">Bank Deposit Statement</div>
                 <table class="report-table">
-                    <thead><tr><th>Date</th><th>Trx No / Slip No</th><th>Name Of Bank</th><th>Account No</th><th>Amount (Tk.)</th><th>Branch</th><th>Territory</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Name Of Bank</th><th>Account No</th><th>Amount (Tk.)</th><th>Territory</th></tr></thead>
                     <tbody id="bankRptTableBody"></tbody>
                 </table>
                 <div class="report-footer">
@@ -490,6 +461,44 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
                 <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Crop & Enhancer Modal -->
+    <div class="modal-overlay" id="cropModal">
+        <div class="modal large">
+            <div class="card-header" style="margin-bottom:15px; padding-bottom:10px; border-bottom:1px solid var(--border);">Crop & Enhance Slip</div>
+            <div class="crop-container">
+                <div class="crop-image-area">
+                    <img id="cropImage" src="" style="max-width: 100%; display: block;">
+                </div>
+                <div class="crop-controls">
+                    <div class="form-group">
+                        <label>Rotate Image</label>
+                        <div class="btn-rotate-group">
+                            <button type="button" class="btn-rotate" onclick="rotateImage(-90)">↺ Left</button>
+                            <button type="button" class="btn-rotate" onclick="rotateImage(90)">↻ Right</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Brightness: <span id="brightVal" style="float:right; font-weight:bold;">100%</span></label>
+                        <input type="range" id="brightness" min="50" max="150" value="100" oninput="updateFilters()">
+                    </div>
+                    <div class="form-group">
+                        <label>Contrast: <span id="contrastVal" style="float:right; font-weight:bold;">100%</span></label>
+                        <input type="range" id="contrast" min="50" max="200" value="100" oninput="updateFilters()">
+                    </div>
+                    <div class="form-group">
+                        <label>Grayscale (B/W)</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="grayscaleToggle" oninput="updateFilters()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="applyCropAndEnhance()">Crop & Save</button>
+                    <button class="btn btn-secondary" style="width:100%;" onclick="closeCropModal()">Cancel</button>
+                </div>
             </div>
         </div>
     </div>
@@ -566,6 +575,7 @@
     const MAX_FILE_SIZE = 2 * 1024 * 1024;
     let currentSummaryData = {}, currentReportTitle = "", currentFilteredData = [];
     let parsedImportData = [], selectedDepositIds = new Set();
+    let cropper = null, uploadedFileName = '';
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -677,41 +687,20 @@
     window.cancelBankEdit = () => {$('bankEditId').value='';$('bankNameInput').value='';$('bankAccNoInput').value='';$('bankBranchInput').value='';$('cancelBankBtn').classList.add('d-none');};
 
     // ================================================================
-    // ★★★ OCR: EXTRACT TRX NO FROM DEPOSIT SLIP IMAGE ★★★
+    // OCR: EXTRACT ONLY TRX NO FROM DEPOSIT SLIP IMAGE
     // ================================================================
-
-    function showOcrStatus(state, extra, bankLabel) {
+    function showOcrStatus(state, htmlContent) {
         const bar = $('ocrStatusBar');
         bar.classList.remove('d-none','scanning','found','not-found','error');
         const rawEl = $('ocrRawText');
         rawEl.classList.remove('visible');
 
-        // Helper for bank label badge
-        const bankBadge = bankLabel ? `<span class="ocr-bank-label">${bankLabel}</span>` : '';
-
-        switch(state) {
-            case 'scanning':
-                bar.className = 'ocr-status-bar scanning';
-                bar.innerHTML = `<span class="ocr-spin">🔍</span><span>স্লিপ থেকে Trx No বের করা হচ্ছে...</span>`;
-                break;
-            case 'found':
-                bar.className = 'ocr-status-bar found';
-                bar.innerHTML = `✅ <span>Trx No পাওয়া গেছে:</span> <span class="ocr-value">${extra}</span>${bankBadge}<button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`;
-                $('depositTrxNo').value = extra;
-                $('depositTrxNo').classList.add('trx-auto-filled');
-                break;
-            case 'notFound':
-                bar.className = 'ocr-status-bar not-found';
-                bar.innerHTML = `⚠️ <span>স্লিপে Trx No পাওয়া যায়নি</span>${bankBadge}<button class="ocr-rescan" onclick="reRunOcr()">🔄 Re-scan</button><button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`;
-                break;
-            case 'error':
-                bar.className = 'ocr-status-bar error';
-                bar.innerHTML = `❌ <span>${extra || 'OCR ব্যর্থ হয়েছে'}</span>${lastOcrRawText ? '<button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>' : ''}`;
-                break;
-            case 'loading':
-                bar.className = 'ocr-status-bar scanning';
-                bar.innerHTML = `<span class="ocr-spin">⏳</span><span>OCR Engine লোড হচ্ছে (প্রথমবার 10-15 সেকেন্ড লাগতে পারে)...</span>`;
-                break;
+        if (state === 'scanning' || state === 'loading') {
+            bar.className = 'ocr-status-bar scanning';
+            bar.innerHTML = htmlContent;
+        } else if (state === 'found' || state === 'notFound' || state === 'error') {
+            bar.className = 'ocr-status-bar ' + state;
+            bar.innerHTML = htmlContent;
         }
     }
 
@@ -720,7 +709,6 @@
         el.classList.toggle('visible');
         if (el.classList.contains('visible')) el.textContent = lastOcrRawText || '(No text extracted)';
     };
-
     window.reRunOcr = () => {
         if (depositSlipBase64 && !isOcrRunning) runOcrExtraction(depositSlipBase64);
     };
@@ -729,125 +717,85 @@
         if (isOcrRunning) return;
         isOcrRunning = true;
         lastOcrRawText = '';
-
         if (typeof Tesseract === 'undefined') {
-            showOcrStatus('error', 'OCR Library লোড হয়নি। ইন্টারনেট সংযোগ চেক করুন।');
-            isOcrRunning = false;
-            return;
+            showOcrStatus('error', `❌ <span>OCR Library লোড হয়নি।</span>`);
+            isOcrRunning = false; return;
         }
-
         try {
-            showOcrStatus('loading');
-
-            const worker = await Tesseract.createWorker('eng', 1, {
-                logger: m => {}
-            });
-
-            showOcrStatus('scanning');
-
+            showOcrStatus('loading', `<span class="ocr-spin">⏳</span><span>OCR Engine লোড হচ্ছে...</span>`);
+            const worker = await Tesseract.createWorker('eng', 1, { logger: m => {} });
+            showOcrStatus('scanning', `<span class="ocr-spin">🔍</span><span>স্লিপ থেকে ডাটা বের করা হচ্ছে...</span>`);
             const { data: { text } } = await worker.recognize(imageData);
             await worker.terminate();
-
             lastOcrRawText = text;
 
             if (!text || text.trim().length < 3) {
-                showOcrStatus('notFound');
-                isOcrRunning = false;
-                return;
+                showOcrStatus('notFound', `⚠️ <span>স্লিপ থেকে কোনো ডাটা পাওয়া যায়নি</span><button class="ocr-rescan" onclick="reRunOcr()">🔄 Re-scan</button><button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`);
+                isOcrRunning = false; return;
             }
 
-            // ★ Returns { value, label } or { value: null, label: null }
-            const result = findTransactionId(text);
+            const result = extractSlipData(text);
+            let filledFields = [];
+            
+            if (result.trxNo && !$('depositTrxNo').value.trim()) {
+                $('depositTrxNo').value = result.trxNo;
+                $('depositTrxNo').classList.add('trx-auto-filled');
+                filledFields.push(`Trx: <span class="ocr-value">${result.trxNo}</span>`);
+            }
 
-            if (result.value) {
-                showOcrStatus('found', result.value, result.label);
-                showToast('Trx No Auto Extract: ' + result.value, 'success');
+            if (filledFields.length > 0) {
+                let statusHtml = `✅ <span>Auto Extracted:</span> ${filledFields.join(' | ')}`;
+                if (result.label) statusHtml += `<span class="ocr-bank-label">${result.label}</span>`;
+                statusHtml += `<button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`;
+                showOcrStatus('found', statusHtml);
+                showToast('স্লিপ থেকে ডাটা সফলভাবে এক্সট্র্যাক্ট হয়েছে!', 'success');
             } else {
-                // Show which bank label was detected (if any) even without value
-                showOcrStatus('notFound', null, result.label);
+                let labelBadge = result.label ? `<span class="ocr-bank-label">${result.label}</span>` : '';
+                showOcrStatus('notFound', `⚠️ <span>স্লিপে নতুন কিছু পাওয়া যায়নি</span>${labelBadge}<button class="ocr-rescan" onclick="reRunOcr()">🔄 Re-scan</button><button class="ocr-raw-toggle" onclick="toggleOcrRaw()">OCR Text</button>`);
             }
 
         } catch (err) {
             console.error('OCR Error:', err);
-            showOcrStatus('error', 'OCR Error: ' + (err.message || 'Unknown error'));
+            showOcrStatus('error', `❌ <span>OCR Error: ${err.message || 'Unknown error'}</span>`);
         } finally {
             isOcrRunning = false;
         }
     }
 
-    /**
-     * ★★★ CORE: Multi-strategy Trx ID extraction for Bangladeshi bank slips ★★★
-     *
-     * Supported labels (Strategy 1 — highest priority):
-     *   ┌──────────────────────────┬─────────────────────┐
-     *   │ Bank / Channel           │ Label on Slip        │
-     *   ├──────────────────────────┼─────────────────────┤
-     *   │ Islami Bank Agent Banking│ লেনদেনের আইডি      │
-     *   │ Islami Bank Branch       │ No.G                │
-     *   │ Islami Bank Branch-2     │ নং-C                │
-     *   │ Dutch-Bangla CRM         │ TXN NO.             │
-     *   │ Dutch-Bangla NexusPay    │ Transaction ID      │
-     *   │ Dutch-Bangla Agent Banking│ Transaction ID     │
-     *   │ Pubali Bank              │ স্ক্রল নং           │
-     *   └──────────────────────────┴─────────────────────┘
-     *
-     * @param {string} text — raw OCR output
-     * @returns {{ value: string|null, label: string|null }}
-     */
-    function findTransactionId(text) {
-        const clean = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-        const lines = clean.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    function extractSlipData(text) {
+        // Clean spaces between numbers (e.g., "1 500.00" -> "1500.00")
+        const cleanText = text.replace(/(\d)\s+(\d)/g, '$1$2');
+        const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        let result = { trxNo: null, label: null };
 
-        // Value pattern: starts with alphanumeric, 4-30 chars of common ID characters
+        // --- 1. EXTRACT TRX NO ---
         const VP = '([A-Za-z0-9][A-Za-z0-9\\/\\-_\\.]' + '{3,29})';
-
-        // False-positive words (common on slips but NOT transaction IDs)
         const FP = /^(date|time|amount|total|name|account|branch|taka|tk|bdt|none|nil|n\/a|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|active|inactive|cash|cheque|deposit|withd|withdraw|balance|available|type|code|mobile|phone|customer|signature|authorized|verified|received|paid|credit|debit)$/i;
-
         function isFP(v) { return FP.test(v); }
-
-        /**
-         * Collapse spaces between digits (OCR artifact: "2025 0115 001" → "20250115001")
-         */
-        function cleanDigits(v) { return v.replace(/(\d)\s+(\d)/g, '$1$2'); }
-
-        /**
-         * Try to extract a value after a label using 3 methods:
-         *   1) label + separator + value  (same regex match)
-         *   2) label on line → remainder of same line after label
-         *   3) label on line → next line
-         */
         function afterLabel(labelRegexStr) {
             const lr = new RegExp(labelRegexStr, 'i');
             const sepVP = new RegExp(labelRegexStr + '[\\s]*[:\\-\\.\\/\\\\=]?\\s*' + VP, 'i');
-
-            // Method 1: Single regex — label + optional separator + value
-            let m = sepVP.exec(clean);
+            let m = sepVP.exec(cleanText);
             if (m) {
-                const v = cleanDigits(m[1].trim().replace(/[\s\\.]+$/, ''));
+                const v = m[1].trim().replace(/[\s\\.]+$/, '');
                 if (v.length >= 4 && !isFP(v)) return v;
             }
-
-            // Method 2 & 3: Line-by-line
             for (let i = 0; i < lines.length; i++) {
                 if (!lr.test(lines[i])) continue;
-
-                // Method 2: Remove label+separator from this line, take first value token
                 const stripPat = new RegExp('.*?' + labelRegexStr + '[\\s]*[:\\-\\.\\/\\\\=]*\\s*', 'i');
                 const remainder = lines[i].replace(stripPat, '').trim();
                 if (remainder.length >= 4) {
                     const vm = remainder.match(new RegExp('^' + VP, 'i'));
                     if (vm) {
-                        const v = cleanDigits(vm[1].trim().replace(/[\s\\.]+$/, ''));
+                        const v = vm[1].trim().replace(/[\s\\.]+$/, '');
                         if (v.length >= 4 && !isFP(v)) return v;
                     }
                 }
-
-                // Method 3: Next line
                 if (i + 1 < lines.length && lines[i + 1].length >= 4) {
                     const vm = lines[i + 1].match(new RegExp('^' + VP, 'i'));
                     if (vm) {
-                        const v = cleanDigits(vm[1].trim().replace(/[\s\\.]+$/, ''));
+                        const v = vm[1].trim().replace(/[\s\\.]+$/, '');
                         if (v.length >= 4 && !isFP(v)) return v;
                     }
                 }
@@ -855,180 +803,133 @@
             return null;
         }
 
-        // Track which bank label was detected (even if value extraction failed)
         let detectedLabel = null;
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 1: Known Bangladeshi Bank Labels — HIGHEST PRIORITY
-        // ════════════════════════════════════════════════════════════════
         const knownLabels = [
-            // লেনদেনের আইডি — Islami Bank Agent Banking
-            { label: 'লেনদেনের\\s*আইডি',                     name: 'IBBL Agent Banking' },
-            // স্ক্রল নং — Pubali Bank
-            { label: 'স্ক্রল\\s*নং',                        name: 'Pubali Bank' },
-            // নং-C (or নং-c, নং.C, নং C) — Islami Bank Branch variant
-            { label: 'নং[\\s]*[\\-\\.]?[\\s]*[Cc]',            name: 'IBBL Branch (নং-C)' },
-            // No.G (or No. G, No.G:, No .G) — Islami Bank Branch
-            { label: 'No\\.?\\s*G(?![a-zA-Z])',                name: 'IBBL Branch (No.G)' },
-            // TXN NO. (or TXN NO, TXN NO:) — Dutch-Bangla CRM
-            { label: 'TXN\\s*NO\\.?',                          name: 'DBBL CRM' },
-            // Transaction ID — Dutch-Bangla NexusPay & Agent Banking
-            { label: 'Transaction\\s*ID',                     name: 'DBBL NexusPay/Agent' },
+            { label: 'লেনদেনের\\s*আইডি', name: 'IBBL Agent Banking' },
+            { label: 'স্ক্রল\\s*নং', name: 'Pubali Bank' },
+            { label: 'নং[\\s]*[\\-\\.]?[\\s]*[Cc]', name: 'IBBL Branch (নং-C)' },
+            { label: 'No\\.?\\s*G(?![a-zA-Z])', name: 'IBBL Branch (No.G)' },
+            { label: 'TXN\\s*NO\\.?', name: 'DBBL CRM' },
+            { label: 'Transaction\\s*ID', name: 'DBBL NexusPay/Agent' },
         ];
-
         for (const { label, name } of knownLabels) {
-            // Quick check: is this label present at all?
             const lr = new RegExp(label, 'i');
-            if (lr.test(clean)) {
-                detectedLabel = name;  // Remember which label we saw
+            if (lr.test(cleanText)) {
+                detectedLabel = name;
                 const val = afterLabel(label);
-                if (val) return { value: val, label: name };
+                if (val) { result.trxNo = val; result.label = name; break; }
             }
         }
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 2: Generic English Labels
-        // ════════════════════════════════════════════════════════════════
-        const engLabels = [
-            'Trx\\s*(?:No|No\\.|Number|#)',
-            'Txn\\s*(?:No|No\\.|Number|#)',
-            'Transaction\\s*(?:No\\.?|Number|#)',
-            'Reference\\s*(?:No\\.?|Number|#)',
-            'Ref\\s*(?:No\\.?|#)',
-            'RRN\\s*(?:No\\.?)?',
-            'Scroll\\s*(?:No\\.?|Number)?',
-            'Serial\\s*(?:No\\.?|Number)?',
-            'Challan\\s*(?:No\\.?)?',
-            'Slip\\s*(?:No\\.?)?',
-            'Receipt\\s*(?:No\\.?)?',
-            'Deposit\\s*(?:Slip\\s*)?(?:No\\.?)?',
-        ];
-
-        for (const label of engLabels) {
-            const lr = new RegExp(label, 'i');
-            if (lr.test(clean)) {
-                if (!detectedLabel) {
-                    // Derive a readable name from the regex
-                    const match = label.match(/^([A-Za-z]+)/);
-                    detectedLabel = match ? match[1] + ' (generic)' : 'Generic Label';
-                }
-                const val = afterLabel(label);
-                if (val) return { value: val, label: detectedLabel };
-            }
-        }
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 3: Generic Bengali Labels (lower confidence)
-        // ════════════════════════════════════════════════════════════════
-        const bengLabels = [
-            'তারিখ\\s*নং',
-            'লেনদেন\\s*(?:আইডি|নং|নম্বর)',
-            'আইডি',
-        ];
-
-        for (const label of bengLabels) {
-            const lr = new RegExp(label, 'i');
-            if (lr.test(clean)) {
-                if (!detectedLabel) detectedLabel = 'Bengali Label';
-                const val = afterLabel(label);
-                if (val) return { value: val, label: detectedLabel };
-            }
-        }
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 4: Standalone transaction-like patterns
-        // ════════════════════════════════════════════════════════════════
-        // 2-5 uppercase letters + 8-20 digits (e.g., TRX20250115001)
-        let m;
-        const standalone = /\b([A-Z]{2,5}[\-\/]?[0-9]{8,20})\b/g;
-        while ((m = standalone.exec(clean)) !== null) {
-            const v = cleanDigits(m[1]);
-            if (!/^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/.test(v) &&
-                !/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(v)) {
-                return { value: v, label: 'Standalone Pattern' };
-            }
-        }
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 5: Long numeric sequences (bare TXN numbers)
-        // ════════════════════════════════════════════════════════════════
-        // Many BD banks use 10-18 digit numeric IDs
-        const numPatterns = [
-            /(?<!\d)(\d{14,18})(?!\d)/g,   // Most common range
-            /(?<!\d)(\d{10,13})(?!\d)/g,   // Shorter range
-            /(?<!\d)(\d{19,20})(?!\d)/g,   // Longer range
-        ];
-        for (const pat of numPatterns) {
-            while ((m = pat.exec(clean)) !== null) {
-                const v = cleanDigits(m[1]);
-                // Skip phone numbers (01...), dates (20250115... if 8 digits), amounts
-                if (!v.startsWith('01') &&
-                    !/^20\d{6}$/.test(v)) {  // 8-digit date-like
-                    return { value: v, label: 'Numeric Sequence' };
+        if (!result.trxNo) {
+            const engLabels = [
+                'Trx\\s*(?:No|No\\.|Number|#)', 'Txn\\s*(?:No|No\\.|Number|#)',
+                'Transaction\\s*(?:No\\.?|Number|#)', 'Reference\\s*(?:No\\.?|Number|#)',
+                'Ref\\s*(?:No\\.?|#)', 'RRN\\s*(?:No\\.?)?', 'Scroll\\s*(?:No\\.?|Number)?',
+                'Serial\\s*(?:No\\.?|Number)?', 'Challan\\s*(?:No\\.?)?', 'Slip\\s*(?:No\\.?)?',
+                'Receipt\\s*(?:No\\.?)?', 'Deposit\\s*(?:Slip\\s*)?(?:No\\.?)?',
+            ];
+            for (const label of engLabels) {
+                const lr = new RegExp(label, 'i');
+                if (lr.test(cleanText)) {
+                    if (!detectedLabel) {
+                        const match = label.match(/^([A-Za-z]+)/);
+                        detectedLabel = match ? match[1] + ' (generic)' : 'Generic Label';
+                    }
+                    const val = afterLabel(label);
+                    if (val) { result.trxNo = val; result.label = detectedLabel; break; }
                 }
             }
         }
 
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 6: IBBL specific format (TRX/YYYY/NNN)
-        // ════════════════════════════════════════════════════════════════
-        const ibblPat = /(?:IBBL|ibbl)?\s*[\/\-]?\s*(?:TRX|trx)[\/\-](\d{4})[\/\-](\d{1,5})/g;
-        while ((m = ibblPat.exec(clean)) !== null) {
-            return { value: `TRX/${m[1]}/${m[2]}`, label: 'IBBL Format' };
-        }
-
-        // ════════════════════════════════════════════════════════════════
-        // STRATEGY 7: "No." followed by long number (fallback)
-        // ════════════════════════════════════════════════════════════════
-        const noPat = /(?:No\.?|No)\s*[\.\-:]\s*(\d{6,20})/gi;
-        while ((m = noPat.exec(clean)) !== null) {
-            return { value: cleanDigits(m[1]), label: 'No. Pattern' };
-        }
-
-        // Nothing found — return detected label (if any) for diagnostic display
-        return { value: null, label: detectedLabel };
+        return result;
     }
 
     // ================================================================
-    // DEPOSIT IMAGE HANDLING + AUTO OCR
+    // IMAGE UPLOAD, CROPPER & ENHANCER
     // ================================================================
-    function compressImage(file, maxWidth=900, quality=0.75) {
-        return new Promise((resolve,reject) => {
-            const reader=new FileReader(); reader.readAsDataURL(file);
-            reader.onload=(e)=>{
-                const img=new Image(); img.src=e.target.result;
-                img.onload=()=>{
-                    const c=document.createElement('canvas');
-                    let w=img.width,h=img.height;
-                    if(w>maxWidth){h=Math.round((h*maxWidth)/w);w=maxWidth;}
-                    c.width=w;c.height=h;
-                    c.getContext('2d').drawImage(img,0,0,w,h);
-                    resolve(c.toDataURL('image/jpeg',quality));
-                };
-                img.onerror=reject;
-            };
-            reader.onerror=reject;
-        });
-    }
-
-    $('depositSlipInput').addEventListener('change', async (e) => {
+    $('depositSlipInput').addEventListener('change', (e) => {
         const file = e.target.files[0]; if(!file) return;
         if(file.size > MAX_FILE_SIZE){showToast('Image too large! Max 2MB','error');$('depositSlipInput').value='';return;}
-        try {
-            const sizeKB = (file.size / 1024).toFixed(1);
-            $('depositSlipSize').textContent = sizeKB + ' KB';
-            depositSlipBase64 = await compressImage(file);
-            $('depositSlipThumb').src = depositSlipBase64;
-            $('depositSlipName').textContent = file.name;
-            $('depositSlipPreview').classList.add('has-image');
-            if (!$('depositTrxNo').value.trim()) {
-                runOcrExtraction(depositSlipBase64);
-            }
-        } catch(err) {
-            showToast('Error processing image','error');
-            console.error(err);
-        }
+        uploadedFileName = file.name;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            $('cropImage').src = ev.target.result;
+            $('cropModal').classList.add('open');
+            if (cropper) cropper.destroy();
+            // Initialized Cropper with events to keep live filter effects intact
+            cropper = new Cropper($('cropImage'), {
+                aspectRatio: NaN,
+                viewMode: 1,
+                autoCrop: true,
+                autoCropArea: 0.8,
+                background: false,
+                movable: true,
+                zoomable: true,
+                rotatable: true,
+                scalable: true,
+                dragMode: 'move',
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                ready: function() {
+                    updateFilters(); // Apply filters immediately when cropper is ready
+                },
+                crop: function() {
+                    updateFilters(); // Keep filters applied during any cropper interaction
+                }
+            });
+            $('brightness').value = 100;
+            $('contrast').value = 100;
+            $('grayscaleToggle').checked = false;
+            updateFilters();
+        };
+        reader.readAsDataURL(file);
     });
+
+    window.rotateImage = (deg) => {
+        if (cropper) cropper.rotate(deg);
+    };
+
+    // Modified updateFilters to select all images within cropper-container for live effect
+    window.updateFilters = () => {
+        const b = $('brightness').value, c = $('contrast').value, g = $('grayscaleToggle').checked ? 1 : 0;
+        $('brightVal').textContent = b + '%';
+        $('contrastVal').textContent = c + '%';
+        
+        // Target both canvas and viewer images inside cropper to ensure effect is always visible live
+        const imgs = document.querySelectorAll('.cropper-canvas img, .cropper-viewer img, .cropper-canvas, .cropper-viewer');
+        imgs.forEach(img => {
+            img.style.filter = `brightness(${b}%) contrast(${c}%) grayscale(${g})`;
+        });
+    };
+
+    window.applyCropAndEnhance = () => {
+        if (!cropper) return;
+        const canvas = cropper.getCroppedCanvas({ maxWidth: 1200, maxHeight: 1200, imageSmoothingQuality: 'high' });
+        if (!canvas) { showToast('Cropping failed. Try again.', 'error'); return; }
+
+        const b = $('brightness').value, c = $('contrast').value, g = $('grayscaleToggle').checked ? 1 : 0;
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.filter = `brightness(${b}%) contrast(${c}%) grayscale(${g})`;
+        ctx.drawImage(canvas, 0, 0);
+
+        depositSlipBase64 = tempCanvas.toDataURL('image/jpeg', 0.85);
+        $('depositSlipThumb').src = depositSlipBase64;
+        $('depositSlipName').textContent = uploadedFileName;
+        $('depositSlipSize').textContent = (Math.round((depositSlipBase64.length * 3/4) / 1024)) + ' KB (Processed)';
+        $('depositSlipPreview').classList.add('has-image');
+        
+        closeCropModal();
+
+        runOcrExtraction(depositSlipBase64);
+    };
+
+    window.closeCropModal = () => {
+        $('cropModal').classList.remove('open');
+        if (cropper) { cropper.destroy(); cropper = null; }
+        $('depositSlipInput').value = ''; 
+    };
 
     $('depositTrxNo').addEventListener('input', () => {
         $('depositTrxNo').classList.remove('trx-auto-filled');
@@ -1044,9 +945,6 @@
     };
     window.openDepositModal = () => { if(depositSlipBase64){$('imgPreviewImg').src=depositSlipBase64;$('imgPreviewModal').classList.add('open');} };
 
-    // ================================================================
-    // DEPOSIT FORM
-    // ================================================================
     $('depositBank').addEventListener('change', () => {
         const bank=banks.find(b=>b.id===$('depositBank').value);
         $('depositAccNo').value=bank?bank.accountNo||'':'';
@@ -1105,9 +1003,6 @@
         clearDepositSlip();
     };
 
-    // ================================================================
-    // STATEMENT TABLE
-    // ================================================================
     function getFilteredData() {
         const fm=$('depositFilterMonth').value,fd=$('depositFilterFromDate').value,td=$('depositFilterToDate').value,bid=$('depositFilterBank').value;
         let f=[...bankDeposits];
@@ -1139,9 +1034,6 @@
     window.viewDepositImage = (id) => {const d=bankDeposits.find(x=>x.id===id);if(d&&d.slipImage){$('imgPreviewImg').src=d.slipImage;$('imgPreviewModal').classList.add('open');}};
     window.clearDepositFilter = () => {$('depositFilterMonth').value='';$('depositFilterFromDate').value='';$('depositFilterToDate').value='';$('depositFilterBank').value='';renderDeposits();};
 
-    // ================================================================
-    // BULK DELETE
-    // ================================================================
     window.toggleRowSelection = (cb) => {if(cb.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);updateBulkDeleteUI();};
     window.toggleSelectAll = (src) => {document.querySelectorAll('.row-check').forEach(cb=>{cb.checked=src.checked;if(src.checked)selectedDepositIds.add(cb.dataset.id);else selectedDepositIds.delete(cb.dataset.id);});updateBulkDeleteUI();};
     function updateBulkDeleteUI() {
@@ -1162,9 +1054,6 @@
         finally{$('bulkDeleteBtn').disabled=false;$('bulkDeleteBtn').innerHTML=`🗑️ Delete (<span id="selectedCount">0</span>)`;}
     };
 
-    // ================================================================
-    // SLIP GENERATION
-    // ================================================================
     window.generateDepositSlip = (isDirect=false) => {
         let f=currentFilteredData;
         const fm=$('depositFilterMonth').value,fd=$('depositFilterFromDate').value,td=$('depositFilterToDate').value,bid=$('depositFilterBank').value;
@@ -1177,16 +1066,16 @@
         $('bankRptTitle').textContent=currentReportTitle;
         const tb=$('bankRptTableBody');tb.innerHTML='';let total=0;currentSummaryData={};
         const sorted=[...f].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-        sorted.forEach(d=>{
-            const a=parseFloat(d.amount)||0;total+=a;
-            const ds=d.date?new Date(d.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}):'';
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${ds}</td><td style="font-family:'Consolas',monospace;font-size:10px;letter-spacing:0.3px">${d.trxNo||''}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(a)}</td><td>${d.branch||''}</td><td>${d.territory||''}</td>`;
+        sorted.forEach(d => {
+            const a = parseFloat(d.amount) || 0; total += a;
+            const ds = d.date ? new Date(d.date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) : '';
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${fmt(a)}</td><td>${d.territory||''}</td>`;
             tb.appendChild(tr);
-            const k=`${d.bankName}-${d.accountNo}`;if(!currentSummaryData[k])currentSummaryData[k]=0;currentSummaryData[k]+=a;
+            const k = `${d.bankName}-${d.accountNo}`; if(!currentSummaryData[k]) currentSummaryData[k]=0; currentSummaryData[k] += a;
         });
         const trT=document.createElement('tr');trT.className='report-grand-total';
-        trT.innerHTML=`<td colspan="4" style="text-align:center;font-weight:bold;">Total</td><td style="text-align:center;">${fmt(total)}</td><td colspan="2"></td>`;
+        trT.innerHTML=`<td colspan="3" style="text-align:center;font-weight:bold;">Total</td><td style="text-align:center;">${fmt(total)}</td><td></td>`;
         tb.appendChild(trT);
         if(isDirect)window.print();else $('slipPreviewModal').classList.add('open');
     };
@@ -1194,9 +1083,6 @@
     window.printGeneratedSlip=()=>window.print();
     window.closeSlipPreview=()=>$('slipPreviewModal').classList.remove('open');
 
-    // ================================================================
-    // WHATSAPP & EXCEL
-    // ================================================================
     window.shareSummaryWhatsApp = () => {
         let text=`*${currentReportTitle}*\nDepot: Kushtia\n\n`,total=0;
         if(!Object.keys(currentSummaryData).length)text+='(No entries)\n';
@@ -1229,19 +1115,17 @@
         h+=`<tr style="font-weight:bold;background:#f0f0f0"><td>Total</td><td>${t.toFixed(2)}</td></tr></tbody></table></body></html>`;
         const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:"application/vnd.ms-excel"}));a.download=`Bank_Summary_${Date.now()}.xls`;a.click();
     };
+    
     window.exportBankExcel = () => {
         const sorted=[...currentFilteredData].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
         let h=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>table{border-collapse:collapse}td,th{border:1px solid #000;padding:5px;font-family:Arial;font-size:12px}</style></head><body>`;
-        h+=`<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Trx No</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
-        if(!sorted.length)h+='<tr><td colspan="6" style="text-align:center">No Data</td></tr>';
-        else sorted.forEach(d=>{const ds=d.date?new Date(d.date).toLocaleDateString('en-GB'):'';h+=`<tr><td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.trxNo||''}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;});
+        h+=`<h2 style="text-align:center">Monico Bank Statement</h2><table><thead><tr><th>Date</th><th>Bank</th><th>Account No</th><th>Amount</th><th>Territory</th></tr></thead><tbody>`;
+        if(!sorted.length)h+='<tr><td colspan="5" style="text-align:center">No Data</td></tr>';
+        else sorted.forEach(d=>{const ds=d.date?new Date(d.date).toLocaleDateString('en-GB'):'';h+=`<tr><td>${ds}</td><td>${d.bankName}</td><td style="mso-number-format:'\\@'">${d.accountNo}</td><td>${(parseFloat(d.amount)||0).toFixed(2)}</td><td>${d.territory||''}</td></tr>`;});
         h+=`</tbody></table></body></html>`;
         const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([h],{type:"application/vnd.ms-excel"}));a.download=`Bank_Statement_${Date.now()}.xls`;a.click();
     };
 
-    // ================================================================
-    // SLIPS ZIP DOWNLOAD
-    // ================================================================
     window.downloadMonthSlips = async () => {
         const mv=$('depositFilterMonth').value;
         if(!mv){showToast('Please select a Month first','error');return;}
@@ -1273,9 +1157,6 @@
         finally{pw.classList.remove('open');}
     };
 
-    // ================================================================
-    // IMPORT EXCEL
-    // ================================================================
     window.downloadTemplate = () => {
         const td=[{"Month":"2025-01","Date":"2025-01-15","Bank Name":"Sonali Bank","Trx No":"TRX20250115001","Amount":5000,"Territory":"Sadar"},{"Month":"2025-01","Date":"2025-01-16","Bank Name":"Dutch Bangla Bank","Trx No":"DBBL8801234","Amount":12000.5,"Territory":"Kushtia"}];
         const ws=XLSX.utils.json_to_sheet(td),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Template");XLSX.writeFile(wb,"Deposit_Import_Template.xlsx");
@@ -1320,9 +1201,6 @@
         catch(e){showToast("Import failed: "+e.message,'error');}
     };
 
-    // ================================================================
-    // DELETE & MODALS
-    // ================================================================
     window.confirmDelete = (type,id) => {deleteTarget={type,id};$('deleteModal').classList.add('open');};
     window.closeModal = () => $('deleteModal').classList.remove('open');
     $('confirmDeleteBtn').onclick = async () => {
@@ -1335,9 +1213,6 @@
         const t=$('toast');t.textContent=msg;t.className='show '+type;setTimeout(()=>t.className='',3500);
     }
 
-    // ================================================================
-    // INIT
-    // ================================================================
     document.addEventListener('DOMContentLoaded', () => {
         if(!checkSession()) $('loginOverlay').classList.remove('d-none');
         $('depositFilterMonth').addEventListener('change', renderDeposits);
