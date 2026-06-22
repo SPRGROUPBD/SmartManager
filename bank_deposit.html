@@ -183,7 +183,6 @@
 
         /* Cropper & Enhancer Modal Styles */
         .crop-container { display: flex; gap: 20px; flex-wrap: wrap; height: 70vh; }
-        /* Fixed height and specific overflow for crop area to make crop lines visible */
         .crop-image-area { flex: 1; min-width: 300px; height: 60vh; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; position: relative; }
         .crop-image-area img { max-width: 100%; display: block; }
         .crop-controls { width: 240px; display: flex; flex-direction: column; gap: 15px; height: 100%; overflow-y: auto; }
@@ -192,6 +191,12 @@
         .btn-rotate-group { display: flex; gap: 10px; }
         .btn-rotate { flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text); }
         .btn-rotate:hover { background: #cbd5e1; }
+
+        /* Quick Effect Buttons */
+        .button-group-vertical { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+        .secondary-button { padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; cursor: pointer; font-weight: 600; color: var(--text); transition: 0.2s; text-align: center; }
+        .secondary-button:hover { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+        .secondary-button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
         /* Ensure Cropper lines are always visible */
         .cropper-line, .cropper-point { background-color: #fff !important; }
@@ -315,7 +320,6 @@
                             </div>
                             <div class="form-group"><label>Bank</label><select id="depositBank" required><option value="" disabled selected>Select Bank</option></select></div>
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
-                                <!-- Removed readonly so user can manually input/edit Account No -->
                                 <div class="form-group"><label>Account No</label><input type="text" id="depositAccNo" placeholder="Enter Account No"></div>
                                 <div class="form-group"><label>Branch</label><input type="text" id="depositBranch" readonly></div>
                             </div>
@@ -481,18 +485,30 @@
                             <button type="button" class="btn-rotate" onclick="rotateImage(90)">↻ Right</button>
                         </div>
                     </div>
+                    
+                    <!-- Quick Clean Effects -->
+                    <div class="form-group">
+                        <label>ছায়া বা দাগ মুছানো (Quick Effects)</label>
+                        <div class="control-group button-group-vertical" id="clean-buttons-group">
+                            <button type="button" id="cleanDocBtnMedium" class="secondary-button clean-button" data-intensity="99" data-alpha="1.3" data-beta="-5">সাধারণ ক্লিন</button>
+                            <button type="button" id="nidCleanEffect" class="secondary-button clean-button" data-clip="1.5" data-alpha="1.4" data-beta="5">কালার ক্লিন</button>
+                            <button type="button" id="camScanColor" class="secondary-button clean-button" data-clip="2.0" data-alpha="1.2" data-beta="10"> কালার স্ক্যান </button>
+                            <button type="button" id="camScanBW" class="secondary-button clean-button" data-alpha="1.8" data-beta="15" data-bw="1"> সাদাকালো </button>
+                        </div>
+                    </div>
+
                     <div class="form-group">
                         <label>Brightness: <span id="brightVal" style="float:right; font-weight:bold;">100%</span></label>
-                        <input type="range" id="brightness" min="50" max="150" value="100" oninput="updateFilters()">
+                        <input type="range" id="brightness" min="50" max="150" value="100" oninput="clearQuickEffect(); updateFilters();">
                     </div>
                     <div class="form-group">
                         <label>Contrast: <span id="contrastVal" style="float:right; font-weight:bold;">100%</span></label>
-                        <input type="range" id="contrast" min="50" max="200" value="100" oninput="updateFilters()">
+                        <input type="range" id="contrast" min="50" max="200" value="100" oninput="clearQuickEffect(); updateFilters();">
                     </div>
                     <div class="form-group">
                         <label>Grayscale (B/W)</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="grayscaleToggle" oninput="updateFilters()">
+                            <input type="checkbox" id="grayscaleToggle" oninput="clearQuickEffect(); updateFilters();">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
@@ -576,6 +592,7 @@
     let currentSummaryData = {}, currentReportTitle = "", currentFilteredData = [];
     let parsedImportData = [], selectedDepositIds = new Set();
     let cropper = null, uploadedFileName = '';
+    let currentPresetFilter = ''; // Holds extra filters like saturate
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -763,13 +780,10 @@
     }
 
     function extractSlipData(text) {
-        // Clean spaces between numbers (e.g., "1 500.00" -> "1500.00")
         const cleanText = text.replace(/(\d)\s+(\d)/g, '$1$2');
         const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-        
         let result = { trxNo: null, label: null };
 
-        // --- 1. EXTRACT TRX NO ---
         const VP = '([A-Za-z0-9][A-Za-z0-9\\/\\-_\\.]' + '{3,29})';
         const FP = /^(date|time|amount|total|name|account|branch|taka|tk|bdt|none|nil|n\/a|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|active|inactive|cash|cheque|deposit|withd|withdraw|balance|available|type|code|mobile|phone|customer|signature|authorized|verified|received|paid|credit|debit)$/i;
         function isFP(v) { return FP.test(v); }
@@ -840,7 +854,6 @@
                 }
             }
         }
-
         return result;
     }
 
@@ -856,7 +869,6 @@
             $('cropImage').src = ev.target.result;
             $('cropModal').classList.add('open');
             if (cropper) cropper.destroy();
-            // Initialized Cropper with events to keep live filter effects intact
             cropper = new Cropper($('cropImage'), {
                 aspectRatio: NaN,
                 viewMode: 1,
@@ -871,15 +883,16 @@
                 cropBoxMovable: true,
                 cropBoxResizable: true,
                 ready: function() {
-                    updateFilters(); // Apply filters immediately when cropper is ready
+                    updateFilters(); 
                 },
                 crop: function() {
-                    updateFilters(); // Keep filters applied during any cropper interaction
+                    updateFilters(); 
                 }
             });
             $('brightness').value = 100;
             $('contrast').value = 100;
             $('grayscaleToggle').checked = false;
+            clearQuickEffect();
             updateFilters();
         };
         reader.readAsDataURL(file);
@@ -889,16 +902,46 @@
         if (cropper) cropper.rotate(deg);
     };
 
-    // Modified updateFilters to select all images within cropper-container for live effect
+    // Quick Effect Buttons Logic
+    document.querySelectorAll('.clean-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.clean-button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            const alpha = parseFloat(btn.dataset.alpha || 1) * 100;
+            const beta = 100 + parseFloat(btn.dataset.beta || 0);
+            const clip = parseFloat(btn.dataset.clip || 1) * 100;
+            const isBW = btn.dataset.bw === '1';
+
+            $('brightness').value = Math.min(150, Math.max(50, beta));
+            $('contrast').value = Math.min(200, Math.max(50, alpha));
+            $('grayscaleToggle').checked = isBW;
+
+            currentPresetFilter = `saturate(${clip}%)`;
+            if (isBW) currentPresetFilter = ''; // Grayscale handles saturation
+
+            updateFilters();
+        });
+    });
+
+    window.clearQuickEffect = () => {
+        currentPresetFilter = '';
+        document.querySelectorAll('.clean-button').forEach(b => b.classList.remove('active'));
+    };
+
+    // Modified updateFilters to correctly target Cropper.js elements
     window.updateFilters = () => {
         const b = $('brightness').value, c = $('contrast').value, g = $('grayscaleToggle').checked ? 1 : 0;
         $('brightVal').textContent = b + '%';
         $('contrastVal').textContent = c + '%';
         
-        // Target both canvas and viewer images inside cropper to ensure effect is always visible live
-        const imgs = document.querySelectorAll('.cropper-canvas img, .cropper-viewer img, .cropper-canvas, .cropper-viewer');
-        imgs.forEach(img => {
-            img.style.filter = `brightness(${b}%) contrast(${c}%) grayscale(${g})`;
+        const preset = currentPresetFilter || '';
+        const filterStr = `brightness(${b}%) contrast(${c}%) grayscale(${g}) ${preset}`;
+        
+        // Target cropper-container for real-time rendering
+        const elements = document.querySelectorAll('#cropImage, .cropper-container');
+        elements.forEach(el => {
+            el.style.filter = filterStr;
         });
     };
 
@@ -908,10 +951,11 @@
         if (!canvas) { showToast('Cropping failed. Try again.', 'error'); return; }
 
         const b = $('brightness').value, c = $('contrast').value, g = $('grayscaleToggle').checked ? 1 : 0;
+        const preset = currentPresetFilter || '';
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width; tempCanvas.height = canvas.height;
         const ctx = tempCanvas.getContext('2d');
-        ctx.filter = `brightness(${b}%) contrast(${c}%) grayscale(${g})`;
+        ctx.filter = `brightness(${b}%) contrast(${c}%) grayscale(${g}) ${preset}`;
         ctx.drawImage(canvas, 0, 0);
 
         depositSlipBase64 = tempCanvas.toDataURL('image/jpeg', 0.85);
@@ -921,7 +965,6 @@
         $('depositSlipPreview').classList.add('has-image');
         
         closeCropModal();
-
         runOcrExtraction(depositSlipBase64);
     };
 
