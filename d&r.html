@@ -83,8 +83,6 @@
         .dmg-reason-grid input[type=radio]{accent-color:#000}
         .dmg-reason-grid input[type=radio]:checked+span{font-weight:700}
         .dmg-reason-grid label:has(input:checked){border-color:#000;background:#f0f0f0}
-
-        /* Searchable Select */
         .ss-wrap{position:relative}
         .ss-input{width:100%;padding:9px 12px;border:1.5px solid #000;font-family:'Inter',sans-serif;font-size:13px;color:#000;background:#fff;outline:none;cursor:text}
         .ss-input::placeholder{color:#999}
@@ -99,27 +97,31 @@
         .ss-empty{padding:14px 12px;font-size:12px;color:#999;text-align:center}
         .ss-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;background:#000;color:#fff;padding:2px 7px;font-weight:600;pointer-events:none;display:none}
         .ss-badge.show{display:block}
-
-        /* Edit History Table */
-        .edit-hist-table input, .edit-hist-table select { 
-            width: 100%; 
-            padding: 6px 8px; 
-            border: 1px solid #ccc; 
-            font-family: 'Inter',sans-serif; 
-            font-size: 12px; 
-            box-sizing: border-box;
-        }
-        .edit-hist-table input:focus { 
-            border-color: #000; 
-            outline: none;
-        }
-
+        .edit-hist-table input, .edit-hist-table select { width:100%;padding:6px 8px;border:1px solid #ccc;font-family:'Inter',sans-serif;font-size:12px;box-sizing:border-box }
+        .edit-hist-table input:focus { border-color:#000;outline:none }
         @media print{body{background:#fff;padding:0}.page,.no-print,.print-btn{display:none!important}#printArea{display:block!important}#printArea *{color:#000!important;background:#fff!important;border-color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
         @media(max-width:700px){.form-grid{grid-template-columns:1fr 1fr}.ch-top{flex-direction:column;align-items:flex-start;gap:8px}.ch-date{text-align:left}.tab-btn{font-size:9px;padding:10px 2px;letter-spacing:.3px}}
         @media(max-width:450px){.form-grid{grid-template-columns:1fr}.page{padding:10px 6px}.entry-form{padding:16px 14px}.company-header{padding:16px 18px 12px}.ch-name{font-size:18px}.modal-box{min-width:auto;width:95vw;padding:20px}.dmg-reason-grid{grid-template-columns:1fr 1fr}}
     </style>
 </head>
 <body>
+
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+<script>
+    var firebaseConfig = {
+        apiKey: "AIzaSyAPgdJMSiv1LaVBA1oGoNPyfsT-VV2wr1I",
+        authDomain: "kushtia-depot.firebaseapp.com",
+        databaseURL: "https://kushtia-depot-default-rtdb.firebaseio.com",
+        projectId: "kushtia-depot",
+        storageBucket: "kushtia-depot.firebasestorage.app",
+        messagingSenderId: "288838128044",
+        appId: "1:288838128044:web:c5bab4a0957f5f71846a09",
+        measurementId: "G-5D5S5N9DP3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+</script>
 
 <div class="page no-print">
     <div class="company-header">
@@ -155,7 +157,7 @@
             </div>
         </div>
         <div class="section-bar"><div class="info"><i class="fa-solid fa-database"></i>&nbsp; Products: <span id="pCnt">0</span></div></div>
-        <div class="table-wrap" id="pWrap"><div class="empty-state"><i class="fa-solid fa-box-open"></i><p>No products yet.</p></div></div>
+        <div class="table-wrap" id="pWrap"><div class="empty-state"><i class="fa-solid fa-box-open"></i><p>Loading products...</p></div></div>
     </div>
 
     <!-- TAB 1: REPACKING ENTRY -->
@@ -270,18 +272,16 @@
                 <button class="btn btn-danger btn-sm" onclick="clearHist()"><i class="fa-solid fa-trash"></i>&nbsp; Clear All</button>
             </div>
         </div>
-        <div id="hWrap"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No saved records yet.</p></div></div>
+        <div id="hWrap"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>Loading records...</p></div></div>
     </div>
 </div>
 
 <div id="printArea"></div>
 
-<!-- Edit History Modal -->
 <div class="modal-overlay" id="editHistMod">
     <div class="modal-box large">
         <h3><i class="fa-solid fa-pen-to-square"></i>&nbsp; Edit History Record</h3>
         <div id="histInfo" style="margin-bottom:15px;display:flex;gap:15px;flex-wrap:wrap;background:#f0f0f0;padding:12px;border:1.5px solid #000;font-size:13px;font-weight:600"></div>
-        
         <div style="margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Entries</div>
             <div style="display:flex;gap:10px;align-items:flex-end">
@@ -292,7 +292,6 @@
                 <button class="btn btn-primary btn-sm" onclick="addRowToHist()"><i class="fa-solid fa-plus"></i> Add Row</button>
             </div>
         </div>
-
         <div class="table-wrap" style="max-height:45vh;overflow-y:auto;border:1.5px solid #000">
             <table class="edit-hist-table" style="width:100%;border-collapse:collapse;font-size:12px">
                 <thead style="position:sticky;top:0;z-index:10">
@@ -312,7 +311,6 @@
                 <tbody id="editHistTableBody"></tbody>
             </table>
         </div>
-
         <div class="form-actions" style="margin-top:20px;justify-content:flex-end">
             <button class="btn btn-secondary btn-sm" onclick="document.getElementById('editHistMod').classList.remove('show')">Cancel</button>
             <button class="btn btn-primary btn-sm" onclick="saveHistUpdate()"><i class="fa-solid fa-check"></i>&nbsp; Update Record</button>
@@ -324,43 +322,59 @@
 <div class="toast" id="toast"></div>
 
 <script>
-/* ═══ STORAGE ═══ */
-var PKEY='mp_products', HKEY='mp_history', RKREF='mp_ref_r', DKREF='mp_ref_d';
-function getP(){return JSON.parse(localStorage.getItem(PKEY)||'[]')}
-function setP(d){localStorage.setItem(PKEY,JSON.stringify(d))}
-function getH(){return JSON.parse(localStorage.getItem(HKEY)||'[]')}
-function setH(d){localStorage.setItem(HKEY,JSON.stringify(d))}
-
-/* ═══ REF NUMBER ═══ */
-function previewRef(type){
-    var key=type==='repacking'?RKREF:DKREF;
-    var prefix=type==='repacking'?'R':'D';
-    var year=new Date().getFullYear();
-    var count=parseInt(localStorage.getItem(key)||'0')+1;
-    return 'MPLKUS/'+prefix+'/'+year+'/'+String(count).padStart(3,'0');
-}
-function genRef(type){
-    var key=type==='repacking'?RKREF:DKREF;
-    var prefix=type==='repacking'?'R':'D';
-    var year=new Date().getFullYear();
-    var count=parseInt(localStorage.getItem(key)||'0')+1;
-    localStorage.setItem(key,count.toString());
-    return 'MPLKUS/'+prefix+'/'+year+'/'+String(count).padStart(3,'0');
-}
-
-/* ═══ STATE ═══ */
+var products = [];
+var histData = [];
+var refR = 0;
+var refD = 0;
 var sessR=[], sessD=[];
 var ssHLIdx={R:-1, D:-1};
-var editingProductIdx = -1;
-var editingHistIdx = -1;
+var editingProductId = null;
+var editingHistKey = null;
 
-/* ═══ INIT ═══ */
 document.addEventListener('DOMContentLoaded',function(){
     var n=new Date();
     var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     document.getElementById('headerDate').textContent='Date: '+String(n.getDate()).padStart(2,'0')+'-'+months[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);
-    drawProducts();
-    drawHistory();
+    
+    db.ref('mp_products').on('value', function(snapshot) {
+        var data = snapshot.val() || {};
+        products = Object.keys(data).map(function(key) {
+            return Object.assign({ id: key }, data[key]);
+        });
+        drawProducts();
+        if (document.getElementById('fList').classList.contains('open')) ssBuildList('R');
+        if (document.getElementById('dList').classList.contains('open')) ssBuildList('D');
+    });
+
+    db.ref('mp_history').on('value', function(snapshot) {
+        try {
+            var data = snapshot.val() || {};
+            histData = Object.keys(data).map(function(key) {
+                var item = Object.assign({ key: key }, data[key]);
+                if (!Array.isArray(item.entries)) item.entries = [];
+                return item;
+            }).sort(function(a, b) {
+                var aId = a.id || parseInt(a.key) || 0;
+                var bId = b.id || parseInt(b.key) || 0;
+                return bId - aId;
+            });
+        } catch(err) {
+            console.error('History load error:', err);
+            histData = [];
+        }
+        drawHistory();
+    });
+
+    db.ref('mp_counters/mp_ref_r').on('value', function(snapshot) {
+        refR = snapshot.val() || 0;
+        updateRefPreview('repacking');
+    });
+
+    db.ref('mp_counters/mp_ref_d').on('value', function(snapshot) {
+        refD = snapshot.val() || 0;
+        updateRefPreview('damage');
+    });
+
     document.addEventListener('click',function(e){
         if(!e.target.closest('.ss-wrap')){
             ssClose('R'); ssClose('D');
@@ -370,7 +384,6 @@ document.addEventListener('DOMContentLoaded',function(){
     document.getElementById('dSearch').addEventListener('keydown',function(e){ssKey(e,'D')});
 });
 
-/* ═══ HELPERS ═══ */
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function clr(){[].slice.call(arguments).forEach(function(id){var e=document.getElementById(id);if(e)e.value=''})}
 var _tt;
@@ -388,28 +401,32 @@ function tab(i){
 function updateRefPreview(type){
     var el=document.getElementById(type==='repacking'?'refPreviewR':'refPreviewD');
     var sess=type==='repacking'?sessR:sessD;
-    el.textContent=sess.length>0?'Ref: '+previewRef(type):'Ref: ---';
+    var count = type==='repacking' ? refR : refD;
+    var prefix=type==='repacking'?'R':'D';
+    var year=new Date().getFullYear();
+    var ref='MPLKUS/'+prefix+'/'+year+'/'+String(count + 1).padStart(3,'0');
+    el.textContent=sess.length>0?'Ref: '+ref:'Ref: ---';
 }
 
 /* ═══ SEARCHABLE SELECT ═══ */
 function ssBuildList(type){
-    var list=getP();
+    var list=products;
     var inputId=type==='R'?'fSearch':'dSearch';
     var listId=type==='R'?'fList':'dList';
     var q=document.getElementById(inputId).value.trim().toLowerCase();
     var el=document.getElementById(listId);
     ssHLIdx[type]=-1;
     if(!list.length){el.innerHTML='<div class="ss-empty">No products found. Add products first.</div>';el.classList.add('open');return}
-    var filtered=list.map(function(p,i){return{idx:i,p:p}}).filter(function(o){
+    var filtered=list.filter(function(p){
         if(!q)return true;
-        return o.p.name.toLowerCase().indexOf(q)!==-1 || o.p.pack.toLowerCase().indexOf(q)!==-1;
+        return p.name.toLowerCase().indexOf(q)!==-1 || p.pack.toLowerCase().indexOf(q)!==-1;
     });
     if(!filtered.length){el.innerHTML='<div class="ss-empty">No match for "'+esc(q)+'"</div>';el.classList.add('open');return}
     var h='';
-    filtered.forEach(function(o){
-        h+='<div class="ss-item" data-idx="'+o.idx+'" onclick="ssPick(\''+type+'\','+o.idx+')">';
-        h+='<div style="font-weight:600">'+esc(o.p.name)+'</div>';
-        h+='<div class="ss-info">'+esc(o.p.pack)+' &nbsp;|&nbsp; <span class="ss-mrp">৳'+o.p.mrp+'</span></div>';
+    filtered.forEach(function(p){
+        h+='<div class="ss-item" data-id="'+p.id+'" onclick="ssPick(\''+type+'\',\''+p.id+'\')">';
+        h+='<div style="font-weight:600">'+esc(p.name)+'</div>';
+        h+='<div class="ss-info">'+esc(p.pack)+' &nbsp;|&nbsp; <span class="ss-mrp">৳'+p.mrp+'</span></div>';
         h+='</div>';
     });
     el.innerHTML=h;
@@ -418,11 +435,12 @@ function ssBuildList(type){
 function ssOpen(type){ssBuildList(type)}
 function ssFilter(type){ssBuildList(type)}
 function ssClose(type){var listId=type==='R'?'fList':'dList';document.getElementById(listId).classList.remove('open');ssHLIdx[type]=-1;}
-function ssPick(type,idx){
-    var p=getP()[idx];
+function ssPick(type,id){
+    var p = products.find(function(x){ return x.id === id });
+    if(!p) return;
     var prefix=type==='R'?'f':'d';
     document.getElementById(prefix+'Search').value=p.name;
-    document.getElementById(prefix+'ProdIdx').value=idx;
+    document.getElementById(prefix+'ProdIdx').value=id;
     document.getElementById(prefix+'Pack').value=p.pack;
     document.getElementById(prefix+'Mrp').value=p.mrp;
     if(prefix==='f') document.getElementById(prefix+'Desc').value=p.desc;
@@ -446,9 +464,9 @@ function ssHighlight(type,items){
     if(ssHLIdx[type]>=0) items[ssHLIdx[type]].scrollIntoView({block:'nearest'});
 }
 
-/* ═══ PRODUCTS ADD / EDIT ═══ */
+/* ═══ PRODUCTS ═══ */
 function resetEditBtn(){
-    editingProductIdx = -1;
+    editingProductId = null;
     var btn = document.getElementById('pSaveBtn');
     btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Product';
     btn.onclick = addProduct;
@@ -461,25 +479,27 @@ function addProduct(){
     if(!name){msg('Product Name দিন','err');return}
     if(!pack){msg('Pack Size দিন','err');return}
     if(mrp<=0){msg('MRP দিন','err');return}
-    var list=getP();
-    if(list.some(function(p){return p.name.toLowerCase()===name.toLowerCase()})){msg('এই নামে আগেই আছে','err');return}
-    list.push({name:name,pack:pack,mrp:mrp,desc:desc});
-    setP(list);
-    clr('pName','pPack','pMrp');
-    document.getElementById('pDesc').value='Repacking';
-    document.getElementById('pName').focus();
-    drawProducts();
-    msg(name+' যোগ হয়েছে','ok');
+    if(products.some(function(p){return p.name.toLowerCase()===name.toLowerCase()})){msg('এই নামে আগেই আছে','err');return}
+    db.ref('mp_products').push({name:name,pack:pack,mrp:mrp,desc:desc}).then(function(){
+        clr('pName','pPack','pMrp');
+        document.getElementById('pDesc').value='Repacking';
+        document.getElementById('pName').focus();
+        msg(name+' যোগ হয়েছে','ok');
+    }).catch(function(err){ msg('Error: '+err.message,'err'); });
 }
-function delProduct(i){
-    var list=getP();
-    if(!confirm(list[i].name+' মুছবেন?'))return;
-    list.splice(i,1);setP(list);drawProducts();msg('মুছে ফেলা হয়েছে','ok');
-    if(editingProductIdx === i) resetEditBtn();
+function delProduct(id){
+    var p = products.find(function(x){ return x.id === id });
+    if(!p) return;
+    if(!confirm(p.name+' মুছবেন?'))return;
+    db.ref('mp_products/' + id).remove().then(function(){
+        msg('মুছে ফেলা হয়েছে','ok');
+        if(editingProductId === id) resetEditBtn();
+    });
 }
-function openEdit(i){
-    var list=getP();var p=list[i];
-    editingProductIdx = i;
+function openEdit(id){
+    var p = products.find(function(x){ return x.id === id });
+    if(!p) return;
+    editingProductId = id;
     document.getElementById('pName').value=p.name;
     document.getElementById('pPack').value=p.pack;
     document.getElementById('pMrp').value=p.mrp;
@@ -490,30 +510,28 @@ function openEdit(i){
     document.getElementById('pName').focus();
 }
 function saveEdit(){
-    if(editingProductIdx === -1) return;
+    if(!editingProductId) return;
     var name=document.getElementById('pName').value.trim();
     var pack=document.getElementById('pPack').value.trim();
     var mrp=parseFloat(document.getElementById('pMrp').value)||0;
     var desc=document.getElementById('pDesc').value.trim()||'Repacking';
     if(!name||!pack||mrp<=0){msg('সব ফিল্ড পূরণ করুন','err');return}
-    var list=getP();
-    if(list.some(function(p, idx){ return idx !== editingProductIdx && p.name.toLowerCase() === name.toLowerCase(); })){msg('এই নামে আগেই আছে','err');return}
-    list[editingProductIdx] = {name:name,pack:pack,mrp:mrp,desc:desc};
-    setP(list);
-    clr('pName','pPack','pMrp');
-    document.getElementById('pDesc').value='Repacking';
-    resetEditBtn();
-    drawProducts();
-    msg('প্রোডাক্ট আপডেট হয়েছে','ok');
+    if(products.some(function(p){ return p.id !== editingProductId && p.name.toLowerCase() === name.toLowerCase(); })){msg('এই নামে আগেই আছে','err');return}
+    db.ref('mp_products/' + editingProductId).update({name:name,pack:pack,mrp:mrp,desc:desc}).then(function(){
+        clr('pName','pPack','pMrp');
+        document.getElementById('pDesc').value='Repacking';
+        resetEditBtn();
+        msg('প্রোডাক্ট আপডেট হয়েছে','ok');
+    });
 }
 function drawProducts(){
-    var list=getP();
+    var list=products;
     document.getElementById('pCnt').textContent=list.length;
     var w=document.getElementById('pWrap');
     if(!list.length){w.innerHTML='<div class="empty-state"><i class="fa-solid fa-box-open"></i><p>No products yet.</p></div>';return}
     var h='<table><thead><tr><th>SL</th><th style="text-align:left">Product Name</th><th>Pack Size</th><th>MRP (৳)</th><th>Description</th><th>Action</th></tr></thead><tbody>';
     list.forEach(function(p,i){
-        h+='<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(p.name)+'</td><td>'+esc(p.pack)+'</td><td>'+p.mrp+'</td><td>'+esc(p.desc)+'</td><td><button class="edit-row" onclick="openEdit('+i+')"><i class="fa-solid fa-pen-to-square"></i></button> <button class="del-row" onclick="delProduct('+i+')"><i class="fa-solid fa-xmark"></i></button></td></tr>';
+        h+='<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(p.name)+'</td><td>'+esc(p.pack)+'</td><td>'+p.mrp+'</td><td>'+esc(p.desc)+'</td><td><button class="edit-row" onclick="openEdit(\''+p.id+'\')"><i class="fa-solid fa-pen-to-square"></i></button> <button class="del-row" onclick="delProduct(\''+p.id+'\')"><i class="fa-solid fa-xmark"></i></button></td></tr>';
     });
     w.innerHTML=h+'</tbody></table>';
 }
@@ -535,9 +553,9 @@ function clearForm(prefix){
 /* ═══ ENTRY ═══ */
 function addEntry(type){
     var prefix=type==='repacking'?'f':'d';
-    var idxVal=document.getElementById(prefix+'ProdIdx').value;
-    if(idxVal===''){msg('প্রোডাক্ট সিলেক্ট করুন','err');document.getElementById(prefix+'Search').focus();return}
-    var p=getP()[parseInt(idxVal)];
+    var id=document.getElementById(prefix+'ProdIdx').value;
+    if(!id){msg('প্রোডাক্ট সিলেক্ট করুন','err');document.getElementById(prefix+'Search').focus();return}
+    var p=products.find(function(x){ return x.id === id });
     if(!p){msg('প্রোডাক্ট পাওয়া যায়নি, আবার সিলেক্ট করুন','err');clearForm(prefix);return}
     var batch=document.getElementById(prefix+'Batch').value.trim();
     var mfg=document.getElementById(prefix+'Mfg').value.trim();
@@ -581,6 +599,8 @@ function drawSess(type){
     });
     body.innerHTML=rows;
 }
+
+/* ═══ SAVE SESSION ═══ */
 function saveSess(type){
     var isR=type==='repacking';
     var sess=isR?sessR:sessD;
@@ -589,15 +609,32 @@ function saveSess(type){
     var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var ds=String(n.getDate()).padStart(2,'0')+'-'+months[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);
     var ts=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
-    var ref=genRef(type);
-    var list=getH();
-    list.unshift({type:type,ref:ref,date:ds,time:ts,id:Date.now(),entries:JSON.parse(JSON.stringify(sess))});
-    setH(list);
-    if(isR) sessR=[]; else sessD=[];
-    drawSess(type);
-    updateRefPreview(type);
-    clearForm(isR?'f':'d');
-    msg('সেভ হয়েছে! Ref: '+ref,'ok');
+    var counterRef = db.ref('mp_counters/' + (isR ? 'mp_ref_r' : 'mp_ref_d'));
+    counterRef.transaction(function(currentCount) {
+        return (currentCount || 0) + 1;
+    }).then(function(result) {
+        var newCount = result.snapshot.val();
+        var prefix = isR ? 'R' : 'D';
+        var year = new Date().getFullYear();
+        var ref = 'MPLKUS/'+prefix+'/'+year+'/'+String(newCount).padStart(3,'0');
+        var id = Date.now();
+        return db.ref('mp_history/' + id).set({
+            type: type,
+            ref: ref,
+            date: ds,
+            time: ts,
+            id: id,
+            entries: JSON.parse(JSON.stringify(sess))
+        });
+    }).then(function() {
+        if(isR) sessR=[]; else sessD=[];
+        drawSess(type);
+        updateRefPreview(type);
+        clearForm(isR?'f':'d');
+        msg('সেভ হয়েছে!','ok');
+    }).catch(function(error) {
+        msg('সেভ ব্যর্থ: ' + error.message, 'err');
+    });
 }
 function discardSess(type){
     var isR=type==='repacking';
@@ -612,144 +649,112 @@ function discardSess(type){
 
 /* ═══ HISTORY ═══ */
 function drawHistory(){
-    var list=getH();
-    document.getElementById('hCnt').textContent=list.length;
-    var w=document.getElementById('hWrap');
-    if(!list.length){w.innerHTML='<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No saved records yet.</p></div>';return}
-    var h='';
-    list.forEach(function(r,ri){
-        var type=r.type||'repacking';
-        var ref=r.ref||'N/A';
-        var badgeClass=type==='damage'?'damage':'repacking';
-        var badgeText=type==='damage'?'Damage':'Repacking';
-        var headerBg=type==='damage'?'#fdf0f0':'#f0f0f0';
-        var borderColor=type==='damage'?'#8b0000':'#000';
-        var rows=r.entries.map(function(e,i){
+    var list = histData;
+    document.getElementById('hCnt').textContent = list.length;
+    var w = document.getElementById('hWrap');
+    if(!list.length){
+        w.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No saved records yet.</p></div>';
+        return;
+    }
+    var h = '';
+    list.forEach(function(r){
+        var type = r.type || 'repacking';
+        var ref = r.ref || 'N/A';
+        var badgeClass = type === 'damage' ? 'damage' : 'repacking';
+        var badgeText = type === 'damage' ? 'Damage' : 'Repacking';
+        var headerBg = type === 'damage' ? '#fdf0f0' : '#f0f0f0';
+        var borderColor = type === 'damage' ? '#8b0000' : '#000';
+        var entries = Array.isArray(r.entries) ? r.entries : [];
+        var rows = entries.map(function(e, i){
             return '<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(e.product)+'</td><td>'+esc(e.packSize)+'</td><td>'+esc(e.batch)+'</td><td>'+esc(e.mfgDate)+'</td><td>'+esc(e.expDate)+'</td><td>'+e.qty+'</td><td>'+e.mrp+'</td><td>'+esc(e.desc)+'</td></tr>';
         }).join('');
-        h+='<div style="margin-bottom:2px;border:1.5px solid '+borderColor+';border-top:none">';
-        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:'+headerBg+';border-bottom:1.5px solid '+borderColor+';flex-wrap:wrap;gap:8px">';
-        h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
-        h+='<span class="type-badge '+badgeClass+'">'+badgeText+'</span>';
-        h+='<span class="ref-tag">'+esc(ref)+'</span>';
-        h+='<span style="font-size:12px;font-weight:600"><i class="fa-solid fa-calendar"></i> '+r.date+' &nbsp;|&nbsp; <i class="fa-solid fa-clock"></i> '+r.time+' &nbsp;|&nbsp; Items: '+r.entries.length+'</span>';
-        h+='</div><div style="display:flex;gap:6px">';
-        h+='<button class="btn btn-secondary btn-sm" onclick="editRec('+ri+')"><i class="fa-solid fa-pen"></i> Edit</button>';
-        h+='<button class="btn btn-secondary btn-sm" onclick="printOne('+ri+')"><i class="fa-solid fa-print"></i> Print</button>';
-        h+='<button class="btn btn-secondary btn-sm" onclick="wordOne('+ri+')"><i class="fa-solid fa-file-word"></i> Word</button>';
-        h+='<button class="btn btn-danger btn-sm" onclick="delRec('+ri+')"><i class="fa-solid fa-trash"></i></button>';
-        h+='</div></div>';
-        h+='<div class="table-wrap"><table>';
-        h+='<thead><tr><th>SL</th><th style="text-align:left">Product</th><th>Pack Size</th><th>Batch No</th><th>Mfg Date</th><th>Exp Date</th><th>Qty</th><th>MRP (৳)</th><th>Remarks</th></tr></thead>';
-        h+='<tbody>'+rows+'</tbody></table></div></div>';
+        h += '<div style="margin-bottom:2px;border:1.5px solid '+borderColor+';border-top:none">';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:'+headerBg+';border-bottom:1.5px solid '+borderColor+';flex-wrap:wrap;gap:8px">';
+        h += '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+        h += '<span class="type-badge '+badgeClass+'">'+badgeText+'</span>';
+        h += '<span class="ref-tag">'+esc(ref)+'</span>';
+        h += '<span style="font-size:12px;font-weight:600"><i class="fa-solid fa-calendar"></i> '+r.date+' &nbsp;|&nbsp; <i class="fa-solid fa-clock"></i> '+r.time+' &nbsp;|&nbsp; Items: '+entries.length+'</span>';
+        h += '</div><div style="display:flex;gap:6px">';
+        h += '<button class="btn btn-secondary btn-sm" onclick="editRec(\''+r.key+'\')"><i class="fa-solid fa-pen"></i> Edit</button>';
+        h += '<button class="btn btn-secondary btn-sm" onclick="printOne(\''+r.key+'\')"><i class="fa-solid fa-print"></i> Print</button>';
+        h += '<button class="btn btn-secondary btn-sm" onclick="wordOne(\''+r.key+'\')"><i class="fa-solid fa-file-word"></i> Word</button>';
+        h += '<button class="btn btn-danger btn-sm" onclick="delRec(\''+r.key+'\')"><i class="fa-solid fa-trash"></i></button>';
+        h += '</div></div>';
+        h += '<div class="table-wrap"><table>';
+        h += '<thead><tr><th>SL</th><th style="text-align:left">Product</th><th>Pack Size</th><th>Batch No</th><th>Mfg Date</th><th>Exp Date</th><th>Qty</th><th>MRP (৳)</th><th>Remarks</th></tr></thead>';
+        h += '<tbody>'+rows+'</tbody></table></div></div>';
     });
-    w.innerHTML=h;
+    w.innerHTML = h;
 }
 
-function editRec(i){
-    var list = getH();
-    if(!list[i]) return;
-    editingHistIdx = i;
-    var r = list[i];
+function editRec(key){
+    var r = histData.find(function(x){ return x.key === key });
+    if(!r) return;
+    editingHistKey = key;
     var type = r.type || 'repacking';
     var ref = r.ref || 'N/A';
-
-    // Populate Info
-    document.getElementById('histInfo').innerHTML = `
-        <div><span style="font-weight:800">Ref:</span> ${esc(ref)}</div>
-        <div><span style="font-weight:800">Type:</span> ${type.toUpperCase()}</div>
-        <div><span style="font-weight:800">Date:</span> ${esc(r.date)}</div>
-        <div><span style="font-weight:800">Time:</span> ${esc(r.time)}</div>
-    `;
-
-    // Populate Add Product Dropdown
-    var prods = getP();
+    document.getElementById('histInfo').innerHTML =
+        '<div><span style="font-weight:800">Ref:</span> '+esc(ref)+'</div>' +
+        '<div><span style="font-weight:800">Type:</span> '+type.toUpperCase()+'</div>' +
+        '<div><span style="font-weight:800">Date:</span> '+esc(r.date)+'</div>' +
+        '<div><span style="font-weight:800">Time:</span> '+esc(r.time)+'</div>';
     var sel = document.getElementById('editAddProd');
-    if(prods.length){
-        sel.innerHTML = prods.map((p,idx) => `<option value="${idx}">${esc(p.name)} (${esc(p.pack)}) - ৳${p.mrp}</option>`).join('');
+    if(products.length){
+        sel.innerHTML = products.map(function(p){ return '<option value="'+p.id+'">'+esc(p.name)+' ('+esc(p.pack)+') - ৳'+p.mrp+'</option>'; }).join('');
     } else {
         sel.innerHTML = '<option value="">No products available</option>';
     }
-
-    // Render Table
     var tbody = document.getElementById('editHistTableBody');
     tbody.innerHTML = '';
-    r.entries.forEach((e, idx) => {
-        addHistRow(e, idx);
-    });
-
+    var entries = Array.isArray(r.entries) ? r.entries : [];
+    entries.forEach(function(e) { addHistRow(e); });
     document.getElementById('editHistMod').classList.add('show');
 }
 
-function addHistRow(e, idx) {
+function addHistRow(e) {
     var tbody = document.getElementById('editHistTableBody');
     var tr = document.createElement('tr');
     var sl = tbody.children.length + 1;
-    
-    var product = e.product || '';
-    var packSize = e.packSize || '';
-    var batch = e.batch || '';
-    var mfgDate = e.mfgDate || '';
-    var expDate = e.expDate || '';
-    var qty = e.qty || 0;
-    var mrp = e.mrp || 0;
-    var desc = e.desc || '';
-
-    tr.innerHTML = `
-        <td style="padding:4px;border:1px solid #000;text-align:center">${String(sl).padStart(2,'0')}</td>
-        <td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">${esc(product)}</td>
-        <td style="padding:4px;border:1px solid #000;text-align:center">${esc(packSize)}</td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="${esc(batch)}"></td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="${esc(mfgDate)}"></td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="${esc(expDate)}"></td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="${qty}" min="0"></td>
-        <td style="padding:4px;border:1px solid #000;text-align:center">${mrp}</td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="${esc(desc)}"></td>
-        <td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest('tr').remove()"><i class="fa-solid fa-xmark"></i></button></td>
-    `;
+    tr.innerHTML =
+        '<td style="padding:4px;border:1px solid #000;text-align:center">'+String(sl).padStart(2,'0')+'</td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">'+esc(e.product||'')+'</td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center">'+esc(e.packSize||'')+'</td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="'+esc(e.batch||'')+'"></td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="'+esc(e.mfgDate||'')+'"></td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="'+esc(e.expDate||'')+'"></td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="'+(e.qty||0)+'" min="0"></td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center">'+(e.mrp||0)+'</td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="'+esc(e.desc||'')+'"></td>' +
+        '<td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
     tbody.appendChild(tr);
 }
 
 function addRowToHist(){
     var sel = document.getElementById('editAddProd');
-    var idx = sel.value;
-    if(idx === "") { msg('No product to add', 'err'); return; }
-    var p = getP()[idx];
+    var id = sel.value;
+    if(!id) { msg('No product to add', 'err'); return; }
+    var p = products.find(function(x){ return x.id === id });
     if(!p) return;
-
-    var newEntry = {
-        product: p.name,
-        packSize: p.pack,
-        batch: '',
-        mfgDate: '',
-        expDate: '',
-        qty: 0,
-        mrp: p.mrp,
-        desc: p.desc
-    };
-    addHistRow(newEntry);
+    addHistRow({ product:p.name, packSize:p.pack, batch:'', mfgDate:'', expDate:'', qty:0, mrp:p.mrp, desc:p.desc });
 }
 
 function saveHistUpdate(){
-    if(editingHistIdx === -1) return;
+    if(!editingHistKey) return;
     var tbody = document.getElementById('editHistTableBody');
     var rows = tbody.querySelectorAll('tr');
     var updatedEntries = [];
     var isValid = true;
     var errMsg = '';
-
     for(var i=0; i<rows.length; i++){
         var row = rows[i];
         var batch = row.querySelector('.inp-batch').value.trim();
         var mfg = row.querySelector('.inp-mfg').value.trim();
         var exp = row.querySelector('.inp-exp').value.trim();
         var qty = parseInt(row.querySelector('.inp-qty').value) || 0;
-
-        if(!batch){ isValid = false; errMsg = 'Batch No খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
-        if(!mfg){ isValid = false; errMsg = 'Mfg Date খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
-        if(!exp){ isValid = false; errMsg = 'Exp Date খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
+        if(!batch){ isValid = false; errMsg = 'Batch No খালি (SL: '+(i+1)+')'; break; }
+        if(!mfg){ isValid = false; errMsg = 'Mfg Date খালি (SL: '+(i+1)+')'; break; }
+        if(!exp){ isValid = false; errMsg = 'Exp Date খালি (SL: '+(i+1)+')'; break; }
         if(qty <= 0){ isValid = false; errMsg = 'Quantity সঠিক নয় (SL: '+(i+1)+')'; break; }
-
         updatedEntries.push({
             product: row.cells[1].textContent.trim(),
             packSize: row.cells[2].textContent.trim(),
@@ -761,113 +766,146 @@ function saveHistUpdate(){
             desc: row.querySelector('.inp-remarks').value.trim()
         });
     }
-
-    if(!isValid){
-        msg(errMsg, 'err');
-        return;
-    }
-
-    if(updatedEntries.length === 0){
-        msg('অন্তত একটি এন্ট্রি থাকতে হবে', 'err');
-        return;
-    }
-
-    var list = getH();
-    list[editingHistIdx].entries = updatedEntries;
-    setH(list);
-    
-    document.getElementById('editHistMod').classList.remove('show');
-    drawHistory();
-    msg('রেকর্ড সফলভাবে আপডেট হয়েছে', 'ok');
+    if(!isValid){ msg(errMsg, 'err'); return; }
+    if(!updatedEntries.length){ msg('অন্তত একটি এন্ট্রি থাকতে হবে', 'err'); return; }
+    db.ref('mp_history/' + editingHistKey).update({ entries: updatedEntries }).then(function() {
+        document.getElementById('editHistMod').classList.remove('show');
+        msg('রেকর্ড আপডেট হয়েছে', 'ok');
+    }).catch(function(error) {
+        msg('আপডেট ব্যর্থ: ' + error.message, 'err');
+    });
 }
 
-function delRec(i){
-    var list=getH();
+function delRec(key){
     if(!confirm('মুছবেন?'))return;
-    list.splice(i,1);setH(list);drawHistory();msg('মুছে ফেলা হয়েছে','ok');
+    db.ref('mp_history/' + key).remove().then(function(){ msg('মুছে ফেলা হয়েছে','ok'); });
 }
 function clearHist(){
-    if(!getH().length){msg('কিছু নেই','err');return}
+    if(!histData.length){msg('কিছু নেই','err');return}
     if(!confirm('সব রেকর্ড মুছবেন?'))return;
-    localStorage.removeItem(HKEY);drawHistory();msg('সব মুছে ফেলা হয়েছে','ok');
+    db.ref('mp_history').remove().then(function(){ msg('সব মুছে ফেলা হয়েছে','ok'); });
 }
 
-/* ═══ PRINT ═══ */
+/* ══════════════════════════════════════════════════════════
+   PRINT — Header centered, No TOTAL, 6-sign footer
+   ══════════════════════════════════════════════════════════ */
 function buildPrint(r){
-    var type=r.type||'repacking';
-    var ref=r.ref||'N/A';
-    var sheetTitle=type==='damage'?'DAMAGE ENTRY':'REPACKING SHEET';
-    var rows=r.entries.map(function(e,i){
-        return '<tr>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+String(i+1).padStart(2,'0')+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:left;font-weight:600;font-size:12px;color:#000;background:#fff">'+esc(e.product)+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.packSize)+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.batch)+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.mfgDate)+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.expDate)+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+e.qty+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+e.mrp+'</td>'+
-            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.desc)+'</td>'+
+    var type = r.type || 'repacking';
+    var ref = r.ref || 'N/A';
+    var sheetTitle = type === 'damage' ? 'DAMAGE ENTRY' : 'REPACKING SHEET';
+    var entries = Array.isArray(r.entries) ? r.entries : [];
+
+    var rows = entries.map(function(e, i){
+        return '<tr>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + String(i+1).padStart(2,'0') + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:left;font-weight:600;font-size:12px">' + esc(e.product) + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + esc(e.packSize) + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + esc(e.batch) + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + esc(e.mfgDate) + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + esc(e.expDate) + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + e.qty + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + e.mrp + '</td>' +
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px">' + esc(e.desc) + '</td>' +
             '</tr>';
     }).join('');
-    var html='<div style="font-family:Arial,sans-serif;color:#000;background:#fff;max-width:960px;margin:0 auto">';
-    html+='<div style="text-align:center;border:2px solid #000;padding:22px 30px 16px;background:#fff">';
-    html+='<div style="font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#000;background:#fff">MONICO PHARMA LTD</div>';
-    html+='<div style="display:inline-block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;border:2px solid #000;padding:4px 18px;margin-top:8px;color:#000;background:#fff">'+sheetTitle+'</div>';
-    html+='<div style="font-size:14px;font-weight:700;margin-top:8px;color:#000;background:#fff">Kushtia Depot</div>';
-    html+='<div style="font-size:11px;margin-top:2px;color:#000;background:#fff">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>';
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:0 4px">';
-    html+='<div style="font-size:13px;font-weight:700;color:#000;background:#fff">Ref.No: '+esc(ref)+'</div>';
-    html+='<div style="font-size:13px;font-weight:700;color:#000;background:#fff">Date: '+esc(r.date)+'</div>';
-    html+='</div></div>';
-    html+='<table style="width:100%;border-collapse:collapse;background:#fff">';
-    html+='<thead><tr>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">SL No</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:left;color:#000;background:#fff">Product Name</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Pack Size</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Batch No</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">MFG Date</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Exp.Date</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Qty</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">MRP</th>';
-    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Remarks</th>';
-    html+='</tr></thead><tbody>'+rows+'</tbody></table>';
-    html+='<table style="width:100%;border-collapse:collapse;background:#fff;margin-top:40px"><tr>';
-    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">DIC</td>';
-    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">SR. RSM</td>';
-    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">PMD</td>';
-    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">CENTRAL DEPOT</td>';
-    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">HO OPERATION</td>';
-    html+='</tr></table></div>';
-    return html;
-}
-function printOne(i){var list=getH();if(!list[i])return;document.getElementById('printArea').innerHTML=buildPrint(list[i]);window.print()}
-function printAll(){var list=getH();if(!list.length){msg('কোনো রেকর্ড নেই','err');return}var a='';list.forEach(function(r,i){if(i>0)a+='<div style="page-break-before:always"></div>';a+=buildPrint(r)});document.getElementById('printArea').innerHTML=a;window.print()}
 
-/* ═══ WORD ═══ */
-function toWord(html,fn){
-    var doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;color:#000;background:#fff}table{border-collapse:collapse}td,th{border:1.5px solid #000;color:#000;background:#fff}</style></head><body>'+html+'</body></html>';
-    var b=new Blob(['\ufeff',doc],{type:'application/msword'});
-    var u=URL.createObjectURL(b);
-    var a=document.createElement('a');a.href=u;a.download=fn+'.doc';
-    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
-    msg('Word ডাউনলোড হয়েছে','ok');
-}
-function wordOne(i){var list=getH();if(!list[i])return;var type=list[i].type||'repacking';toWord(buildPrint(list[i]),(type==='damage'?'Damage':'Repacking')+'_'+list[i].date+'_'+list[i].time.replace(':',''))}
-function wordAll(){var list=getH();if(!list.length){msg('কোনো রেকর্ড নেই','err');return}var a='';list.forEach(function(r){a+=buildPrint(r)+'<br clear="all" style="page-break-before:always">'});toWord(a,'Depot_All_'+Date.now())}
+    /* 6 signature blocks */
+    var signLabels = ['DIC', 'SR.RSM/RSM', 'PMD', 'CENTRAL DEPOT', 'HO OPERATION'];
+    var signHtml = '<div style="display:flex;justify-content:space-between;margin-top:50px;gap:4px">' +
+        signLabels.map(function(label) {
+            return '<div style="text-align:center;flex:1;min-width:0">' +
+                '<div style="border-top:1.5px solid #000;padding-top:6px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px">' + label + '</div>' +
+            '</div>';
+        }).join('') +
+        '</div>';
 
-/* ═══ KEYBOARD ═══ */
-document.addEventListener('keydown',function(e){
-    if(e.key==='Escape'){
-        document.getElementById('editHistMod').classList.remove('show');
-    }
-    if(e.key==='Enter'){
-        var id=document.activeElement.id;
-        if(['pName','pPack','pMrp','pDesc'].indexOf(id)!==-1){e.preventDefault();document.getElementById('pSaveBtn').click()}
-        if(['fBatch','fMfg','fExp','fQty'].indexOf(id)!==-1){e.preventDefault();addEntry('repacking')}
-        if(['dBatch','dMfg','dExp','dQty'].indexOf(id)!==-1){e.preventDefault();addEntry('damage')}
-    }
-});
+    return '<div style="font-family:Inter,Arial,sans-serif;color:#000;padding:24px 30px;max-width:900px;margin:0 auto">' +
+
+        /* ── HEADER (centered) ── */
+        '<div style="border:2px solid #000;padding:20px 24px 14px;text-align:center;margin-bottom:0">' +
+            '<div style="font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:2px">MONICO PHARMA LTD</div>' +
+            '<div style="font-size:14px;font-weight:700;margin-top:5px">Kushtia Depot</div>' +
+            '<div style="font-size:11px;color:#333;margin-top:3px">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>' +
+            '<div style="margin-top:12px;display:inline-block;font-size:14px;font-weight:800;text-transform:uppercase;letter-spacing:2px;border:2px solid #000;padding:5px 20px">' + sheetTitle + '</div>' +
+            '<div style="margin-top:8px;font-size:13px;font-weight:600">Date: ' + r.date + '</div>' +
+        '</div>' +
+
+        /* ── INFO BAR ── */
+        '<div style="border:2px solid #000;border-top:none;padding:10px 24px;background:#f5f5f5;font-size:13px;font-weight:700;display:flex;justify-content:space-between">' +
+            '<span>Ref: ' + esc(ref) + '</span>' +
+            '<span>Time: ' + r.time + '</span>' +
+            '<span>Total Items: ' + entries.length + '</span>' +
+        '</div>' +
+
+        /* ── TABLE (no TOTAL footer) ── */
+        '<table style="width:100%;border-collapse:collapse;border:2px solid #000;border-top:none">' +
+            '<thead><tr>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">SL</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:left">Product Name</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Pack</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Batch</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Mfg</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Exp</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Qty</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">MRP</th>' +
+                '<th style="padding:10px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;text-align:center">Remarks</th>' +
+            '</tr></thead>' +
+            '<tbody>' + rows + '</tbody>' +
+            /* No <tfoot> — TOTAL row removed */
+        '</table>' +
+
+        /* ── 6-SIGNATURE FOOTER ── */
+        signHtml +
+
+    '</div>';
+}
+
+function printOne(key){
+    var r = histData.find(function(x){ return x.key === key });
+    if(!r) return;
+    document.getElementById('printArea').innerHTML = buildPrint(r);
+    setTimeout(function(){ window.print(); }, 200);
+}
+
+function printAll(){
+    if(!histData.length){ msg('প্রিন্ট করার কিছু নেই','err'); return; }
+    var allHtml = histData.map(function(r){ return buildPrint(r); }).join('<div style="page-break-after:always"></div>');
+    document.getElementById('printArea').innerHTML = allHtml;
+    setTimeout(function(){ window.print(); }, 200);
+}
+
+function wordOne(key){
+    var r = histData.find(function(x){ return x.key === key });
+    if(!r) return;
+    var htmlContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Export</title></head><body>'+buildPrint(r)+'</body></html>';
+    var blob = new Blob(['\ufeff', htmlContent], {type:'application/msword'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (r.ref || 'record').replace(/\//g, '-') + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    msg('Word ফাইল ডাউনলোড হচ্ছে','ok');
+}
+
+function wordAll(){
+    if(!histData.length){ msg('এক্সপোর্ট করার কিছু নেই','err'); return; }
+    var allHtml = histData.map(function(r){ return buildPrint(r); }).join('<br clear="all" style="page-break-before:always">');
+    var htmlContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Export All</title></head><body>'+allHtml+'</body></html>';
+    var blob = new Blob(['\ufeff', htmlContent], {type:'application/msword'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'Monico_Kushtia_All_Records.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    msg('Word ফাইল ডাউনলোড হচ্ছে','ok');
+}
 </script>
+
 </body>
 </html>
