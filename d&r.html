@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monico Pharma Ltd - Depot Management</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:#e8e8e8;color:#000;min-height:100vh}
+        .page{max-width:980px;margin:0 auto;padding:20px 15px}
+        .company-header{background:#fff;border:2px solid #000;padding:24px 30px 18px}
+        .ch-top{display:flex;justify-content:space-between;align-items:center}
+        .ch-name{font-size:24px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#000}
+        .ch-badge{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:2px;border:2px solid #000;padding:5px 16px;color:#000}
+        .ch-depot{font-size:15px;font-weight:700;margin-top:10px;color:#000}
+        .ch-addr{font-size:12px;color:#333;margin-top:2px}
+        .ch-date{text-align:right;margin-top:10px;font-size:13px;font-weight:600;color:#000}
+        .tabs{display:flex;border:2px solid #000;border-top:none;background:#fff}
+        .tab-btn{flex:1;padding:13px 4px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;border:none;background:#fff;color:#000;border-right:1px solid #000;transition:background .15s}
+        .tab-btn:last-child{border-right:none}
+        .tab-btn.active{background:#000;color:#fff}
+        .tab-btn:hover:not(.active){background:#e8e8e8}
+        .tab-content{display:none;border:2px solid #000;border-top:none;background:#fff;min-height:300px}
+        .tab-content.active{display:block}
+        .entry-form{padding:24px 28px}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+        .form-group{display:flex;flex-direction:column;gap:5px}
+        .form-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#000}
+        .form-group input,.form-group select{padding:9px 12px;border:1.5px solid #000;font-family:'Inter',sans-serif;font-size:13px;color:#000;background:#fff;outline:none}
+        .form-group input:focus,.form-group select:focus{box-shadow:0 0 0 2px rgba(0,0,0,.12)}
+        .form-group select{cursor:pointer;appearance:auto}
+        .form-group input[readonly]{background:#f5f5f5}
+        .form-actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap}
+        .btn{padding:11px 22px;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border:2px solid #000;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+        .btn-primary{background:#000;color:#fff}
+        .btn-primary:hover{background:#333}
+        .btn-secondary{background:#fff;color:#000}
+        .btn-secondary:hover{background:#f0f0f0}
+        .btn-danger{background:#fff;color:#b00;border-color:#b00}
+        .btn-danger:hover{background:#b00;color:#fff}
+        .btn-sm{padding:6px 14px;font-size:10px}
+        .section-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1.5px solid #000;flex-wrap:wrap;gap:10px}
+        .section-bar .info{font-size:13px;font-weight:600;color:#000}
+        .section-bar .actions{display:flex;gap:8px;flex-wrap:wrap}
+        .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse;font-size:12.5px}
+        thead th{background:#000;color:#fff;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.7px;padding:11px 8px;border:1.5px solid #000;text-align:center;white-space:nowrap}
+        tbody td{padding:10px 8px;border:1.5px solid #000;text-align:center;color:#000}
+        tbody td:nth-child(2){text-align:left;font-weight:600}
+        tbody tr:nth-child(even){background:#f7f7f7}
+        tbody tr:hover{background:#ededed}
+        .del-row{background:none;border:none;cursor:pointer;color:#b00;font-size:14px;padding:4px 6px}
+        .del-row:hover{color:#800}
+        .edit-row{background:none;border:none;cursor:pointer;color:#000;font-size:13px;padding:4px 6px}
+        .edit-row:hover{color:#555}
+        .empty-state{padding:60px 20px;text-align:center}
+        .empty-state i{font-size:48px;color:#ccc;margin-bottom:16px;display:block}
+        .empty-state p{font-size:14px;color:#888}
+        .ref-tag{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;background:#f0f0f0;border:1.5px solid #000;padding:4px 12px;display:inline-block;letter-spacing:.5px}
+        .type-badge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;padding:3px 10px;display:inline-block;color:#fff}
+        .type-badge.repacking{background:#000}
+        .type-badge.damage{background:#8b0000}
+        .toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#000;color:#fff;padding:14px 28px;border-radius:4px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:all .35s ease;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+        .toast.ok{background:#0a6e3a}
+        .toast.err{background:#b00}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9990;display:none;justify-content:center;align-items:center;padding:20px}
+        .modal-overlay.show{display:flex}
+        .modal-box{background:#fff;border:2px solid #000;padding:28px;min-width:360px;max-width:90vw;max-height:90vh;overflow-y:auto}
+        .modal-box.large{width:900px}
+        .modal-box h3{font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px;color:#000}
+        .modal-box .form-group{margin-bottom:14px}
+        .modal-box .form-group input{width:100%}
+        .modal-box .form-actions{margin-top:20px;justify-content:flex-end}
+        .print-btn{position:fixed;bottom:24px;right:24px;background:#000;color:#fff;border:none;padding:14px 24px;border-radius:50px;font-family:'Inter',sans-serif;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 24px rgba(0,0,0,.3);transition:all .2s;display:flex;align-items:center;gap:8px;z-index:100}
+        .print-btn:hover{background:#333;transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+        #printArea{display:none}
+        .dmg-reason-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-top:4px}
+        .dmg-reason-grid label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;cursor:pointer;text-transform:none;letter-spacing:0;padding:6px 8px;border:1.5px solid #ccc;transition:all .15s}
+        .dmg-reason-grid label:hover{border-color:#000;background:#f5f5f5}
+        .dmg-reason-grid input[type=radio]{accent-color:#000}
+        .dmg-reason-grid input[type=radio]:checked+span{font-weight:700}
+        .dmg-reason-grid label:has(input:checked){border-color:#000;background:#f0f0f0}
+
+        /* Searchable Select */
+        .ss-wrap{position:relative}
+        .ss-input{width:100%;padding:9px 12px;border:1.5px solid #000;font-family:'Inter',sans-serif;font-size:13px;color:#000;background:#fff;outline:none;cursor:text}
+        .ss-input::placeholder{color:#999}
+        .ss-input:focus{box-shadow:0 0 0 2px rgba(0,0,0,.12)}
+        .ss-list{position:absolute;top:100%;left:0;right:0;max-height:220px;overflow-y:auto;border:1.5px solid #000;border-top:none;background:#fff;z-index:500;display:none}
+        .ss-list.open{display:block}
+        .ss-item{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #eee;transition:background .1s}
+        .ss-item:last-child{border-bottom:none}
+        .ss-item:hover,.ss-item.hl{background:#e8e8e8}
+        .ss-item .ss-info{font-size:11px;color:#666;margin-top:2px}
+        .ss-item .ss-mrp{font-weight:700;color:#000}
+        .ss-empty{padding:14px 12px;font-size:12px;color:#999;text-align:center}
+        .ss-badge{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:10px;background:#000;color:#fff;padding:2px 7px;font-weight:600;pointer-events:none;display:none}
+        .ss-badge.show{display:block}
+
+        /* Edit History Table */
+        .edit-hist-table input, .edit-hist-table select { 
+            width: 100%; 
+            padding: 6px 8px; 
+            border: 1px solid #ccc; 
+            font-family: 'Inter',sans-serif; 
+            font-size: 12px; 
+            box-sizing: border-box;
+        }
+        .edit-hist-table input:focus { 
+            border-color: #000; 
+            outline: none;
+        }
+
+        @media print{body{background:#fff;padding:0}.page,.no-print,.print-btn{display:none!important}#printArea{display:block!important}#printArea *{color:#000!important;background:#fff!important;border-color:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+        @media(max-width:700px){.form-grid{grid-template-columns:1fr 1fr}.ch-top{flex-direction:column;align-items:flex-start;gap:8px}.ch-date{text-align:left}.tab-btn{font-size:9px;padding:10px 2px;letter-spacing:.3px}}
+        @media(max-width:450px){.form-grid{grid-template-columns:1fr}.page{padding:10px 6px}.entry-form{padding:16px 14px}.company-header{padding:16px 18px 12px}.ch-name{font-size:18px}.modal-box{min-width:auto;width:95vw;padding:20px}.dmg-reason-grid{grid-template-columns:1fr 1fr}}
+    </style>
+</head>
+<body>
+
+<div class="page no-print">
+    <div class="company-header">
+        <div class="ch-top">
+            <div class="ch-name">Monico Pharma Ltd</div>
+            <div class="ch-badge">Repacking Sheet</div>
+        </div>
+        <div class="ch-depot">Kushtia Depot</div>
+        <div class="ch-addr">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>
+        <div class="ch-date" id="headerDate"></div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="tab(0)"><i class="fa-solid fa-boxes-stacked"></i>&nbsp; Products</button>
+        <button class="tab-btn" onclick="tab(1)"><i class="fa-solid fa-pen-to-square"></i>&nbsp; Repacking Entry</button>
+        <button class="tab-btn" onclick="tab(2)"><i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Damage Entry</button>
+        <button class="tab-btn" onclick="tab(3)"><i class="fa-solid fa-clock-rotate-left"></i>&nbsp; History</button>
+    </div>
+
+    <!-- TAB 0: PRODUCTS -->
+    <div class="tab-content active" id="tab-0">
+        <div class="entry-form" style="border-bottom:1.5px solid #000">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px"><i class="fa-solid fa-plus-circle"></i>&nbsp; Add / Edit Product</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Product Name *</label><input type="text" id="pName" placeholder="e.g. Moset Syp"></div>
+                <div class="form-group"><label>Pack Size *</label><input type="text" id="pPack" placeholder="e.g. 60ml"></div>
+                <div class="form-group"><label>MRP (৳) *</label><input type="number" id="pMrp" placeholder="0" min="0"></div>
+                <div class="form-group"><label>Description</label><input type="text" id="pDesc" value="Repacking"></div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" id="pSaveBtn" onclick="addProduct()"><i class="fa-solid fa-plus"></i>&nbsp; Add Product</button>
+                <button class="btn btn-secondary" onclick="clr('pName','pPack','pMrp');document.getElementById('pDesc').value='Repacking';document.getElementById('pName').focus();resetEditBtn()"><i class="fa-solid fa-eraser"></i>&nbsp; Clear</button>
+            </div>
+        </div>
+        <div class="section-bar"><div class="info"><i class="fa-solid fa-database"></i>&nbsp; Products: <span id="pCnt">0</span></div></div>
+        <div class="table-wrap" id="pWrap"><div class="empty-state"><i class="fa-solid fa-box-open"></i><p>No products yet.</p></div></div>
+    </div>
+
+    <!-- TAB 1: REPACKING ENTRY -->
+    <div class="tab-content" id="tab-1">
+        <div class="entry-form">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px"><i class="fa-solid fa-pen-to-square"></i>&nbsp; Add Repacking Entry</div>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column:1/-1">
+                    <label>Search Product *</label>
+                    <div class="ss-wrap" id="ssWrapR">
+                        <input type="text" class="ss-input" id="fSearch" placeholder="Type to search product..." autocomplete="off" onfocus="ssOpen('R')" oninput="ssFilter('R')">
+                        <span class="ss-badge" id="fBadge"></span>
+                        <div class="ss-list" id="fList"></div>
+                    </div>
+                    <input type="hidden" id="fProdIdx" value="">
+                </div>
+                <div class="form-group"><label>Pack Size</label><input type="text" id="fPack" readonly></div>
+                <div class="form-group"><label>Batch No *</label><input type="text" id="fBatch" placeholder="e.g. 231225"></div>
+                <div class="form-group"><label>Manufacture Date *</label><input type="text" id="fMfg" placeholder="e.g. Dec-25"></div>
+                <div class="form-group"><label>Expiry Date *</label><input type="text" id="fExp" placeholder="e.g. Nov-27"></div>
+                <div class="form-group"><label>Repacking Qty *</label><input type="number" id="fQty" placeholder="0" min="0"></div>
+                <div class="form-group"><label>MRP (৳)</label><input type="text" id="fMrp" readonly></div>
+                <div class="form-group"><label>Description</label><input type="text" id="fDesc" readonly></div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" onclick="addEntry('repacking')"><i class="fa-solid fa-plus"></i>&nbsp; Add Entry</button>
+                <button class="btn btn-secondary" onclick="clearForm('f')"><i class="fa-solid fa-eraser"></i>&nbsp; Clear</button>
+            </div>
+        </div>
+        <div id="sessBoxR" style="display:none">
+            <div class="section-bar">
+                <div class="info">
+                    <span class="ref-tag" id="refPreviewR">Ref: ---</span>
+                    &nbsp;&nbsp;
+                    <i class="fa-solid fa-list"></i>&nbsp; Entries: <span id="sCntR">0</span>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary btn-sm" onclick="saveSess('repacking')"><i class="fa-solid fa-floppy-disk"></i>&nbsp; Save</button>
+                    <button class="btn btn-danger btn-sm" onclick="discardSess('repacking')"><i class="fa-solid fa-trash"></i>&nbsp; Discard</button>
+                </div>
+            </div>
+            <div class="table-wrap"><table>
+                <thead><tr><th>SL</th><th style="text-align:left">Product</th><th>Pack Size</th><th>Batch No</th><th>Mfg Date</th><th>Exp Date</th><th>Qty</th><th>MRP (৳)</th><th>Remarks</th><th>Action</th></tr></thead>
+                <tbody id="sBodyR"></tbody>
+            </table></div>
+        </div>
+    </div>
+
+    <!-- TAB 2: DAMAGE ENTRY -->
+    <div class="tab-content" id="tab-2">
+        <div class="entry-form">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px;color:#8b0000"><i class="fa-solid fa-triangle-exclamation"></i>&nbsp; Add Damage Entry</div>
+            <div class="form-grid">
+                <div class="form-group" style="grid-column:1/-1">
+                    <label>Search Product *</label>
+                    <div class="ss-wrap" id="ssWrapD">
+                        <input type="text" class="ss-input" id="dSearch" placeholder="Type to search product..." autocomplete="off" onfocus="ssOpen('D')" oninput="ssFilter('D')">
+                        <span class="ss-badge" id="dBadge"></span>
+                        <div class="ss-list" id="dList"></div>
+                    </div>
+                    <input type="hidden" id="dProdIdx" value="">
+                </div>
+                <div class="form-group"><label>Pack Size</label><input type="text" id="dPack" readonly></div>
+                <div class="form-group"><label>Batch No *</label><input type="text" id="dBatch" placeholder="e.g. 231225"></div>
+                <div class="form-group"><label>Manufacture Date *</label><input type="text" id="dMfg" placeholder="e.g. Dec-25"></div>
+                <div class="form-group"><label>Expiry Date *</label><input type="text" id="dExp" placeholder="e.g. Nov-27"></div>
+                <div class="form-group"><label>Damage Qty *</label><input type="number" id="dQty" placeholder="0" min="0"></div>
+                <div class="form-group"><label>MRP (৳)</label><input type="text" id="dMrp" readonly></div>
+            </div>
+            <div class="form-group" style="margin-top:14px">
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#000">Damage Reason *</label>
+                <div class="dmg-reason-grid">
+                    <label><input type="radio" name="dmgR" value="Broken" checked><span>Broken</span></label>
+                    <label><input type="radio" name="dmgR" value="Expired"><span>Expired</span></label>
+                    <label><input type="radio" name="dmgR" value="Leaking"><span>Leaking</span></label>
+                    <label><input type="radio" name="dmgR" value="Crushed"><span>Crushed</span></label>
+                    <label><input type="radio" name="dmgR" value="Mislabeled"><span>Mislabeled</span></label>
+                    <label><input type="radio" name="dmgR" value="Other"><span>Other</span></label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" style="background:#8b0000;border-color:#8b0000" onclick="addEntry('damage')"><i class="fa-solid fa-plus"></i>&nbsp; Add Entry</button>
+                <button class="btn btn-secondary" onclick="clearForm('d')"><i class="fa-solid fa-eraser"></i>&nbsp; Clear</button>
+            </div>
+        </div>
+        <div id="sessBoxD" style="display:none">
+            <div class="section-bar">
+                <div class="info">
+                    <span class="ref-tag" id="refPreviewD">Ref: ---</span>
+                    &nbsp;&nbsp;
+                    <i class="fa-solid fa-list"></i>&nbsp; Entries: <span id="sCntD">0</span>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary btn-sm" style="background:#8b0000;border-color:#8b0000" onclick="saveSess('damage')"><i class="fa-solid fa-floppy-disk"></i>&nbsp; Save</button>
+                    <button class="btn btn-danger btn-sm" onclick="discardSess('damage')"><i class="fa-solid fa-trash"></i>&nbsp; Discard</button>
+                </div>
+            </div>
+            <div class="table-wrap"><table>
+                <thead><tr><th>SL</th><th style="text-align:left">Product</th><th>Pack Size</th><th>Batch No</th><th>Mfg Date</th><th>Exp Date</th><th>Qty</th><th>MRP (৳)</th><th>Damage Reason</th><th>Action</th></tr></thead>
+                <tbody id="sBodyD"></tbody>
+            </table></div>
+        </div>
+    </div>
+
+    <!-- TAB 3: HISTORY -->
+    <div class="tab-content" id="tab-3">
+        <div class="section-bar">
+            <div class="info"><i class="fa-solid fa-database"></i>&nbsp; Records: <span id="hCnt">0</span></div>
+            <div class="actions">
+                <button class="btn btn-secondary btn-sm" onclick="printAll()"><i class="fa-solid fa-print"></i>&nbsp; Print All</button>
+                <button class="btn btn-secondary btn-sm" onclick="wordAll()"><i class="fa-solid fa-file-word"></i>&nbsp; Word All</button>
+                <button class="btn btn-danger btn-sm" onclick="clearHist()"><i class="fa-solid fa-trash"></i>&nbsp; Clear All</button>
+            </div>
+        </div>
+        <div id="hWrap"><div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No saved records yet.</p></div></div>
+    </div>
+</div>
+
+<div id="printArea"></div>
+
+<!-- Edit History Modal -->
+<div class="modal-overlay" id="editHistMod">
+    <div class="modal-box large">
+        <h3><i class="fa-solid fa-pen-to-square"></i>&nbsp; Edit History Record</h3>
+        <div id="histInfo" style="margin-bottom:15px;display:flex;gap:15px;flex-wrap:wrap;background:#f0f0f0;padding:12px;border:1.5px solid #000;font-size:13px;font-weight:600"></div>
+        
+        <div style="margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Entries</div>
+            <div style="display:flex;gap:10px;align-items:flex-end">
+                <div class="form-group" style="margin:0">
+                    <label style="font-size:10px">Add Product</label>
+                    <select id="editAddProd" style="padding:8px 10px;border:1.5px solid #000;font-size:12px;min-width:200px"></select>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="addRowToHist()"><i class="fa-solid fa-plus"></i> Add Row</button>
+            </div>
+        </div>
+
+        <div class="table-wrap" style="max-height:45vh;overflow-y:auto;border:1.5px solid #000">
+            <table class="edit-hist-table" style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead style="position:sticky;top:0;z-index:10">
+                    <tr>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:30px">SL</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;text-align:left">Product Name</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:70px">Pack</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:80px">Batch No</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:70px">Mfg</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:70px">Exp</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:60px">Qty</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:60px">MRP</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:100px">Remarks</th>
+                        <th style="padding:8px;border:1px solid #000;background:#000;color:#fff;width:40px">Del</th>
+                    </tr>
+                </thead>
+                <tbody id="editHistTableBody"></tbody>
+            </table>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px;justify-content:flex-end">
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('editHistMod').classList.remove('show')">Cancel</button>
+            <button class="btn btn-primary btn-sm" onclick="saveHistUpdate()"><i class="fa-solid fa-check"></i>&nbsp; Update Record</button>
+        </div>
+    </div>
+</div>
+
+<button class="print-btn no-print" onclick="printAll()"><i class="fa-solid fa-print"></i>&nbsp; Print</button>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═══ STORAGE ═══ */
+var PKEY='mp_products', HKEY='mp_history', RKREF='mp_ref_r', DKREF='mp_ref_d';
+function getP(){return JSON.parse(localStorage.getItem(PKEY)||'[]')}
+function setP(d){localStorage.setItem(PKEY,JSON.stringify(d))}
+function getH(){return JSON.parse(localStorage.getItem(HKEY)||'[]')}
+function setH(d){localStorage.setItem(HKEY,JSON.stringify(d))}
+
+/* ═══ REF NUMBER ═══ */
+function previewRef(type){
+    var key=type==='repacking'?RKREF:DKREF;
+    var prefix=type==='repacking'?'R':'D';
+    var year=new Date().getFullYear();
+    var count=parseInt(localStorage.getItem(key)||'0')+1;
+    return 'MPLKUS/'+prefix+'/'+year+'/'+String(count).padStart(3,'0');
+}
+function genRef(type){
+    var key=type==='repacking'?RKREF:DKREF;
+    var prefix=type==='repacking'?'R':'D';
+    var year=new Date().getFullYear();
+    var count=parseInt(localStorage.getItem(key)||'0')+1;
+    localStorage.setItem(key,count.toString());
+    return 'MPLKUS/'+prefix+'/'+year+'/'+String(count).padStart(3,'0');
+}
+
+/* ═══ STATE ═══ */
+var sessR=[], sessD=[];
+var ssHLIdx={R:-1, D:-1};
+var editingProductIdx = -1;
+var editingHistIdx = -1;
+
+/* ═══ INIT ═══ */
+document.addEventListener('DOMContentLoaded',function(){
+    var n=new Date();
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    document.getElementById('headerDate').textContent='Date: '+String(n.getDate()).padStart(2,'0')+'-'+months[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);
+    drawProducts();
+    drawHistory();
+    document.addEventListener('click',function(e){
+        if(!e.target.closest('.ss-wrap')){
+            ssClose('R'); ssClose('D');
+        }
+    });
+    document.getElementById('fSearch').addEventListener('keydown',function(e){ssKey(e,'R')});
+    document.getElementById('dSearch').addEventListener('keydown',function(e){ssKey(e,'D')});
+});
+
+/* ═══ HELPERS ═══ */
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function clr(){[].slice.call(arguments).forEach(function(id){var e=document.getElementById(id);if(e)e.value=''})}
+var _tt;
+function msg(t,type){var e=document.getElementById('toast');e.textContent=t;e.className='toast'+(type==='ok'?' ok':type==='err'?' err':'');void e.offsetWidth;e.classList.add('show');clearTimeout(_tt);_tt=setTimeout(function(){e.classList.remove('show')},2800)}
+
+function tab(i){
+    document.querySelectorAll('.tab-btn').forEach(function(b,j){b.classList.toggle('active',j===i)});
+    document.querySelectorAll('.tab-content').forEach(function(c,j){c.classList.toggle('active',j===i)});
+    if(i===0)drawProducts();
+    if(i===1){updateRefPreview('repacking')}
+    if(i===2){updateRefPreview('damage')}
+    if(i===3)drawHistory();
+}
+
+function updateRefPreview(type){
+    var el=document.getElementById(type==='repacking'?'refPreviewR':'refPreviewD');
+    var sess=type==='repacking'?sessR:sessD;
+    el.textContent=sess.length>0?'Ref: '+previewRef(type):'Ref: ---';
+}
+
+/* ═══ SEARCHABLE SELECT ═══ */
+function ssBuildList(type){
+    var list=getP();
+    var inputId=type==='R'?'fSearch':'dSearch';
+    var listId=type==='R'?'fList':'dList';
+    var q=document.getElementById(inputId).value.trim().toLowerCase();
+    var el=document.getElementById(listId);
+    ssHLIdx[type]=-1;
+    if(!list.length){el.innerHTML='<div class="ss-empty">No products found. Add products first.</div>';el.classList.add('open');return}
+    var filtered=list.map(function(p,i){return{idx:i,p:p}}).filter(function(o){
+        if(!q)return true;
+        return o.p.name.toLowerCase().indexOf(q)!==-1 || o.p.pack.toLowerCase().indexOf(q)!==-1;
+    });
+    if(!filtered.length){el.innerHTML='<div class="ss-empty">No match for "'+esc(q)+'"</div>';el.classList.add('open');return}
+    var h='';
+    filtered.forEach(function(o){
+        h+='<div class="ss-item" data-idx="'+o.idx+'" onclick="ssPick(\''+type+'\','+o.idx+')">';
+        h+='<div style="font-weight:600">'+esc(o.p.name)+'</div>';
+        h+='<div class="ss-info">'+esc(o.p.pack)+' &nbsp;|&nbsp; <span class="ss-mrp">৳'+o.p.mrp+'</span></div>';
+        h+='</div>';
+    });
+    el.innerHTML=h;
+    el.classList.add('open');
+}
+function ssOpen(type){ssBuildList(type)}
+function ssFilter(type){ssBuildList(type)}
+function ssClose(type){var listId=type==='R'?'fList':'dList';document.getElementById(listId).classList.remove('open');ssHLIdx[type]=-1;}
+function ssPick(type,idx){
+    var p=getP()[idx];
+    var prefix=type==='R'?'f':'d';
+    document.getElementById(prefix+'Search').value=p.name;
+    document.getElementById(prefix+'ProdIdx').value=idx;
+    document.getElementById(prefix+'Pack').value=p.pack;
+    document.getElementById(prefix+'Mrp').value=p.mrp;
+    if(prefix==='f') document.getElementById(prefix+'Desc').value=p.desc;
+    var badge=document.getElementById(prefix+'Badge');
+    badge.textContent=p.pack; badge.classList.add('show');
+    ssClose(type);
+    document.getElementById(prefix+'Batch').focus();
+}
+function ssKey(e,type){
+    var listId=type==='R'?'fList':'dList';
+    var el=document.getElementById(listId);
+    var items=el.querySelectorAll('.ss-item');
+    if(!el.classList.contains('open')||!items.length){ssOpen(type);return}
+    if(e.key==='ArrowDown'){e.preventDefault();ssHLIdx[type]=Math.min(ssHLIdx[type]+1,items.length-1);ssHighlight(type,items)}
+    else if(e.key==='ArrowUp'){e.preventDefault();ssHLIdx[type]=Math.max(ssHLIdx[type]-1,0);ssHighlight(type,items)}
+    else if(e.key==='Enter'){e.preventDefault();if(ssHLIdx[type]>=0&&items[ssHLIdx[type]]){items[ssHLIdx[type]].click()}}
+    else if(e.key==='Escape'){ssClose(type)}
+}
+function ssHighlight(type,items){
+    items.forEach(function(it,i){it.classList.toggle('hl',i===ssHLIdx[type])});
+    if(ssHLIdx[type]>=0) items[ssHLIdx[type]].scrollIntoView({block:'nearest'});
+}
+
+/* ═══ PRODUCTS ADD / EDIT ═══ */
+function resetEditBtn(){
+    editingProductIdx = -1;
+    var btn = document.getElementById('pSaveBtn');
+    btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Product';
+    btn.onclick = addProduct;
+}
+function addProduct(){
+    var name=document.getElementById('pName').value.trim();
+    var pack=document.getElementById('pPack').value.trim();
+    var mrp=parseFloat(document.getElementById('pMrp').value)||0;
+    var desc=document.getElementById('pDesc').value.trim()||'Repacking';
+    if(!name){msg('Product Name দিন','err');return}
+    if(!pack){msg('Pack Size দিন','err');return}
+    if(mrp<=0){msg('MRP দিন','err');return}
+    var list=getP();
+    if(list.some(function(p){return p.name.toLowerCase()===name.toLowerCase()})){msg('এই নামে আগেই আছে','err');return}
+    list.push({name:name,pack:pack,mrp:mrp,desc:desc});
+    setP(list);
+    clr('pName','pPack','pMrp');
+    document.getElementById('pDesc').value='Repacking';
+    document.getElementById('pName').focus();
+    drawProducts();
+    msg(name+' যোগ হয়েছে','ok');
+}
+function delProduct(i){
+    var list=getP();
+    if(!confirm(list[i].name+' মুছবেন?'))return;
+    list.splice(i,1);setP(list);drawProducts();msg('মুছে ফেলা হয়েছে','ok');
+    if(editingProductIdx === i) resetEditBtn();
+}
+function openEdit(i){
+    var list=getP();var p=list[i];
+    editingProductIdx = i;
+    document.getElementById('pName').value=p.name;
+    document.getElementById('pPack').value=p.pack;
+    document.getElementById('pMrp').value=p.mrp;
+    document.getElementById('pDesc').value=p.desc;
+    var btn = document.getElementById('pSaveBtn');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i>&nbsp; Update Product';
+    btn.onclick = saveEdit;
+    document.getElementById('pName').focus();
+}
+function saveEdit(){
+    if(editingProductIdx === -1) return;
+    var name=document.getElementById('pName').value.trim();
+    var pack=document.getElementById('pPack').value.trim();
+    var mrp=parseFloat(document.getElementById('pMrp').value)||0;
+    var desc=document.getElementById('pDesc').value.trim()||'Repacking';
+    if(!name||!pack||mrp<=0){msg('সব ফিল্ড পূরণ করুন','err');return}
+    var list=getP();
+    if(list.some(function(p, idx){ return idx !== editingProductIdx && p.name.toLowerCase() === name.toLowerCase(); })){msg('এই নামে আগেই আছে','err');return}
+    list[editingProductIdx] = {name:name,pack:pack,mrp:mrp,desc:desc};
+    setP(list);
+    clr('pName','pPack','pMrp');
+    document.getElementById('pDesc').value='Repacking';
+    resetEditBtn();
+    drawProducts();
+    msg('প্রোডাক্ট আপডেট হয়েছে','ok');
+}
+function drawProducts(){
+    var list=getP();
+    document.getElementById('pCnt').textContent=list.length;
+    var w=document.getElementById('pWrap');
+    if(!list.length){w.innerHTML='<div class="empty-state"><i class="fa-solid fa-box-open"></i><p>No products yet.</p></div>';return}
+    var h='<table><thead><tr><th>SL</th><th style="text-align:left">Product Name</th><th>Pack Size</th><th>MRP (৳)</th><th>Description</th><th>Action</th></tr></thead><tbody>';
+    list.forEach(function(p,i){
+        h+='<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(p.name)+'</td><td>'+esc(p.pack)+'</td><td>'+p.mrp+'</td><td>'+esc(p.desc)+'</td><td><button class="edit-row" onclick="openEdit('+i+')"><i class="fa-solid fa-pen-to-square"></i></button> <button class="del-row" onclick="delProduct('+i+')"><i class="fa-solid fa-xmark"></i></button></td></tr>';
+    });
+    w.innerHTML=h+'</tbody></table>';
+}
+
+/* ═══ CLEAR FORM ═══ */
+function clearForm(prefix){
+    if(prefix==='f'){
+        clr('fSearch','fProdIdx','fPack','fBatch','fMfg','fExp','fQty','fMrp','fDesc');
+        document.getElementById('fBadge').classList.remove('show');
+        document.getElementById('fSearch').focus();
+    } else {
+        clr('dSearch','dProdIdx','dPack','dBatch','dMfg','dExp','dQty','dMrp');
+        document.getElementById('dBadge').classList.remove('show');
+        document.querySelector('input[name="dmgR"][value="Broken"]').checked=true;
+        document.getElementById('dSearch').focus();
+    }
+}
+
+/* ═══ ENTRY ═══ */
+function addEntry(type){
+    var prefix=type==='repacking'?'f':'d';
+    var idxVal=document.getElementById(prefix+'ProdIdx').value;
+    if(idxVal===''){msg('প্রোডাক্ট সিলেক্ট করুন','err');document.getElementById(prefix+'Search').focus();return}
+    var p=getP()[parseInt(idxVal)];
+    if(!p){msg('প্রোডাক্ট পাওয়া যায়নি, আবার সিলেক্ট করুন','err');clearForm(prefix);return}
+    var batch=document.getElementById(prefix+'Batch').value.trim();
+    var mfg=document.getElementById(prefix+'Mfg').value.trim();
+    var exp=document.getElementById(prefix+'Exp').value.trim();
+    var qty=parseInt(document.getElementById(prefix+'Qty').value)||0;
+    if(!batch){msg('Batch No দিন','err');document.getElementById(prefix+'Batch').focus();return}
+    if(!mfg){msg('Mfg Date দিন','err');document.getElementById(prefix+'Mfg').focus();return}
+    if(!exp){msg('Exp Date দিন','err');document.getElementById(prefix+'Exp').focus();return}
+    if(qty<=0){msg('Quantity দিন','err');document.getElementById(prefix+'Qty').focus();return}
+    var desc=p.desc;
+    if(type==='damage'){
+        var checked=document.querySelector('input[name="dmgR"]:checked');
+        desc=checked?checked.value:'Broken';
+    }
+    var entry={product:p.name,packSize:p.pack,batch:batch,mfgDate:mfg,expDate:exp,qty:qty,mrp:p.mrp,desc:desc};
+    if(type==='repacking') sessR.push(entry);
+    else sessD.push(entry);
+    drawSess(type);
+    clearForm(prefix);
+    updateRefPreview(type);
+    msg('এন্ট্রি যোগ হয়েছে','ok');
+}
+function rmSess(type,i){
+    if(type==='repacking') sessR.splice(i,1);
+    else sessD.splice(i,1);
+    drawSess(type);
+    updateRefPreview(type);
+}
+function drawSess(type){
+    var isR=type==='repacking';
+    var sess=isR?sessR:sessD;
+    var box=document.getElementById(isR?'sessBoxR':'sessBoxD');
+    var body=document.getElementById(isR?'sBodyR':'sBodyD');
+    var cntEl=document.getElementById(isR?'sCntR':'sCntD');
+    if(!sess.length){box.style.display='none';return}
+    box.style.display='block';
+    cntEl.textContent=sess.length;
+    var rows='';
+    sess.forEach(function(e,i){
+        rows+='<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(e.product)+'</td><td>'+esc(e.packSize)+'</td><td>'+esc(e.batch)+'</td><td>'+esc(e.mfgDate)+'</td><td>'+esc(e.expDate)+'</td><td>'+e.qty+'</td><td>'+e.mrp+'</td><td>'+esc(e.desc)+'</td><td><button class="del-row" onclick="rmSess(\''+type+'\','+i+')"><i class="fa-solid fa-xmark"></i></button></td></tr>';
+    });
+    body.innerHTML=rows;
+}
+function saveSess(type){
+    var isR=type==='repacking';
+    var sess=isR?sessR:sessD;
+    if(!sess.length){msg('সেভ করার কিছু নেই','err');return}
+    var n=new Date();
+    var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var ds=String(n.getDate()).padStart(2,'0')+'-'+months[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);
+    var ts=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+    var ref=genRef(type);
+    var list=getH();
+    list.unshift({type:type,ref:ref,date:ds,time:ts,id:Date.now(),entries:JSON.parse(JSON.stringify(sess))});
+    setH(list);
+    if(isR) sessR=[]; else sessD=[];
+    drawSess(type);
+    updateRefPreview(type);
+    clearForm(isR?'f':'d');
+    msg('সেভ হয়েছে! Ref: '+ref,'ok');
+}
+function discardSess(type){
+    var isR=type==='repacking';
+    var sess=isR?sessR:sessD;
+    if(!sess.length)return;
+    if(!confirm('সব এন্ট্রি বাতিল করবেন?'))return;
+    if(isR) sessR=[]; else sessD=[];
+    drawSess(type);
+    updateRefPreview(type);
+    msg('বাতিল হয়েছে');
+}
+
+/* ═══ HISTORY ═══ */
+function drawHistory(){
+    var list=getH();
+    document.getElementById('hCnt').textContent=list.length;
+    var w=document.getElementById('hWrap');
+    if(!list.length){w.innerHTML='<div class="empty-state"><i class="fa-solid fa-inbox"></i><p>No saved records yet.</p></div>';return}
+    var h='';
+    list.forEach(function(r,ri){
+        var type=r.type||'repacking';
+        var ref=r.ref||'N/A';
+        var badgeClass=type==='damage'?'damage':'repacking';
+        var badgeText=type==='damage'?'Damage':'Repacking';
+        var headerBg=type==='damage'?'#fdf0f0':'#f0f0f0';
+        var borderColor=type==='damage'?'#8b0000':'#000';
+        var rows=r.entries.map(function(e,i){
+            return '<tr><td>'+String(i+1).padStart(2,'0')+'</td><td style="text-align:left;font-weight:600">'+esc(e.product)+'</td><td>'+esc(e.packSize)+'</td><td>'+esc(e.batch)+'</td><td>'+esc(e.mfgDate)+'</td><td>'+esc(e.expDate)+'</td><td>'+e.qty+'</td><td>'+e.mrp+'</td><td>'+esc(e.desc)+'</td></tr>';
+        }).join('');
+        h+='<div style="margin-bottom:2px;border:1.5px solid '+borderColor+';border-top:none">';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:'+headerBg+';border-bottom:1.5px solid '+borderColor+';flex-wrap:wrap;gap:8px">';
+        h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+        h+='<span class="type-badge '+badgeClass+'">'+badgeText+'</span>';
+        h+='<span class="ref-tag">'+esc(ref)+'</span>';
+        h+='<span style="font-size:12px;font-weight:600"><i class="fa-solid fa-calendar"></i> '+r.date+' &nbsp;|&nbsp; <i class="fa-solid fa-clock"></i> '+r.time+' &nbsp;|&nbsp; Items: '+r.entries.length+'</span>';
+        h+='</div><div style="display:flex;gap:6px">';
+        h+='<button class="btn btn-secondary btn-sm" onclick="editRec('+ri+')"><i class="fa-solid fa-pen"></i> Edit</button>';
+        h+='<button class="btn btn-secondary btn-sm" onclick="printOne('+ri+')"><i class="fa-solid fa-print"></i> Print</button>';
+        h+='<button class="btn btn-secondary btn-sm" onclick="wordOne('+ri+')"><i class="fa-solid fa-file-word"></i> Word</button>';
+        h+='<button class="btn btn-danger btn-sm" onclick="delRec('+ri+')"><i class="fa-solid fa-trash"></i></button>';
+        h+='</div></div>';
+        h+='<div class="table-wrap"><table>';
+        h+='<thead><tr><th>SL</th><th style="text-align:left">Product</th><th>Pack Size</th><th>Batch No</th><th>Mfg Date</th><th>Exp Date</th><th>Qty</th><th>MRP (৳)</th><th>Remarks</th></tr></thead>';
+        h+='<tbody>'+rows+'</tbody></table></div></div>';
+    });
+    w.innerHTML=h;
+}
+
+function editRec(i){
+    var list = getH();
+    if(!list[i]) return;
+    editingHistIdx = i;
+    var r = list[i];
+    var type = r.type || 'repacking';
+    var ref = r.ref || 'N/A';
+
+    // Populate Info
+    document.getElementById('histInfo').innerHTML = `
+        <div><span style="font-weight:800">Ref:</span> ${esc(ref)}</div>
+        <div><span style="font-weight:800">Type:</span> ${type.toUpperCase()}</div>
+        <div><span style="font-weight:800">Date:</span> ${esc(r.date)}</div>
+        <div><span style="font-weight:800">Time:</span> ${esc(r.time)}</div>
+    `;
+
+    // Populate Add Product Dropdown
+    var prods = getP();
+    var sel = document.getElementById('editAddProd');
+    if(prods.length){
+        sel.innerHTML = prods.map((p,idx) => `<option value="${idx}">${esc(p.name)} (${esc(p.pack)}) - ৳${p.mrp}</option>`).join('');
+    } else {
+        sel.innerHTML = '<option value="">No products available</option>';
+    }
+
+    // Render Table
+    var tbody = document.getElementById('editHistTableBody');
+    tbody.innerHTML = '';
+    r.entries.forEach((e, idx) => {
+        addHistRow(e, idx);
+    });
+
+    document.getElementById('editHistMod').classList.add('show');
+}
+
+function addHistRow(e, idx) {
+    var tbody = document.getElementById('editHistTableBody');
+    var tr = document.createElement('tr');
+    var sl = tbody.children.length + 1;
+    
+    var product = e.product || '';
+    var packSize = e.packSize || '';
+    var batch = e.batch || '';
+    var mfgDate = e.mfgDate || '';
+    var expDate = e.expDate || '';
+    var qty = e.qty || 0;
+    var mrp = e.mrp || 0;
+    var desc = e.desc || '';
+
+    tr.innerHTML = `
+        <td style="padding:4px;border:1px solid #000;text-align:center">${String(sl).padStart(2,'0')}</td>
+        <td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">${esc(product)}</td>
+        <td style="padding:4px;border:1px solid #000;text-align:center">${esc(packSize)}</td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="${esc(batch)}"></td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="${esc(mfgDate)}"></td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="${esc(expDate)}"></td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="${qty}" min="0"></td>
+        <td style="padding:4px;border:1px solid #000;text-align:center">${mrp}</td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="${esc(desc)}"></td>
+        <td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest('tr').remove()"><i class="fa-solid fa-xmark"></i></button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function addRowToHist(){
+    var sel = document.getElementById('editAddProd');
+    var idx = sel.value;
+    if(idx === "") { msg('No product to add', 'err'); return; }
+    var p = getP()[idx];
+    if(!p) return;
+
+    var newEntry = {
+        product: p.name,
+        packSize: p.pack,
+        batch: '',
+        mfgDate: '',
+        expDate: '',
+        qty: 0,
+        mrp: p.mrp,
+        desc: p.desc
+    };
+    addHistRow(newEntry);
+}
+
+function saveHistUpdate(){
+    if(editingHistIdx === -1) return;
+    var tbody = document.getElementById('editHistTableBody');
+    var rows = tbody.querySelectorAll('tr');
+    var updatedEntries = [];
+    var isValid = true;
+    var errMsg = '';
+
+    for(var i=0; i<rows.length; i++){
+        var row = rows[i];
+        var batch = row.querySelector('.inp-batch').value.trim();
+        var mfg = row.querySelector('.inp-mfg').value.trim();
+        var exp = row.querySelector('.inp-exp').value.trim();
+        var qty = parseInt(row.querySelector('.inp-qty').value) || 0;
+
+        if(!batch){ isValid = false; errMsg = 'Batch No খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
+        if(!mfg){ isValid = false; errMsg = 'Mfg Date খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
+        if(!exp){ isValid = false; errMsg = 'Exp Date খালি থাকতে পারবে না (SL: '+(i+1)+')'; break; }
+        if(qty <= 0){ isValid = false; errMsg = 'Quantity সঠিক নয় (SL: '+(i+1)+')'; break; }
+
+        updatedEntries.push({
+            product: row.cells[1].textContent.trim(),
+            packSize: row.cells[2].textContent.trim(),
+            batch: batch,
+            mfgDate: mfg,
+            expDate: exp,
+            qty: qty,
+            mrp: parseFloat(row.cells[7].textContent.trim()) || 0,
+            desc: row.querySelector('.inp-remarks').value.trim()
+        });
+    }
+
+    if(!isValid){
+        msg(errMsg, 'err');
+        return;
+    }
+
+    if(updatedEntries.length === 0){
+        msg('অন্তত একটি এন্ট্রি থাকতে হবে', 'err');
+        return;
+    }
+
+    var list = getH();
+    list[editingHistIdx].entries = updatedEntries;
+    setH(list);
+    
+    document.getElementById('editHistMod').classList.remove('show');
+    drawHistory();
+    msg('রেকর্ড সফলভাবে আপডেট হয়েছে', 'ok');
+}
+
+function delRec(i){
+    var list=getH();
+    if(!confirm('মুছবেন?'))return;
+    list.splice(i,1);setH(list);drawHistory();msg('মুছে ফেলা হয়েছে','ok');
+}
+function clearHist(){
+    if(!getH().length){msg('কিছু নেই','err');return}
+    if(!confirm('সব রেকর্ড মুছবেন?'))return;
+    localStorage.removeItem(HKEY);drawHistory();msg('সব মুছে ফেলা হয়েছে','ok');
+}
+
+/* ═══ PRINT ═══ */
+function buildPrint(r){
+    var type=r.type||'repacking';
+    var ref=r.ref||'N/A';
+    var sheetTitle=type==='damage'?'DAMAGE ENTRY':'REPACKING SHEET';
+    var rows=r.entries.map(function(e,i){
+        return '<tr>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+String(i+1).padStart(2,'0')+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:left;font-weight:600;font-size:12px;color:#000;background:#fff">'+esc(e.product)+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.packSize)+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.batch)+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.mfgDate)+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.expDate)+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+e.qty+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+e.mrp+'</td>'+
+            '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-size:12px;color:#000;background:#fff">'+esc(e.desc)+'</td>'+
+            '</tr>';
+    }).join('');
+    var html='<div style="font-family:Arial,sans-serif;color:#000;background:#fff;max-width:960px;margin:0 auto">';
+    html+='<div style="text-align:center;border:2px solid #000;padding:22px 30px 16px;background:#fff">';
+    html+='<div style="font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#000;background:#fff">MONICO PHARMA LTD</div>';
+    html+='<div style="display:inline-block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:2px;border:2px solid #000;padding:4px 18px;margin-top:8px;color:#000;background:#fff">'+sheetTitle+'</div>';
+    html+='<div style="font-size:14px;font-weight:700;margin-top:8px;color:#000;background:#fff">Kushtia Depot</div>';
+    html+='<div style="font-size:11px;margin-top:2px;color:#000;background:#fff">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:0 4px">';
+    html+='<div style="font-size:13px;font-weight:700;color:#000;background:#fff">Ref.No: '+esc(ref)+'</div>';
+    html+='<div style="font-size:13px;font-weight:700;color:#000;background:#fff">Date: '+esc(r.date)+'</div>';
+    html+='</div></div>';
+    html+='<table style="width:100%;border-collapse:collapse;background:#fff">';
+    html+='<thead><tr>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">SL No</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:left;color:#000;background:#fff">Product Name</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Pack Size</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Batch No</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">MFG Date</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Exp.Date</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Qty</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">MRP</th>';
+    html+='<th style="padding:10px 8px;border:1.5px solid #000;font-size:11px;text-transform:uppercase;letter-spacing:.7px;text-align:center;color:#000;background:#fff">Remarks</th>';
+    html+='</tr></thead><tbody>'+rows+'</tbody></table>';
+    html+='<table style="width:100%;border-collapse:collapse;background:#fff;margin-top:40px"><tr>';
+    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">DIC</td>';
+    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">SR. RSM</td>';
+    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">PMD</td>';
+    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">CENTRAL DEPOT</td>';
+    html+='<td style="width:20%;height:80px;padding:10px 14px;text-align:center;border:1.5px solid #000;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#000;background:#fff;vertical-align:bottom">HO OPERATION</td>';
+    html+='</tr></table></div>';
+    return html;
+}
+function printOne(i){var list=getH();if(!list[i])return;document.getElementById('printArea').innerHTML=buildPrint(list[i]);window.print()}
+function printAll(){var list=getH();if(!list.length){msg('কোনো রেকর্ড নেই','err');return}var a='';list.forEach(function(r,i){if(i>0)a+='<div style="page-break-before:always"></div>';a+=buildPrint(r)});document.getElementById('printArea').innerHTML=a;window.print()}
+
+/* ═══ WORD ═══ */
+function toWord(html,fn){
+    var doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;color:#000;background:#fff}table{border-collapse:collapse}td,th{border:1.5px solid #000;color:#000;background:#fff}</style></head><body>'+html+'</body></html>';
+    var b=new Blob(['\ufeff',doc],{type:'application/msword'});
+    var u=URL.createObjectURL(b);
+    var a=document.createElement('a');a.href=u;a.download=fn+'.doc';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+    msg('Word ডাউনলোড হয়েছে','ok');
+}
+function wordOne(i){var list=getH();if(!list[i])return;var type=list[i].type||'repacking';toWord(buildPrint(list[i]),(type==='damage'?'Damage':'Repacking')+'_'+list[i].date+'_'+list[i].time.replace(':',''))}
+function wordAll(){var list=getH();if(!list.length){msg('কোনো রেকর্ড নেই','err');return}var a='';list.forEach(function(r){a+=buildPrint(r)+'<br clear="all" style="page-break-before:always">'});toWord(a,'Depot_All_'+Date.now())}
+
+/* ═══ KEYBOARD ═══ */
+document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){
+        document.getElementById('editHistMod').classList.remove('show');
+    }
+    if(e.key==='Enter'){
+        var id=document.activeElement.id;
+        if(['pName','pPack','pMrp','pDesc'].indexOf(id)!==-1){e.preventDefault();document.getElementById('pSaveBtn').click()}
+        if(['fBatch','fMfg','fExp','fQty'].indexOf(id)!==-1){e.preventDefault();addEntry('repacking')}
+        if(['dBatch','dMfg','dExp','dQty'].indexOf(id)!==-1){e.preventDefault();addEntry('damage')}
+    }
+});
+</script>
+</body>
+</html>
