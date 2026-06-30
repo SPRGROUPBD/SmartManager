@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DCC বিশেষ ডিসকাউন্ট অনুমোদন - MonicoPharma</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans Bengali',sans-serif;color:#000}
+
+body{background:#e8e8e8;min-height:100vh;padding:20px 10px}
+
+/* ===== NAVIGATION ===== */
+.top-nav{max-width:210mm;margin:0 auto 16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.nav-btn{display:inline-flex;align-items:center;gap:7px;padding:9px 22px;font-size:13px;font-weight:600;color:#fff;background:#222;border:2px solid #222;border-radius:4px;cursor:pointer;font-family:'Noto Sans Bengali',sans-serif;transition:all .2s}
+.nav-btn:hover{background:#444;border-color:#444}
+.nav-btn.active{background:#000;border-color:#000;box-shadow:0 0 0 2px #888}
+.nav-btn.danger{background:#8b0000;border-color:#8b0000}
+.nav-btn.danger:hover{background:#a00}
+.nav-btn.print-btn{background:#1a5c1a;border-color:#1a5c1a}
+.nav-btn.print-btn:hover{background:#228b22}
+.nav-btn.save-btn{background:#0a4a7a;border-color:#0a4a7a}
+.nav-btn.save-btn:hover{background:#0d6ebd}
+
+/* ===== DASHBOARD ===== */
+.dashboard{max-width:210mm;margin:0 auto;background:#fff;border:1px solid #bbb;border-radius:6px;overflow:hidden;display:none}
+.dashboard.show{display:block}
+.dash-header{background:linear-gradient(135deg,#111 0%,#333 100%);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:18px}
+.dash-logo{width:56px;height:56px;border-radius:8px;overflow:hidden;border:2px solid rgba(255,255,255,.3);flex-shrink:0}
+.dash-logo img{width:100%;height:100%;object-fit:contain}
+.dash-title{font-size:18px;font-weight:700}
+.dash-sub{font-size:11px;color:#aaa;margin-top:2px}
+.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid #ddd}
+.stat-card{padding:20px 16px;text-align:center;border-right:1px solid #ddd;transition:background .2s}
+.stat-card:last-child{border-right:none}
+.stat-card:hover{background:#f7f7f7}
+.stat-num{font-size:28px;font-weight:700;color:#111}
+.stat-label{font-size:11px;color:#666;margin-top:4px;font-weight:500}
+.dash-actions{padding:20px 28px;display:flex;gap:12px;flex-wrap:wrap}
+.dash-action-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;font-size:14px;font-weight:600;border:2px solid #111;border-radius:5px;cursor:pointer;background:#fff;color:#111;font-family:'Noto Sans Bengali',sans-serif;transition:all .2s}
+.dash-action-btn:hover{background:#111;color:#fff}
+.dash-action-btn.primary{background:#111;color:#fff}
+.dash-action-btn.primary:hover{background:#333}
+.dash-recent{padding:0 28px 24px}
+.dash-recent h3{font-size:14px;font-weight:700;padding:16px 0 10px;border-bottom:2px solid #111;margin-bottom:0;display:inline-block}
+.recent-table{width:100%;border-collapse:collapse;margin-top:8px}
+.recent-table th{background:#f0f0f0;font-size:11px;font-weight:600;padding:8px 10px;text-align:left;border:1px solid #ddd;white-space:nowrap}
+.recent-table td{font-size:12px;padding:8px 10px;border:1px solid #ddd}
+.recent-table tr:hover td{background:#fafafa}
+.status-badge{display:inline-block;padding:2px 10px;border-radius:10px;font-size:10px;font-weight:600}
+.status-pending{background:#fff3cd;color:#856404}
+.status-approved{background:#d4edda;color:#155724}
+.status-rejected{background:#f8d7da;color:#721c24}
+
+/* ===== HISTORY ===== */
+.history{max-width:210mm;margin:0 auto;background:#fff;border:1px solid #bbb;border-radius:6px;overflow:hidden;display:none}
+.history.show{display:block}
+.hist-header{background:#111;color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between}
+.hist-header h2{font-size:16px;font-weight:700}
+.hist-search{padding:16px 28px;display:flex;gap:10px;border-bottom:1px solid #ddd}
+.hist-search input{flex:1;padding:8px 12px;border:1.5px solid #ccc;border-radius:4px;font-size:13px;font-family:'Noto Sans Bengali',sans-serif;outline:none}
+.hist-search input:focus{border-color:#111}
+.hist-body{padding:16px 28px 28px}
+.hist-table{width:100%;border-collapse:collapse}
+.hist-table th{background:#f0f0f0;font-size:11px;font-weight:600;padding:8px 10px;text-align:left;border:1px solid #ddd;white-space:nowrap}
+.hist-table td{font-size:12px;padding:8px 10px;border:1px solid #ddd}
+.hist-table tr:hover td{background:#fafafa}
+.hist-empty{text-align:center;padding:40px 20px;color:#888;font-size:14px}
+.hist-action-btn{padding:4px 10px;font-size:11px;border:1px solid #111;background:#fff;color:#111;border-radius:3px;cursor:pointer;font-family:'Noto Sans Bengali',sans-serif;transition:all .15s}
+.hist-action-btn:hover{background:#111;color:#fff}
+.hist-action-btn.del{border-color:#a00;color:#a00}
+.hist-action-btn.del:hover{background:#a00;color:#fff}
+
+/* ===== MANAGEMENT ===== */
+.management{max-width:210mm;margin:0 auto;background:#fff;border:1px solid #bbb;border-radius:6px;overflow:hidden;display:none}
+.management.show{display:block}
+.mgmt-header{background:#111;color:#fff;padding:18px 28px;display:flex;align-items:center;justify-content:space-between}
+.mgmt-header h2{font-size:16px;font-weight:700}
+.mgmt-body{padding:20px 28px}
+.mgmt-form{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding:16px;border:1px solid #ddd;border-radius:5px;background:#f9f9f9}
+.mgmt-form .full{grid-column:1 / -1}
+.mgmt-form label{font-size:12px;font-weight:600;display:block;margin-bottom:4px}
+.mgmt-form input{width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:'Noto Sans Bengali',sans-serif}
+
+/* ===== PRINT AREA ===== */
+.print-area{display:none}
+.print-area.show{display:block}
+
+.page{width:210mm;min-height:297mm;background:#fff;margin:0 auto 20px;border:1px solid #aaa}
+.page-inner{padding:10mm 16mm 10mm}
+.page-number{text-align:center;font-size:11px;color:#000;padding:6px 0 2px;border-top:1px solid #000;margin-top:10px}
+
+.official-header{border:2px solid #000;margin-bottom:12px}
+.header-top{display:flex;align-items:center;gap:16px;padding:12px 14px;border-bottom:1px solid #000}
+.logo-box{width:62px;height:62px;border:1.5px solid #000;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border-radius:2px}
+.logo-box img{width:100%;height:100%;object-fit:contain}
+.header-info{flex:1}
+.company-name{font-size:17px;font-weight:700;color:#000}
+.company-name-en{font-size:10.5px;font-weight:500;color:#000;letter-spacing:.8px;text-transform:uppercase;margin-top:1px}
+.address-line{font-size:10.5px;color:#000;margin-top:3px;line-height:1.6}
+.address-line i{font-size:8px;margin-right:2px}
+
+.header-meta{display:flex;flex-wrap:wrap}
+.header-meta-item{flex:1;min-width:0;padding:6px 10px;border-right:1px solid #000;display:flex;align-items:center;gap:5px}
+.header-meta-item:last-child{border-right:none}
+.meta-label{font-size:10.5px;font-weight:600;color:#000;white-space:nowrap}
+.meta-value{font-size:10.5px;color:#000;word-break:break-all}
+
+.form-title-bar{background:#000;color:#fff;text-align:center;padding:9px 14px;margin-bottom:12px}
+.form-title-bar h2{font-size:15px;font-weight:700;color:#fff;line-height:1.5}
+.title-en{font-size:9.5px;font-weight:400;letter-spacing:1.5px;text-transform:uppercase;color:#bbb;margin-top:1px}
+
+.meta-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:20px}
+.meta-block{font-size:13px;color:#000;line-height:2}
+.meta-block.right{text-align:right}
+
+input[type="text"],input[type="date"],input[type="number"],select,textarea{font-family:'Noto Sans Bengali',sans-serif;font-size:13px;color:#000;background:#fff;border:none;border-bottom:1.5px solid #000;padding:3px 4px;outline:none;width:100%}
+input[type="text"]:focus,input[type="date"]:focus,select:focus,textarea:focus{border-bottom-color:#000}
+input[type="date"]{width:160px;cursor:text}
+input[type="date"]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.6}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23000'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 4px center;padding-right:18px}
+textarea{border:1.5px solid #000;resize:vertical;min-height:45px;line-height:1.7}
+
+.auto-field{font-size:13px;color:#000;border-bottom:1.5px solid #000;padding:3px 4px;display:inline-block;min-width:160px;font-weight:500}
+
+.subject-box{border:1.5px solid #000;border-left:5px solid #000;padding:9px 12px;margin-bottom:14px}
+.subject-box p{font-size:13px;color:#000;line-height:1.8}
+.subject-box b{color:#000}
+
+.body-text{font-size:13px;color:#000;line-height:1.95;text-align:justify;margin-bottom:4px}
+.body-text .salute{margin-bottom:6px}
+
+.section-card{margin-top:14px;border:1.5px solid #000}
+.section-title{background:#000;color:#fff;padding:6px 12px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;border-bottom:1.5px solid #000}
+.section-title i{font-size:11px;color:#999}
+.section-body{padding:10px 12px}
+
+.form-table{width:100%;border-collapse:collapse}
+.form-table td{padding:6px 10px;border:1px solid #000;font-size:13px;color:#000;vertical-align:middle}
+.form-table .label-cell{background:#f0f0f0;font-weight:600;color:#000;width:34%;white-space:nowrap}
+
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1.5px solid #000}
+.info-cell{display:flex;align-items:center;border-bottom:1px solid #000;border-right:1px solid #000;padding:0;min-height:36px}
+.info-cell:nth-child(2n){border-right:none}
+.info-cell:nth-last-child(-n+2){border-bottom:none}
+.cell-label{background:#f0f0f0;font-size:12px;font-weight:600;color:#000;padding:6px 10px;white-space:nowrap;min-width:125px;border-right:1px solid #000}
+.cell-value{flex:1;padding:3px 5px}
+.cell-value input,.cell-value select{border-bottom:none;font-size:12.5px;padding:2px}
+
+.signature-area{margin-top:30px;border-top:1px solid #000}
+.signature-row{display:flex;justify-content:space-between}
+.signature-box{flex:1;text-align:center;padding:0 10px}
+.signature-box:not(:last-child){border-right:1px solid #000}
+.sig-role{font-size:12px;font-weight:600;color:#000;margin-bottom:4px}
+.sig-space{height:60px;border-bottom:1.5px solid #000;margin-bottom:6px}
+.sig-name{font-size:12px;color:#000;min-height:18px}
+
+/* ===== PAGE 2 SIGNATURE ROWS (বড় হাইট) ===== */
+.p2-sig-section{margin-top:14px}
+.p2-sig-row{display:flex;border:1px solid #000;border-bottom:none}
+.p2-sig-row:last-child{border-bottom:1px solid #000}
+.p2-sig-role{background:#f0f0f0;font-size:12px;font-weight:600;color:#000;padding:10px 14px;width:160px;display:flex;flex-direction:column;justify-content:center;border-right:1px solid #000;flex-shrink:0}
+.p2-sig-role small{font-size:10px;font-weight:400;color:#444;margin-top:3px;display:block}
+.p2-sig-content{flex:1;display:flex;align-items:center;padding:4px 8px;min-height:65px}
+.p2-sig-line{width:100%;height:1px;background:#000;margin-top:auto;margin-bottom:8px}
+
+.page2-header{text-align:center;padding-bottom:8px;border-bottom:1.5px solid #000;margin-bottom:14px}
+.page2-header h3{font-size:14px;font-weight:700;color:#000}
+.cont-note{font-size:11px;color:#000;margin-top:2px}
+
+.purpose-list{list-style:none;padding:0;counter-reset:item}
+.purpose-list li{counter-increment:item;font-size:13px;color:#000;line-height:2;padding-left:28px;position:relative}
+.purpose-list li::before{content:counter(item, bengali);position:absolute;left:0;top:3px;width:20px;height:20px;border:1.5px solid #000;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#000;background:#fff}
+
+.verification-text{font-size:13px;color:#000;line-height:1.95;text-align:justify}
+
+.verify-table,.approval-table{width:100%;border-collapse:collapse;margin-top:10px}
+.verify-table td,.approval-table td{padding:6px 10px;border:1px solid #000;font-size:13px;color:#000}
+.verify-table .label-cell,.approval-table .label-cell{background:#f0f0f0;font-weight:600;color:#000;width:20%}
+.verify-table input,.approval-table input,.approval-table textarea{border-bottom:none;font-size:12.5px;padding:2px}
+
+.checkbox-group{display:flex;flex-direction:column;gap:3px;margin:7px 0}
+.checkbox-item{display:flex;align-items:center;gap:8px;font-size:13px;color:#000;cursor:pointer;padding:3px 0}
+.checkbox-item input[type="checkbox"]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:1.5px solid #000;border-radius:2px;position:relative;cursor:pointer;flex-shrink:0;background:#fff;padding:0}
+.checkbox-item input[type="checkbox"]:checked{background:#000;border-color:#000}
+.checkbox-item input[type="checkbox"]:checked::after{content:'';position:absolute;left:5px;top:1px;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+
+.approval-role{font-size:12.5px;color:#000;font-weight:500}
+.footer-note{margin-top:12px;padding:6px 0;border-top:1px solid #000;font-size:10.5px;color:#000;text-align:center;line-height:1.6}
+
+/* ===== TOAST ===== */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);background:#111;color:#fff;padding:12px 28px;border-radius:6px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:all .35s;pointer-events:none;font-family:'Noto Sans Bengali',sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{background:#1a7a1a}
+.toast.error{background:#a00}
+
+/* ===== LOADING ===== */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:9998;flex-direction:column;gap:12px}
+.loading-overlay.show{display:flex}
+.spinner{width:36px;height:36px;border:3px solid #ddd;border-top-color:#111;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:#333;font-weight:500}
+
+@media print{
+    *{color:#000!important}
+    body{background:#fff!important;padding:0}
+    .top-nav,.dashboard,.history,.management,.toast,.loading-overlay{display:none!important}
+    .print-area{display:block!important}
+    .page{border:none;margin:0 auto;width:100%;page-break-after:always;background:#fff!important}
+    .page:last-child{page-break-after:auto}
+    .form-title-bar{background:#000!important}
+    .section-title{background:#000!important}
+    .checkbox-item input[type="checkbox"]:checked{background:#000!important}
+    input[type="text"],input[type="date"],select,textarea{border-bottom:1px solid #000!important;background:#fff!important}
+    .cell-value input,.cell-value select,.verify-table input,.approval-table input,.approval-table textarea,.form-table input{border-bottom:1px solid #000!important}
+    .sig-space,.p2-sig-line{border-bottom:1px solid #000!important;height:1px!important;background:#000!important}
+    .form-table .label-cell,.cell-label,.verify-table .label-cell,.approval-table .label-cell,.p2-sig-role{background:#fff!important}
+    .purpose-list li::before{background:#fff!important;color:#000!important;border-color:#000!important}
+    .page-number{display:block!important}
+}
+
+@media(max-width:800px){
+    body{padding:8px}
+    .page{width:100%}
+    .page-inner{padding:8mm}
+    .meta-row{flex-direction:column;gap:8px}
+    .meta-block.right{text-align:left}
+    .info-grid{grid-template-columns:1fr}
+    .info-cell{border-right:none}
+    .cell-label{min-width:100px}
+    .header-meta{flex-direction:column}
+    .header-meta-item{border-right:none;border-bottom:1px solid #000}
+    .header-meta-item:last-child{border-bottom:none}
+    .signature-row{flex-direction:column;gap:16px}
+    .signature-box:not(:last-child){border-right:none;border-bottom:1px solid #000;padding-bottom:16px}
+    .p2-sig-row{flex-direction:column}
+    .p2-sig-role{width:100%;border-right:none;border-bottom:1px solid #000}
+    .dash-stats{grid-template-columns:1fr 1fr}
+    .stat-card{border-bottom:1px solid #ddd}
+    .mgmt-form{grid-template-columns:1fr}
+}
+
+</style>
+
+</head>
+
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">ডেটা সংরক্ষণ হচ্ছে...</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- NAVIGATION -->
+<div class="top-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')"><i class="fas fa-tachometer-alt"></i> ড্যাশবোর্ড</button>
+    <button class="nav-btn" onclick="showView('entry')"><i class="fas fa-plus-circle"></i> নতুন আবেদন</button>
+    <button class="nav-btn" onclick="showView('history')"><i class="fas fa-history"></i> ইতিহাস</button>
+    <button class="nav-btn" onclick="showView('management')"><i class="fas fa-users-cog"></i> ম্যানেজমেন্ট</button>
+</div>
+
+<!-- ===== DASHBOARD ===== -->
+<div class="dashboard show" id="dashboardView">
+    <div class="dash-header">
+        <div class="dash-logo"><img src="https://www.monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="MonicoPharma"></div>
+        <div>
+            <div class="dash-title">DCC বিশেষ ডিসকাউন্ট অনুমোদন সিস্টেম</div>
+            <div class="dash-sub">MonicoPharma Limited — কুষ্টিয়া ডিপো</div>
+        </div>
+    </div>
+    <div class="dash-stats">
+        <div class="stat-card"><div class="stat-num" id="statTotal">0</div><div class="stat-label">মোট আবেদন</div></div>
+        <div class="stat-card"><div class="stat-num" id="statPending">0</div><div class="stat-label">অপেক্ষমাণ</div></div>
+        <div class="stat-card"><div class="stat-num" id="statApproved">0</div><div class="stat-label">অনুমোদিত</div></div>
+        <div class="stat-card"><div class="stat-num" id="statRejected">0</div><div class="stat-label">প্রত্যাখ্যাত</div></div>
+    </div>
+    <div class="dash-actions">
+        <button class="dash-action-btn primary" onclick="showView('entry')"><i class="fas fa-plus"></i> নতুন আবেদন তৈরি করুন</button>
+        <button class="dash-action-btn" onclick="showView('history')"><i class="fas fa-list"></i> সকল আবেদন দেখুন</button>
+    </div>
+    <div class="dash-recent">
+        <h3>সাম্প্রতিক আবেদনসমূহ</h3>
+        <table class="recent-table">
+            <thead><tr><th>ফর্ম নং</th><th>তারিখ</th><th>কেমিস্ট</th><th>ডিসকাউন্ট</th><th>অবস্থা</th></tr></thead>
+            <tbody id="recentTableBody"><tr><td colspan="5" style="text-align:center;color:#999;padding:30px">কোনো আবেদন নেই</td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ===== MANAGEMENT (Applicant Info) ===== -->
+<div class="management" id="managementView">
+    <div class="mgmt-header">
+        <h2><i class="fas fa-users-cog" style="margin-right:8px"></i>আবেদনকারী ম্যানেজমেন্ট</h2>
+    </div>
+    <div class="mgmt-body">
+        <p style="margin-bottom:15px;font-size:13px;color:#444"><i class="fas fa-info-circle"></i> এখানে আবেদনকারীদের আইডি ও তথ্য সংরক্ষণ করা হয়। আবেদন ফর্মে আইডি দিলে তথ্যগুলো অটো ফিল হবে।</p>
+        <div class="mgmt-form">
+            <div>
+                <label>আবেদনকারী আইডি *</label>
+                <input type="text" id="mgmtApplicantId" placeholder="যেমন: MPO001">
+            </div>
+            <div>
+                <label>ডিপোর নাম</label>
+                <input type="text" id="mgmtDepotName" value="কুষ্টিয়া ডিপো">
+            </div>
+            <div>
+                <label>রিজিয়ন</label>
+                <input type="text" id="mgmtRegion" value="কুষ্টিয়া">
+            </div>
+            <div>
+                <label>টেরিটরি</label>
+                <input type="text" id="mgmtTerritory" placeholder="টেরিটরি">
+            </div>
+            <div>
+                <label>MPO নাম</label>
+                <input type="text" id="mgmtMpoName" placeholder="MPO এর নাম">
+            </div>
+            <div>
+                <label>AM নাম</label>
+                <input type="text" id="mgmtAmName" placeholder="AM এর নাম">
+            </div>
+            <div>
+                <label>RSM নাম</label>
+                <input type="text" id="mgmtRsmName" placeholder="RSM এর নাম">
+            </div>
+            <div class="full" style="display:flex;align-items:flex-end;">
+                <button class="nav-btn save-btn" onclick="saveApplicant()"><i class="fas fa-save"></i> আবেদনকারী সংরক্ষণ করুন</button>
+            </div>
+        </div>
+        <div id="applicantListBody" style="margin-top:20px;"></div>
+    </div>
+</div>
+
+<!-- ===== HISTORY ===== -->
+<div class="history" id="historyView">
+    <div class="hist-header">
+        <h2><i class="fas fa-history" style="margin-right:8px"></i>আবেদনের ইতিহাস</h2>
+    </div>
+    <div class="hist-search">
+        <input type="text" id="searchInput" placeholder="ফর্ম নং, কেমিস্টের নাম বা DCC দিয়ে খুঁজুন..." oninput="loadHistory()">
+    </div>
+    <div class="hist-body" id="historyBody">
+        <div class="hist-empty"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>কোনো আবেদন পাওয়া যায়নি</div>
+    </div>
+</div>
+
+<!-- ===== ENTRY / PRINT AREA ===== -->
+<div class="print-area" id="entryView">
+
+<!-- পেজ ১ -->
+<div class="page" id="page1">
+<div class="page-inner">
+
+    <div class="official-header">
+        <div class="header-top">
+            <div class="logo-box">
+                <img src="https://www.monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="MonicoPharma">
+            </div>
+            <div class="header-info">
+                <div class="company-name">MonicoPharma Limited</div>
+                
+                <div class="address-line">
+                    <i class="fas fa-map-marker-alt"></i>
+                    7, Gausnagar, New Eskaton, Ramna, Dhaka 1205, Bangladesh<br>
+                    <i class="fas fa-phone"></i>
+                    +8801974445666, +8801329731250, +8802222227976
+                    &nbsp;|&nbsp;
+                    <i class="fas fa-envelope"></i>
+                    info@monicopharma.com
+                </div>
+            </div>
+        </div>
+        <div class="header-meta">
+            <div class="header-meta-item">
+                <span class="meta-label">ফর্ম নং:</span>
+                <span class="meta-value" id="formNumberDisplay">---</span>
+            </div>
+            <div class="header-meta-item">
+                <span class="meta-label">রিভিশন:</span>
+                <span class="meta-value">Rev. 00</span>
+            </div>
+            <div class="header-meta-item">
+                <span class="meta-label">ভার্সন:</span>
+                <span class="meta-value">V.1.0</span>
+            </div>
+            <div class="header-meta-item">
+                <span class="meta-label">ফর্ম আইডি:</span>
+                <span class="meta-value" id="formIdDisplay">---</span>
+            </div>
+            <div class="header-meta-item">
+                <span class="meta-label">তারিখ:</span>
+                <span class="meta-value" id="headerDateDisplay">---</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-title-bar">
+        <h2>
+            ডাক্তার কাম কেমিস্ট (DCC) বিশেষ ডিসকাউন্ট অনুমোদন আবেদনপত্র
+            <div class="title-en">DCC Special Discount Approval Application Form</div>
+        </h2>
+    </div>
+
+    <div class="meta-row">
+        <div class="meta-block">তারিখ : <span class="auto-field" id="dateDisplay">---</span></div>
+        <div class="meta-block right">বরাবর<br>মহাব্যবস্থাপক</div>
+        <div class="meta-block right">মনিকো ফার্মা লিমিটেড <br>7, গাউসনগর, নিউ ইস্কাটন রোড,
+মগবাজার, রমনা, ঢাকা-১২০৫, বাংলাদেশ<br></div>
+    </div>
+
+    <div class="subject-box">
+        <p><b>বিষয়:</b> ডাক্তার কাম কেমিস্ট (DCC) কার্যক্রমের আওতায় বিশেষ ডিসকাউন্ট প্রদানের অনুমোদন প্রসঙ্গে।</p>
+    </div>
+
+    <div class="body-text">
+        <p class="salute">জনাব,</p>
+        <p>বিনীত নিবেদন এই যে, কোম্পানির বিক্রয় কার্যক্রমকে আরও গতিশীল করা, বাজারে প্রতিযোগিতামূলক অবস্থান সুদৃঢ় করা, নতুন প্রেসক্রিপশন সৃষ্টি, পণ্যের বাজার সম্প্রসারণ এবং নির্ধারিত বিক্রয় লক্ষ্যমাত্রা অর্জনের লক্ষ্যে ডাক্তার কাম কেমিস্ট (DCC) কার্যক্রমের আওতায় বিশেষ ডিসকাউন্ট প্রদানের প্রয়োজনীয়তা দেখা দিয়েছে।</p>
+        <p>উল্লেখ্য যে, প্রস্তাবিত ডিসকাউন্টের যৌক্তিকতা নিশ্চিত করার জন্য বাজার পরিস্থিতি পর্যালোচনা করা হয়েছে এবং প্রতিযোগী প্রতিষ্ঠানের ইনভয়েসসহ প্রয়োজনীয় সহায়ক নথিপত্র সংযুক্ত করা হয়েছে।</p>
+        <p>অতএব, নিম্নোক্ত বিবরণ অনুযায়ী বিশেষ ডিসকাউন্ট প্রদানের জন্য আপনার সদয় অনুমোদন প্রার্থনা করছি।</p>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title"><i class="fas fa-user-edit"></i> আবেদনকারীর তথ্য</div>
+        <div class="section-body" style="padding:0">
+            <div class="info-grid">
+                <div class="info-cell">
+                    <div class="cell-label">আবেদনকারী আইডি</div>
+                    <div class="cell-value"><input type="text" id="applicantId" placeholder="আইডি নং লিখুন" onblur="fetchApplicantData()"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">ডিপোর নাম</div>
+                    <div class="cell-value"><input type="text" id="depotName" value="কুষ্টিয়া ডিপো" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">রিজিয়ন</div>
+                    <div class="cell-value"><input type="text" id="regionField" value="কুষ্টিয়া" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">টেরিটরি</div>
+                    <div class="cell-value"><input type="text" id="territory" placeholder="টেরিটরি লিখুন" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">MPO নাম</div>
+                    <div class="cell-value"><input type="text" id="mpoName" placeholder="MPO এর নাম" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">AM নাম</div>
+                    <div class="cell-value"><input type="text" id="amName" placeholder="AM এর নাম" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">RSM নাম</div>
+                    <div class="cell-value"><input type="text" id="rsmName" placeholder="RSM এর নাম" readonly style="background:#f5f5f5"></div>
+                </div>
+                <div class="info-cell">
+                    <div class="cell-label">ফর্ম আইডি</div>
+                    <div class="cell-value"><span class="auto-field" id="formIdDisplay2" style="border-bottom:none;font-size:12px">---</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title"><i class="fas fa-clipboard-list"></i> প্রস্তাবের বিবরণ</div>
+        <div class="section-body">
+            <table class="form-table">
+                <tr>
+                    <td class="label-cell">কেমিস্টের নাম</td>
+                    <td><input type="text" id="chemistName" placeholder="কেমিস্টের পূর্ণ নাম লিখুন"></td>
+                </tr>
+                <tr>
+                    <td class="label-cell">DCC (ডাক্তার/কেমিস্টের নাম)</td>
+                    <td><input type="text" id="dccName" placeholder="ডাক্তার ও কেমিস্টের নাম লিখুন"></td>
+                </tr>
+                <tr>
+                    <td class="label-cell">কার্যকর সময়কাল</td>
+                    <td>
+                        <input type="date" id="startDate" style="width:145px"> হতে
+                        <input type="date" id="endDate" style="width:145px"> পর্যন্ত
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell">প্রস্তাবিত ডিসকাউন্ট</td>
+                    <td>
+                        <input type="number" id="discountPercent" placeholder="শতকরা হার লিখুন" style="width:120px;display:inline-block"> % (শতাংশ)
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="signature-area">
+        <div class="signature-row">
+            <div class="signature-box">
+                <div class="sig-role">MPO স্বাক্ষর</div>
+                <div class="sig-space"></div>
+                <div class="sig-name" id="sigMpoName"></div>
+            </div>
+            <div class="signature-box">
+                <div class="sig-role">AM স্বাক্ষর</div>
+                <div class="sig-space"></div>
+                <div class="sig-name" id="sigAmName"></div>
+            </div>
+            <div class="signature-box">
+                <div class="sig-role">RSM স্বাক্ষর</div>
+                <div class="sig-space"></div>
+                <div class="sig-name" id="sigRsmName"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div class="page-number">পৃষ্ঠা - ১</div>
+</div>
+
+<!-- পেজ ২ -->
+<div class="page" id="page2">
+<div class="page-inner">
+
+    <div class="page2-header">
+        <h3>ডাক্তার কাম কেমিস্ট (DCC) বিশেষ ডিসকাউন্ট অনুমোদন আবেদনপত্র</h3>
+        <div class="cont-note">(চলমান)</div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title"><i class="fas fa-bullseye"></i> বিশেষ ডিসকাউন্ট প্রদানের উদ্দেশ্য</div>
+        <div class="section-body">
+            <ul class="purpose-list">
+                <li>বাজারে প্রতিযোগিতামূলক অবস্থান বজায় রাখা।</li>
+                <li>নতুন প্রেসক্রিপশন সৃষ্টি ও বিক্রয় বৃদ্ধি করা।</li>
+                <li>নির্বাচিত ডাক্তার ও কেমিস্টের মাধ্যমে পণ্যের বাজার সম্প্রসারণ।</li>
+                <li>নির্ধারিত বিক্রয় লক্ষ্যমাত্রা অর্জন।</li>
+                <li>গ্রাহকের সাথে দীর্ঘমেয়াদি ব্যবসায়িক সম্পর্ক সুদৃঢ় করা।</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title"><i class="fas fa-clipboard-check"></i> Depot In-Charge কর্তৃক যাচাইকরণ</div>
+        <div class="section-body">
+            <p class="verification-text">আমি প্রত্যয়ন করছি যে, আবেদনপত্রে প্রদত্ত তথ্যসমূহ যাচাই করা হয়েছে। সংযুক্ত অন্যান্য কোম্পানির ইনভয়েস এবং প্রয়োজনীয় সহায়ক নথিপত্র পর্যালোচনা করে প্রস্তাবিত বিশেষ ডিসকাউন্টের যৌক্তিকতা নিশ্চিত করা হয়েছে। অতএব, আবেদনটি পরবর্তী অনুমোদনের জন্য সুপারিশ করা হলো।</p>
+            <table class="verify-table">
+                <tr><td class="label-cell">নাম</td><td><input type="text" id="depotInChargeName" placeholder="Depot In-Charge এর নাম"></td></tr>
+                <tr><td class="label-cell">স্বাক্ষর</td><td></td></tr>
+                <tr><td class="label-cell">তারিখ</td><td><input type="date" id="depotSignDate"></td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-title"><i class="fas fa-paperclip"></i> সংযুক্তি (Supporting Documents)</div>
+        <div class="section-body">
+            <div class="checkbox-group">
+                <label class="checkbox-item"><input type="checkbox" id="attachInvoice"><span>অন্যান্য কোম্পানির ইনভয়েসের কপি</span></label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ম্যানুয়াল স্বাক্ষর সেকশন -->
+    <div class="p2-sig-section">
+        <div class="p2-sig-row">
+            <div class="p2-sig-role">Verified by Sales Admin<br></div>
+            <div class="p2-sig-content"><div class="p2-sig-line"></div></div>
+        </div>
+        <div class="p2-sig-row">
+            <div class="p2-sig-role">Recomend by PMD Manager<br></div>
+            <div class="p2-sig-content"><div class="p2-sig-line"></div></div>
+        </div>
+        <div class="p2-sig-row">
+            <div class="p2-sig-role">Head of Operation<br></div>
+            <div class="p2-sig-content"><div class="p2-sig-line"></div></div>
+        </div>
+        <div class="p2-sig-row">
+            <div class="p2-sig-role">IT Department<br></div>
+            <div class="p2-sig-content"><div class="p2-sig-line"></div></div>
+        </div>
+    </div>
+
+    <div class="footer-note">
+        এই ফর্মটি অভ্যন্তরীণ ব্যবহারের জন্য এবং অনুমোদনের পর সংরক্ষণ করতে হবে।
+    </div>
+
+</div>
+<div class="page-number">পৃষ্ঠা - ২</div>
+</div>
+
+<!-- এন্ট্রি পেজ অ্যাকশন বার -->
+<div style="max-width:210mm;margin:0 auto 30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center" id="entryActions">
+    <button class="nav-btn save-btn" onclick="saveToFirebase()"><i class="fas fa-cloud-upload-alt"></i> সংরক্ষণ করুন</button>
+    <button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>
+    <button class="nav-btn danger" onclick="resetForm()"><i class="fas fa-redo"></i> রিসেট</button>
+    <button class="nav-btn" onclick="showView('dashboard')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ড্যাশবোর্ডে ফিরুন</button>
+</div>
+
+</div><!-- /print-area -->
+
+<script>
+
+/* ===== FIREBASE INIT ===== */
+const firebaseConfig = {
+    apiKey: "AIzaSyAPgdJMSiv1LaVBA1oGoNPyfsT-VV2wr1I",
+    authDomain: "kushtia-depot.firebaseapp.com",
+    databaseURL: "https://kushtia-depot-default-rtdb.firebaseio.com",
+    projectId: "kushtia-depot",
+    storageBucket: "kushtia-depot.firebasestorage.app",
+    messagingSenderId: "288838128044",
+    appId: "1:288838128044:web:c5bab4a0957f5f71846a09",
+    measurementId: "G-5D5S5N9DP3"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ===== UTILITY ===== */
+function getTodayBangla() {
+    var now = new Date();
+    var day = String(now.getDate()).padStart(2, '0');
+    var months = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
+    return day + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
+}
+
+// DCCKS2026001, DCCKS2026002 format
+function generateFormNumber(callback) {
+    var year = new Date().getFullYear();
+    var counterRef = db.ref('counters/formNumber_' + year);
+    counterRef.transaction(function(count) {
+        return (count || 0) + 1;
+    }, function(error, committed, snapshot) {
+        if (committed) {
+            var num = snapshot.val();
+            var formattedNum = String(num).padStart(3, '0');
+            var formNo = 'DCCKS' + year + formattedNum; // Both Form No & Form ID are same
+            callback(formNo);
+        } else {
+            callback('DCCKS' + year + '001');
+        }
+    });
+}
+
+function showToast(msg, type) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast ' + (type || '') + ' show';
+    setTimeout(function() { t.className = 'toast'; }, 3000);
+}
+
+function showLoading(text) {
+    document.getElementById('loading').querySelector('.loading-text').textContent = text || 'ডেটা সংরক্ষণ হচ্ছে...';
+    document.getElementById('loading').classList.add('show');
+}
+function hideLoading() {
+    document.getElementById('loading').classList.remove('show');
+}
+
+/* ===== VIEW SWITCHING ===== */
+function showView(view) {
+    document.getElementById('dashboardView').classList.remove('show');
+    document.getElementById('historyView').classList.remove('show');
+    document.getElementById('entryView').classList.remove('show');
+    document.getElementById('managementView').classList.remove('show');
+    document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
+
+    if (view === 'dashboard') {
+        document.getElementById('dashboardView').classList.add('show');
+        document.querySelectorAll('.nav-btn')[0].classList.add('active');
+        loadDashboard();
+    } else if (view === 'history') {
+        document.getElementById('historyView').classList.add('show');
+        document.querySelectorAll('.nav-btn')[2].classList.add('active');
+        loadHistory();
+    } else if (view === 'management') {
+        document.getElementById('managementView').classList.add('show');
+        document.querySelectorAll('.nav-btn')[3].classList.add('active');
+        loadApplicants();
+    } else if (view === 'entry') {
+        document.getElementById('entryView').classList.add('show');
+        document.querySelectorAll('.nav-btn')[1].classList.add('active');
+        resetEntryActions(); // reset buttons
+        initFormFields();
+        // Ensure inputs are editable
+        document.querySelectorAll('#entryView input, #entryView textarea').forEach(function(el) {
+            if(el.id !== 'depotName' && el.id !== 'regionField' && el.id !== 'territory' && el.id !== 'mpoName' && el.id !== 'amName' && el.id !== 'rsmName') {
+                el.readOnly = false;
+                el.style.background = '#fff';
+            }
+        });
+        document.querySelectorAll('#entryView input[type="checkbox"]').forEach(function(el) { el.disabled = false; });
+    }
+}
+
+function resetEntryActions() {
+    document.getElementById('entryActions').innerHTML = `
+        <button class="nav-btn save-btn" onclick="saveToFirebase()"><i class="fas fa-cloud-upload-alt"></i> সংরক্ষণ করুন</button>
+        <button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>
+        <button class="nav-btn danger" onclick="resetForm()"><i class="fas fa-redo"></i> রিসেট</button>
+        <button class="nav-btn" onclick="showView('dashboard')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ড্যাশবোর্ডে ফিরুন</button>
+    `;
+}
+
+/* ===== INIT FORM ===== */
+function initFormFields() {
+    var banglaDate = getTodayBangla();
+    document.getElementById('dateDisplay').textContent = banglaDate;
+    document.getElementById('headerDateDisplay').textContent = banglaDate;
+    
+    generateFormNumber(function(num) {
+        document.getElementById('formNumberDisplay').textContent = num;
+        document.getElementById('formIdDisplay').textContent = num; // Form ID & Form No are SAME
+        document.getElementById('formIdDisplay2').textContent = num;
+    });
+}
+
+function resetForm() {
+    if (!confirm('আপনি কি ফর্মটি রিসেট করতে চান?')) return;
+    document.querySelectorAll('#entryView input[type="text"], #entryView input[type="number"]').forEach(function(inp) { 
+        if (!inp.readOnly) inp.value = ''; 
+    });
+    document.querySelectorAll('#entryView input[type="date"]').forEach(function(d) { d.value = ''; });
+    document.querySelectorAll('#entryView textarea').forEach(function(t) { t.value = ''; });
+    document.querySelectorAll('#entryView input[type="checkbox"]').forEach(function(c) { c.checked = false; });
+    document.getElementById('sigMpoName').textContent = '';
+    document.getElementById('sigAmName').textContent = '';
+    document.getElementById('sigRsmName').textContent = '';
+    initFormFields();
+    showToast('ফর্ম রিসেট হয়েছে', '');
+}
+
+/* ===== APPLICANT AUTO FILL ===== */
+function fetchApplicantData() {
+    var id = document.getElementById('applicantId').value.trim();
+    if (!id) return;
+    
+    db.ref('applicants/' + id).once('value').then(function(snapshot) {
+        if (snapshot.exists()) {
+            var d = snapshot.val();
+            document.getElementById('depotName').value = d.depotName || 'কুষ্টিয়া ডিপো';
+            document.getElementById('regionField').value = d.region || 'কুষ্টিয়া';
+            document.getElementById('territory').value = d.territory || '';
+            document.getElementById('mpoName').value = d.mpoName || '';
+            document.getElementById('amName').value = d.amName || '';
+            document.getElementById('rsmName').value = d.rsmName || '';
+            
+            // Update signatures
+            document.getElementById('sigMpoName').textContent = d.mpoName || '';
+            document.getElementById('sigAmName').textContent = d.amName || '';
+            document.getElementById('sigRsmName').textContent = d.rsmName || '';
+            
+            showToast('আবেদনকারীর তথ্য লোড হয়েছে', 'success');
+        } else {
+            showToast('আবেদনকারী আইডি পাওয়া যায়নি', 'error');
+            document.getElementById('territory').value = '';
+            document.getElementById('mpoName').value = '';
+            document.getElementById('amName').value = '';
+            document.getElementById('rsmName').value = '';
+        }
+    });
+}
+
+/* ===== COLLECT FORM DATA ===== */
+function collectData() {
+    var formNo = document.getElementById('formNumberDisplay').textContent;
+    return {
+        formNumber: formNo,
+        formId: formNo, // Form ID is same as Form Number
+        dateBangla: document.getElementById('dateDisplay').textContent,
+        applicantId: document.getElementById('applicantId').value,
+        depotName: document.getElementById('depotName').value,
+        region: document.getElementById('regionField').value,
+        territory: document.getElementById('territory').value,
+        mpoName: document.getElementById('mpoName').value,
+        amName: document.getElementById('amName').value,
+        rsmName: document.getElementById('rsmName').value,
+        chemistName: document.getElementById('chemistName').value,
+        dccName: document.getElementById('dccName').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        discountPercent: document.getElementById('discountPercent').value,
+        depotInChargeName: document.getElementById('depotInChargeName').value,
+        depotSignDate: document.getElementById('depotSignDate').value,
+        attachInvoice: document.getElementById('attachInvoice').checked,
+        status: 'pending',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+}
+
+/* ===== SAVE TO FIREBASE ===== */
+function saveToFirebase() {
+    var data = collectData();
+
+    // ভ্যালিডেশন
+    if (!data.applicantId) { showToast('আবেদনকারী আইডি লিখুন', 'error'); document.getElementById('applicantId').focus(); return; }
+    if (!data.chemistName) { showToast('কেমিস্টের নাম লিখুন', 'error'); document.getElementById('chemistName').focus(); return; }
+    if (!data.dccName) { showToast('DCC এর নাম লিখুন', 'error'); document.getElementById('dccName').focus(); return; }
+    if (!data.discountPercent || data.discountPercent <= 0) { showToast('ডিসকাউন্টের শতাংশ লিখুন', 'error'); document.getElementById('discountPercent').focus(); return; }
+    if (!data.startDate || !data.endDate) { showToast('কার্যকর সময়কাল নির্বাচন করুন', 'error'); return; }
+
+    showLoading('ডেটা সংরক্ষণ হচ্ছে...');
+
+    var newRef = db.ref('dccApplications').push();
+    newRef.set(data).then(function() {
+        hideLoading();
+        showToast('আবেদন সফলভাবে সংরক্ষিত হয়েছে', 'success');
+        resetForm();
+    }).catch(function(err) {
+        hideLoading();
+        showToast('সংরক্ষণে সমস্যা: ' + err.message, 'error');
+    });
+}
+
+/* ===== LOAD DASHBOARD ===== */
+function loadDashboard() {
+    db.ref('dccApplications').orderByChild('createdAt').limitToLast(50).once('value', function(snapshot) {
+        var all = [];
+        var pending = 0, approved = 0, rejected = 0;
+        snapshot.forEach(function(child) {
+            var d = child.val();
+            d._key = child.key;
+            all.push(d);
+            if (d.status === 'pending') pending++;
+            else if (d.status === 'approved') approved++;
+            else if (d.status === 'rejected') rejected++;
+        });
+        all.reverse();
+
+        document.getElementById('statTotal').textContent = all.length;
+        document.getElementById('statPending').textContent = pending;
+        document.getElementById('statApproved').textContent = approved;
+        document.getElementById('statRejected').textContent = rejected;
+
+        var tbody = document.getElementById('recentTableBody');
+        if (all.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:30px">কোনো আবেদন নেই</td></tr>';
+            return;
+        }
+
+        var html = '';
+        var recent = all.slice(0, 10);
+        for (var i = 0; i < recent.length; i++) {
+            var r = recent[i];
+            var statusClass = r.status === 'approved' ? 'status-approved' : (r.status === 'rejected' ? 'status-rejected' : 'status-pending');
+            var statusText = r.status === 'approved' ? 'অনুমোদিত' : (r.status === 'rejected' ? 'প্রত্যাখ্যাত' : 'অপেক্ষমাণ');
+            html += '<tr>';
+            html += '<td style="font-weight:600">' + r.formNumber + '</td>';
+            html += '<td>' + (r.dateBangla || '---') + '</td>';
+            html += '<td>' + (r.chemistName || '---') + '</td>';
+            html += '<td>' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td>';
+            html += '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>';
+            html += '</tr>';
+        }
+        tbody.innerHTML = html;
+    });
+}
+
+/* ===== LOAD HISTORY ===== */
+function loadHistory() {
+    var search = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+    var body = document.getElementById('historyBody');
+
+    db.ref('dccApplications').orderByChild('createdAt').once('value', function(snapshot) {
+        var all = [];
+        snapshot.forEach(function(child) {
+            var d = child.val();
+            d._key = child.key;
+            all.push(d);
+        });
+        all.reverse();
+
+        if (search) {
+            all = all.filter(function(d) {
+                return (d.formNumber || '').toLowerCase().indexOf(search) !== -1 ||
+                       (d.chemistName || '').toLowerCase().indexOf(search) !== -1 ||
+                       (d.dccName || '').toLowerCase().indexOf(search) !== -1 ||
+                       (d.mpoName || '').toLowerCase().indexOf(search) !== -1;
+            });
+        }
+
+        if (all.length === 0) {
+            body.innerHTML = '<div class="hist-empty"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>কোনো আবেদন পাওয়া যায়নি</div>';
+            return;
+        }
+
+        var html = '<table class="hist-table"><thead><tr>';
+        html += '<th>ফর্ম নং</th><th>তারিখ</th><th>কেমিস্ট</th><th>DCC</th><th>ডিসকাউন্ট</th><th>অবস্থা</th><th>অ্যাকশন</th>';
+        html += '</tr></thead><tbody>';
+
+        for (var i = 0; i < all.length; i++) {
+            var r = all[i];
+            var statusClass = r.status === 'approved' ? 'status-approved' : (r.status === 'rejected' ? 'status-rejected' : 'status-pending');
+            var statusText = r.status === 'approved' ? 'অনুমোদিত' : (r.status === 'rejected' ? 'প্রত্যাখ্যাত' : 'অপেক্ষমাণ');
+
+            html += '<tr>';
+            html += '<td style="font-weight:600;white-space:nowrap">' + r.formNumber + '</td>';
+            html += '<td style="white-space:nowrap">' + (r.dateBangla || '---') + '</td>';
+            html += '<td>' + (r.chemistName || '---') + '</td>';
+            html += '<td>' + (r.dccName || '---') + '</td>';
+            html += '<td style="font-weight:600">' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td>';
+            html += '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>';
+            html += '<td style="white-space:nowrap">';
+            html += '<button class="hist-action-btn" onclick="viewApplication(\'' + r._key + '\')"><i class="fas fa-eye"></i> দেখুন ও প্রিন্ট</button> ';
+            html += '<button class="hist-action-btn del" onclick="deleteApplication(\'' + r._key + '\')"><i class="fas fa-trash"></i></button>';
+            html += '</td>';
+            html += '</tr>';
+        }
+
+        html += '</tbody></table>';
+        body.innerHTML = html;
+    });
+}
+
+/* ===== VIEW APPLICATION (Read-only Print Mode) ===== */
+function viewApplication(key) {
+    showLoading('ডেটা লোড হচ্ছে...');
+    db.ref('dccApplications/' + key).once('value', function(snapshot) {
+        hideLoading();
+        var d = snapshot.val();
+        if (!d) { showToast('আবেদন পাওয়া যায়নি', 'error'); return; }
+
+        document.getElementById('formNumberDisplay').textContent = d.formNumber || '---';
+        document.getElementById('formIdDisplay').textContent = d.formId || '---';
+        document.getElementById('formIdDisplay2').textContent = d.formId || '---';
+        document.getElementById('dateDisplay').textContent = d.dateBangla || '---';
+        document.getElementById('headerDateDisplay').textContent = d.dateBangla || '---';
+        document.getElementById('applicantId').value = d.applicantId || '';
+        document.getElementById('depotName').value = d.depotName || 'কুষ্টিয়া ডিপো';
+        document.getElementById('regionField').value = d.region || 'কুষ্টিয়া';
+        document.getElementById('territory').value = d.territory || '';
+        document.getElementById('mpoName').value = d.mpoName || '';
+        document.getElementById('amName').value = d.amName || '';
+        document.getElementById('rsmName').value = d.rsmName || '';
+        document.getElementById('chemistName').value = d.chemistName || '';
+        document.getElementById('dccName').value = d.dccName || '';
+        document.getElementById('startDate').value = d.startDate || '';
+        document.getElementById('endDate').value = d.endDate || '';
+        document.getElementById('discountPercent').value = d.discountPercent || '';
+        document.getElementById('depotInChargeName').value = d.depotInChargeName || '';
+        document.getElementById('depotSignDate').value = d.depotSignDate || '';
+        document.getElementById('attachInvoice').checked = d.attachInvoice || false;
+
+        document.getElementById('sigMpoName').textContent = d.mpoName || '';
+        document.getElementById('sigAmName').textContent = d.amName || '';
+        document.getElementById('sigRsmName').textContent = d.rsmName || '';
+
+        // সব ইনপুট read-only করুন
+        document.querySelectorAll('#entryView input, #entryView textarea').forEach(function(el) {
+            el.readOnly = true;
+            el.style.background = '#f5f5f5';
+        });
+        document.querySelectorAll('#entryView input[type="checkbox"]').forEach(function(el) {
+            el.disabled = true;
+        });
+
+        // Show only Print & Back buttons
+        document.getElementById('entryActions').innerHTML = `
+            <button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>
+            <button class="nav-btn" onclick="showView('history')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ইতিহাসে ফিরুন</button>
+        `;
+
+        showView('entry');
+        showToast('দেখার মোড — শুধু প্রিন্ট করতে পারবেন', '');
+    });
+}
+
+/* ===== DELETE APPLICATION ===== */
+function deleteApplication(key) {
+    if (!confirm('আপনি কি এই আবেদনটি মুছে ফেলতে চান?')) return;
+    showLoading('মুছে ফেলা হচ্ছে...');
+    db.ref('dccApplications/' + key).remove().then(function() {
+        hideLoading();
+        showToast('আবেদন মুছে ফেলা হয়েছে', 'success');
+        loadHistory();
+    }).catch(function(err) {
+        hideLoading();
+        showToast('মুছে ফেলতে সমস্যা: ' + err.message, 'error');
+    });
+}
+
+/* ===== MANAGEMENT FUNCTIONS ===== */
+function saveApplicant() {
+    var id = document.getElementById('mgmtApplicantId').value.trim();
+    if(!id) { showToast('আবেদনকারী আইডি লিখুন', 'error'); return; }
+    
+    var data = {
+        depotName: document.getElementById('mgmtDepotName').value,
+        region: document.getElementById('mgmtRegion').value,
+        territory: document.getElementById('mgmtTerritory').value,
+        mpoName: document.getElementById('mgmtMpoName').value,
+        amName: document.getElementById('mgmtAmName').value,
+        rsmName: document.getElementById('mgmtRsmName').value
+    };
+    
+    showLoading('সংরক্ষণ হচ্ছে...');
+    db.ref('applicants/' + id).set(data).then(function() {
+        hideLoading();
+        showToast('আবেদনকারী সংরক্ষিত হয়েছে', 'success');
+        document.getElementById('mgmtApplicantId').value = '';
+        document.getElementById('mgmtTerritory').value = '';
+        document.getElementById('mgmtMpoName').value = '';
+        document.getElementById('mgmtAmName').value = '';
+        document.getElementById('mgmtRsmName').value = '';
+        loadApplicants();
+    }).catch(function(err) {
+        hideLoading();
+        showToast('সংরক্ষণে সমস্যা: ' + err.message, 'error');
+    });
+}
+
+function loadApplicants() {
+    var body = document.getElementById('applicantListBody');
+    db.ref('applicants').once('value', function(snapshot) {
+        if(!snapshot.exists()) {
+            body.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">কোনো আবেদনকারী যুক্ত নেই।</p>';
+            return;
+        }
+        var html = '<table class="hist-table"><thead><tr><th>আইডি</th><th>ডিপো</th><th>রিজিয়ন</th><th>টেরিটরি</th><th>MPO</th><th>AM</th><th>RSM</th><th>অ্যাকশন</th></tr></thead><tbody>';
+        snapshot.forEach(function(child) {
+            var d = child.val();
+            var k = child.key;
+            html += '<tr>';
+            html += '<td style="font-weight:600">' + k + '</td>';
+            html += '<td>' + (d.depotName||'') + '</td>';
+            html += '<td>' + (d.region||'') + '</td>';
+            html += '<td>' + (d.territory||'') + '</td>';
+            html += '<td>' + (d.mpoName||'') + '</td>';
+            html += '<td>' + (d.amName||'') + '</td>';
+            html += '<td>' + (d.rsmName||'') + '</td>';
+            html += '<td><button class="hist-action-btn del" onclick="deleteApplicant(\'' + k + '\')"><i class="fas fa-trash"></i></button></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        body.innerHTML = html;
+    });
+}
+
+function deleteApplicant(id) {
+    if(!confirm('আবেদনকারী মুছে ফেলতে চান?')) return;
+    db.ref('applicants/' + id).remove().then(function() {
+        showToast('মুছে ফেলা হয়েছে', 'success');
+        loadApplicants();
+    });
+}
+
+</script>
+</body>
+</html>
