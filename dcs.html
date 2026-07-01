@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kushtia Depot - VBA Style Report</title>
+    <style>
+        /* Classic Windows 98 / VBA Styles */
+        body {
+            font-family: Tahoma, 'MS Sans Serif', sans-serif;
+            font-size: 11px;
+            background-color: #c0c0c0;
+            color: #000000;
+            margin: 10px;
+            line-height: 1.4;
+        }
+
+        .container {
+            border: 2px groove #ffffff #808080 #808080 #ffffff;
+            background-color: #c0c0c0;
+            padding: 10px;
+        }
+
+        .form-header {
+            background-color: #000080;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 4px 5px;
+            margin-bottom: 0;
+            text-align: center;
+        }
+
+        .header-sub {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            padding: 3px 5px;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #808080;
+            border-right: 1px solid #ffffff;
+            border-top: 1px solid #ffffff;
+            border-left: 1px solid #808080;
+            background-color: #c0c0c0;
+        }
+
+        .header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 5px;
+            border-bottom: 1px solid #808080;
+            border-right: 1px solid #ffffff;
+            border-top: 1px solid #ffffff;
+            border-left: 1px solid #808080;
+            background-color: #c0c0c0;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 700px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
+
+        .section-frame {
+            border: 1px solid #808080;
+            border-right: 1px solid #ffffff;
+            border-bottom: 1px solid #ffffff;
+            background-color: #c0c0c0;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .section-frame:hover { background-color: #d4d0c8; }
+
+        .section-label {
+            font-weight: bold;
+            background-color: #c0c0c0;
+            margin: -6px -6px 5px -6px;
+            padding: 2px 5px;
+            border-bottom: 1px solid #808080;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .data-table { width: 100%; border-collapse: collapse; }
+
+        .data-table td {
+            padding: 2px 5px;
+            border: 1px solid #c0c0c0;
+            vertical-align: middle;
+        }
+
+        .field-name { width: 60%; background-color: #c0c0c0; font-weight: normal; }
+        .field-value {
+            width: 40%; background-color: #ffffff;
+            border: 2px inset #808080 #ffffff #ffffff #808080;
+            padding: 2px 4px; min-height: 16px;
+        }
+
+        .win98-textarea {
+            width: 100%; height: 80px;
+            border: 2px inset #808080 #ffffff #ffffff #808080;
+            background-color: #ffffff; font-family: Tahoma, 'MS Sans Serif', sans-serif;
+            font-size: 11px; padding: 4px; box-sizing: border-box; resize: vertical; color: #000;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            padding-top: 5px;
+        }
+
+        .sig-col {
+            text-align: center;
+            width: 33%;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            font-weight: bold;
+        }
+
+        .action-bar {
+            text-align: right; margin: 10px 0 0 0; padding: 5px;
+            border-top: 1px solid #808080; border-right: 1px solid #ffffff;
+            border-bottom: 1px solid #ffffff; border-left: 1px solid #808080;
+            background-color: #c0c0c0;
+        }
+
+        .win98-btn {
+            background-color: #c0c0c0;
+            border: 2px outset #ffffff #808080 #808080 #ffffff;
+            font-family: Tahoma, 'MS Sans Serif', sans-serif;
+            font-size: 11px; padding: 3px 15px; cursor: pointer; color: #000;
+        }
+
+        .win98-btn:active {
+            border: 2px inset #808080 #ffffff #ffffff #808080;
+            padding: 4px 14px 2px 16px;
+        }
+
+        .util-link {
+            font-size: 10px; color: #000080; text-decoration: underline; cursor: pointer; font-weight: normal;
+        }
+        .util-link:hover { color: #ff0000; }
+        .util-link.add { color: #008000; }
+        .util-link.add:hover { color: #004d00; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 1000;
+            justify-content: center; align-items: center;
+        }
+
+        .modal-content {
+            background-color: #c0c0c0;
+            border: 2px outset #ffffff #808080 #808080 #ffffff;
+            padding: 0; width: 360px; max-height: 80vh; overflow-y: auto;
+            box-shadow: 2px 2px 0px #000;
+        }
+
+        .modal-title-bar {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white; font-weight: bold; font-size: 11px; padding: 2px 5px;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 10;
+        }
+
+        .close-btn {
+            background: #c0c0c0; border: 1px outset #ffffff #808080 #808080 #ffffff;
+            font-size: 10px; font-weight: bold; padding: 0 4px; cursor: pointer;
+            color: #000; line-height: 14px;
+        }
+
+        .modal-body { padding: 15px 15px 10px 15px; }
+        .form-group { margin-bottom: 8px; }
+        .form-group label { display: block; margin-bottom: 3px; font-weight: bold; }
+        
+        .form-group input {
+            width: 100%; border: 2px inset #808080 #ffffff #ffffff #808080;
+            padding: 2px 4px; font-family: Tahoma, 'MS Sans Serif', sans-serif;
+            font-size: 11px; box-sizing: border-box; background-color: #fff; color: #000;
+        }
+
+        .modal-actions {
+            text-align: center; padding: 0 15px 15px 15px;
+            display: flex; justify-content: center; gap: 10px;
+            position: sticky; bottom: 0; background: #c0c0c0; padding-top: 10px; border-top: 1px solid #808080;
+        }
+
+        .month-block {
+            border: 1px solid #808080; padding: 8px; margin-bottom: 10px;
+            background-color: #d4d0c8; position: relative;
+        }
+        .month-block-title { font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #808080; padding-bottom: 3px;}
+
+        /* ==========================================
+           100% FIXED PRINT FORMAT
+           ========================================== */
+        @media print {
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+
+            /* Force colors and backgrounds to print exactly */
+            * {
+                color: #000 !important; 
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                text-shadow: none !important;
+                box-shadow: none !important;
+            }
+            
+            /* Force 12px text size for print */
+            body, .form-header, .header-sub, .field-name, .field-value, .section-label, .sig-col, .win98-textarea { 
+                font-size: 12px !important;
+                line-height: 1.4 !important;
+            }
+            
+            body { 
+                margin: 0; 
+                padding: 0; 
+                background-color: #fff !important; 
+            }
+            
+            /* Fit exactly on ONE PAGE */
+            .container { 
+                border: 2px solid #000 !important; 
+                padding: 10px !important; 
+                background-color: #fff !important;
+                transform: scale(0.92); 
+                transform-origin: top left; 
+                width: 108.7%;
+            }
+
+            .system-status { display: none !important; } 
+            .action-bar, .modal-overlay, .util-link { display: none !important; }
+            
+            /* Table Grid Borders with AUTO FIT */
+            .data-table { 
+                width: 100% !important; 
+                border-collapse: collapse !important; 
+                table-layout: auto !important; 
+            }
+            .data-table td { 
+                padding: 3px 5px !important; 
+                border: 1px solid #000 !important; 
+                background-color: #fff !important;
+                height: auto !important; 
+                white-space: nowrap; 
+            }
+            
+            .field-name, .field-value { 
+                border: 1px solid #000 !important; 
+                font-weight: normal !important; 
+                width: auto !important; 
+                min-height: 0 !important; 
+                height: auto !important;
+                background-color: #fff !important;
+            }
+            
+            /* Section Boxes */
+            .section-frame { 
+                border: 1px solid #000 !important; 
+                margin-bottom: 10px !important; 
+                page-break-inside: avoid !important; 
+                cursor: default !important;
+                padding: 5px !important;
+                background-color: #fff !important;
+            }
+            .section-label { 
+                border: 1px solid #000 !important; 
+                text-align: left !important; 
+                margin: -6px -6px 5px -6px !important;
+                padding: 2px 5px !important;
+                font-weight: bold !important;
+                background-color: #e0e0e0 !important; /* Light gray header will print */
+                white-space: nowrap;
+            }
+            .dashboard-grid { gap: 15px !important; }
+            
+            /* Fixing Header for Print */
+            .form-header { 
+                padding: 2px 5px !important; 
+                margin: 0 0 3px 0 !important; 
+                text-align: center !important;
+                border: 1px solid #000 !important;
+                background-color: #e0e0e0 !important; /* Light gray header will print */
+            }
+            .header-sub { 
+                padding: 2px 5px !important; 
+                margin: 0 0 5px 0 !important; 
+                text-align: center !important;
+                border: 1px solid #000 !important;
+                background-color: #fff !important;
+            }
+            .header-info { 
+                display: block !important; 
+                text-align: center !important; 
+                padding: 5px !important; 
+                margin: 0 0 10px 0 !important;
+                border: 1px solid #000 !important;
+                background-color: #fff !important;
+            }
+            
+            /* Fix Footer Signature */
+            .signature-section { margin-top: 40px !important; }
+            .sig-col { 
+                border-top: 1px solid #000 !important; 
+                padding-top: 5px !important; 
+                border-left: none !important; 
+                border-right: none !important; 
+                border-bottom: none !important;
+                background-color: #fff !important;
+            }
+            
+            /* Fix Remarks Box */
+            .win98-textarea { 
+                height: auto !important; 
+                min-height: 30px !important;
+                resize: none !important; 
+                overflow: hidden !important; 
+                border: 1px solid #000 !important;
+                background-color: #fff !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="form-header">Sales & Collection Report</div>
+    <div class="header-sub">Kushtia Depot</div>
+    
+    <div class="header-info">
+        <span><strong>Date:</strong> <span id="currentDate"></span></span>
+        <span class="system-status"><strong>System Status:</strong> Auto Saving Enabled</span>
+    </div>
+
+    <div class="dashboard-grid">
+        <!-- 1. Manpower Frame -->
+        <div class="section-frame" onclick="openModal('manpower')">
+            <div class="section-label">Manpower Status</div>
+            <table class="data-table">
+                <tr><td class="field-name">Today Open MPO</td><td class="field-value" id="d-mpo-today">0</td></tr>
+                <tr><td class="field-name">Total Open MPO</td><td class="field-value" id="d-mpo-total">29</td></tr>
+                <tr><td class="field-name">AM Total</td><td class="field-value" id="d-am-total">6</td></tr>
+                <tr><td class="field-name">RSM</td><td class="field-value" id="d-rsm">1</td></tr>
+            </table>
+        </div>
+
+        <!-- 2. Sales Frame -->
+        <div class="section-frame" onclick="openModal('sales')">
+            <div class="section-label">Sales Status</div>
+            <table class="data-table">
+                <tr><td class="field-name">Today TP Sales</td><td class="field-value" id="d-sales-today">Tk. 0</td></tr>
+                <tr><td class="field-name">Today TP + VAT</td><td class="field-value" id="d-sales-vat">Tk. 0</td></tr>
+                <tr><td class="field-name">Month Total (TP)</td><td class="field-value" id="d-sales-month">Tk. 0</td></tr>
+                <tr><td class="field-name">Month Total (TP+VAT)</td><td class="field-value" id="d-sales-month-vat">Tk. 0</td></tr>
+            </table>
+        </div>
+
+        <!-- 3. Collection Frame: Current Month -->
+        <div class="section-frame" onclick="openModal('coll_current')">
+            <div class="section-label">Collection Status - Current Month</div>
+            <table class="data-table">
+                <tr><td class="field-name">Today Collection</td><td class="field-value" id="d-coll-today">Tk. 0</td></tr>
+                <tr><td class="field-name">Current Month Total</td><td class="field-value" id="d-coll-current-total">Tk. 0</td></tr>
+                <tr><td class="field-name">Current Month Total Outstanding</td><td class="field-value" id="d-coll-current-outstanding">Tk. 0</td></tr>
+            </table>
+        </div>
+
+        <!-- 4. Collection Frame: Previous Months -->
+        <div class="section-frame">
+            <div class="section-label">
+                <span>Collection Status - Previous Months</span>
+                <span class="util-link add" onclick="event.stopPropagation(); openModal('coll_prev')">Edit Months</span>
+            </div>
+            <table class="data-table" id="prev-months-table">
+                <!-- Dynamic rows will be injected here by JavaScript -->
+            </table>
+        </div>
+    </div>
+
+    <!-- Remarks Frame -->
+    <div class="section-frame">
+        <div class="section-label">Remarks</div>
+        <textarea id="remarks-box" class="win98-textarea" placeholder="Enter your remarks here..."></textarea>
+    </div>
+
+    <!-- Print Footer Signatures -->
+    <div class="signature-section">
+        <div class="sig-col">Prepared by DIC</div>
+        <div class="sig-col">Rechecked by Sr RSM/RSM</div>
+        <div class="sig-col">Verified by PMD Manager</div>
+    </div>
+
+    <div class="action-bar">
+        <button class="win98-btn" onclick="window.print()">Print Report</button>
+    </div>
+</div>
+
+<!-- Popup Modal -->
+<div id="modal-overlay" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-title-bar">
+            <span id="modal-title">Edit</span>
+            <button class="close-btn" onclick="closeModal()">X</button>
+        </div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions" id="modal-actions"></div>
+    </div>
+</div>
+
+<script>
+    // 1. Set Current Date
+    const d = new Date();
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    document.getElementById('currentDate').innerText = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+
+    const dateKey = `depot_report_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    let currentSection = '';
+
+    let prevMonthsData = [
+        { name: 'May-26', sales: 0, today: 0, total: 0 }
+    ];
+
+    function formatTk(num) {
+        if(isNaN(num) || num === '') return "Tk. 0";
+        return "Tk. " + Number(num).toLocaleString('en-IN');
+    }
+
+    function extractNum(str) {
+        if(!str) return 0;
+        let cleanedStr = str.replace(/Tk\.\s/g, '').replace(/,/g, '');
+        return parseFloat(cleanedStr) || 0;
+    }
+
+    function renderPrevMonthsTable() {
+        const table = document.getElementById('prev-months-table');
+        table.innerHTML = ''; 
+        
+        if (prevMonthsData.length === 0) {
+            table.innerHTML = `<tr><td class="field-name" colspan="2" style="text-align:center; font-style:italic;">No previous months added</td></tr>`;
+            return;
+        }
+
+        prevMonthsData.forEach(month => {
+            let outstanding = month.sales - month.total;
+            table.innerHTML += `
+                <tr><td class="field-name" style="font-weight:bold; background-color:#e0e0e0;">${month.name}</td><td class="field-value" style="background-color:#e0e0e0;">---</td></tr>
+                <tr><td class="field-name">&nbsp;&nbsp;Total TP + VAT Sales</td><td class="field-value">${formatTk(month.sales)}</td></tr>
+                <tr><td class="field-name">&nbsp;&nbsp;Today Collection</td><td class="field-value">${formatTk(month.today)}</td></tr>
+                <tr><td class="field-name">&nbsp;&nbsp;Total Collection</td><td class="field-value">${formatTk(month.total)}</td></tr>
+                <tr><td class="field-name" style="font-weight:bold;">&nbsp;&nbsp;${month.name} Outstanding</td><td class="field-value" style="font-weight:bold;">${formatTk(outstanding)}</td></tr>
+            `;
+        });
+    }
+
+    function loadDateWiseData() {
+        const savedData = localStorage.getItem(dateKey);
+        if (savedData) {
+            const data = JSON.parse(savedData);
+            
+            document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
+            document.getElementById('d-mpo-total').innerText = data.mpo_total || '0';
+            document.getElementById('d-am-total').innerText = data.am_total || '0';
+            document.getElementById('d-rsm').innerText = data.rsm || '0';
+            
+            document.getElementById('d-sales-today').innerText = data.sales_today || 'Tk. 0';
+            document.getElementById('d-sales-vat').innerText = data.sales_vat || 'Tk. 0';
+            document.getElementById('d-sales-month').innerText = data.sales_month || 'Tk. 0';
+            document.getElementById('d-sales-month-vat').innerText = data.sales_month_vat || 'Tk. 0';
+            
+            document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
+            document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
+            document.getElementById('d-coll-current-outstanding').innerText = data.coll_current_outstanding || 'Tk. 0';
+            
+            if (data.prevMonths && Array.isArray(data.prevMonths)) {
+                prevMonthsData = data.prevMonths;
+            }
+            
+            document.getElementById('remarks-box').value = data.remarks || '';
+        }
+        renderPrevMonthsTable();
+    }
+
+    function saveToLocalStorage() {
+        const dataToSave = {
+            mpo_today: document.getElementById('d-mpo-today').innerText,
+            mpo_total: document.getElementById('d-mpo-total').innerText,
+            am_total: document.getElementById('d-am-total').innerText,
+            rsm: document.getElementById('d-rsm').innerText,
+            sales_today: document.getElementById('d-sales-today').innerText,
+            sales_vat: document.getElementById('d-sales-vat').innerText,
+            sales_month: document.getElementById('d-sales-month').innerText,
+            sales_month_vat: document.getElementById('d-sales-month-vat').innerText,
+            coll_today: document.getElementById('d-coll-today').innerText,
+            coll_current_total: document.getElementById('d-coll-current-total').innerText,
+            coll_current_outstanding: document.getElementById('d-coll-current-outstanding').innerText,
+            prevMonths: prevMonthsData, 
+            remarks: document.getElementById('remarks-box').value
+        };
+        localStorage.setItem(dateKey, JSON.stringify(dataToSave));
+    }
+
+    loadDateWiseData();
+
+    function calculateCurrentOutstanding() {
+        let salesVat = extractNum(document.getElementById('d-sales-month-vat').innerText);
+        let collTotal = extractNum(document.getElementById('d-coll-current-total').innerText);
+        document.getElementById('d-coll-current-outstanding').innerText = formatTk(salesVat - collTotal);
+    }
+
+    function openModal(section) {
+        currentSection = section;
+        const modalBody = document.getElementById('modal-body');
+        const modalActions = document.getElementById('modal-actions');
+        const modalTitle = document.getElementById('modal-title');
+        modalBody.innerHTML = '';
+        modalActions.innerHTML = '';
+
+        if (section === 'manpower') {
+            modalTitle.innerText = 'Edit Manpower';
+            const fields = [
+                { id: 'd-mpo-today', label: 'Today Open MPO' },
+                { id: 'd-mpo-total', label: 'Total Open MPO' },
+                { id: 'd-am-total', label: 'AM Total' },
+                { id: 'd-rsm', label: 'RSM' }
+            ];
+            fields.forEach(f => {
+                modalBody.innerHTML += `<div class="form-group"><label>${f.label}:</label><input type="text" id="input-${f.id}" value="${document.getElementById(f.id).innerText}"></div>`;
+            });
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
+        } 
+        else if (section === 'sales') {
+            modalTitle.innerText = 'Edit Sales';
+            const fields = [
+                { id: 'd-sales-today', label: 'Today TP Sales (নম্বর দিন)' },
+                { id: 'd-sales-vat', label: 'Today TP + VAT (নম্বর দিন)' },
+                { id: 'd-sales-month', label: 'Month Total TP (নম্বর দিন)' },
+                { id: 'd-sales-month-vat', label: 'Month Total TP+VAT (নম্বর দিন)' }
+            ];
+            fields.forEach(f => {
+                modalBody.innerHTML += `<div class="form-group"><label>${f.label}:</label><input type="number" id="input-${f.id}" value=""></div>`;
+            });
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">Save</button><button class="win98-btn" onclick="closeModal()">Return</button>`;
+        } 
+        else if (section === 'coll_current') {
+            modalTitle.innerText = 'Edit Current Month Collection';
+            let html = `
+                <div class="form-group"><label>Today Collection (নম্বর দিন):</label><input type="number" id="input-d-coll-today" value=""></div>
+                <div class="form-group"><label>Current Month Total (নম্বর দিন):</label><input type="number" id="input-d-coll-current-total" value=""></div>
+                <div style="font-size:10px; margin-top:5px; border-top:1px solid #808080; padding-top:5px;">* Outstanding will be calculated automatically</div>
+            `;
+            modalBody.innerHTML = html;
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
+        }
+        else if (section === 'coll_prev') {
+            modalTitle.innerText = 'Edit Previous Months';
+            renderPrevMonthsModal();
+            
+            modalActions.innerHTML = `
+                <button class="win98-btn" onclick="addMonthInModal()">+ Add Month</button>
+                <button class="win98-btn" onclick="saveData()">OK</button>
+                <button class="win98-btn" onclick="closeModal()">Cancel</button>
+            `;
+        }
+
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function renderPrevMonthsModal() {
+        const modalBody = document.getElementById('modal-body');
+        const existingBlocks = modalBody.querySelectorAll('.month-block');
+        existingBlocks.forEach(block => block.remove());
+
+        let html = '';
+        prevMonthsData.forEach((month, index) => {
+            html += `
+                <div class="month-block" id="mblock-${index}">
+                    <div class="month-block-title">
+                        Month: ${month.name} 
+                        <span class="util-link" onclick="removeMonthInModal(${index})" style="margin-left:10px;">[Remove]</span>
+                    </div>
+                    <div class="form-group"><label>Month Name (e.g., May-26):</label><input type="text" class="prev-name" value="${month.name}"></div>
+                    <div class="form-group"><label>Total TP + VAT Sales:</label><input type="number" class="prev-sales" value="${month.sales}"></div>
+                    <div class="form-group"><label>Today Collection:</label><input type="number" class="prev-today" value="${month.today}"></div>
+                    <div class="form-group"><label>Total Collection:</label><input type="number" class="prev-total" value="${month.total}"></div>
+                </div>
+            `;
+        });
+        modalBody.insertAdjacentHTML('afterbegin', html);
+    }
+
+    function addMonthInModal() {
+        prevMonthsData.push({ name: 'New Month', sales: 0, today: 0, total: 0 });
+        renderPrevMonthsModal();
+    }
+
+    function removeMonthInModal(index) {
+        if(prevMonthsData.length > 1) {
+            prevMonthsData.splice(index, 1);
+            renderPrevMonthsModal();
+        } else {
+            alert('At least one month is required.');
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').style.display = 'none';
+    }
+
+    function saveData() {
+        if (currentSection === 'manpower') {
+            ['d-mpo-today', 'd-mpo-total', 'd-am-total', 'd-rsm'].forEach(id => {
+                document.getElementById(id).innerText = document.getElementById(`input-${id}`).value;
+            });
+        } 
+        else if (currentSection === 'sales') {
+            ['d-sales-today', 'd-sales-vat', 'd-sales-month', 'd-sales-month-vat'].forEach(id => {
+                let val = document.getElementById(`input-${id}`).value;
+                document.getElementById(id).innerText = formatTk(val);
+            });
+            calculateCurrentOutstanding();
+        } 
+        else if (currentSection === 'coll_current') {
+            let todayVal = parseFloat(document.getElementById('input-d-coll-today').value) || 0;
+            let totalVal = parseFloat(document.getElementById('input-d-coll-current-total').value) || 0;
+            
+            document.getElementById('d-coll-today').innerText = formatTk(todayVal);
+            document.getElementById('d-coll-current-total').innerText = formatTk(totalVal);
+            calculateCurrentOutstanding();
+        }
+        else if (currentSection === 'coll_prev') {
+            const blocks = document.querySelectorAll('.month-block');
+            let newData = [];
+            
+            blocks.forEach(block => {
+                newData.push({
+                    name: block.querySelector('.prev-name').value,
+                    sales: parseFloat(block.querySelector('.prev-sales').value) || 0,
+                    today: parseFloat(block.querySelector('.prev-today').value) || 0,
+                    total: parseFloat(block.querySelector('.prev-total').value) || 0
+                });
+            });
+            
+            prevMonthsData = newData;
+            renderPrevMonthsTable(); 
+        }
+
+        saveToLocalStorage();
+        closeModal();
+    }
+
+</script>
+
+</body>
+</html>
