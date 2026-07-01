@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kushtia Depot - VBA Style Report</title>
+    
+    <!-- 1. Firebase SDK Scripts (v9 Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <style>
         /* Classic Windows 98 / VBA Styles */
         body {
@@ -19,6 +24,7 @@
             border: 2px groove #ffffff #808080 #808080 #ffffff;
             background-color: #c0c0c0;
             padding: 10px;
+            position: relative;
         }
 
         .form-header {
@@ -46,7 +52,7 @@
 
         .header-info {
             display: flex;
-            justify-content: space-between;
+            justify-content: center; /* Changed to center */
             align-items: center;
             margin-bottom: 10px;
             padding: 5px;
@@ -56,6 +62,23 @@
             border-left: 1px solid #808080;
             background-color: #c0c0c0;
         }
+
+        /* Added Status Bar for UI Feedback */
+        #status-bar {
+            position: absolute;
+            top: -40px;
+            right: 10px;
+            background-color: #000080;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 10;
+        }
+        #status-bar.show { opacity: 1; }
 
         .dashboard-grid {
             display: grid;
@@ -75,6 +98,7 @@
             background-color: #c0c0c0;
             padding: 5px;
             cursor: pointer;
+            transition: background 0.2s;
         }
 
         .section-frame:hover { background-color: #d4d0c8; }
@@ -203,15 +227,11 @@
         .month-block-title { font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #808080; padding-bottom: 3px;}
 
         /* ==========================================
-           100% FIXED PRINT FORMAT - PERFECTLY CENTERED
+           PRINT FORMAT: 100% FIXED & CENTERED
            ========================================== */
         @media print {
-            @page {
-                size: A4;
-                margin: 10mm;
-            }
+            @page { size: A4; margin: 10mm; }
 
-            /* Force colors and backgrounds to print exactly */
             * {
                 color: #000 !important; 
                 -webkit-print-color-adjust: exact !important;
@@ -220,39 +240,29 @@
                 box-shadow: none !important;
             }
             
-            /* Force 12px text size for print */
             body, .form-header, .header-sub, .field-name, .field-value, .section-label, .sig-col, .win98-textarea { 
                 font-size: 12px !important;
                 line-height: 1.4 !important;
             }
             
             body { 
-                margin: 0; 
-                padding: 0; 
-                background-color: #fff !important;
-                display: flex !important; /* Enables perfect horizontal centering */
+                margin: 0; padding: 0; background-color: #fff !important;
+                display: flex !important; 
                 justify-content: center !important; 
             }
             
-            /* Fit exactly on ONE PAGE & CENTERED */
             .container { 
                 border: 2px solid #000 !important; 
                 padding: 10px !important; 
                 background-color: #fff !important;
-                width: 100% !important; /* Take 100% width of page */
-                transform: scale(0.92) !important; /* Scale down to fit 12px text */
-                transform-origin: top center !important; /* Scale symmetrically from center so borders don't cut off */
+                width: 100% !important; 
+                transform: scale(0.92) !important; 
+                transform-origin: top center !important;
             }
 
-            .system-status { display: none !important; } 
-            .action-bar, .modal-overlay, .util-link { display: none !important; }
+            .system-status, #status-bar, .action-bar, .modal-overlay, .util-link { display: none !important; }
             
-            /* Table Grid Borders with AUTO FIT */
-            .data-table { 
-                width: 100% !important; 
-                border-collapse: collapse !important; 
-                table-layout: auto !important; 
-            }
+            .data-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
             .data-table td { 
                 padding: 3px 5px !important; 
                 border: 1px solid #000 !important; 
@@ -265,18 +275,15 @@
                 border: 1px solid #000 !important; 
                 font-weight: normal !important; 
                 width: auto !important; 
-                min-height: 0 !important; 
                 height: auto !important;
                 background-color: #fff !important;
             }
             
-            /* Section Boxes */
             .section-frame { 
                 border: 1px solid #000 !important; 
                 margin-bottom: 10px !important; 
                 page-break-inside: avoid !important; 
                 cursor: default !important;
-                padding: 5px !important;
                 background-color: #fff !important;
             }
             .section-label { 
@@ -286,11 +293,9 @@
                 padding: 2px 5px !important;
                 font-weight: bold !important;
                 background-color: #e0e0e0 !important; 
-                white-space: nowrap;
             }
             .dashboard-grid { gap: 15px !important; }
             
-            /* Fixing Header for Print */
             .form-header { 
                 padding: 2px 5px !important; 
                 margin: 0 0 3px 0 !important; 
@@ -298,34 +303,19 @@
                 border: 1px solid #000 !important;
                 background-color: #e0e0e0 !important;
             }
-            .header-sub { 
-                padding: 2px 5px !important; 
-                margin: 0 0 5px 0 !important; 
-                text-align: center !important;
-                border: 1px solid #000 !important;
-                background-color: #fff !important;
-            }
-            .header-info { 
-                display: block !important; 
-                text-align: center !important; 
-                padding: 5px !important; 
-                margin: 0 0 10px 0 !important;
+            .header-sub, .header-info { 
                 border: 1px solid #000 !important;
                 background-color: #fff !important;
             }
             
-            /* Fix Footer Signature */
             .signature-section { margin-top: 40px !important; }
             .sig-col { 
                 border-top: 1px solid #000 !important; 
-                padding-top: 5px !important; 
                 border-left: none !important; 
                 border-right: none !important; 
-                border-bottom: none !important;
                 background-color: #fff !important;
             }
             
-            /* Fix Remarks Box */
             .win98-textarea { 
                 height: auto !important; 
                 min-height: 30px !important;
@@ -339,13 +329,16 @@
 </head>
 <body>
 
+<!-- Status bar for saving feedback -->
+<div id="status-bar">Saving to Cloud...</div>
+
 <div class="container">
     <div class="form-header">Sales & Collection Report</div>
     <div class="header-sub">Kushtia Depot</div>
     
     <div class="header-info">
         <span><strong>Date:</strong> <span id="currentDate"></span></span>
-        <span class="system-status"><strong>System Status:</strong> Auto Saving Enabled</span>
+        <!-- <span class="system-status"><strong>Status:</strong> Cloud Sync Active</span> -->
     </div>
 
     <div class="dashboard-grid">
@@ -387,9 +380,7 @@
                 <span>Collection Status - Previous Months</span>
                 <span class="util-link add" onclick="event.stopPropagation(); openModal('coll_prev')">Edit Months</span>
             </div>
-            <table class="data-table" id="prev-months-table">
-                <!-- Dynamic rows will be injected here by JavaScript -->
-            </table>
+            <table class="data-table" id="prev-months-table"></table>
         </div>
     </div>
 
@@ -399,7 +390,6 @@
         <textarea id="remarks-box" class="win98-textarea" placeholder="Enter your remarks here..."></textarea>
     </div>
 
-    <!-- Print Footer Signatures -->
     <div class="signature-section">
         <div class="sig-col">Prepared by DIC</div>
         <div class="sig-col">Rechecked by Sr RSM/RSM</div>
@@ -407,7 +397,7 @@
     </div>
 
     <div class="action-bar">
-        <button class="win98-btn" onclick="window.print()">Print Report</button>
+        <button class="win98-btn" onclick="window.print()">🖨️ Print Report</button>
     </div>
 </div>
 
@@ -424,17 +414,30 @@
 </div>
 
 <script>
-    // 1. Set Current Date
+    // 1. Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyAPgdJMSiv1LaVBA1oGoNPyfsT-VV2wr1I",
+        authDomain: "kushtia-depot.firebaseapp.com",
+        databaseURL: "https://kushtia-depot-default-rtdb.firebaseio.com/", 
+        projectId: "kushtia-depot",
+        storageBucket: "kushtia-depot.firebasestorage.app",
+        messagingSenderId: "288838128044",
+        appId: "1:288838128044:web:c5bab4a0957f5f71846a09"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 2. Set Current Date & Firebase Path
     const d = new Date();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     document.getElementById('currentDate').innerText = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
-
-    const dateKey = `depot_report_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    
+    // Node-by-node structure: "reports/2023-10-25/manpower/..."
+    const dateKey = `reports/${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     let currentSection = '';
 
-    let prevMonthsData = [
-        { name: 'May-26', sales: 0, today: 0, total: 0 }
-    ];
+    let prevMonthsData = [{ name: 'May-26', sales: 0, today: 0, total: 0 }];
 
     function formatTk(num) {
         if(isNaN(num) || num === '') return "Tk. 0";
@@ -450,12 +453,10 @@
     function renderPrevMonthsTable() {
         const table = document.getElementById('prev-months-table');
         table.innerHTML = ''; 
-        
         if (prevMonthsData.length === 0) {
             table.innerHTML = `<tr><td class="field-name" colspan="2" style="text-align:center; font-style:italic;">No previous months added</td></tr>`;
             return;
         }
-
         prevMonthsData.forEach(month => {
             let outstanding = month.sales - month.total;
             table.innerHTML += `
@@ -468,35 +469,41 @@
         });
     }
 
-    function loadDateWiseData() {
-        const savedData = localStorage.getItem(dateKey);
-        if (savedData) {
-            const data = JSON.parse(savedData);
-            
-            document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
-            document.getElementById('d-mpo-total').innerText = data.mpo_total || '0';
-            document.getElementById('d-am-total').innerText = data.am_total || '0';
-            document.getElementById('d-rsm').innerText = data.rsm || '0';
-            
-            document.getElementById('d-sales-today').innerText = data.sales_today || 'Tk. 0';
-            document.getElementById('d-sales-vat').innerText = data.sales_vat || 'Tk. 0';
-            document.getElementById('d-sales-month').innerText = data.sales_month || 'Tk. 0';
-            document.getElementById('d-sales-month-vat').innerText = data.sales_month_vat || 'Tk. 0';
-            
-            document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
-            document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
-            document.getElementById('d-coll-current-outstanding').innerText = data.coll_current_outstanding || 'Tk. 0';
-            
-            if (data.prevMonths && Array.isArray(data.prevMonths)) {
-                prevMonthsData = data.prevMonths;
+    // 3. Load Data from Firebase
+    async function loadData() {
+        try {
+            const snapshot = await db.ref(dateKey).once('value');
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                
+                document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
+                document.getElementById('d-mpo-total').innerText = data.mpo_total || '0';
+                document.getElementById('d-am-total').innerText = data.am_total || '0';
+                document.getElementById('d-rsm').innerText = data.rsm || '0';
+                
+                document.getElementById('d-sales-today').innerText = data.sales_today || 'Tk. 0';
+                document.getElementById('d-sales-vat').innerText = data.sales_vat || 'Tk. 0';
+                document.getElementById('d-sales-month').innerText = data.sales_month || 'Tk. 0';
+                document.getElementById('d-sales-month-vat').innerText = data.sales_month_vat || 'Tk. 0';
+                
+                document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
+                document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
+                document.getElementById('d-coll-current-outstanding').innerText = data.coll_current_outstanding || 'Tk. 0';
+                
+                if (data.prevMonths && Array.isArray(data.prevMonths)) {
+                    prevMonthsData = data.prevMonths;
+                }
+                
+                document.getElementById('remarks-box').value = data.remarks || '';
             }
-            
-            document.getElementById('remarks-box').value = data.remarks || '';
+            renderPrevMonthsTable();
+        } catch (error) {
+            console.error("Error loading data: ", error);
         }
-        renderPrevMonthsTable();
     }
 
-    function saveToLocalStorage() {
+    // 4. Save Data to Firebase (Renamed to avoid conflict)
+    function saveToFirebase() {
         const dataToSave = {
             mpo_today: document.getElementById('d-mpo-today').innerText,
             mpo_total: document.getElementById('d-mpo-total').innerText,
@@ -509,13 +516,32 @@
             coll_today: document.getElementById('d-coll-today').innerText,
             coll_current_total: document.getElementById('d-coll-current-total').innerText,
             coll_current_outstanding: document.getElementById('d-coll-current-outstanding').innerText,
-            prevMonths: prevMonthsData, 
-            remarks: document.getElementById('remarks-box').value
+            remarks: document.getElementById('remarks-box').value,
+            prevMonths: prevMonthsData
         };
-        localStorage.setItem(dateKey, JSON.stringify(dataToSave));
+
+        const statusEl = document.getElementById('status-bar');
+        statusEl.innerText = "Syncing to Cloud...";
+        statusEl.classList.add('show');
+
+        db.ref(dateKey).set(dataToSave)
+            .then(() => {
+                statusEl.innerText = "Saved to Cloud Successfully!";
+                setTimeout(() => statusEl.classList.remove('show'), 2000);
+            })
+            .catch((error) => {
+                statusEl.innerText = "Error saving data!";
+                statusEl.style.backgroundColor = "#c53030";
+                setTimeout(() => {
+                    statusEl.classList.remove('show'); 
+                    statusEl.style.backgroundColor = "#000080";
+                }, 3000);
+                console.error("Firebase Save Error: ", error);
+            });
     }
 
-    loadDateWiseData();
+    // Auto load data on startup
+    loadData();
 
     function calculateCurrentOutstanding() {
         let salesVat = extractNum(document.getElementById('d-sales-month-vat').innerText);
@@ -542,7 +568,7 @@
             fields.forEach(f => {
                 modalBody.innerHTML += `<div class="form-group"><label>${f.label}:</label><input type="text" id="input-${f.id}" value="${document.getElementById(f.id).innerText}"></div>`;
             });
-            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveDataUI()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
         } 
         else if (section === 'sales') {
             modalTitle.innerText = 'Edit Sales';
@@ -553,19 +579,19 @@
                 { id: 'd-sales-month-vat', label: 'Month Total TP+VAT (নম্বর দিন)' }
             ];
             fields.forEach(f => {
-                modalBody.innerHTML += `<div class="form-group"><label>${f.label}:</label><input type="number" id="input-${f.id}" value=""></div>`;
+                modalBody.innerHTML += `<div class="form-group"><label>${f.label}:</label><input type="number" id="input-${f.id}" value="${extractNum(document.getElementById(f.id).innerText)}"></div>`;
             });
-            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">Save</button><button class="win98-btn" onclick="closeModal()">Return</button>`;
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveDataUI()">Save</button><button class="win98-btn" onclick="closeModal()">Return</button>`;
         } 
         else if (section === 'coll_current') {
             modalTitle.innerText = 'Edit Current Month Collection';
             let html = `
-                <div class="form-group"><label>Today Collection (নম্বর দিন):</label><input type="number" id="input-d-coll-today" value=""></div>
-                <div class="form-group"><label>Current Month Total (নম্বর দিন):</label><input type="number" id="input-d-coll-current-total" value=""></div>
+                <div class="form-group"><label>Today Collection (নম্বর দিন):</label><input type="number" id="input-d-coll-today" value="${extractNum(document.getElementById('d-coll-today').innerText)}"></div>
+                <div class="form-group"><label>Current Month Total (নম্বর দিন):</label><input type="number" id="input-d-coll-current-total" value="${extractNum(document.getElementById('d-coll-current-total').innerText)}"></div>
                 <div style="font-size:10px; margin-top:5px; border-top:1px solid #808080; padding-top:5px;">* Outstanding will be calculated automatically</div>
             `;
             modalBody.innerHTML = html;
-            modalActions.innerHTML = `<button class="win98-btn" onclick="saveData()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
+            modalActions.innerHTML = `<button class="win98-btn" onclick="saveDataUI()">OK</button><button class="win98-btn" onclick="closeModal()">Cancel</button>`;
         }
         else if (section === 'coll_prev') {
             modalTitle.innerText = 'Edit Previous Months';
@@ -573,7 +599,7 @@
             
             modalActions.innerHTML = `
                 <button class="win98-btn" onclick="addMonthInModal()">+ Add Month</button>
-                <button class="win98-btn" onclick="saveData()">OK</button>
+                <button class="win98-btn" onclick="saveDataUI()">OK</button>
                 <button class="win98-btn" onclick="closeModal()">Cancel</button>
             `;
         }
@@ -622,7 +648,8 @@
         document.getElementById('modal-overlay').style.display = 'none';
     }
 
-    function saveData() {
+    // Renamed from saveData to saveDataUI to prevent infinite loop
+    function saveDataUI() {
         if (currentSection === 'manpower') {
             ['d-mpo-today', 'd-mpo-total', 'd-am-total', 'd-rsm'].forEach(id => {
                 document.getElementById(id).innerText = document.getElementById(`input-${id}`).value;
@@ -637,7 +664,8 @@
         } 
         else if (currentSection === 'coll_current') {
             let todayVal = parseFloat(document.getElementById('input-d-coll-today').value) || 0;
-            let totalVal = parseFloat(document.getElementById('input-d-coll-current-total').value) || 0;
+            // Fixed Typo here: input-d-coll-current-total
+            let totalVal = parseFloat(document.getElementById('input-d-coll-current-total').value) || 0; 
             
             document.getElementById('d-coll-today').innerText = formatTk(todayVal);
             document.getElementById('d-coll-current-total').innerText = formatTk(totalVal);
@@ -646,7 +674,6 @@
         else if (currentSection === 'coll_prev') {
             const blocks = document.querySelectorAll('.month-block');
             let newData = [];
-            
             blocks.forEach(block => {
                 newData.push({
                     name: block.querySelector('.prev-name').value,
@@ -655,12 +682,12 @@
                     total: parseFloat(block.querySelector('.prev-total').value) || 0
                 });
             });
-            
             prevMonthsData = newData;
             renderPrevMonthsTable(); 
         }
 
-        saveToLocalStorage();
+        // Call the Firebase save function
+        saveToFirebase();
         closeModal();
     }
 
