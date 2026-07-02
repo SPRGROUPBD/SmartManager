@@ -394,7 +394,8 @@
     </div>
 
     <div class="action-bar">
-        <button class="win98-btn" onclick="window.print()">🖨️ Print Report</button>
+        <!-- Changed to call custom printReport() function -->
+        <button class="win98-btn" onclick="printReport()">🖨️ Print Report</button>
     </div>
 </div>
 
@@ -425,7 +426,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Set Current Date & Firebase Path (Changed to Monthly Path so data persists all month)
+    // 2. Set Current Date & Firebase Path (Monthly Path so data persists all month)
     const d = new Date();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     document.getElementById('currentDate').innerText = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
@@ -540,6 +541,28 @@
                 }, 3000);
                 console.error("Firebase Save Error: ", error);
             });
+    }
+
+    // Custom Print Function to dynamically set PDF/File Name
+    function printReport() {
+        const today = new Date();
+        const dd = String(today.getDate()).padStart(2, '0');
+        const mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
+        const yy = String(today.getFullYear()).slice(-2); // Get last 2 digits of year
+        
+        const dynamicTitle = `Collection Report-${dd}-${mm}-${yy}`;
+        const originalTitle = document.title;
+        
+        // Temporarily change the document title
+        document.title = dynamicTitle;
+        
+        // Trigger print
+        window.print();
+        
+        // Restore original title after printing
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 500);
     }
 
     // Auto load data on startup
