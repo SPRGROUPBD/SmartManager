@@ -52,7 +52,7 @@
 
         .header-info {
             display: flex;
-            justify-content: center; /* Changed to center */
+            justify-content: center; /* Centered Date */
             align-items: center;
             margin-bottom: 10px;
             padding: 5px;
@@ -63,7 +63,6 @@
             background-color: #c0c0c0;
         }
 
-        /* Added Status Bar for UI Feedback */
         #status-bar {
             position: absolute;
             top: -40px;
@@ -329,7 +328,6 @@
 </head>
 <body>
 
-<!-- Status bar for saving feedback -->
 <div id="status-bar">Saving to Cloud...</div>
 
 <div class="container">
@@ -338,7 +336,6 @@
     
     <div class="header-info">
         <span><strong>Date:</strong> <span id="currentDate"></span></span>
-        <!-- <span class="system-status"><strong>Status:</strong> Cloud Sync Active</span> -->
     </div>
 
     <div class="dashboard-grid">
@@ -428,13 +425,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Set Current Date & Firebase Path
+    // 2. Set Current Date & Firebase Path (Changed to Monthly Path so data persists all month)
     const d = new Date();
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     document.getElementById('currentDate').innerText = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
     
-    // Node-by-node structure: "reports/2023-10-25/manpower/..."
-    const dateKey = `reports/${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    // Monthly path: "reports/2023-10"
+    const dateKey = `reports/${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     let currentSection = '';
 
     let prevMonthsData = [{ name: 'May-26', sales: 0, today: 0, total: 0 }];
@@ -446,14 +443,14 @@
 
     function extractNum(str) {
         if(!str) return 0;
-        let cleanedStr = str.replace(/Tk\.\s/g, '').replace(/,/g, '');
+        let cleanedStr = str.toString().replace(/Tk\.\s/g, '').replace(/,/g, '');
         return parseFloat(cleanedStr) || 0;
     }
 
     function renderPrevMonthsTable() {
         const table = document.getElementById('prev-months-table');
         table.innerHTML = ''; 
-        if (prevMonthsData.length === 0) {
+        if (!prevMonthsData || prevMonthsData.length === 0) {
             table.innerHTML = `<tr><td class="field-name" colspan="2" style="text-align:center; font-style:italic;">No previous months added</td></tr>`;
             return;
         }
@@ -490,8 +487,13 @@
                 document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
                 document.getElementById('d-coll-current-outstanding').innerText = data.coll_current_outstanding || 'Tk. 0';
                 
-                if (data.prevMonths && Array.isArray(data.prevMonths)) {
-                    prevMonthsData = data.prevMonths;
+                // Handle Firebase converting Array to Object issue
+                if (data.prevMonths) {
+                    if (Array.isArray(data.prevMonths)) {
+                        prevMonthsData = data.prevMonths;
+                    } else {
+                        prevMonthsData = Object.values(data.prevMonths);
+                    }
                 }
                 
                 document.getElementById('remarks-box').value = data.remarks || '';
@@ -502,7 +504,7 @@
         }
     }
 
-    // 4. Save Data to Firebase (Renamed to avoid conflict)
+    // 4. Save Data to Firebase
     function saveToFirebase() {
         const dataToSave = {
             mpo_today: document.getElementById('d-mpo-today').innerText,
@@ -609,16 +611,18 @@
 
     function renderPrevMonthsModal() {
         const modalBody = document.getElementById('modal-body');
-        const existingBlocks = modalBody.querySelectorAll('.month-block');
-        existingBlocks.forEach(block => block.remove());
+        modalBody.innerHTML = ''; // Clear entirely for fresh render
 
         let html = '';
-        prevMonthsData.forEach((month, index) => {
+        if(prevMonthsData.length === 0) {
+            html = '<div style="text-align:center; font-style:italic; margin-bottom:10px;">No months added. Click "+ Add Month"</div>';
+        }
+        prevMonthsData.forEach((month) => {
             html += `
-                <div class="month-block" id="mblock-${index}">
+                <div class="month-block">
                     <div class="month-block-title">
                         Month: ${month.name} 
-                        <span class="util-link" onclick="removeMonthInModal(${index})" style="margin-left:10px;">[Remove]</span>
+                        <span class="util-link" onclick="this.closest('.month-block').remove()" style="margin-left:10px;">[Remove]</span>
                     </div>
                     <div class="form-group"><label>Month Name (e.g., May-26):</label><input type="text" class="prev-name" value="${month.name}"></div>
                     <div class="form-group"><label>Total TP + VAT Sales:</label><input type="number" class="prev-sales" value="${month.sales}"></div>
@@ -627,28 +631,31 @@
                 </div>
             `;
         });
-        modalBody.insertAdjacentHTML('afterbegin', html);
+        modalBody.innerHTML = html;
     }
 
     function addMonthInModal() {
-        prevMonthsData.push({ name: 'New Month', sales: 0, today: 0, total: 0 });
-        renderPrevMonthsModal();
-    }
-
-    function removeMonthInModal(index) {
-        if(prevMonthsData.length > 1) {
-            prevMonthsData.splice(index, 1);
-            renderPrevMonthsModal();
-        } else {
-            alert('At least one month is required.');
-        }
+        const modalBody = document.getElementById('modal-body');
+        const newMonthHtml = `
+            <div class="month-block">
+                <div class="month-block-title">
+                    Month: New Month 
+                    <span class="util-link" onclick="this.closest('.month-block').remove()" style="margin-left:10px;">[Remove]</span>
+                </div>
+                <div class="form-group"><label>Month Name (e.g., May-26):</label><input type="text" class="prev-name" value="New Month"></div>
+                <div class="form-group"><label>Total TP + VAT Sales:</label><input type="number" class="prev-sales" value="0"></div>
+                <div class="form-group"><label>Today Collection:</label><input type="number" class="prev-today" value="0"></div>
+                <div class="form-group"><label>Total Collection:</label><input type="number" class="prev-total" value="0"></div>
+            </div>
+        `;
+        modalBody.insertAdjacentHTML('beforeend', newMonthHtml);
     }
 
     function closeModal() {
         document.getElementById('modal-overlay').style.display = 'none';
     }
 
-    // Renamed from saveData to saveDataUI to prevent infinite loop
+    // Save logic strictly separated
     function saveDataUI() {
         if (currentSection === 'manpower') {
             ['d-mpo-today', 'd-mpo-total', 'd-am-total', 'd-rsm'].forEach(id => {
@@ -664,7 +671,6 @@
         } 
         else if (currentSection === 'coll_current') {
             let todayVal = parseFloat(document.getElementById('input-d-coll-today').value) || 0;
-            // Fixed Typo here: input-d-coll-current-total
             let totalVal = parseFloat(document.getElementById('input-d-coll-current-total').value) || 0; 
             
             document.getElementById('d-coll-today').innerText = formatTk(todayVal);
@@ -682,7 +688,7 @@
                     total: parseFloat(block.querySelector('.prev-total').value) || 0
                 });
             });
-            prevMonthsData = newData;
+            prevMonthsData = newData; // Assign DOM data to global variable only on OK
             renderPrevMonthsTable(); 
         }
 
