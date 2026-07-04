@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monico Pharma - Approvel System Depot Inchar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config={theme:{extend:{colors:{
+            brand:{50:'#effefb',100:'#c8fff4',200:'#91fee9',300:'#53f5d9',400:'#20e0c4',500:'#0bbfaa',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a'},
+            navy:{800:'#1a2332',900:'#0F172A',950:'#0a0f1a'},
+            gold:{400:'#FBBF24',500:'#F59E0B',600:'#D97706'}
+        }}}}
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        *{font-family:'Inter',sans-serif;box-sizing:border-box}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-track{background:#f1f5f9}
+        ::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:3px}
+        .sidebar{width:260px;height:100vh;overflow:hidden;transition:transform .3s;position:fixed;top:0;left:0;z-index:40}
+        .main-content{margin-left:260px;min-height:100vh;transition:margin .3s}
+        .nav-link{transition:all .2s;border-left:3px solid transparent}
+        .nav-link:hover{background:rgba(13,148,136,.1);border-left-color:rgba(13,148,136,.3)}
+        .nav-link.active{background:rgba(13,148,136,.15);border-left-color:#0d9488;color:#0d9488;font-weight:600}
+        .nav-sub{max-height:0;overflow:hidden;transition:max-height .35s}
+        .nav-sub.open{max-height:300px}
+        .nav-parent.open .chevron{transform:rotate(90deg)}
+        .chevron{transition:transform .3s}
+        .stat-card{transition:transform .25s,box-shadow .25s}
+        .stat-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.1)}
+        .page-content{animation:fadeUp .35s ease}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .table-row:hover td{background:#f0fdfa!important}
+        .btn-primary{background:linear-gradient(135deg,#0d9488,#0f766e);transition:all .2s}
+        .btn-primary:hover{background:linear-gradient(135deg,#0f766e,#115e59);transform:translateY(-1px);box-shadow:0 4px 15px rgba(13,148,136,.3)}
+        .btn-danger:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(239,68,68,.3)}
+        .btn-update{background:linear-gradient(135deg,#2563eb,#1d4ed8);transition:all .2s}
+        .btn-update:hover{background:linear-gradient(135deg,#1d4ed8,#1e40af);transform:translateY(-1px);box-shadow:0 4px 15px rgba(37,99,235,.3)}
+        .btn-purple{background:linear-gradient(135deg,#7c3aed,#6d28d9);transition:all .2s}
+        .btn-purple:hover{background:linear-gradient(135deg,#6d28d9,#5b21b6);transform:translateY(-1px);box-shadow:0 4px 15px rgba(124,58,237,.3)}
+        .btn-gold{background:linear-gradient(135deg,#F59E0B,#D97706);transition:all .2s}
+        .btn-gold:hover{background:linear-gradient(135deg,#D97706,#B45309);transform:translateY(-1px);box-shadow:0 4px 15px rgba(245,158,11,.3)}
+        .toast{animation:slideIn .4s ease,fadeOut .4s ease 2.6s forwards}
+        @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+        @keyframes fadeOut{to{transform:translateX(100%);opacity:0}}
+        .pulse-dot{animation:pulse 2s infinite}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        .conn-ok{background:linear-gradient(90deg,#059669,#047857)}
+        .conn-err{background:linear-gradient(90deg,#dc2626,#b91c1c)}
+        .conn-warn{background:linear-gradient(90deg,#d97706,#b45309)}
+        .toggle-track{width:40px;height:22px;border-radius:11px;background:#cbd5e1;position:relative;cursor:pointer;transition:background .2s}
+        .toggle-track.on{background:#0d9488}
+        .toggle-thumb{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+        .toggle-track.on .toggle-thumb{left:20px}
+        .input-focus:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+        .edit-banner{background:linear-gradient(90deg,#2563eb,#3b82f6)}
+        .edit-banner-purple{background:linear-gradient(90deg,#7c3aed,#8b5cf6)}
+        .auto-fill-flash{animation:autoFlash .6s}
+        @keyframes autoFlash{0%{background:#d1fae5}100%{background:transparent}}
+        .login-bg{background:linear-gradient(135deg,#0f766e 0%,#115e59 40%,#0a0f1a 100%)}
+        .login-card{backdrop-filter:blur(20px);background:rgba(255,255,255,.95)}
+        .sig-box-print{min-width:130px;height:90px;display:inline-flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:9px;font-weight:600}
+        .sig-box-print .sig-line{width:100%;border-top:1px solid #333;padding-top:4px;text-align:center}
+        .approval-card{border:2px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center;transition:all .3s}
+        .approval-card.signed{border-color:#059669;background:#f0fdf4}
+        .approval-card.current-user{border-color:#0d9488;background:#f0fdfa;box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+        .approval-card.pending-blocked{border-color:#f59e0b;background:#fffbeb;opacity:.7}
+        table:not(.ps-print-table):not(.po-print-table){border-collapse:collapse}
+        table:not(.ps-print-table):not(.po-print-table) th{border:1px solid #cbd5e1}
+        table:not(.ps-print-table):not(.po-print-table) td{border:1px solid #e2e8f0}
+        .ps-print-table{width:100%;border-collapse:collapse;font-size:11px;font-family:'Inter',sans-serif;table-layout:auto}
+        .ps-print-table th{background:#d1fae5;border:1px solid #333;padding:4px 3px;text-align:left;font-weight:700;font-size:10px;white-space:normal;word-break:break-word}
+        .ps-print-table td{border:1px solid #999;padding:3px 3px;font-size:10px;white-space:normal;word-break:break-word}
+        .ps-print-table tfoot td{border:1px solid #333}
+        .po-print-table{width:100%;border-collapse:collapse;font-size:13px;font-family:'Inter',sans-serif;table-layout:auto}
+        .po-print-table th{background:#d1fae5;border:1px solid #333;padding:6px 5px;text-align:left;font-weight:700;font-size:12px}
+        .po-print-table td{border:1px solid #999;padding:5px}
+        .po-print-table tfoot td{border:1px solid #333}
+        .doc-row-inactive td{color:#999!important;text-decoration:line-through;background:#f8fafc}
+        @media(max-width:1024px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main-content{margin-left:0}}
+        @media print{
+            .sidebar,.top-bar,.no-print,.conn-ok,.conn-err,.conn-warn{display:none!important}
+            .main-content{margin-left:0!important}
+            .print-area{padding:0!important}
+            body{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+            .ps-print-table,.po-print-table{font-size:10px!important}
+            .ps-print-table td,.ps-print-table th,.po-print-table td,.po-print-table th{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+            .ps-print-table tr,.po-print-table tr{page-break-inside:avoid}
+            .doc-row-inactive{display:none!important}
+            .ps-remark-input{border:none!important;background:transparent!important;padding:0!important}
+            .approval-section-print{margin-top:20px}
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="min-h-screen flex">
+    <div class="hidden lg:flex lg:w-1/2 login-bg flex-col justify-center items-center p-12 relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10">
+            <div class="absolute top-20 left-20 w-64 h-64 rounded-full bg-white/20 blur-3xl"></div>
+            <div class="absolute bottom-20 right-20 w-80 h-80 rounded-full bg-emerald-300/20 blur-3xl"></div>
+        </div>
+        <div class="relative z-10 text-center">
+            <div class="w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-sm flex items-center justify-center mx-auto mb-6 border border-white/20">
+                <i class="fas fa-capsules text-4xl text-emerald-300"></i>
+            </div>
+            <h1 class="text-4xl font-black text-white mb-3 tracking-tight">Monico Pharma Ltd</h1>
+            <p class="text-emerald-200 text-lg font-medium mb-1">Approvel System</p>
+            <p class="text-emerald-300/60 text-sm">Depot Inchar - Doctor Honorarium Management</p>
+            <div class="mt-10 flex items-center justify-center gap-6 text-emerald-200/50 text-xs">
+                <span><i class="fas fa-shield-halved mr-1"></i>Secured</span>
+                <span><i class="fas fa-clock mr-1"></i>Real-time</span>
+                <span><i class="fas fa-check-double mr-1"></i>4-Level Approval</span>
+            </div>
+        </div>
+    </div>
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-50">
+        <div class="login-card w-full max-w-md p-8 rounded-2xl shadow-xl border border-slate-200/50">
+            <div class="lg:hidden text-center mb-6">
+                <div class="w-14 h-14 rounded-xl bg-brand-600 flex items-center justify-center mx-auto mb-3"><i class="fas fa-capsules text-white text-2xl"></i></div>
+                <h2 class="text-xl font-bold text-slate-800">Monico Pharma</h2>
+                <p class="text-xs text-slate-400">Approvel System Depot Inchar</p>
+            </div>
+            <div class="hidden lg:block mb-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-1">Welcome Back</h2>
+                <p class="text-sm text-slate-400">Sign in to access the system</p>
+            </div>
+            <div id="loginError" class="hidden mb-4 bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg"><i class="fas fa-exclamation-circle mr-1"></i><span id="loginErrorText"></span></div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">System ID</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><i class="fas fa-user"></i></span>
+                        <input type="text" id="loginUser" class="input-focus w-full border border-slate-300 rounded-lg pl-10 pr-4 py-3 text-sm outline-none" placeholder="Enter your System ID" onkeydown="if(event.key==='Enter')doLogin()">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Password</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"><i class="fas fa-lock"></i></span>
+                        <input type="password" id="loginPass" class="input-focus w-full border border-slate-300 rounded-lg pl-10 pr-10 py-3 text-sm outline-none" placeholder="Enter your password" onkeydown="if(event.key==='Enter')doLogin()">
+                        <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onclick="togglePassVis()"><i class="fas fa-eye" id="passEyeIcon"></i></button>
+                    </div>
+                </div>
+                <button onclick="doLogin()" id="loginBtn" class="btn-primary w-full text-white py-3 rounded-lg text-sm font-bold flex items-center justify-center gap-2"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-100 text-center text-[11px] text-slate-400">Monico Pharma Ltd &copy; 2025 &mdash; Depot Inchar System</div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appPage" class="hidden">
+    <div id="connBanner" class="conn-warn text-white text-center py-1.5 px-4 text-xs font-medium no-print"><i class="fas fa-spinner fa-spin mr-1"></i>Connecting to server...</div>
+
+    <aside class="sidebar bg-navy-900 text-white flex flex-col no-print" id="sidebar">
+        <div class="px-4 py-4 border-b border-white/10 flex-shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center"><i class="fas fa-capsules text-white"></i></div>
+                <div><h1 class="text-sm font-bold leading-tight">Monico Pharma</h1><p class="text-[9px] text-slate-400 tracking-wider uppercase">Approvel System</p></div>
+            </div>
+        </div>
+        <nav class="flex-1 min-h-0 overflow-y-auto py-3" id="sidebarNav">
+            <div class="px-4 mb-1"><span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Main</span></div>
+            <a href="#" class="nav-link active flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="dashboard" onclick="showPage('dashboard');return false"><i class="fas fa-chart-pie w-5 text-center text-brand-400"></i>Dashboard</a>
+
+            <div class="nav-sec-dic">
+                <div class="px-4 mt-4 mb-1"><span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Management</span></div>
+                <div class="nav-parent open"><a href="#" class="nav-link flex items-center justify-between px-4 py-2 text-sm text-slate-300" onclick="toggleSubMenu(this);return false"><span class="flex items-center gap-3"><i class="fas fa-user-doctor w-5 text-center text-brand-400"></i>Doctor</span><i class="fas fa-chevron-right chevron text-[10px] text-slate-500"></i></a><div class="nav-sub open"><a href="#" class="nav-link flex items-center gap-3 pl-11 pr-4 py-1.5 text-xs text-slate-400" data-page="add-doctor" onclick="showPage('add-doctor');return false"><i class="fas fa-plus w-4 text-center"></i>Add</a><a href="#" class="nav-link flex items-center gap-3 pl-11 pr-4 py-1.5 text-xs text-slate-400" data-page="doctor-list" onclick="showPage('doctor-list');return false"><i class="fas fa-list w-4 text-center"></i>List</a></div></div>
+                <div class="nav-parent"><a href="#" class="nav-link flex items-center justify-between px-4 py-2 text-sm text-slate-300" onclick="toggleSubMenu(this);return false"><span class="flex items-center gap-3"><i class="fas fa-user-tie w-5 text-center text-brand-400"></i>MPO</span><i class="fas fa-chevron-right chevron text-[10px] text-slate-500"></i></a><div class="nav-sub"><a href="#" class="nav-link flex items-center gap-3 pl-11 pr-4 py-1.5 text-xs text-slate-400" data-page="add-mpo" onclick="showPage('add-mpo');return false"><i class="fas fa-plus w-4 text-center"></i>Add</a><a href="#" class="nav-link flex items-center gap-3 pl-11 pr-4 py-1.5 text-xs text-slate-400" data-page="mpo-list" onclick="showPage('mpo-list');return false"><i class="fas fa-list w-4 text-center"></i>List</a></div></div>
+            </div>
+
+            <div class="nav-sec-dic">
+                <div class="px-4 mt-4 mb-1"><span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Transactions</span></div>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="mpo-sales" onclick="showPage('mpo-sales');return false"><i class="fas fa-chart-line w-5 text-center text-emerald-400"></i>MPO Sales Entry</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="pay-order-entry" onclick="showPage('pay-order-entry');return false"><i class="fas fa-hashtag w-5 text-center text-purple-400"></i>Pay Order Entry</a>
+            </div>
+
+            <div class="px-4 mt-4 mb-1"><span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Reports</span></div>
+            <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="report-monthly" onclick="showPage('report-monthly');return false"><i class="fas fa-calendar w-5 text-center text-brand-400"></i>Monthly Report</a>
+            <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="pay-order-report" onclick="showPage('pay-order-report');return false"><i class="fas fa-file-invoice-dollar w-5 text-center text-purple-400"></i>Pay Order Report</a>
+            <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-gold-500 font-semibold" data-page="print-sheet" onclick="showPage('print-sheet');return false"><i class="fas fa-print w-5 text-center"></i>Print Sheet</a>
+
+            <div class="nav-sec-dic">
+                <div class="px-4 mt-4 mb-1"><span class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest">Admin</span></div>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" data-page="user-management" onclick="showPage('user-management');return false"><i class="fas fa-users-cog w-5 text-center text-amber-400"></i>User Management</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" onclick="openAreaSettings();return false"><i class="fas fa-map-location-dot w-5 text-center text-blue-400"></i>Area Management</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" onclick="openSlabSettings();return false"><i class="fas fa-sliders w-5 text-center text-blue-400"></i>Slab Settings</a>
+                <a href="#" class="nav-link flex items-center gap-3 px-4 py-2 text-sm text-slate-300" onclick="openSignatureSettings();return false"><i class="fas fa-file-signature w-5 text-center text-blue-400"></i>Signature Settings</a>
+            </div>
+        </nav>
+        <div class="px-4 py-3 border-t border-white/10 flex-shrink-0">
+            <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center text-[10px] font-bold text-white" id="sidebarAvatar">KS</div><div><p class="text-xs font-semibold text-white" id="sidebarUserName">KS</p><p class="text-[9px] text-slate-400" id="sidebarUserRole">DIC</p></div></div>
+                <button onclick="doLogout()" class="text-slate-400 hover:text-red-400 text-xs" title="Logout"><i class="fas fa-right-from-bracket"></i></button>
+            </div>
+            <div class="text-[10px] text-slate-500 flex items-center gap-1" id="sidebarStatus"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 pulse-dot"></span>Connecting...</div>
+        </div>
+    </aside>
+
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-30 hidden lg:hidden no-print" onclick="closeSidebar()"></div>
+
+    <div class="main-content" id="mainContent">
+        <header class="top-bar bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-20 no-print">
+            <div class="flex items-center gap-4">
+                <button class="lg:hidden text-slate-600 hover:text-brand-600" onclick="openSidebar()"><i class="fas fa-bars text-lg"></i></button>
+                <h2 class="text-lg font-bold text-slate-800" id="pageTitle">Dashboard</h2>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-xs text-slate-400" id="currentDateTime"></span>
+                <div class="h-5 w-px bg-slate-200"></div>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full" id="headerRoleBadge"></span>
+            </div>
+        </header>
+        <div class="p-6 print-area">
+
+            <!-- DASHBOARD -->
+            <div id="page-dashboard" class="page-content">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200"><div class="flex items-center justify-between mb-3"><span class="text-xs font-semibold text-slate-400 uppercase">Active Doctors</span><div class="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center"><i class="fas fa-user-doctor text-brand-600"></i></div></div><div class="text-3xl font-extrabold" id="statDoctors">0</div></div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200"><div class="flex items-center justify-between mb-3"><span class="text-xs font-semibold text-slate-400 uppercase">MPOs</span><div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center"><i class="fas fa-user-tie text-blue-600"></i></div></div><div class="text-3xl font-extrabold" id="statMPOs">0</div></div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200"><div class="flex items-center justify-between mb-3"><span class="text-xs font-semibold text-slate-400 uppercase">Total Disbursed</span><div class="w-10 h-10 rounded-lg bg-gold-500/10 flex items-center justify-center"><i class="fas fa-bangladeshi-taka-sign text-gold-600"></i></div></div><div class="text-3xl font-extrabold" id="statTotal">0</div></div>
+                    <div class="stat-card bg-white rounded-xl p-5 border border-slate-200"><div class="flex items-center justify-between mb-3"><span class="text-xs font-semibold text-slate-400 uppercase">This Month</span><div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center"><i class="fas fa-calendar-check text-emerald-600"></i></div></div><div class="text-3xl font-extrabold" id="statMonth">0</div><div class="text-xs text-slate-400 mt-1" id="statMonthLabel">-</div></div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b border-slate-100"><h3 class="font-bold text-slate-700 text-sm">Recent Pay Orders</h3></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-2">Doctor</th><th class="text-left px-4 py-2">MPO</th><th class="text-left px-4 py-2">Amount</th><th class="text-left px-4 py-2">Month</th></tr></thead><tbody id="recentEntriesBody" class="divide-y divide-slate-100"></tbody></table></div><div id="recentEmpty" class="hidden px-5 py-8 text-center text-slate-400 text-sm">No entries yet</div></div>
+                    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b border-slate-100"><h3 class="font-bold text-slate-700 text-sm">Approval Status Overview</h3></div><div id="approvalOverview" class="p-5 space-y-3"></div></div>
+                </div>
+            </div>
+
+            <!-- ADD/EDIT DOCTOR -->
+            <div id="page-add-doctor" class="page-content hidden">
+                <div id="editModeBanner" class="edit-banner hidden text-white px-5 py-2.5 rounded-t-xl flex items-center justify-between no-print"><div class="flex items-center gap-2"><i class="fas fa-edit"></i><span class="font-semibold text-sm">Update Mode — Doctor</span></div><button onclick="cancelEditDoctor()" class="text-white/80 hover:text-white text-xs"><i class="fas fa-times mr-1"></i>Cancel</button></div>
+                <div class="max-w-2xl"><div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <input type="hidden" id="editDocId" value="">
+                    <h3 class="text-lg font-bold mb-6 flex items-center gap-2" id="doctorFormTitle"><i class="fas fa-user-doctor text-brand-600"></i>Add Doctor</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Name *</label><input type="text" id="docName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Degree *</label><input type="text" id="docDegree" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Specialty *</label><input type="text" id="docSpecialty" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Chamber *</label><input type="text" id="docChamber" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile *</label><input type="text" id="docMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="docTerritory" list="territoryList" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"><datalist id="territoryList"></datalist></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Amount *</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="docAmount" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none"></div></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">MPO</label><select id="docAssignedMpo" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Optional --</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Active</label><div class="flex items-center gap-3 mt-1"><div id="docActiveToggle" class="toggle-track on" onclick="toggleDocActive()"><div class="toggle-thumb"></div></div><span id="docActiveLabel" class="text-sm font-semibold text-emerald-600">Active</span></div></div>
+                    </div>
+                    <div class="flex gap-3 mt-6"><button onclick="saveDoctor()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save</button><button onclick="cancelEditDoctor()" id="btnCancelEdit" class="hidden px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Back</button><button onclick="resetDoctorForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Reset</button></div>
+                </div></div>
+            </div>
+
+            <!-- DOCTOR LIST -->
+            <div id="page-doctor-list" class="page-content hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2"><h3 class="font-bold text-slate-700">All Doctors</h3><div class="flex gap-2"><input type="text" id="docSearchInput" oninput="renderDoctorList()" placeholder="Search..." class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-48"><a href="#" onclick="showPage('add-doctor');return false" class="btn-primary text-white px-4 py-1.5 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i>Add</a></div></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Degree</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">MPO</th><th class="text-center px-4 py-3">Active</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="doctorEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No doctors found</div></div></div>
+
+            <!-- ADD MPO -->
+            <div id="page-add-mpo" class="page-content hidden"><div class="max-w-2xl"><div class="bg-white rounded-xl border border-slate-200 p-6"><h3 class="text-lg font-bold mb-6 flex items-center gap-2"><i class="fas fa-user-tie text-brand-600"></i>Add MPO</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Name *</label><input type="text" id="mpoName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">EMP Code *</label><input type="text" id="mpoEmpId" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Area *</label><select id="mpoArea" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select --</option></select></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="mpoTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile *</label><input type="text" id="mpoMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Join Date *</label><input type="date" id="mpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div></div><div class="flex gap-3 mt-6"><button onclick="saveMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save</button><button onclick="resetMPOForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Reset</button></div></div></div></div>
+
+            <!-- MPO LIST -->
+            <div id="page-mpo-list" class="page-content hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><h3 class="font-bold text-slate-700">All MPOs</h3><a href="#" onclick="showPage('add-mpo');return false" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i>Add</a></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-5 py-3">#</th><th class="text-left px-5 py-3">Name</th><th class="text-left px-5 py-3">EMP Code</th><th class="text-left px-5 py-3">Area</th><th class="text-left px-5 py-3">Territory</th><th class="text-left px-5 py-3">Mobile</th><th class="text-center px-5 py-3">Actions</th></tr></thead><tbody id="mpoListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="mpoEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No MPOs</div></div></div>
+
+            <!-- MPO SALES ENTRY -->
+            <div id="page-mpo-sales" class="page-content hidden">
+                <div class="no-print bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div><h3 class="font-bold flex items-center gap-2"><i class="fas fa-chart-line text-emerald-600"></i>MPO Sales Entry</h3><p class="text-xs text-slate-400 mt-1">নতুন মাস সিলেক্ট করলে TP-1 অটো-ফিল হবে</p></div>
+                        <div class="flex-1"></div>
+                        <div><label class="block text-[10px] font-semibold text-slate-500 mb-1">Area</label><select id="salesArea" onchange="loadMPOSalesTable()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div><label class="block text-[10px] font-semibold text-slate-500 mb-1">Month</label><select id="salesMonth" onchange="loadMPOSalesTable()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select></div>
+                        <button onclick="saveAllMPOSales()" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-cloud-arrow-up mr-1"></i>Save All</button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">MPO Name</th><th class="text-left px-4 py-3">EMP Code</th><th class="text-left px-4 py-3">Area</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">TP 1</th><th class="text-left px-4 py-3">TP 2</th><th class="text-center px-4 py-3">Doctors</th></tr></thead><tbody id="mpoSalesBody" class="divide-y divide-slate-100"></tbody></table></div><div id="mpoSalesEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No MPOs</div></div>
+            </div>
+
+            <!-- PAY ORDER ENTRY -->
+            <div id="page-pay-order-entry" class="page-content hidden">
+                <div id="poEditBanner" class="edit-banner-purple hidden text-white px-5 py-2.5 rounded-t-xl flex items-center justify-between no-print"><div class="flex items-center gap-2"><i class="fas fa-edit"></i><span class="font-semibold text-sm">Update Mode — Pay Order</span></div><button onclick="cancelEditPO()" class="text-white/80 hover:text-white text-xs"><i class="fas fa-times mr-1"></i>Cancel</button></div>
+                <div class="max-w-3xl"><div class="bg-white rounded-xl border border-slate-200 p-6">
+                    <input type="hidden" id="editPOId" value="">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2" id="poFormTitle"><i class="fas fa-hashtag text-purple-600"></i>Pay Order Entry</h3>
+                    <div id="poAutoFillIndicator" class="hidden mb-4 bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 flex items-center gap-2 text-sm text-purple-700"><i class="fas fa-magic"></i><span>অটো-ফিল হয়েছে</span></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Doctor *</label><select id="poDoctor" onchange="onPODoctorChange()" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select --</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">MPO *</label><select id="poEntryMPO" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select --</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Amount *</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="poEntryAmount" min="0" oninput="updatePOCommission()" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none"></div></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Pay Order No</label><input type="text" id="poEntryPayOrderNo" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">PO Date</label><input type="date" id="poEntryDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Month *</label><select id="poEntryMonth" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">TP 1</label><input type="text" id="poEntryTp1" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-slate-50" readonly></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">TP 2</label><input type="text" id="poEntryTp2" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-slate-50" readonly></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">PO Type</label><select id="poEntryType" onchange="updatePOCommission()" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="IBBL">IBBL</option><option value="Bkash">Bkash</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Commission/PO</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="poEntryCommission" value="58" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none bg-slate-50" readonly></div></div>
+                        <div class="md:col-span-3"><label class="block text-xs font-semibold text-slate-500 mb-1">Remarks</label><input type="text" id="poEntryRemarks" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
+                    </div>
+                    <div class="flex gap-3 mt-6"><button onclick="savePayOrderEntry()" class="btn-purple text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save Pay Order</button><button onclick="cancelEditPO()" id="btnCancelPO" class="hidden px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button><button onclick="resetPOEntryForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Reset</button></div>
+                </div></div>
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-6"><div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><h3 class="font-bold text-slate-700">Pay Order Entries</h3><select id="poListMonth" onchange="loadPOEntriesList()" class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none bg-white"></select></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doctor</th><th class="text-left px-4 py-3">PO No</th><th class="text-left px-4 py-3">Type</th><th class="text-left px-4 py-3">MPO</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">PO Date</th><th class="text-left px-4 py-3">Month</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="poEntryListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="poEntryEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No pay order entries</div></div>
+            </div>
+
+            <!-- MONTHLY REPORT -->
+            <div id="page-report-monthly" class="page-content hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b flex flex-wrap items-center gap-3"><h3 class="font-bold">Monthly Report</h3><select id="rptMonthlyMonth" onchange="loadMonthlyReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select><select id="rptMonthlyArea" onchange="loadMonthlyReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All Areas</option></select></div><div class="overflow-x-auto" id="monthlyReportTable"></div><div id="monthlyReportFooter" class="px-5 py-3 border-t bg-slate-50 font-bold text-sm"></div></div></div>
+
+            <!-- PAY ORDER REPORT -->
+            <div id="page-pay-order-report" class="page-content hidden">
+                <div class="no-print bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <div class="flex flex-wrap items-end gap-4">
+                        <h3 class="font-bold flex items-center gap-2"><i class="fas fa-file-invoice-dollar text-purple-600"></i>Pay Order Report</h3>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Month</label><select id="poRptMonth" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">PO Date</label><input type="date" id="poRptDate" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Area</label><select id="poRptArea" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><select id="poRptTerritory" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div class="flex-1"></div>
+                        <button onclick="printAs('landscape')" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i>Print</button>
+                    </div>
+                </div>
+                <div id="poReportPrintArea"></div>
+            </div>
+
+            <!-- PRINT SHEET -->
+            <div id="page-print-sheet" class="page-content hidden">
+                <div class="no-print bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2"><i class="fas fa-print text-gold-500"></i>Print Sheet — Approval Workflow</h3>
+                    <div class="flex flex-wrap items-end gap-4">
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Month</label><select id="printMonth" onchange="loadPrintSheet()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Area</label><select id="printArea" onchange="onPrintFilterChange()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><select id="printTerritory" onchange="loadPrintSheet()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div class="flex items-center gap-2"><input type="checkbox" id="printShowAll" checked onchange="loadPrintSheet()" class="w-4 h-4 text-brand-600 rounded"><label for="printShowAll" class="text-sm font-semibold">ALL Doctors</label></div>
+                        <div class="flex-1"></div>
+                        <button onclick="savePrintSheetRemarks()" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-cloud-arrow-up mr-1"></i>Save Remarks</button>
+                        <button onclick="printAs('landscape')" class="btn-gold text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i>Print</button>
+                    </div>
+                </div>
+                <div id="printSheetArea"></div>
+                <div id="approvalSection" class="no-print mt-6 bg-white rounded-xl border border-slate-200 p-5">
+                    <h4 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fas fa-clipboard-check text-brand-600"></i>Approval Workflow</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="approvalCards"></div>
+                    <div class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700"><i class="fas fa-info-circle mr-1"></i>Sequential approval: RSM → Sales Admin → AC → HO. Each step requires the previous to be completed.</div>
+                </div>
+            </div>
+
+            <!-- USER MANAGEMENT -->
+            <div id="page-user-management" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><h3 class="font-bold text-slate-700 flex items-center gap-2"><i class="fas fa-users-cog text-amber-500"></i>User Management</h3><button onclick="openAddUserModal()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-user-plus mr-1"></i>Add User</button></div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-5 py-3">Username</th><th class="text-left px-5 py-3">Name</th><th class="text-left px-5 py-3">Role</th><th class="text-center px-5 py-3">Active</th><th class="text-center px-5 py-3">Actions</th></tr></thead><tbody id="userListBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    <div id="userEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No users</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div id="modalEditMPO" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalEditMPO')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-edit text-brand-600 mr-2"></i>Edit MPO</h3><button onclick="closeModal('modalEditMPO')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><input type="hidden" id="editMpoId"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Name</label><input type="text" id="editMpoName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">EMP Code</label><input type="text" id="editMpoEmpId" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Area</label><select id="editMpoArea" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select --</option></select></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><input type="text" id="editMpoTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile</label><input type="text" id="editMpoMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Join Date</label><input type="date" id="editMpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div></div><div class="flex gap-3 mt-6"><button onclick="updateMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i>Update</button><button onclick="closeModal('modalEditMPO')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
+
+<div id="modalAreaSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAreaSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-xl p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-map-location-dot text-blue-600 mr-2"></i>Area Management</h3><button onclick="closeModal('modalAreaSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><div class="flex gap-2 mb-4"><input type="text" id="newAreaInput" placeholder="Type area name..." class="input-focus flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"><button onclick="addNewArea()" class="btn-primary text-white px-5 py-2.5 rounded-lg text-sm font-semibold whitespace-nowrap"><i class="fas fa-plus mr-1"></i>Add</button></div><div id="areaListContainer" class="space-y-2 max-h-72 overflow-y-auto"></div></div></div>
+
+<div id="modalSlabSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSlabSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-xl p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-sliders text-blue-600 mr-2"></i>Commission Slab Settings</h3><button onclick="closeModal('modalSlabSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><div class="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 mb-2 px-1"><div class="col-span-4">Type</div><div class="col-span-3">Amount (>=)</div><div class="col-span-4">Commission (৳)</div><div class="col-span-1"></div></div><div id="slabSettingsContainer" class="space-y-3 max-h-60 overflow-y-auto"></div><button onclick="addSlabRow()" class="mt-3 text-sm text-brand-600 font-semibold flex items-center gap-1"><i class="fas fa-plus"></i>Add Row</button><div class="flex gap-3 mt-6"><button onclick="saveSlabSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save</button></div></div></div>
+
+<div id="modalSignatureSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSignatureSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-file-signature text-blue-600 mr-2"></i>Signature Settings</h3><button onclick="closeModal('modalSignatureSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><p class="text-xs text-slate-500 mb-4">Upload transparent PNG signatures.</p><div class="grid grid-cols-2 gap-4" id="sigUploadContainer"></div><div class="flex gap-3 mt-6"><button onclick="saveSignatureSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save</button></div></div></div>
+
+<div id="modalAddUser" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalAddUser')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-md p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-user-plus text-brand-600 mr-2"></i>Add User</h3><button onclick="closeModal('modalAddUser')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><div class="space-y-4"><div><label class="block text-xs font-semibold text-slate-500 mb-1">Username *</label><input type="text" id="newUserUsername" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="e.g. RSM1"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Full Name *</label><input type="text" id="newUserName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="e.g. Md. Rahim"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Password *</label><input type="password" id="newUserPass" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="Min 6 characters"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Role *</label><select id="newUserRole" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="RSM">RSM (Regional Sales Manager)</option><option value="SalesAdmin">Sales Admin</option><option value="AC">AC (Accounts)</option><option value="HO">HO (Head Office)</option></select></div></div><div class="flex gap-3 mt-6"><button onclick="saveNewUser()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i>Save User</button><button onclick="closeModal('modalAddUser')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
+
+<div id="modalEditUser" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalEditUser')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-md p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-user-edit text-brand-600 mr-2"></i>Edit User</h3><button onclick="closeModal('modalEditUser')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><input type="hidden" id="editUserOrigUsername"><div class="space-y-4"><div><label class="block text-xs font-semibold text-slate-500 mb-1">Full Name</label><input type="text" id="editUserName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">New Password (leave blank to keep)</label><input type="password" id="editUserPass" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Role</label><select id="editUserRole" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="RSM">RSM</option><option value="SalesAdmin">Sales Admin</option><option value="AC">AC</option><option value="HO">HO</option></select></div><div class="flex items-center gap-3"><div id="editUserActiveToggle" class="toggle-track on" onclick="toggleEditUserActive()"><div class="toggle-thumb"></div></div><span id="editUserActiveLabel" class="text-sm font-semibold text-emerald-600">Active</span></div></div><div class="flex gap-3 mt-6"><button onclick="updateUser()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i>Update</button><button onclick="closeModal('modalEditUser')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
+
+<div id="modalConfirmDelete" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalConfirmDelete')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center"><div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><i class="fas fa-trash-alt text-red-500 text-xl"></i></div><h3 class="text-lg font-bold mb-2">Delete?</h3><p class="text-sm text-slate-500 mb-6" id="deleteConfirmText"></p><input type="hidden" id="deleteTargetId"><input type="hidden" id="deleteTargetType"><div class="flex gap-3 justify-center"><button onclick="confirmDelete()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-trash mr-1"></i>Delete</button><button onclick="closeModal('modalConfirmDelete')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
+
+<div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 no-print"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, push, update, remove, onValue, get, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const fbApp = initializeApp({
+    apiKey:"AIzaSyD9VXe5YBofZ2O4yCzTmRutTlfy-tRSruw",
+    authDomain:"octor-aad88.firebaseapp.com",
+    databaseURL:"https://octor-aad88-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId:"octor-aad88",storageBucket:"octor-aad88.firebasestorage.app",
+    messagingSenderId:"606146627263",appId:"1:606146627263:web:0a4cbb4bc02c939d59280a"
+});
+const db = getDatabase(fbApp);
+
+/* ===== হার্ডকোডেড লোকাল ADMIN — কোনো DB reference নেই ===== */
+const LOCAL_ADMIN = {
+    username: 'KS',
+    password: 'Monico@Ku007',
+    role: 'DIC',
+    name: 'KS (System Admin)',
+    active: true,
+    isLocal: true
+};
+
+const COMPANY = {name:"Monico Pharma Ltd",address:"04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000",depot:"Depot: Kushtia"};
+const SIG_LABELS = ['Prepared by','Checked by','ReChecked by','Verified by','Approved By','Applicant by (MPL)','Regional Sales Manager (MPL)','Accounts Officer (IBBL)','Officer (IBBL)','Branch Manager (IBBL)'];
+const APPROVAL_STEPS = [
+    {key:'rsm',label:'Checked by RSM',role:'RSM',icon:'fa-clipboard-check',color:'blue'},
+    {key:'salesAdmin',label:'ReChecked by Sales Admin',role:'SalesAdmin',icon:'fa-rotate',color:'purple'},
+    {key:'ac',label:'Verified by AC',role:'AC',icon:'fa-shield-halved',color:'emerald'},
+    {key:'ho',label:'Approved By HO',role:'HO',icon:'fa-stamp',color:'amber'}
+];
+const ROLE_LABELS = {DIC:'DIC (System Admin)',RSM:'RSM',SalesAdmin:'Sales Admin',AC:'AC (Accounts)',HO:'HO (Head Office)'};
+const ROLE_COLORS = {DIC:'bg-red-100 text-red-700',RSM:'bg-blue-100 text-blue-700',SalesAdmin:'bg-purple-100 text-purple-700',AC:'bg-emerald-100 text-emerald-700',HO:'bg-amber-100 text-amber-700'};
+
+let CU = null;
+let doctorsCache={}, mposCache={}, honorariumCache={}, mpoSalesCache={}, areasCache=[], settingsCache={};
+let tempSignatures={}, editUserActive=true, docActive=true;
+let fbConnected = false;
+
+const $=id=>document.getElementById(id);
+const val=id=>$(id)?.value||'';
+const fmt=n=>'৳'+Number(n||0).toLocaleString('en-BD');
+const fmtDate=d=>{if(!d)return'';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})}catch(e){return d||''}};
+const monthKey=d=>{if(!d)return'';const dt=new Date(d);return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')};
+const monthLabel=mk=>{if(!mk)return'';const[y,m]=mk.split('-');const months=['January','February','March','April','May','June','July','August','September','October','November','December'];return months[parseInt(m)-1]+' '+y};
+function populateMonthSelect(selId,selected){const sel=$(selId);if(!sel)return;sel.innerHTML='';const now=new Date();for(let i=0;i<12;i++){const d=new Date(now.getFullYear(),now.getMonth()-i,1);const mk=monthKey(d);const opt=document.createElement('option');opt.value=mk;opt.textContent=monthLabel(mk);if(mk===selected)opt.selected=true;sel.appendChild(opt)}}
+function toast(msg,type='success'){const c=$('toastContainer');const t=document.createElement('div');t.className=`toast px-4 py-3 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${type==='success'?'bg-emerald-600 text-white':type==='error'?'bg-red-600 text-white':'bg-slate-700 text-white'}`;t.innerHTML=`<i class="fas ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-info-circle'}"></i>${msg}`;c.appendChild(t);setTimeout(()=>t.remove(),3200)}
+function openModal(id){$(id).classList.remove('hidden')}
+function closeModal(id){$(id).classList.add('hidden')}
+function updateDateTime(){$('currentDateTime').textContent=new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+
+/* ===== AUTH — প্রথমে লোকাল চেক, তারপর Firebase ===== */
+function togglePassVis(){const p=$('loginPass'),i=$('passEyeIcon');if(p.type==='password'){p.type='text';i.className='fas fa-eye-slash'}else{p.type='password';i.className='fas fa-eye'}}
+
+async function doLogin(){
+    const u=val('loginUser').trim(), p=val('loginPass');
+    if(!u||!p){showLoginError('Please enter System ID and Password');return}
+    const btn=$('loginBtn');btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin mr-1"></i>Signing in...';
+
+    /* ধাপ ১: লোকাল অ্যাডমিন চেক — কোনো Firebase লাগবে না */
+    if(u===LOCAL_ADMIN.username && p===LOCAL_ADMIN.password){
+        CU = {...LOCAL_ADMIN};
+        sessionStorage.setItem('mpUser', JSON.stringify(CU));
+        showApp();
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';
+        return;
+    }
+
+    /* ধাপ ২: Firebase থেকে অন্য ইউজার চেক */
+    if(!fbConnected){
+        showLoginError('Server not connected. Only local admin can login offline.');
+        btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';
+        return;
+    }
+    try{
+        const snap = await get(ref(db,'users/'+u));
+        if(!snap.exists()){showLoginError('User not found. Contact DIC admin.');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';return}
+        const user = snap.val();
+        if(!user.active){showLoginError('Account is deactivated. Contact admin.');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';return}
+        if(user.password!==p){showLoginError('Wrong password.');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';return}
+        CU = {username:u, ...user, isLocal:false};
+        sessionStorage.setItem('mpUser', JSON.stringify(CU));
+        showApp();
+    }catch(e){
+        showLoginError('Connection error. Try again.');
+    }
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In';
+}
+function showLoginError(msg){$('loginError').classList.remove('hidden');$('loginErrorText').textContent=msg}
+
+function doLogout(){sessionStorage.removeItem('mpUser');CU=null;$('appPage').classList.add('hidden');$('loginPage').classList.remove('hidden');$('loginPass').value='';$('loginError').classList.add('hidden');const btn=$('loginBtn');btn.disabled=false;btn.innerHTML='<i class="fas fa-sign-in-alt"></i> Sign In'}
+
+function showApp(){
+    $('loginPage').classList.add('hidden');$('appPage').classList.remove('hidden');
+    $('sidebarAvatar').textContent=(CU.name||CU.username).substring(0,2).toUpperCase();
+    $('sidebarUserName').textContent=CU.name||CU.username;
+    $('sidebarUserRole').textContent=ROLE_LABELS[CU.role]||CU.role;
+    const badge=$('headerRoleBadge');badge.textContent=ROLE_LABELS[CU.role]||CU.role;
+    badge.className='text-xs font-semibold px-2.5 py-0.5 rounded-full '+(ROLE_COLORS[CU.role]||'bg-slate-100 text-slate-700');
+    if(CU.isLocal){badge.textContent+=' [LOCAL]'}
+    applyRoleAccess();showPage('dashboard');
+}
+
+function applyRoleAccess(){
+    const isDIC=CU.role==='DIC';
+    document.querySelectorAll('.nav-sec-dic').forEach(el=>el.style.display=isDIC?'':'none');
+    if(!isDIC){
+        document.querySelectorAll('[data-page="add-doctor"],[data-page="add-mpo"],[data-page="mpo-sales"],[data-page="pay-order-entry"],[data-page="user-management"]').forEach(el=>{el.style.display='none'});
+    }
+}
+
+/* ===== NAVIGATION ===== */
+function showPage(page){
+    document.querySelectorAll('.page-content').forEach(el=>el.classList.add('hidden'));
+    const pg=$('page-'+page);if(pg)pg.classList.remove('hidden');
+    document.querySelectorAll('.nav-link').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll(`.nav-link[data-page="${page}"]`).forEach(el=>el.classList.add('active'));
+    const titles={dashboard:'Dashboard','add-doctor':'Add Doctor','doctor-list':'Doctor List','add-mpo':'Add MPO','mpo-list':'MPO List','mpo-sales':'MPO Sales Entry','pay-order-entry':'Pay Order Entry','report-monthly':'Monthly Report','pay-order-report':'Pay Order Report','print-sheet':'Print Sheet','user-management':'User Management'};
+    $('pageTitle').textContent=titles[page]||page;closeSidebar();
+    if(page==='dashboard')loadDashboard();
+    if(page==='doctor-list')renderDoctorList();
+    if(page==='add-doctor'){populateMPOSelect('docAssignedMpo');populateTerritoryDatalist()}
+    if(page==='add-mpo')populateAreaSelect('mpoArea');
+    if(page==='mpo-sales'){populateAreaSelect('salesArea');populateMonthSelect('salesMonth',monthKey(new Date()));loadMPOSalesTable()}
+    if(page==='pay-order-entry'){populateDoctorSelect('poDoctor');populateMPOSelect('poEntryMPO');populateMonthSelect('poEntryMonth',monthKey(new Date()));populateMonthSelect('poListMonth',monthKey(new Date()));loadPOEntriesList()}
+    if(page==='report-monthly'){populateMonthSelect('rptMonthlyMonth',monthKey(new Date()));populateAreaSelect('rptMonthlyArea','All Areas');loadMonthlyReport()}
+    if(page==='pay-order-report'){populateMonthSelect('poRptMonth',monthKey(new Date()));populateAreaSelect('poRptArea');populateTerritorySelect('poRptTerritory');loadPayOrderReport()}
+    if(page==='print-sheet'){populateMonthSelect('printMonth',monthKey(new Date()));populateAreaSelect('printArea');populateTerritorySelect('printTerritory');loadPrintSheet();loadApprovalSection()}
+    if(page==='user-management')loadUserList();
+}
+function toggleSubMenu(el){el.parentElement.classList.toggle('open')}
+function openSidebar(){$('sidebar').classList.add('open');$('sidebarOverlay').classList.remove('hidden')}
+function closeSidebar(){$('sidebar').classList.remove('open');$('sidebarOverlay').classList.add('hidden')}
+
+/* ===== DATA LISTENERS ===== */
+function setupListeners(){
+    onValue(ref(db,'doctors'),snap=>{doctorsCache=snap.val()||{};if(CU)refreshCurrentPage()});
+    onValue(ref(db,'mpos'),snap=>{mposCache=snap.val()||{};if(CU)refreshCurrentPage()});
+    onValue(ref(db,'honorarium'),snap=>{honorariumCache=snap.val()||{};if(CU)refreshCurrentPage()});
+    onValue(ref(db,'mpoSales'),snap=>{mpoSalesCache=snap.val()||{}});
+    onValue(ref(db,'settings'),snap=>{settingsCache=snap.val()||{};areasCache=Object.values(settingsCache.areas||{}).sort()});
+    onValue(ref(db,'.info/connected'),snap=>{
+        fbConnected=snap.val()===true;const b=$('connBanner');const s=$('sidebarStatus');
+        if(fbConnected){b.className='conn-ok text-white text-center py-1.5 px-4 text-xs font-medium no-print';b.innerHTML='<i class="fas fa-check-circle mr-1"></i>Connected to Firebase';s.innerHTML='<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Connected'}
+        else{b.className='conn-warn text-white text-center py-1.5 px-4 text-xs font-medium no-print';b.innerHTML='<i class="fas fa-exclamation-triangle mr-1"></i>Offline — Local admin only';s.innerHTML='<span class="w-1.5 h-1.5 rounded-full bg-amber-400 pulse-dot"></span>Offline'}
+    });
+}
+function refreshCurrentPage(){const p=document.querySelector('.page-content:not(.hidden)');if(!p)return;const id=p.id.replace('page-','');if(id==='dashboard')loadDashboard();if(id==='doctor-list')renderDoctorList();if(id==='print-sheet'){loadPrintSheet();loadApprovalSection()}}
+
+/* ===== POPULATE HELPERS ===== */
+function populateMPOSelect(selId,selected){const sel=$(selId);if(!sel)return;const prev=sel.value;sel.innerHTML='<option value="">-- Optional --</option>';Object.entries(mposCache).forEach(([id,m])=>{const o=document.createElement('option');o.value=id;o.textContent=m.name+' ('+m.empId+')';if(id===selected||id===prev)o.selected=true;sel.appendChild(o)})}
+function populateDoctorSelect(selId,selected){const sel=$(selId);if(!sel)return;sel.innerHTML='<option value="">-- Select --</option>';Object.entries(doctorsCache).filter(([_,d])=>d.active!==false).forEach(([id,d])=>{const o=document.createElement('option');o.value=id;o.textContent=d.name+' - '+d.degree;sel.appendChild(o)})}
+function populateAreaSelect(selId,allLabel){const sel=$(selId);if(!sel)return;const prev=sel.value;sel.innerHTML='';if(allLabel){const o=document.createElement('option');o.value='';o.textContent=allLabel;sel.appendChild(o)}areasCache.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;if(a===prev)o.selected=true;sel.appendChild(o)})}
+function populateTerritorySelect(selId){const sel=$(selId);if(!sel)return;const prev=sel.value;sel.innerHTML='<option value="">All</option>';const ts=new Set();Object.values(mposCache).forEach(m=>{if(m.territory)ts.add(m.territory)});[...ts].sort().forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(t===prev)o.selected=true;sel.appendChild(o)})}
+function populateTerritoryDatalist(){const dl=$('territoryList');if(!dl)return;dl.innerHTML='';const ts=new Set();Object.values(mposCache).forEach(m=>{if(m.territory)ts.add(m.territory)});[...ts].sort().forEach(t=>{const o=document.createElement('option');o.value=t;dl.appendChild(o)})}
+function onPrintFilterChange(){populateTerritorySelect('printTerritory');loadPrintSheet()}
+
+/* ===== DOCTOR CRUD ===== */
+function toggleDocActive(){docActive=!docActive;$('docActiveToggle').classList.toggle('on',docActive);$('docActiveLabel').textContent=docActive?'Active':'Inactive';$('docActiveLabel').className='text-sm font-semibold '+(docActive?'text-emerald-600':'text-red-500')}
+async function saveDoctor(){const name=val('docName').trim(),degree=val('docDegree').trim(),specialty=val('docSpecialty').trim(),chamber=val('docChamber').trim(),mobile=val('docMobile').trim(),territory=val('docTerritory').trim(),amount=parseFloat(val('docAmount'))||0,mpo=val('docAssignedMpo');if(!name||!degree||!specialty||!chamber||!mobile||!territory||!amount){toast('Fill all required fields','error');return}const editId=val('editDocId');const data={name,degree,specialty,chamber,mobile,territory,amount,assignedMpo:mpo,active:docActive,updatedAt:new Date().toISOString()};try{if(editId){await update(ref(db,'doctors/'+editId),data);toast('Doctor updated');cancelEditDoctor()}else{data.createdAt=new Date().toISOString();await push(ref(db,'doctors'),data);toast('Doctor added');resetDoctorForm()}}catch(e){toast('Save failed','error')}}
+function editDoctor(id){const d=doctorsCache[id];if(!d)return;showPage('add-doctor');$('editDocId').value=id;$('docName').value=d.name||'';$('docDegree').value=d.degree||'';$('docSpecialty').value=d.specialty||'';$('docChamber').value=d.chamber||'';$('docMobile').value=d.mobile||'';$('docTerritory').value=d.territory||'';$('docAmount').value=d.amount||'';$('docAssignedMpo').value=d.assignedMpo||'';docActive=d.active!==false;$('docActiveToggle').classList.toggle('on',docActive);$('docActiveLabel').textContent=docActive?'Active':'Inactive';$('docActiveLabel').className='text-sm font-semibold '+(docActive?'text-emerald-600':'text-red-500');$('doctorFormTitle').innerHTML='<i class="fas fa-edit text-brand-600"></i>Update Doctor';$('editModeBanner').classList.remove('hidden');$('btnCancelEdit').classList.remove('hidden')}
+function cancelEditDoctor(){$('editDocId').value='';$('editModeBanner').classList.add('hidden');$('btnCancelEdit').classList.add('hidden');$('doctorFormTitle').innerHTML='<i class="fas fa-user-doctor text-brand-600"></i>Add Doctor';resetDoctorForm()}
+function resetDoctorForm(){$['docName','docDegree','docSpecialty','docChamber','docMobile','docTerritory','docAmount'].forEach(id=>$(id).value='');$('docAssignedMpo').value='';docActive=true;$('docActiveToggle').classList.add('on');$('docActiveLabel').textContent='Active';$('docActiveLabel').className='text-sm font-semibold text-emerald-600'}
+function deleteDoctor(id,name){$('deleteTargetId').value=id;$('deleteTargetType').value='doctor';$('deleteConfirmText').textContent=`Delete doctor "${name}"?`;openModal('modalConfirmDelete')}
+function renderDoctorList(){const body=$('doctorListBody'),empty=$('doctorEmpty'),search=(val('docSearchInput')||'').toLowerCase();const entries=Object.entries(doctorsCache).filter(([_,d])=>!search||d.name?.toLowerCase().includes(search)||d.territory?.toLowerCase().includes(search)||d.degree?.toLowerCase().includes(search));if(!entries.length){body.innerHTML='';empty.classList.remove('hidden');return}empty.classList.add('hidden');body.innerHTML=entries.map(([id,d],i)=>{const mpo=d.assignedMpo?mposCache[d.assignedMpo]:null;const inactive=d.active===false;return `<tr class="table-row ${inactive?'doc-row-inactive':''}"><td class="px-4 py-2.5 text-xs text-slate-400">${i+1}</td><td class="px-4 py-2.5 font-semibold text-sm">${d.name||''}</td><td class="px-4 py-2.5 text-sm">${d.degree||''}</td><td class="px-4 py-2.5 text-sm">${d.territory||''}</td><td class="px-4 py-2.5 text-sm font-semibold">${fmt(d.amount)}</td><td class="px-4 py-2.5 text-sm">${mpo?mpo.name:'-'}</td><td class="px-4 py-2.5 text-center">${inactive?'<span class="text-red-500 text-xs font-semibold">No</span>':'<span class="text-emerald-600 text-xs font-semibold">Yes</span>'}</td><td class="px-4 py-2.5 text-center"><button onclick="editDoctor('${id}')" class="text-blue-600 hover:text-blue-800 text-xs mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteDoctor('${id}','${(d.name||'').replace(/'/g,"\\'")}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-trash"></i></button></td></tr>`}).join('')}
+
+/* ===== MPO CRUD ===== */
+async function saveMPO(){const name=val('mpoName').trim(),empId=val('mpoEmpId').trim(),area=val('mpoArea'),territory=val('mpoTerritory').trim(),mobile=val('mpoMobile').trim(),joinDate=val('mpoJoinDate');if(!name||!empId||!area||!territory||!mobile||!joinDate){toast('Fill all required fields','error');return}try{await push(ref(db,'mpos'),{name,empId,area,territory,mobile,joinDate,createdAt:new Date().toISOString()});toast('MPO added');resetMPOForm()}catch(e){toast('Save failed','error')}}
+function resetMPOForm(){$['mpoName','mpoEmpId','mpoTerritory','mpoMobile','mpoJoinDate'].forEach(id=>$(id).value='');$('mpoArea').value=''}
+function editMPO(id){const m=mposCache[id];if(!m)return;$('editMpoId').value=id;$('editMpoName').value=m.name||'';$('editMpoEmpId').value=m.empId||'';$('editMpoTerritory').value=m.territory||'';$('editMpoMobile').value=m.mobile||'';$('editMpoJoinDate').value=m.joinDate||'';populateAreaSelect('editMpoArea');$('editMpoArea').value=m.area||'';openModal('modalEditMPO')}
+async function updateMPO(){const id=val('editMpoId');if(!id)return;try{await update(ref(db,'mpos/'+id),{name:val('editMpoName').trim(),empId:val('editMpoEmpId').trim(),area:val('editMpoArea'),territory:val('editMpoTerritory').trim(),mobile:val('editMpoMobile').trim(),joinDate:val('editMpoJoinDate')});toast('MPO updated');closeModal('modalEditMPO')}catch(e){toast('Update failed','error')}}
+function deleteMPO(id,name){$('deleteTargetId').value=id;$('deleteTargetType').value='mpo';$('deleteConfirmText').textContent=`Delete MPO "${name}"?`;openModal('modalConfirmDelete')}
+function renderMPOList(){const body=$('mpoListBody'),empty=$('mpoEmpty');const entries=Object.entries(mposCache);if(!entries.length){body.innerHTML='';empty.classList.remove('hidden');return}empty.classList.add('hidden');body.innerHTML=entries.map(([id,m],i)=>`<tr class="table-row"><td class="px-5 py-2.5 text-xs text-slate-400">${i+1}</td><td class="px-5 py-2.5 font-semibold text-sm">${m.name||''}</td><td class="px-5 py-2.5 text-sm">${m.empId||''}</td><td class="px-5 py-2.5 text-sm">${m.area||''}</td><td class="px-5 py-2.5 text-sm">${m.territory||''}</td><td class="px-5 py-2.5 text-sm">${m.mobile||''}</td><td class="px-5 py-2.5 text-center"><button onclick="editMPO('${id}')" class="text-blue-600 hover:text-blue-800 text-xs mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteMPO('${id}','${(m.name||'').replace(/'/g,"\\'")}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-trash"></i></button></td></tr>`).join('')}
+
+/* ===== MPO SALES ===== */
+function loadMPOSalesTable(){const body=$('mpoSalesBody'),empty=$('mpoSalesEmpty'),area=val('salesArea'),month=val('salesMonth');let entries=Object.entries(mposCache);if(area)entries=entries.filter(([_,m])=>m.area===area);if(!entries.length){body.innerHTML='';empty.classList.remove('hidden');return}empty.classList.add('hidden');const[y,m]=month.split('-').map(Number);const prevMk=(m===1?(y-1)+'-12':y+'-'+String(m-1).padStart(2,'0'));const docCountByMpo={};Object.values(doctorsCache).filter(d=>d.active!==false).forEach(d=>{if(d.assignedMpo){docCountByMpo[d.assignedMpo]=(docCountByMpo[d.assignedMpo]||0)+1}});body.innerHTML=entries.map(([id,mpo],i)=>{const sales=mpoSalesCache[month]?.[id]||{};const prevSales=mpoSalesCache[prevMk]?.[id]||{};const tp1=sales.tp1||prevSales.tp2||prevSales.tp1||'';const tp2=sales.tp2||'';const docs=docCountByMpo[id]||0;const autoFilled=tp1&&!sales.tp1;return `<tr class="table-row ${autoFilled?'auto-fill-flash':''}"><td class="px-4 py-2 text-xs text-slate-400">${i+1}</td><td class="px-4 py-2 font-semibold text-sm">${mpo.name}</td><td class="px-4 py-2 text-sm">${mpo.empId}</td><td class="px-4 py-2 text-sm">${mpo.area||''}</td><td class="px-4 py-2 text-sm">${mpo.territory||''}</td><td class="px-4 py-2"><input type="text" class="input-focus border border-slate-300 rounded px-2 py-1.5 text-sm w-full outline-none" data-mpo="${id}" data-field="tp1" value="${tp1}"></td><td class="px-4 py-2"><input type="text" class="input-focus border border-slate-300 rounded px-2 py-1.5 text-sm w-full outline-none" data-mpo="${id}" data-field="tp2" value="${tp2}"></td><td class="px-4 py-2 text-center"><span class="inline-flex items-center justify-center w-7 h-7 rounded-full ${docs>0?'bg-blue-100 text-blue-700':'bg-slate-100 text-slate-400'} text-xs font-bold">${docs}</span></td></tr>`}).join('')}
+async function saveAllMPOSales(){const month=val('salesMonth');if(!month){toast('Select month','error');return}const updates={};document.querySelectorAll('#mpoSalesBody input[data-mpo]').forEach(inp=>{const mpoId=inp.dataset.mpo,field=inp.dataset.field,v=inp.value.trim();if(v)updates[`mpoSales/${month}/${mpoId}/${field}`]=v});if(!Object.keys(updates).length){toast('No data to save','error');return}try{await update(ref(db),updates);toast('All MPO sales saved')}catch(e){toast('Save failed','error')}}
+
+/* ===== PAY ORDER ===== */
+function onPODoctorChange(){const docId=val('poDoctor');if(!docId)return;const d=doctorsCache[docId];if(!d)return;$('poEntryAmount').value=d.amount||'';$('poEntryMPO').value=d.assignedMpo||'';const month=val('poEntryMonth');const sales=mpoSalesCache[month]?.[d.assignedMpo]||{};$('poEntryTp1').value=sales.tp1||'';$('poEntryTp2').value=sales.tp2||'';if(sales.tp1)$('poAutoFillIndicator').classList.remove('hidden');else $('poAutoFillIndicator').classList.add('hidden');updatePOCommission()}
+function updatePOCommission(){const type=val('poEntryType'),amount=parseFloat(val('poEntryAmount'))||0;const slabs=settingsCache.commissionSlabs||[];let commission=58;const matching=slabs.filter(s=>s.type===type).sort((a,b)=>(b.amount||0)-(a.amount||0));for(const s of matching){if(amount>=(s.amount||0)){commission=s.commission||58;break}}$('poEntryCommission').value=commission}
+async function savePayOrderEntry(){const doctor=val('poDoctor'),mpo=val('poEntryMPO'),amount=parseFloat(val('poEntryAmount'))||0,month=val('poEntryMonth');if(!doctor||!mpo||!amount||!month){toast('Fill Doctor, MPO, Amount, Month','error');return}const editId=val('editPOId');const data={doctorId:doctor,mpoId:mpo,amount,payOrderNo:val('poEntryPayOrderNo').trim(),poDate:val('poEntryDate'),month,tp1:val('poEntryTp1'),tp2:val('poEntryTp2'),type:val('poEntryType'),commission:parseFloat(val('poEntryCommission'))||0,remarks:val('poEntryRemarks').trim(),updatedAt:new Date().toISOString()};try{if(editId){await update(ref(db,'honorarium/'+editId),data);toast('Pay Order updated');cancelEditPO()}else{data.createdAt=new Date().toISOString();await push(ref(db,'honorarium'),data);toast('Pay Order saved');resetPOEntryForm()}loadPOEntriesList()}catch(e){toast('Save failed','error')}}
+function editPO(id){const h=honorariumCache[id];if(!h)return;$('editPOId').value=id;$('poDoctor').value=h.doctorId||'';$('poEntryMPO').value=h.mpoId||'';$('poEntryAmount').value=h.amount||'';$('poEntryPayOrderNo').value=h.payOrderNo||'';$('poEntryDate').value=h.poDate||'';$('poEntryMonth').value=h.month||'';$('poEntryTp1').value=h.tp1||'';$('poEntryTp2').value=h.tp2||'';$('poEntryType').value=h.type||'IBBL';$('poEntryCommission').value=h.commission||58;$('poEntryRemarks').value=h.remarks||'';$('poFormTitle').innerHTML='<i class="fas fa-edit text-purple-600"></i>Update Pay Order';$('poEditBanner').classList.remove('hidden');$('btnCancelPO').classList.remove('hidden')}
+function cancelEditPO(){$('editPOId').value='';$('poEditBanner').classList.add('hidden');$('btnCancelPO').classList.add('hidden');$('poFormTitle').innerHTML='<i class="fas fa-hashtag text-purple-600"></i>Pay Order Entry';resetPOEntryForm()}
+function resetPOEntryForm(){$['poDoctor','poEntryMPO','poEntryAmount','poEntryPayOrderNo','poEntryDate','poEntryTp1','poEntryTp2','poEntryRemarks'].forEach(id=>$(id).value='');$('poEntryType').value='IBBL';$('poEntryCommission').value=58;$('poAutoFillIndicator').classList.add('hidden')}
+function deletePO(id){$('deleteTargetId').value=id;$('deleteTargetType').value='honorarium';$('deleteConfirmText').textContent='Delete this Pay Order entry?';openModal('modalConfirmDelete')}
+function loadPOEntriesList(){const body=$('poEntryListBody'),empty=$('poEntryEmpty'),month=val('poListMonth');const entries=Object.entries(honorariumCache).filter(([_,h])=>!month||h.month===month).sort((a,b)=>(b[1].createdAt||'').localeCompare(a[1].createdAt||''));if(!entries.length){body.innerHTML='';empty.classList.remove('hidden');return}empty.classList.add('hidden');body.innerHTML=entries.map(([id,h],i)=>{const doc=doctorsCache[h.doctorId]||{};const mpo=mposCache[h.mpoId]||{};return `<tr class="table-row"><td class="px-4 py-2 text-xs text-slate-400">${i+1}</td><td class="px-4 py-2 font-semibold text-sm">${doc.name||'-'}</td><td class="px-4 py-2 text-sm">${h.payOrderNo||'-'}</td><td class="px-4 py-2 text-xs"><span class="px-2 py-0.5 rounded-full ${h.type==='Bkash'?'bg-pink-100 text-pink-700':'bg-blue-100 text-blue-700'} font-semibold">${h.type||'IBBL'}</span></td><td class="px-4 py-2 text-sm">${mpo.name||'-'}</td><td class="px-4 py-2 font-semibold">${fmt(h.amount)}</td><td class="px-4 py-2 text-sm">${fmtDate(h.poDate)}</td><td class="px-4 py-2 text-sm">${monthLabel(h.month)}</td><td class="px-4 py-2 text-center"><button onclick="editPO('${id}')" class="text-blue-600 hover:text-blue-800 text-xs mr-2"><i class="fas fa-edit"></i></button><button onclick="deletePO('${id}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-trash"></i></button></td></tr>`}).join('')}
+
+/* ===== DELETE ===== */
+async function confirmDelete(){const id=val('deleteTargetId'),type=val('deleteTargetType');if(!id||!type)return;try{await remove(ref(db,type+'/'+id));toast('Deleted successfully');closeModal('modalConfirmDelete')}catch(e){toast('Delete failed','error')}}
+
+/* ===== PRINT SHEET ===== */
+function loadPrintSheet(){const area=$('printSheetArea');const month=val('printMonth'),areaF=val('printArea'),terrF=val('printTerritory'),showAll=$('printShowAll').checked;if(!month){area.innerHTML='<div class="bg-white rounded-xl border p-10 text-center text-slate-400">Select a month</div>';return}let entries=Object.entries(honorariumCache).filter(([_,h])=>h.month===month);if(areaF){const mpoIds=Object.entries(mposCache).filter(([_,m])=>m.area===areaF).map(([id])=>id);entries=entries.filter(([_,h])=>mpoIds.includes(h.mpoId))}if(terrF){const mpoIds=Object.entries(mposCache).filter(([_,m])=>m.territory===terrF).map(([id])=>id);entries=entries.filter(([_,h])=>mpoIds.includes(h.mpoId))}entries.sort((a,b)=>{const ma=mposCache[a[1].mpoId]||{},mb=mposCache[b[1].mpoId]||{},da=doctorsCache[a[1].doctorId]||{},db2=doctorsCache[b[1].doctorId]||{};return(ma.area||'').localeCompare(mb.area||'')||(ma.territory||'').localeCompare(mb.territory||'')||(da.name||'').localeCompare(db2.name||'')});if(!showAll)entries=entries.filter(([_,h])=>{const d=doctorsCache[h.doctorId];return d&&d.active!==false});if(!entries.length){area.innerHTML='<div class="bg-white rounded-xl border p-10 text-center text-slate-400">No entries for this filter</div>';return}let total=0,totalComm=0;const rows=entries.map(([id,h],i)=>{const doc=doctorsCache[h.doctorId]||{};const mpo=mposCache[h.mpoId]||{};total+=h.amount||0;totalComm+=h.commission||0;const inactive=doc.active===false;return `<tr class="${inactive?'doc-row-inactive':''}"><td class="text-center">${i+1}</td><td>${doc.name||'-'}</td><td>${doc.degree||''}</td><td>${doc.chamber||''}</td><td>${doc.territory||''}</td><td>${mpo.name||'-'}<br><span style="font-size:9px;color:#666">${mpo.empId||''}</span></td><td class="text-right">${fmt(h.amount)}</td><td>${h.payOrderNo||'-'}</td><td><span class="px-1 py-0.5 rounded text-[9px] font-bold ${h.type==='Bkash'?'bg-pink-100 text-pink-700':'bg-blue-100 text-blue-700'}">${h.type||'IBBL'}</span></td><td class="text-center">${fmtDate(h.poDate)}</td><td class="text-right">${fmt(h.commission||0)}</td><td><input type="text" class="ps-remark-input input-focus border border-slate-200 rounded px-1.5 py-1 text-[10px] w-full outline-none" data-hid="${id}" value="${h.remarks||''}"></td></tr>`}).join('');const filterLabel=[areaF?'Area: '+areaF:'',terrF?'Territory: '+terrF:'',!showAll?'Active Only':''].filter(Boolean).join(' | ');area.innerHTML=`<div class="bg-white rounded-xl border border-slate-200 p-6"><div class="text-center mb-4"><h2 class="text-lg font-black text-slate-800">${COMPANY.name}</h2><p class="text-xs text-slate-500">${COMPANY.address}</p><p class="text-xs font-semibold text-brand-700">${COMPANY.depot}</p><div class="mt-2 inline-block bg-brand-50 border border-brand-200 rounded-lg px-4 py-1.5"><span class="text-sm font-bold text-brand-800">Doctor Honorarium — ${monthLabel(month)}</span></div>${filterLabel?'<p class="text-[10px] text-slate-400 mt-1">'+filterLabel+'</p>':''}</div><div class="overflow-x-auto"><table class="ps-print-table"><thead><tr><th>#</th><th>Doctor Name</th><th>Degree</th><th>Chamber</th><th>Territory</th><th>MPO</th><th class="text-right">Amount</th><th>PO No</th><th>Type</th><th class="text-center">PO Date</th><th class="text-right">Comm.</th><th>Remarks</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="6" class="text-right font-bold">Total:</td><td class="text-right font-bold">${fmt(total)}</td><td colspan="3"></td><td class="text-right font-bold">${fmt(totalComm)}</td><td></td></tr></tfoot></table></div>${buildPrintSignatures(month,areaF,terrF)}</div>`}
+function buildPrintSignatures(month,areaF,terrF){const key=month+'_'+(areaF||'ALL')+'_'+(terrF||'ALL');return `<div class="approval-section-print mt-8 pt-4 border-t-2 border-slate-300"><div class="flex flex-wrap justify-between gap-4">${APPROVAL_STEPS.map(s=>{const sigs=settingsCache.approvals?.[key]?.[s.key];const signed=sigs?.signed;return `<div class="sig-box-print"><div style="min-height:40px;display:flex;align-items:center;justify-content:center">${signed&&sigs.signature?`<img src="${sigs.signature}" style="max-height:35px;max-width:120px">`:(signed?`<span style="font-size:11px;font-weight:700">${sigs.name||''}</span>`:'')}</div><div class="sig-line">${s.label}</div>${signed?`<div style="font-size:8px;color:#666;margin-top:2px">${fmtDate(sigs.date)}</div>`:''}</div>`}).join('')}</div></div>`}
+async function savePrintSheetRemarks(){const updates={};document.querySelectorAll('.ps-remark-input[data-hid]').forEach(inp=>{const hid=inp.dataset.hid,v=inp.value.trim();if(honorariumCache[hid]?.remarks!==v)updates['honorarium/'+hid+'/remarks']=v});if(!Object.keys(updates).length){toast('No remarks changed');return}try{await update(ref(db),updates);toast('Remarks saved')}catch(e){toast('Save failed','error')}}
+
+/* ===== APPROVAL ===== */
+function getApprovalKey(){return val('printMonth')+'_'+(val('printArea')||'ALL')+'_'+(val('printTerritory')||'ALL')}
+function loadApprovalSection(){const container=$('approvalCards');if(!CU||CU.role==='DIC'){$('approvalSection').style.display='none';return}$('approvalSection').style.display='';const key=getApprovalKey();const approvals=settingsCache.approvals?.[key]||{};const stepOrder=APPROVAL_STEPS.map(s=>s.key);container.innerHTML=APPROVAL_STEPS.map((step,idx)=>{const prevKey=idx>0?stepOrder[idx-1]:null;const prevSigned=!prevKey||approvals[prevKey]?.signed;const isMyRole=CU.role===step.role;const signed=approvals[step.key]?.signed;const canSign=isMyRole&&prevSigned&&!signed;let cardClass='approval-card',statusHtml='';if(signed){cardClass+=' signed';statusHtml=`<div class="text-emerald-600 text-xs font-bold mb-1"><i class="fas fa-check-circle mr-1"></i>Signed</div><div class="text-sm font-bold text-slate-700">${approvals[step.key].name||''}</div><div class="text-[10px] text-slate-400">${fmtDate(approvals[step.key].date)}</div>`}else if(canSign){cardClass+=' current-user';statusHtml=`<button onclick="signApproval('${step.key}')" class="btn-primary text-white px-4 py-2 rounded-lg text-xs font-bold"><i class="fas fa-pen-nib mr-1"></i>Sign Here</button>`}else if(isMyRole&&!prevSigned){cardClass+=' pending-blocked';statusHtml=`<div class="text-amber-600 text-xs font-semibold"><i class="fas fa-lock mr-1"></i>Waiting for previous step</div>`}else{statusHtml=`<div class="text-slate-400 text-xs">Pending</div>`}return `<div class="${cardClass}"><div class="text-2xl mb-2 text-${step.color}-500"><i class="fas ${step.icon}"></i></div><div class="text-xs font-bold text-slate-600 mb-3">${step.label}</div>${statusHtml}</div>`}).join('')}
+async function signApproval(stepKey){if(!CU)return;const key=getApprovalKey();const step=APPROVAL_STEPS.find(s=>s.key===stepKey);if(!step)return;const idx=APPROVAL_STEPS.findIndex(s=>s.key===stepKey);if(idx>0){const prevKey=APPROVAL_STEPS[idx-1].key;const approvals=settingsCache.approvals?.[key]||{};if(!approvals[prevKey]?.signed){toast('Previous approval step must be completed first','error');return}}try{const sigData={signed:true,name:CU.name||CU.username,date:new Date().toISOString(),signature:settingsCache.signatures?.[CU.username]||null};await update(ref(db,`settings/approvals/${key}/${stepKey}`),sigData);toast('Signed successfully as '+step.label)}catch(e){toast('Sign failed','error')}}
+
+/* ===== REPORTS ===== */
+function loadMonthlyReport(){const container=$('monthlyReportTable'),footer=$('monthlyReportFooter'),month=val('rptMonthlyMonth'),areaF=val('rptMonthlyArea');let entries=Object.entries(honorariumCache).filter(([_,h])=>h.month===month);if(areaF){const mpoIds=Object.entries(mposCache).filter(([_,m])=>m.area===areaF).map(([id])=>id);entries=entries.filter(([_,h])=>mpoIds.includes(h.mpoId))}if(!entries.length){container.innerHTML='<div class="p-10 text-center text-slate-400">No data</div>';footer.textContent='';return}let total=0;const rows=entries.map(([id,h],i)=>{const doc=doctorsCache[h.doctorId]||{};const mpo=mposCache[h.mpoId]||{};total+=h.amount||0;return `<tr class="table-row"><td class="px-4 py-2 text-xs">${i+1}</td><td class="px-4 py-2 text-sm font-semibold">${doc.name||'-'}</td><td class="px-4 py-2 text-sm">${doc.degree||''}</td><td class="px-4 py-2 text-sm">${doc.territory||''}</td><td class="px-4 py-2 text-sm">${mpo.name||'-'}</td><td class="px-4 py-2 text-sm font-semibold">${fmt(h.amount)}</td><td class="px-4 py-2 text-sm">${h.payOrderNo||'-'}</td><td class="px-4 py-2 text-sm">${monthLabel(h.month)}</td></tr>`}).join('');container.innerHTML=`<table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doctor</th><th class="text-left px-4 py-3">Degree</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">MPO</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">PO No</th><th class="text-left px-4 py-3">Month</th></tr></thead><tbody class="divide-y divide-slate-100">${rows}</tbody></table>`;footer.textContent='Total: '+fmt(total)+' | Entries: '+entries.length}
+function loadPayOrderReport(){const area=$('poReportPrintArea');const month=val('poRptMonth'),dateF=val('poRptDate'),areaF=val('poRptArea'),terrF=val('poRptTerritory');let entries=Object.entries(honorariumCache).filter(([_,h])=>h.month===month);if(dateF)entries=entries.filter(([_,h])=>h.poDate===dateF);if(areaF){const mpoIds=Object.entries(mposCache).filter(([_,m])=>m.area===areaF).map(([id])=>id);entries=entries.filter(([_,h])=>mpoIds.includes(h.mpoId))}if(terrF){const mpoIds=Object.entries(mposCache).filter(([_,m])=>m.territory===terrF).map(([id])=>id);entries=entries.filter(([_,h])=>mpoIds.includes(h.mpoId))}entries.sort((a,b)=>{const da=doctorsCache[a[1].doctorId]||{},db2=doctorsCache[b[1].doctorId]||{};return(da.name||'').localeCompare(db2.name||'')});if(!entries.length){area.innerHTML='<div class="bg-white rounded-xl border p-10 text-center text-slate-400">No data</div>';return}let total=0,totalComm=0;const rows=entries.map(([id,h],i)=>{const doc=doctorsCache[h.doctorId]||{};const mpo=mposCache[h.mpoId]||{};total+=h.amount||0;totalComm+=h.commission||0;return `<tr><td class="text-center">${i+1}</td><td>${doc.name||'-'}</td><td>${doc.degree||''}</td><td>${doc.chamber||''}</td><td>${doc.territory||''}</td><td>${mpo.name||'-'}<br><span style="font-size:10px;color:#666">${mpo.empId||''}</span></td><td class="text-right">${fmt(h.amount)}</td><td>${h.payOrderNo||'-'}</td><td class="text-center"><span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${h.type==='Bkash'?'bg-pink-100 text-pink-700':'bg-blue-100 text-blue-700'}">${h.type||'IBBL'}</span></td><td class="text-center">${fmtDate(h.poDate)}</td><td class="text-right">${fmt(h.commission||0)}</td><td>${h.remarks||''}</td></tr>`}).join('');area.innerHTML=`<div class="bg-white rounded-xl border border-slate-200 p-6"><div class="text-center mb-4"><h2 class="text-lg font-black">${COMPANY.name}</h2><p class="text-xs text-slate-500">${COMPANY.address}</p><p class="text-xs font-semibold text-purple-700">${COMPANY.depot}</p><div class="mt-2 inline-block bg-purple-50 border border-purple-200 rounded-lg px-4 py-1.5"><span class="text-sm font-bold text-purple-800">Pay Order Report — ${monthLabel(month)}</span></div></div><div class="overflow-x-auto"><table class="po-print-table"><thead><tr><th>#</th><th>Doctor</th><th>Degree</th><th>Chamber</th><th>Territory</th><th>MPO</th><th class="text-right">Amount</th><th>PO No</th><th>Type</th><th class="text-center">PO Date</th><th class="text-right">Comm.</th><th>Remarks</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td colspan="6" class="text-right font-bold">Total:</td><td class="text-right font-bold">${fmt(total)}</td><td colspan="3"></td><td class="text-right font-bold">${fmt(totalComm)}</td><td></td></tr></tfoot></table></div></div>`}
+
+/* ===== DASHBOARD ===== */
+function loadDashboard(){const activeDocs=Object.values(doctorsCache).filter(d=>d.active!==false).length;const mpoCount=Object.keys(mposCache).length;const allEntries=Object.values(honorariumCache);const totalDisb=allEntries.reduce((s,h)=>s+(h.amount||0),0);const curMonth=monthKey(new Date());const thisMonth=allEntries.filter(h=>h.month===curMonth).reduce((s,h)=>s+(h.amount||0),0);$('statDoctors').textContent=activeDocs;$('statMPOs').textContent=mpoCount;$('statTotal').textContent=fmt(totalDisb);$('statMonth').textContent=fmt(thisMonth);$('statMonthLabel').textContent=monthLabel(curMonth);const recent=allEntries.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')).slice(0,5);const rBody=$('recentEntriesBody'),rEmpty=$('recentEmpty');if(!recent.length){rBody.innerHTML='';rEmpty.classList.remove('hidden')}else{rEmpty.classList.add('hidden');rBody.innerHTML=recent.map(h=>{const doc=doctorsCache[h.doctorId]||{};const mpo=mposCache[h.mpoId]||{};return `<tr class="table-row"><td class="px-5 py-2.5 font-semibold text-sm">${doc.name||'-'}</td><td class="px-5 py-2.5 text-sm">${mpo.name||'-'}</td><td class="px-5 py-2.5 text-sm font-semibold">${fmt(h.amount)}</td><td class="px-5 py-2.5 text-sm">${monthLabel(h.month)}</td></tr>`}).join('')}loadApprovalOverview()}
+function loadApprovalOverview(){const container=$('approvalOverview');if(!CU)return;const curMonth=monthKey(new Date());const key=curMonth+'_ALL_ALL';const approvals=settingsCache.approvals?.[key]||{};container.innerHTML=APPROVAL_STEPS.map(s=>{const done=approvals[s.key]?.signed;const isMe=CU.role===s.role;return `<div class="flex items-center gap-3 p-3 rounded-lg border ${done?'border-emerald-200 bg-emerald-50':'border-slate-200 bg-slate-50'} ${isMe&&!done?'ring-2 ring-brand-300':''}"><div class="w-8 h-8 rounded-full flex items-center justify-center ${done?'bg-emerald-500 text-white':'bg-slate-200 text-slate-400'}"><i class="fas ${done?'fa-check':s.icon} text-xs"></i></div><div class="flex-1"><div class="text-xs font-bold ${done?'text-emerald-700':'text-slate-600'}">${s.label}</div><div class="text-[10px] ${done?'text-emerald-500':'text-slate-400'}">${done?(approvals[s.key].name+' — '+fmtDate(approvals[s.key].date)):'Pending'}</div></div>${isMe&&!done?'<span class="text-[9px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full">YOUR ACTION</span>':''}</div>`}).join('')}
+
+/* ===== SETTINGS: AREA ===== */
+function openAreaSettings(){renderAreaList();openModal('modalAreaSettings')}
+function renderAreaList(){const c=$('areaListContainer');c.innerHTML=areasCache.map((a,i)=>`<div class="flex items-center justify-between bg-slate-50 rounded-lg px-4 py-2.5"><span class="text-sm font-medium">${a}</span><button onclick="deleteArea(${i})" class="text-red-400 hover:text-red-600 text-xs"><i class="fas fa-trash"></i></button></div>`).join('')}
+async function addNewArea(){const n=val('newAreaInput').trim();if(!n){toast('Enter area name','error');return}if(areasCache.includes(n)){toast('Area already exists','error');return}try{await set(ref(db,'settings/areas'),[...areasCache,n].sort());$('newAreaInput').value='';toast('Area added')}catch(e){toast('Failed','error')}}
+async function deleteArea(idx){const updated=areasCache.filter((_,i)=>i!==idx);try{await set(ref(db,'settings/areas'),updated);toast('Area removed')}catch(e){toast('Failed','error')}}
+
+/* ===== SETTINGS: SLAB ===== */
+function openSlabSettings(){renderSlabRows();openModal('modalSlabSettings')}
+function renderSlabRows(){const c=$('slabSettingsContainer');const slabs=settingsCache.commissionSlabs||[];c.innerHTML=slabs.map((s,i)=>`<div class="grid grid-cols-12 gap-2 items-center"><select class="col-span-4 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none bg-white slab-type" data-idx="${i}"><option value="IBBL" ${s.type==='IBBL'?'selected':''}>IBBL</option><option value="Bkash" ${s.type==='Bkash'?'selected':''}>Bkash</option></select><input type="number" class="col-span-3 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none slab-amount" data-idx="${i}" value="${s.amount||0}" min="0"><input type="number" class="col-span-4 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none slab-comm" data-idx="${i}" value="${s.commission||0}" min="0"><button onclick="removeSlabRow(${i})" class="col-span-1 text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button></div>`).join('')}
+function addSlabRow(){const c=$('slabSettingsContainer');const i=c.children.length;const div=document.createElement('div');div.className='grid grid-cols-12 gap-2 items-center';div.innerHTML=`<select class="col-span-4 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none bg-white slab-type"><option value="IBBL">IBBL</option><option value="Bkash">Bkash</option></select><input type="number" class="col-span-3 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none slab-amount" value="0" min="0"><input type="number" class="col-span-4 input-focus border border-slate-300 rounded px-2 py-2 text-sm outline-none slab-comm" value="58" min="0"><button onclick="this.closest('.grid').remove()" class="col-span-1 text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>`;c.appendChild(div)}
+function removeSlabRow(idx){renderSlabRows();const rows=$('slabSettingsContainer').children;if(rows[idx])rows[idx].remove()}
+async function saveSlabSettings(){const slabs=[];$('slabSettingsContainer').children.forEach(row=>{slabs.push({type:row.querySelector('.slab-type')?.value||'IBBL',amount:parseFloat(row.querySelector('.slab-amount')?.value)||0,commission:parseFloat(row.querySelector('.slab-comm')?.value)||0})});try{await set(ref(db,'settings/commissionSlabs'),slabs);toast('Slab settings saved');closeModal('modalSlabSettings')}catch(e){toast('Failed','error')}}
+
+/* ===== SETTINGS: SIGNATURE ===== */
+function openSignatureSettings(){tempSignatures={};const c=$('sigUploadContainer');c.innerHTML=SIG_LABELS.map((label,i)=>`<div class="border border-slate-200 rounded-lg p-4"><label class="block text-xs font-semibold text-slate-600 mb-2">${label}</label><input type="file" accept="image/png,image/jpeg" onchange="handleSigUpload(event,${i})" class="text-xs mb-2 w-full"><div class="h-16 border border-dashed border-slate-300 rounded flex items-center justify-center overflow-hidden" id="sigPreview${i}"><span class="text-[10px] text-slate-400">No image</span></div></div>`).join('');const sigs=settingsCache.signatures||{};SIG_LABELS.forEach((_,i)=>{if(sigs[i]){tempSignatures[i]=sigs[i];$('sigPreview'+i).innerHTML=`<img src="${sigs[i]}" style="max-height:56px;max-width:100%">`}});openModal('modalSignatureSettings')}
+function handleSigUpload(e,idx){const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=ev=>{tempSignatures[idx]=ev.target.result;$('sigPreview'+idx).innerHTML=`<img src="${ev.target.result}" style="max-height:56px;max-width:100%">`};reader.readAsDataURL(file)}
+async function saveSignatureSettings(){try{await set(ref(db,'settings/signatures'),tempSignatures);toast('Signatures saved');closeModal('modalSignatureSettings')}catch(e){toast('Failed','error')}}
+
+/* ===== USER MANAGEMENT ===== */
+function loadUserList(){if(!CU||CU.role!=='DIC')return;onValue(ref(db,'users'),snap=>{const users=snap.val()||{};const body=$('userListBody'),empty=$('userEmpty');const entries=Object.entries(users);if(!entries.length){body.innerHTML='';empty.classList.remove('hidden');return}empty.classList.add('hidden');body.innerHTML=entries.map(([uname,u])=>`<tr class="table-row"><td class="px-5 py-3 font-mono font-semibold text-sm">${uname}</td><td class="px-5 py-3 text-sm">${u.name||'-'}</td><td class="px-5 py-3"><span class="text-xs font-semibold px-2.5 py-0.5 rounded-full ${ROLE_COLORS[u.role]||''}">${ROLE_LABELS[u.role]||u.role}</span></td><td class="px-5 py-3 text-center">${u.active!==false?'<span class="text-emerald-600 text-xs font-bold">Active</span>':'<span class="text-red-500 text-xs font-bold">Inactive</span>'}</td><td class="px-5 py-3 text-center"><button onclick="openEditUserModal('${uname}')" class="text-blue-600 hover:text-blue-800 text-xs mr-2"><i class="fas fa-edit"></i></button><button onclick="deleteUser('${uname}')" class="text-red-500 hover:text-red-700 text-xs"><i class="fas fa-trash"></i></button></td></tr>`).join('')},{onlyOnce:true})}
+function openAddUserModal(){$['newUserUsername','newUserName','newUserPass'].forEach(id=>$(id).value='');$('newUserRole').value='RSM';openModal('modalAddUser')}
+async function saveNewUser(){const username=val('newUserUsername').trim(),name=val('newUserName').trim(),pass=val('newUserPass'),role=val('newUserRole');if(!username||!name||!pass){toast('Fill all fields','error');return}if(pass.length<6){toast('Password min 6 characters','error');return}if(username===LOCAL_ADMIN.username){toast('This username is reserved for local admin','error');return}try{const exists=await get(ref(db,'users/'+username));if(exists.exists()){toast('Username already exists','error');return}await set(ref(db,'users/'+username),{password:pass,role,name,active:true,createdAt:new Date().toISOString()});toast('User created');closeModal('modalAddUser');loadUserList()}catch(e){toast('Failed: '+e.message,'error')}}
+function openEditUserModal(uname){get(ref(db,'users/'+uname)).then(snap=>{if(!snap.exists())return;const u=snap.val();$('editUserOrigUsername').value=uname;$('editUserName').value=u.name||'';$('editUserPass').value='';$('editUserRole').value=u.role||'RSM';editUserActive=u.active!==false;$('editUserActiveToggle').classList.toggle('on',editUserActive);$('editUserActiveLabel').textContent=editUserActive?'Active':'Inactive';$('editUserActiveLabel').className='text-sm font-semibold '+(editUserActive?'text-emerald-600':'text-red-500');openModal('modalEditUser')})}
+function toggleEditUserActive(){editUserActive=!editUserActive;$('editUserActiveToggle').classList.toggle('on',editUserActive);$('editUserActiveLabel').textContent=editUserActive?'Active':'Inactive';$('editUserActiveLabel').className='text-sm font-semibold '+(editUserActive?'text-emerald-600':'text-red-500')}
+async function updateUser(){const orig=val('editUserOrigUsername');if(!orig)return;const data={name:val('editUserName').trim(),role:val('editUserRole'),active:editUserActive};if(val('editUserPass'))data.password=val('editUserPass');try{await update(ref(db,'users/'+orig),data);toast('User updated');closeModal('modalEditUser');loadUserList()}catch(e){toast('Failed','error')}}
+function deleteUser(uname){$('deleteTargetId').value=uname;$('deleteTargetType').value='users';$('deleteConfirmText').textContent=`Delete user "${uname}"?`;openModal('modalConfirmDelete')}
+
+function printAs(){window.print()}
+
+/* ===== INIT — কোনো DB রাইট ছাড়াই ===== */
+function init(){
+    setupListeners();
+    updateDateTime();setInterval(updateDateTime,30000);
+    const saved=sessionStorage.getItem('mpUser');
+    if(saved){try{CU=JSON.parse(saved);showApp()}catch(e){sessionStorage.removeItem('mpUser')}}
+}
+init();
+</script>
+</body>
+</html>
