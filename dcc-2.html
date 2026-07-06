@@ -56,8 +56,9 @@ body{background:#d0d0d0;min-height:100vh;padding:20px 10px}
 /* ===== ইতিহাস ===== */
 .history{max-width:210mm;margin:0 auto;background:#fff;border:1px solid #bbb;border-radius:8px;overflow:hidden;display:none;box-shadow:0 4px 15px rgba(0,0,0,.08)}
 .history.show{display:block}
-.hist-header{background:#111;color:#fff;padding:20px 30px}
+.hist-header{background:#111;color:#fff;padding:20px 30px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .hist-header h2{font-size:18px;font-weight:700}
+.hist-header-actions{display:flex;gap:8px;flex-wrap:wrap}
 .hist-search{padding:18px 30px;display:flex;gap:10px;border-bottom:1px solid #ddd}
 .hist-search input{flex:1;padding:10px 14px;border:1.5px solid #ccc;border-radius:5px;font-size:14px;font-family:'Noto Sans Bengali',sans-serif;outline:none}
 .hist-search input:focus{border-color:#111}
@@ -71,6 +72,8 @@ body{background:#d0d0d0;min-height:100vh;padding:20px 10px}
 .hist-action-btn:hover{background:#111;color:#fff}
 .hist-action-btn.del{border-color:#a00;color:#a00}
 .hist-action-btn.del:hover{background:#a00;color:#fff}
+.hist-action-btn.print-action{border-color:#1a5c1a;color:#1a5c1a}
+.hist-action-btn.print-action:hover{background:#1a5c1a;color:#fff}
 
 /* ===== ম্যানেজমেন্ট ===== */
 .management{max-width:210mm;margin:0 auto;background:#fff;border:1px solid #bbb;border-radius:8px;overflow:hidden;display:none;box-shadow:0 4px 15px rgba(0,0,0,.08)}
@@ -97,9 +100,7 @@ body{background:#d0d0d0;min-height:100vh;padding:20px 10px}
 .mgmt-del-btn:hover{background:#a00;color:#fff}
 .mgmt-empty{text-align:center;padding:24px;color:#999;font-size:14px}
 
-/* ======================================================
-   এন্ট্রি / প্রিন্ট এরিয়া — এক পৃষ্ঠা
-   ====================================================== */
+/* ===== এন্ট্রি / প্রিন্ট এরিয়া ===== */
 .print-area{display:none}
 .print-area.show{display:block}
 
@@ -283,14 +284,18 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:14px;color:#333;font-weight:500}
 
+/* ===== এন্ট্রি অ্যাকশন বার ===== */
+.entry-action-bar{max-width:210mm;margin:0 auto 30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.entry-action-bar .nav-btn{font-size:13px;padding:10px 22px}
+
 /* ======================================================
-   প্রিন্ট স্টাইল
+   প্রিন্ট স্টাইল — স্বাক্ষর ফাঁকা থাকলে কিছু দেখাবে না
    ====================================================== */
 @media print{
     @page{size:A4;margin:7mm}
     *{color:#000!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
     html,body{margin:0!important;padding:0!important;background:#fff!important;width:auto!important}
-    .top-nav,.dashboard,.history,.management,.toast,.loading-overlay,#entryActions{display:none!important}
+    .top-nav,.dashboard,.history,.management,.toast,.loading-overlay,.entry-action-bar{display:none!important}
     .print-area{display:block!important}
     .page{border:none!important;box-shadow:none!important;margin:0!important;width:100%!important;min-height:auto!important;page-break-after:avoid!important;background:#fff!important;overflow:visible!important;padding:0!important}
     .page-inner{padding:0!important}
@@ -298,9 +303,19 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
     input[type="text"],input[type="date"],input[type="number"],select,textarea{border-bottom:1px solid #000!important;background:#fff!important}
     .cell-value input,.form-table input,.verify-field-col .vf-value input{border-bottom:1px solid #000!important}
     .sig-box-area:hover,.verify-field-col .vf-value .vf-sig-area:hover{background:#fff!important}
-    .sig-box-area .sig-remove,.verify-field-col .vf-value .vf-sig-area .vf-sig-rm{display:none!important}
-    .sig-box-area .sig-placeholder,.verify-field-col .vf-value .vf-sig-area .vf-sig-ph{display:none!important}
-    .sig-box-area img,.verify-field-col .vf-value .vf-sig-area img{display:block!important}
+
+    /* স্বাক্ষর: placeholder ও remove বাটন সম্পূর্ণ লুকানো */
+    .sig-box-area .sig-remove,
+    .verify-field-col .vf-value .vf-sig-area .vf-sig-rm{display:none!important}
+    .sig-box-area .sig-placeholder,
+    .verify-field-col .vf-value .vf-sig-area .vf-sig-ph{display:none!important}
+
+    /* শুধুমাত্র যেসব img তে real data আছে সেগুলো দেখাবে, বাকিগুলো লুকানো থাকবে */
+    .sig-box-area.has-sig img{display:block!important}
+    .verify-field-col .vf-value .vf-sig-area.has-sig img{display:block!important}
+    .sig-box-area:not(.has-sig) img{display:none!important}
+    .verify-field-col .vf-value .vf-sig-area:not(.has-sig) img{display:none!important}
+
     .info-cell-4{border-bottom:1px solid #000!important;border-right:1px solid #000!important}
     .info-cell-4:nth-child(4n){border-right:none!important}
     .info-cell-4:nth-last-child(-n+4){border-bottom:none!important}
@@ -333,6 +348,7 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
     .stat-card{border-bottom:1px solid #ddd}
     .mgmt-form{grid-template-columns:1fr}
     .mgmt-tabs{flex-wrap:wrap}
+    .hist-header{flex-direction:column;align-items:flex-start}
 }
 </style>
 </head>
@@ -418,18 +434,22 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 
 <!-- ===== ইতিহাস ===== -->
 <div class="history" id="historyView">
-    <div class="hist-header"><h2><i class="fas fa-history" style="margin-right:8px"></i>আবেদনের ইতিহাস</h2></div>
+    <div class="hist-header">
+        <h2><i class="fas fa-history" style="margin-right:8px"></i>আবেদনের ইতিহাস</h2>
+        <div class="hist-header-actions">
+            <button class="nav-btn print-btn" id="histPrintBtn" onclick="printCurrentForm()" style="display:none;padding:8px 20px;font-size:13px"><i class="fas fa-print"></i> প্রিন্ট করুন</button>
+        </div>
+    </div>
     <div class="hist-search"><input type="text" id="searchInput" placeholder="ফর্ম নং, কেমিস্টের নাম বা DCC দিয়ে খুঁজুন..." oninput="loadHistory()"></div>
     <div class="hist-body" id="historyBody"><div class="hist-empty"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>কোনো আবেদন পাওয়া যায়নি</div></div>
 </div>
 
-<!-- ===== এন্ট্রি / প্রিন্ট — এক পৃষ্ঠা ===== -->
+<!-- ===== এন্ট্রি / প্রিন্ট ===== -->
 <div class="print-area" id="entryView">
 
 <div class="page" id="page1">
 <div class="page-inner">
 
-    <!-- অফিসিয়াল হেডার -->
     <div class="official-header">
         <div class="header-top">
             <div class="logo-box"><img src="https://www.monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="Logo"></div>
@@ -451,13 +471,11 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
         </div>
     </div>
 
-    <!-- ফর্ম টাইটেল -->
     <div class="form-title-bar">
         <h2>ডাক্তার কাম কেমিস্ট (DCC) বিশেষ ডিসকাউন্ট অনুমোদন আবেদনপত্র
         <div class="title-en">DCC Special Discount Approval Application Form</div></h2>
     </div>
 
-    <!-- তারিখ ও বরাবর -->
     <div class="meta-row">
         <div class="meta-block left">
         তারিখ : <span class="auto-field" id="dateDisplay">---</span><br>
@@ -467,28 +485,23 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             ৮/১, গাউসনগর, নিউ ইস্কাটন রোড,<br>
             মগবাজার, রমনা, ঢাকা-১২০৫।
         </div>
-       
     </div>
 
-    <!-- বিষয় -->
     <div class="subject-box">
         <p><b>বিষয়:</b> <span id="Subject"> DCC কার্যক্রমের আওতায় বিশেষ ডিসকাউন্ট প্রদানের অনুমোদন প্রসঙ্গে।</span></p>
     </div>
 
-    <!-- মূল লেখা -->
     <div class="body-text">
         <p class="salute">জনাব,</p>
         <p>বিনীত নিবেদন এই যে, কোম্পানির বিক্রয় কার্যক্রমকে গতিশীল করা, বাজারে প্রতিযোগিতামূলক অবস্থান সুদৃঢ় করা, নতুন প্রেসক্রিপশন সৃষ্টি এবং নির্ধারিত বিক্রয় লক্ষ্যমাত্রা অর্জনের লক্ষ্যে DCC কার্যক্রমের আওতায় বিশেষ ডিসকাউন্ট প্রদানের প্রয়োজনীয়তা দেখা দিয়েছে। প্রস্তাবিত ডিসকাউন্টের যৌক্তিকতা নিশ্চিত করার জন্য বাজার পরিস্থিতি পর্যালোচনা করা হয়েছে। অতএব, নিম্নোক্ত বিবরণ অনুযায়ী বিশেষ ডিসকাউন্ট প্রদানের জন্য আপনার সদয় অনুমোদন প্রার্থনা করছি।</p>
     </div>
 
-    <!-- প্রস্তাবের বিবরণ -->
     <div class="section-card">
         <div class="section-title"><i class="fas fa-clipboard-list"></i> প্রস্তাবের বিবরণ</div>
         <div class="section-body" style="padding:0">
             <table class="form-table">
                 <tr><td class="label-cell">কেমিস্টের কোড</td><td><b><input type="text" id="chemistCode" placeholder="কেমিস্টের কোড"></b></td></tr>
-               
-                <tr><td class="label-cell">ফার্মেসির নাম</td><td><input type="text" id="pharmacyName" placeholder="ফার্মেসির নাম" oninput="updateDynamicSubject()"></td></tr>
+                <tr><td class="label-cell">ফার্মেসির নাম</td><td><input type="text" id="pharmacyName" placeholder="ফার্মেসির নাম"></td></tr>
                 <tr><td class="label-cell">DCC (ডাক্তার/কেমিস্টের নাম)</td><td><input type="text" id="dccName" placeholder="ডাক্তার ও কেমিস্টের নাম"></td></tr>
                 <tr><td class="label-cell">কার্যকর সময়কাল</td><td style="display:flex;gap:6px;align-items:center"><input type="date" id="startDate" style="width:120px"> <span style="font-size:10px;white-space:nowrap">হতে —</span> <input type="date" id="endDate" style="width:120px"> <span style="font-size:10px;white-space:nowrap">পর্যন্ত</span></td></tr>
                 <tr><td class="label-cell">প্রস্তাবিত ডিসকাউন্ট (%)</td><td><input type="number" step="0.01" id="discountPercent" placeholder="যেমন: 5, 7.5, 10%"></td></tr>
@@ -496,7 +509,6 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
         </div>
     </div>
 
-    <!-- আবেদনকারীর তথ্য -->
     <div class="section-card">
         <div class="section-title"><i class="fas fa-user-edit"></i> আবেদনকারীর তথ্য</div>
         <div class="section-body" style="padding:0">
@@ -513,7 +525,6 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
         </div>
     </div>
 
-    <!-- Depot In-Charge কর্তৃক যাচাইকরণ -->
     <div class="verify-block">
         <div class="verify-title"><i class="fas fa-clipboard-check"></i> Depot In-Charge কর্তৃক যাচাইকরণ</div>
         <div class="verify-body">
@@ -526,12 +537,12 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
                 <div class="verify-field-col">
                     <div class="vf-label">স্বাক্ষর</div>
                     <div class="vf-value">
-                        <div class="vf-sig-area" id="vfSigArea_dic" onclick="triggerVfSigUpload('dic')">
-                            <img id="vfSigImg_dic" alt="DIC">
-                            <span class="vf-sig-ph"></span>
-                            <button class="vf-sig-rm" onclick="event.stopPropagation();removeVfSig('dic')">&times;</button>
+                        <div class="vf-sig-area" id="vfSigArea_dic" onclick="triggerVfSigUpload()">
+                            <img id="vfSigImg_dic" alt="">
+                            <span class="vf-sig-ph"><i class="fas fa-signature"></i>ক্লিক করুন</span>
+                            <button class="vf-sig-rm" onclick="event.stopPropagation();removeVfSig()">&times;</button>
                         </div>
-                        <input type="file" id="vfSigFile_dic" accept="image/*" style="display:none" onchange="handleVfSigUpload('dic')">
+                        <input type="file" id="vfSigFile_dic" accept="image/*" style="display:none" onchange="handleVfSigUpload()">
                     </div>
                 </div>
                 <div class="verify-field-col">
@@ -542,14 +553,13 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
         </div>
     </div>
 
-    <!-- স্বাক্ষর গ্রিড — MPO, AM, RSM / PMD Manager, HOP, IT -->
     <div class="sig-grid">
         <div class="sig-grid-row">
             <div class="sig-box">
                 <div class="sig-box-label">MPO স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_mpo" onclick="triggerSigUpload('mpo')">
-                    <img id="sigImg_mpo" alt="MPO">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_mpo" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('mpo')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_mpo" accept="image/*" style="display:none" onchange="handleSigUpload('mpo')">
@@ -557,8 +567,8 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <div class="sig-box">
                 <div class="sig-box-label">AM স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_am" onclick="triggerSigUpload('am')">
-                    <img id="sigImg_am" alt="AM">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_am" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('am')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_am" accept="image/*" style="display:none" onchange="handleSigUpload('am')">
@@ -566,8 +576,8 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <div class="sig-box">
                 <div class="sig-box-label">RSM স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_rsm" onclick="triggerSigUpload('rsm')">
-                    <img id="sigImg_rsm" alt="RSM">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_rsm" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('rsm')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_rsm" accept="image/*" style="display:none" onchange="handleSigUpload('rsm')">
@@ -577,8 +587,8 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <div class="sig-box">
                 <div class="sig-box-label">PMD Manager<br>স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_pmd" onclick="triggerSigUpload('pmd')">
-                    <img id="sigImg_pmd" alt="PMD">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_pmd" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('pmd')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_pmd" accept="image/*" style="display:none" onchange="handleSigUpload('pmd')">
@@ -586,8 +596,8 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <div class="sig-box">
                 <div class="sig-box-label">Head of<br>Operation স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_hop" onclick="triggerSigUpload('hop')">
-                    <img id="sigImg_hop" alt="HOP">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_hop" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('hop')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_hop" accept="image/*" style="display:none" onchange="handleSigUpload('hop')">
@@ -595,8 +605,8 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <div class="sig-box">
                 <div class="sig-box-label">MPL IT<br>স্বাক্ষর</div>
                 <div class="sig-box-area" id="sigArea_it" onclick="triggerSigUpload('it')">
-                    <img id="sigImg_it" alt="IT">
-                    <span class="sig-placeholder"></span>
+                    <img id="sigImg_it" alt="">
+                    <span class="sig-placeholder"><i class="fas fa-signature"></i>ক্লিক করুন</span>
                     <button class="sig-remove" onclick="event.stopPropagation();removeSig('it')">&times;</button>
                 </div>
                 <input type="file" id="sigFile_it" accept="image/*" style="display:none" onchange="handleSigUpload('it')">
@@ -610,7 +620,7 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 <div class="page-number">Page - 1</div>
 </div>
 
-<div id="entryActions" style="max-width:210mm;margin:0 auto 30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center"></div>
+<div class="entry-action-bar" id="entryActions"></div>
 
 </div><!-- /print-area -->
 
@@ -631,11 +641,11 @@ firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
 var _editingKey = null;
 var _viewMode = false;
+var _currentHistKey = null;
 
-/* স্বাক্ষর গ্রিড কী — DIC এখানে নেই, আলাদা ব্লকে আছে */
 var sigKeys = ['mpo','am','rsm','pmd','hop','it'];
 
-/* ===== হেল্পার ===== */
+/* ===== বাংলা তারিখ ===== */
 function getTodayBangla() {
     var now = new Date();
     var day = String(now.getDate()).padStart(2, '0');
@@ -643,6 +653,7 @@ function getTodayBangla() {
     return day + ' ' + months[now.getMonth()] + ' ' + now.getFullYear();
 }
 
+/* ===== হেল্পার ===== */
 function showToast(msg, type) {
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -656,16 +667,117 @@ function showLoading(text) {
 }
 function hideLoading() { document.getElementById('loading').classList.remove('show'); }
 
-/* ===== গতিশীল বিষয় ===== */
-function updateDynamicSubject() {
-    var cn = document.getElementById('chemistName').value.trim() || '[---]';
-    var pn = document.getElementById('pharmacyName').value.trim() || '[---]';
-    document.getElementById('dynamicSubject').textContent =
-        'কেমিস্টের নাম: ' + cn + ', ফার্মেসির নাম: ' + pn + ' এর DCC কার্যক্রমের আওতায় বিশেষ ডিসকাউন্ট প্রদানের অনুমোদন প্রসঙ্গে।';
+/* ===== ভিউ সুইচিং ===== */
+function showView(view) {
+    _viewMode = false;
+    _editingKey = null;
+    _currentHistKey = null;
+    document.getElementById('histPrintBtn').style.display = 'none';
+
+    document.querySelectorAll('.top-nav .nav-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('dashboardView').classList.remove('show');
+    document.getElementById('historyView').classList.remove('show');
+    document.getElementById('managementView').classList.remove('show');
+    document.getElementById('entryView').classList.remove('show');
+
+    if (view === 'dashboard') {
+        document.getElementById('dashboardView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[0].classList.add('active');
+        loadDashboard();
+    } else if (view === 'entry') {
+        document.getElementById('entryView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[1].classList.add('active');
+        resetForm();
+        showEntryActions('new');
+    } else if (view === 'history') {
+        document.getElementById('historyView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[2].classList.add('active');
+        loadHistory();
+    } else if (view === 'management') {
+        document.getElementById('managementView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[3].classList.add('active');
+        populateMgmtAssignDropdowns();
+        loadApplicants();
+    }
+    window.scrollTo({top: 0, behavior: 'smooth'});
 }
 
-/* ===== স্বাক্ষর গ্রিড আপলোড ===== */
-function triggerSigUpload(key) { document.getElementById('sigFile_' + key).click(); }
+/* ===== এন্ট্রি অ্যাকশন বার ===== */
+function showEntryActions(mode) {
+    var bar = document.getElementById('entryActions');
+    if (mode === 'new') {
+        bar.innerHTML = '<button class="nav-btn save-btn" onclick="saveForm()"><i class="fas fa-save"></i> সংরক্ষণ করুন</button>' +
+            '<button class="nav-btn" onclick="showView(\'dashboard\')"><i class="fas fa-arrow-left"></i> ফিরে যান</button>';
+    } else if (mode === 'edit') {
+        bar.innerHTML = '<button class="nav-btn save-btn" onclick="saveForm()"><i class="fas fa-save"></i> আপডেট করুন</button>' +
+            '<button class="nav-btn print-btn" onclick="doPrint()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>' +
+            '<button class="nav-btn" onclick="showView(\'history\')"><i class="fas fa-arrow-left"></i> ফিরে যান</button>';
+    } else if (mode === 'view') {
+        bar.innerHTML = '<button class="nav-btn print-btn" onclick="doPrint()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>' +
+            '<button class="nav-btn" onclick="showView(\'history\')"><i class="fas fa-arrow-left"></i> ফিরে যান</button>';
+    }
+}
+
+/* ===== তারিখ অটো সেট ===== */
+function setCurrentDate() {
+    var todayBangla = getTodayBangla();
+    document.getElementById('dateDisplay').textContent = todayBangla;
+    document.getElementById('headerDateDisplay').textContent = todayBangla;
+    document.getElementById('dicDate').value = todayBangla;
+    var todayISO = new Date().toISOString().split('T')[0];
+    document.getElementById('startDate').value = todayISO;
+}
+
+/* ===== ফর্ম রিসেট ===== */
+function resetForm() {
+    _editingKey = null;
+    document.getElementById('chemistCode').value = '';
+    document.getElementById('pharmacyName').value = '';
+    document.getElementById('dccName').value = '';
+    document.getElementById('endDate').value = '';
+    document.getElementById('discountPercent').value = '';
+    document.getElementById('applicantId').value = '';
+    document.getElementById('depotName').value = 'কুষ্টিয়া ডিপো';
+    document.getElementById('regionField').value = 'কুষ্টিয়া';
+    document.getElementById('territory').value = '';
+    document.getElementById('mpoNameDisplay').value = '';
+    document.getElementById('amNameDisplay').value = '';
+    document.getElementById('rsmNameDisplay').value = '';
+    document.getElementById('dicName').value = '';
+    clearAllSigs();
+    setCurrentDate();
+    generateFormNumber();
+}
+
+function generateFormNumber() {
+    var today = new Date();
+    var y = today.getFullYear().toString().slice(-2);
+    var m = String(today.getMonth() + 1).padStart(2, '0');
+    var prefix = 'DCC-KUS-' + y + m + '-';
+    document.getElementById('formNumberDisplay').textContent = prefix + '0001';
+    document.getElementById('formIdDisplay').textContent = '---';
+    document.getElementById('formIdDisplay2').textContent = '---';
+
+    db.ref('forms').orderByKey().limitToLast(1).once('value', function(snap) {
+        var lastNum = 0;
+        snap.forEach(function(c) {
+            var fn = c.val().formNumber || '';
+            var parts = fn.split('-');
+            if (parts.length >= 4) {
+                var n = parseInt(parts[3], 10);
+                if (!isNaN(n) && n > lastNum) lastNum = n;
+            }
+        });
+        var newNum = String(lastNum + 1).padStart(4, '0');
+        document.getElementById('formNumberDisplay').textContent = prefix + newNum;
+    });
+}
+
+/* ===== স্বাক্ষর আপলোড ===== */
+function triggerSigUpload(key) { 
+    if (_viewMode) return; 
+    document.getElementById('sigFile_' + key).click(); 
+}
 
 function handleSigUpload(key) {
     var file = document.getElementById('sigFile_' + key).files[0];
@@ -673,7 +785,8 @@ function handleSigUpload(key) {
     if (file.size > 512000) { showToast('স্বাক্ষরের ছবি ৫০০KB এর কম হতে হবে', 'error'); document.getElementById('sigFile_' + key).value = ''; return; }
     var reader = new FileReader();
     reader.onload = function(e) {
-        document.getElementById('sigImg_' + key).src = e.target.result;
+        var img = document.getElementById('sigImg_' + key);
+        img.src = e.target.result;
         document.getElementById('sigArea_' + key).classList.add('has-sig');
     };
     reader.readAsDataURL(file);
@@ -685,8 +798,16 @@ function removeSig(key) {
     document.getElementById('sigFile_' + key).value = '';
 }
 
-/* ===== DIC স্বাক্ষর আপলোড (যাচাইকরণ ব্লকে) ===== */
-function triggerVfSigUpload() { document.getElementById('vfSigFile_dic').click(); }
+function clearAllSigs() {
+    sigKeys.forEach(function(k) { removeSig(k); });
+    removeVfSig();
+}
+
+/* ===== DIC স্বাক্ষর ===== */
+function triggerVfSigUpload() { 
+    if (_viewMode) return; 
+    document.getElementById('vfSigFile_dic').click(); 
+}
 
 function handleVfSigUpload() {
     var file = document.getElementById('vfSigFile_dic').files[0];
@@ -706,36 +827,350 @@ function removeVfSig() {
     document.getElementById('vfSigFile_dic').value = '';
 }
 
-/* সব স্বাক্ষর সংগ্রহ */
 function getAllSignatures() {
     var sigs = {};
     sigKeys.forEach(function(key) {
         var img = document.getElementById('sigImg_' + key);
         sigs[key] = img.src && img.src.indexOf('data:') === 0 ? img.src : '';
     });
-    /* DIC স্বাক্ষর আলাদাভাবে */
     var dicImg = document.getElementById('vfSigImg_dic');
     sigs.dic = dicImg.src && dicImg.src.indexOf('data:') === 0 ? dicImg.src : '';
     return sigs;
 }
 
-/* স্বাক্ষর সেট (লোডের সময়) */
 function setSignatures(sigs) {
     if (!sigs) return;
     sigKeys.forEach(function(key) {
         if (sigs[key] && sigs[key].indexOf('data:') === 0) {
             document.getElementById('sigImg_' + key).src = sigs[key];
             document.getElementById('sigArea_' + key).classList.add('has-sig');
+        } else {
+            document.getElementById('sigImg_' + key).src = '';
+            document.getElementById('sigArea_' + key).classList.remove('has-sig');
         }
     });
-    /* DIC */
     if (sigs.dic && sigs.dic.indexOf('data:') === 0) {
         document.getElementById('vfSigImg_dic').src = sigs.dic;
         document.getElementById('vfSigArea_dic').classList.add('has-sig');
+    } else {
+        document.getElementById('vfSigImg_dic').src = '';
+        document.getElementById('vfSigArea_dic').classList.remove('has-sig');
     }
 }
 
-/* ===== ম্যানেজমেন্ট ট্যাব ===== */
+/* ===== আবেদনকারী ডেটা ফেচ ===== */
+function fetchApplicantData() {
+    var id = document.getElementById('applicantId').value.trim();
+    if (!id) return;
+    db.ref('applicants/' + id).once('value', function(snap) {
+        if (snap.exists()) {
+            var d = snap.val();
+            document.getElementById('depotName').value = d.depotName || 'কুষ্টিয়া ডিপো';
+            document.getElementById('regionField').value = d.region || 'কুষ্টিয়া';
+            document.getElementById('territory').value = d.territory || '';
+            document.getElementById('mpoNameDisplay').value = d.mpoName || '';
+            document.getElementById('amNameDisplay').value = d.amName || '';
+            document.getElementById('rsmNameDisplay').value = d.rsmName || '';
+            showToast('আবেদনকারীর তথ্য লোড হয়েছে', 'success');
+        } else {
+            showToast('এই আইডিতে কোনো আবেদনকারী পাওয়া যায়নি', 'error');
+        }
+    });
+}
+
+/* ===== ফর্ম সংরক্ষণ ===== */
+function saveForm() {
+    var formNumber = document.getElementById('formNumberDisplay').textContent;
+    var pharmacyName = document.getElementById('pharmacyName').value.trim();
+    var dccName = document.getElementById('dccName').value.trim();
+    var discountPercent = document.getElementById('discountPercent').value.trim();
+
+    if (!pharmacyName) { showToast('ফার্মেসির নাম লিখুন', 'error'); return; }
+    if (!dccName) { showToast('DCC এর নাম লিখুন', 'error'); return; }
+    if (!discountPercent) { showToast('ডিসকাউন্টের পরিমাণ লিখুন', 'error'); return; }
+
+    var sigs = getAllSignatures();
+    var totalSigSize = 0;
+    for (var k in sigs) { if (sigs[k]) totalSigSize += sigs[k].length; }
+    if (totalSigSize > 3000000) { showToast('স্বাক্ষরের ছবি অনেক বড়, ছোট ছবি ব্যবহার করুন', 'error'); return; }
+
+    var data = {
+        formNumber: formNumber,
+        chemistCode: document.getElementById('chemistCode').value.trim(),
+        pharmacyName: pharmacyName,
+        dccName: dccName,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        discountPercent: discountPercent,
+        applicantId: document.getElementById('applicantId').value.trim(),
+        depotName: document.getElementById('depotName').value,
+        region: document.getElementById('regionField').value,
+        territory: document.getElementById('territory').value,
+        mpoName: document.getElementById('mpoNameDisplay').value,
+        amName: document.getElementById('amNameDisplay').value,
+        rsmName: document.getElementById('rsmNameDisplay').value,
+        dicName: document.getElementById('dicName').value.trim(),
+        dicDate: document.getElementById('dicDate').value.trim(),
+        dateBangla: document.getElementById('dateDisplay').textContent,
+        signatures: sigs,
+        status: 'pending',
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    showLoading('ডেটা সংরক্ষণ হচ্ছে...');
+
+    if (_editingKey) {
+        db.ref('forms/' + _editingKey).update(data)
+        .then(function() {
+            hideLoading();
+            showToast('আবেদন আপডেট হয়েছে', 'success');
+            _editingKey = null;
+            showView('history');
+        })
+        .catch(function(err) { hideLoading(); showToast('সমস্যা: ' + err.message, 'error'); });
+    } else {
+        db.ref('forms').push(data)
+        .then(function(ref) {
+            hideLoading();
+            document.getElementById('formIdDisplay').textContent = ref.key;
+            document.getElementById('formIdDisplay2').textContent = ref.key;
+            db.ref('forms/' + ref.key + '/formId').set(ref.key);
+            showToast('সংরক্ষিত হয়েছে — ' + formNumber, 'success');
+            showEntryActions('edit');
+            _editingKey = ref.key;
+        })
+        .catch(function(err) { hideLoading(); showToast('সমস্যা: ' + err.message, 'error'); });
+    }
+}
+
+/* ===== ইতিহাস লোড ===== */
+function loadHistory() {
+    var body = document.getElementById('historyBody');
+    var search = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+    db.ref('forms').orderByChild('createdAt').once('value', function(snap) {
+        var items = [];
+        snap.forEach(function(c) { var d = c.val(); d._key = c.key; items.push(d); });
+        items.reverse();
+
+        if (search) {
+            items = items.filter(function(d) {
+                return (d.formNumber || '').toLowerCase().indexOf(search) !== -1 ||
+                       (d.pharmacyName || '').toLowerCase().indexOf(search) !== -1 ||
+                       (d.dccName || '').toLowerCase().indexOf(search) !== -1;
+            });
+        }
+
+        if (items.length === 0) {
+            body.innerHTML = '<div class="hist-empty"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>কোনো আবেদন পাওয়া যায়নি</div>';
+            return;
+        }
+
+        var h = '<table class="hist-table"><thead><tr><th>ফর্ম নং</th><th>তারিখ</th><th>ফার্মেসি</th><th>DCC</th><th>ডিসকাউন্ট</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>';
+        for (var i = 0; i < items.length; i++) {
+            var r = items[i];
+            var statusClass = 'status-pending';
+            var statusText = 'অপেক্ষমাণ';
+            if (r.status === 'approved') { statusClass = 'status-approved'; statusText = 'অনুমোদিত'; }
+            else if (r.status === 'rejected') { statusClass = 'status-rejected'; statusText = 'প্রত্যাখ্যাত'; }
+
+            var safeKey = r._key.replace(/'/g, "\\'");
+            var safeFn = (r.formNumber || '').replace(/'/g, "\\'");
+
+            h += '<tr>';
+            h += '<td style="font-weight:600;white-space:nowrap">' + (r.formNumber || '---') + '</td>';
+            h += '<td style="white-space:nowrap">' + (r.dateBangla || '---') + '</td>';
+            h += '<td>' + (r.pharmacyName || '---') + '</td>';
+            h += '<td>' + (r.dccName || '---') + '</td>';
+            h += '<td style="font-weight:600">' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td>';
+            h += '<td><span class="status-badge ' + statusClass + '">' + statusText + '</span></td>';
+            h += '<td style="white-space:nowrap">';
+            h += '<button class="hist-action-btn" onclick="viewForm(\'' + safeKey + '\')"><i class="fas fa-eye"></i> দেখুন</button>';
+            h += '<button class="hist-action-btn" onclick="editForm(\'' + safeKey + '\')"><i class="fas fa-edit"></i> সম্পাদনা</button>';
+            h += '<button class="hist-action-btn print-action" onclick="printForm(\'' + safeKey + '\')"><i class="fas fa-print"></i> প্রিন্ট</button>';
+            h += '<button class="hist-action-btn del" onclick="deleteForm(\'' + safeKey + '\',\'' + safeFn + '\')"><i class="fas fa-trash"></i></button>';
+            h += '</td></tr>';
+        }
+        h += '</tbody></table>';
+        body.innerHTML = h;
+    });
+}
+
+/* ===== ফর্ম দেখুন ===== */
+function viewForm(key) {
+    db.ref('forms/' + key).once('value', function(snap) {
+        if (!snap.exists()) { showToast('ফর্ম পাওয়া যায়নি', 'error'); return; }
+        var d = snap.val();
+        _viewMode = true;
+        _editingKey = null;
+        _currentHistKey = key;
+        loadFormDataToPage(d);
+        toggleFormInputs(true);
+
+        document.querySelectorAll('.top-nav .nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('dashboardView').classList.remove('show');
+        document.getElementById('historyView').classList.remove('show');
+        document.getElementById('managementView').classList.remove('show');
+        document.getElementById('entryView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[2].classList.add('active');
+        showEntryActions('view');
+        document.getElementById('histPrintBtn').style.display = 'inline-flex';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+
+/* ===== ফর্ম সম্পাদনা ===== */
+function editForm(key) {
+    db.ref('forms/' + key).once('value', function(snap) {
+        if (!snap.exists()) { showToast('ফর্ম পাওয়া যায়নি', 'error'); return; }
+        var d = snap.val();
+        _viewMode = false;
+        _editingKey = key;
+        _currentHistKey = key;
+        loadFormDataToPage(d);
+        toggleFormInputs(false);
+
+        document.querySelectorAll('.top-nav .nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('dashboardView').classList.remove('show');
+        document.getElementById('historyView').classList.remove('show');
+        document.getElementById('managementView').classList.remove('show');
+        document.getElementById('entryView').classList.add('show');
+        document.querySelectorAll('.top-nav .nav-btn')[2].classList.add('active');
+        showEntryActions('edit');
+        document.getElementById('histPrintBtn').style.display = 'inline-flex';
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+
+/* ===== সরাসরি প্রিন্ট ===== */
+function printForm(key) {
+    db.ref('forms/' + key).once('value', function(snap) {
+        if (!snap.exists()) { showToast('ফর্ম পাওয়া যায়নি', 'error'); return; }
+        var d = snap.val();
+        _viewMode = true;
+        _editingKey = null;
+        _currentHistKey = key;
+        loadFormDataToPage(d);
+        toggleFormInputs(true);
+
+        document.querySelectorAll('.top-nav .nav-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('dashboardView').classList.remove('show');
+        document.getElementById('historyView').classList.remove('show');
+        document.getElementById('managementView').classList.remove('show');
+        document.getElementById('entryView').classList.add('show');
+        showEntryActions('view');
+        document.getElementById('histPrintBtn').style.display = 'inline-flex';
+
+        setTimeout(function() { window.print(); }, 400);
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+}
+
+function printCurrentForm() { if (_currentHistKey) window.print(); }
+function doPrint() { window.print(); }
+
+/* ===== ফর্ম ডিলিট ===== */
+function deleteForm(key, formNumber) {
+    if (!confirm('ফর্ম ' + formNumber + ' মুছে ফেলতে চান?')) return;
+    db.ref('forms/' + key).remove()
+    .then(function() {
+        showToast('মুছে ফেলা হয়েছে', 'success');
+        if (_currentHistKey === key) {
+            _currentHistKey = null;
+            document.getElementById('histPrintBtn').style.display = 'none';
+        }
+        loadHistory();
+        loadDashboard();
+    })
+    .catch(function(err) { showToast('সমস্যা: ' + err.message, 'error'); });
+}
+
+/* ===== ফর্ম ডেটা পেজে লোড ===== */
+function loadFormDataToPage(d) {
+    document.getElementById('formNumberDisplay').textContent = d.formNumber || '---';
+    document.getElementById('formIdDisplay').textContent = d._key || d.formId || '---';
+    document.getElementById('formIdDisplay2').textContent = d._key || d.formId || '---';
+    document.getElementById('headerDateDisplay').textContent = d.dateBangla || '---';
+    document.getElementById('dateDisplay').textContent = d.dateBangla || '---';
+    document.getElementById('chemistCode').value = d.chemistCode || '';
+    document.getElementById('pharmacyName').value = d.pharmacyName || '';
+    document.getElementById('dccName').value = d.dccName || '';
+    document.getElementById('startDate').value = d.startDate || '';
+    document.getElementById('endDate').value = d.endDate || '';
+    document.getElementById('discountPercent').value = d.discountPercent || '';
+    document.getElementById('applicantId').value = d.applicantId || '';
+    document.getElementById('depotName').value = d.depotName || 'কুষ্টিয়া ডিপো';
+    document.getElementById('regionField').value = d.region || 'কুষ্টিয়া';
+    document.getElementById('territory').value = d.territory || '';
+    document.getElementById('mpoNameDisplay').value = d.mpoName || '';
+    document.getElementById('amNameDisplay').value = d.amName || '';
+    document.getElementById('rsmNameDisplay').value = d.rsmName || '';
+    document.getElementById('dicName').value = d.dicName || '';
+    document.getElementById('dicDate').value = d.dicDate || '';
+    clearAllSigs();
+    if (d.signatures) setSignatures(d.signatures);
+}
+
+/* ===== ইনপুট টগল ===== */
+function toggleFormInputs(disabled) {
+    var inputs = document.querySelectorAll('#entryView input[type="text"], #entryView input[type="date"], #entryView input[type="number"], #entryView select, #entryView textarea');
+    var alwaysReadonly = ['depotName','regionField','territory','mpoNameDisplay','amNameDisplay','rsmNameDisplay'];
+    inputs.forEach(function(inp) {
+        if (disabled || alwaysReadonly.indexOf(inp.id) !== -1) {
+            inp.setAttribute('readonly', 'readonly');
+            inp.style.background = '#f5f5f5';
+            inp.style.cursor = 'default';
+        } else {
+            inp.removeAttribute('readonly');
+            inp.style.background = '#fff';
+            inp.style.cursor = 'text';
+        }
+    });
+}
+
+/* ===== ড্যাশবোর্ড ===== */
+function loadDashboard() {
+    db.ref('forms').once('value', function(snap) {
+        var total = 0, pending = 0, approved = 0, rejected = 0;
+        var recent = [];
+        snap.forEach(function(c) {
+            total++;
+            var d = c.val();
+            var s = d.status || 'pending';
+            if (s === 'approved') approved++;
+            else if (s === 'rejected') rejected++;
+            else pending++;
+            recent.push(d);
+        });
+        document.getElementById('statTotal').textContent = total;
+        document.getElementById('statPending').textContent = pending;
+        document.getElementById('statApproved').textContent = approved;
+        document.getElementById('statRejected').textContent = rejected;
+
+        recent.reverse();
+        var tbody = document.getElementById('recentTableBody');
+        if (recent.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:30px">কোনো আবেদন নেই</td></tr>';
+            return;
+        }
+        var show = recent.slice(0, 8);
+        var h = '';
+        for (var i = 0; i < show.length; i++) {
+            var r = show[i];
+            var sc = 'status-pending', st = 'অপেক্ষমাণ';
+            if (r.status === 'approved') { sc = 'status-approved'; st = 'অনুমোদিত'; }
+            else if (r.status === 'rejected') { sc = 'status-rejected'; st = 'প্রত্যাখ্যাত'; }
+            h += '<tr><td style="font-weight:600;white-space:nowrap">' + (r.formNumber || '---') + '</td>';
+            h += '<td style="white-space:nowrap">' + (r.dateBangla || '---') + '</td>';
+            h += '<td>' + (r.dccName || '---') + '</td>';
+            h += '<td style="font-weight:600">' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td>';
+            h += '<td><span class="status-badge ' + sc + '">' + st + '</span></td></tr>';
+        }
+        tbody.innerHTML = h;
+    });
+}
+
+/* ===== ম্যানেজমেন্ট ===== */
 function switchMgmtTab(tab) {
     document.querySelectorAll('.mgmt-tab').forEach(function(b) { b.classList.remove('active'); });
     document.querySelectorAll('.mgmt-tab-content').forEach(function(c) { c.classList.remove('active'); });
@@ -842,302 +1277,17 @@ function loadApplicants() {
 }
 
 function deleteApplicant(id) {
-    if (!confirm('"' + id + '" মুছে ফেলতে চান?')) return;
+    if (!confirm('আবেদনকারী "' + id + '" মুছে ফেলতে চান?')) return;
     db.ref('applicants/' + id).remove()
     .then(function() { showToast('মুছে ফেলা হয়েছে', 'success'); loadApplicants(); })
     .catch(function(err) { showToast('সমস্যা: ' + err.message, 'error'); });
 }
 
-function fetchApplicantData() {
-    var id = document.getElementById('applicantId').value.trim();
-    if (!id) return;
-    db.ref('applicants/' + id).once('value', function(snap) {
-        var d = snap.val();
-        if (!d) { showToast('এই আইডিতে কোনো আবেদনকারী নেই', 'error'); return; }
-        document.getElementById('depotName').value = d.depotName || '';
-        document.getElementById('regionField').value = d.region || '';
-        document.getElementById('territory').value = d.territory || '';
-        document.getElementById('mpoNameDisplay').value = d.mpoName || '';
-        document.getElementById('amNameDisplay').value = d.amName || '';
-        document.getElementById('rsmNameDisplay').value = d.rsmName || '';
-        showToast('আবেদনকারীর তথ্য লোড হয়েছে', 'success');
-    });
-}
-
-/* ===== ভিউ সুইচিং ===== */
-function showView(view) {
-    _editingKey = null; _viewMode = false;
-    document.getElementById('dashboardView').classList.remove('show');
-    document.getElementById('historyView').classList.remove('show');
-    document.getElementById('entryView').classList.remove('show');
-    document.getElementById('managementView').classList.remove('show');
-    document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-
-    if (view === 'dashboard') {
-        document.getElementById('dashboardView').classList.add('show');
-        document.querySelectorAll('.nav-btn')[0].classList.add('active');
-        loadDashboard();
-    } else if (view === 'history') {
-        document.getElementById('historyView').classList.add('show');
-        document.querySelectorAll('.nav-btn')[2].classList.add('active');
-        loadHistory();
-    } else if (view === 'management') {
-        document.getElementById('managementView').classList.add('show');
-        document.querySelectorAll('.nav-btn')[3].classList.add('active');
-        var at = document.querySelector('.mgmt-tab.active');
-        if (at) { var t = at.getAttribute('data-tab'); if (t === 'am') loadMgmtList('am'); else if (t === 'rsm') loadMgmtList('rsm'); else { loadApplicants(); populateMgmtAssignDropdowns(); } }
-        else { loadApplicants(); populateMgmtAssignDropdowns(); }
-    } else if (view === 'entry') {
-        document.getElementById('entryView').classList.add('show');
-        document.querySelectorAll('.nav-btn')[1].classList.add('active');
-        resetForm(false); makeFormEditable(true); setEntryActions('new');
-    }
-}
-
-function setEntryActions(mode) {
-    var el = document.getElementById('entryActions');
-    if (mode === 'new') {
-        el.innerHTML =
-            '<button class="nav-btn save-btn" onclick="saveToFirebase()"><i class="fas fa-cloud-upload-alt"></i> সংরক্ষণ করুন</button>' +
-            '<button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>' +
-            '<button class="nav-btn danger" onclick="resetForm(true)"><i class="fas fa-redo"></i> রিসেট</button>' +
-            '<button class="nav-btn" onclick="showView(\'dashboard\')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ড্যাশবোর্ডে ফিরুন</button>';
-    } else if (mode === 'edit') {
-        el.innerHTML =
-            '<button class="nav-btn save-btn" onclick="updateInFirebase()"><i class="fas fa-save"></i> আপডেট করুন</button>' +
-            '<button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>' +
-            '<button class="nav-btn danger" onclick="showView(\'history\')"><i class="fas fa-times"></i> বাতিল</button>' +
-            '<button class="nav-btn" onclick="showView(\'dashboard\')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ড্যাশবোর্ডে ফিরুন</button>';
-    } else if (mode === 'view') {
-        el.innerHTML =
-            '<button class="nav-btn print-btn" onclick="window.print()"><i class="fas fa-print"></i> প্রিন্ট করুন</button>' +
-            '<button class="nav-btn" onclick="showView(\'history\')" style="background:#555;border-color:#555"><i class="fas fa-arrow-left"></i> ইতিহাসে ফিরুন</button>';
-    }
-}
-
-function resetForm(notify) {
-    var ids = ['chemistCode','chemistName','pharmacyName','dccName','startDate','endDate','discountPercent','applicantId','dicName','dicDate'];
-    ids.forEach(function(id) { document.getElementById(id).value = ''; });
-    document.getElementById('depotName').value = 'কুষ্টিয়া ডিপো';
-    document.getElementById('regionField').value = 'কুষ্টিয়া';
-    document.getElementById('territory').value = '';
-    document.getElementById('mpoNameDisplay').value = '';
-    document.getElementById('amNameDisplay').value = '';
-    document.getElementById('rsmNameDisplay').value = '';
-    sigKeys.forEach(function(key) { removeSig(key); });
-    removeVfSig();
-    generateFormNumber();
-    updateDynamicSubject();
-    _editingKey = null;
-    if (notify) showToast('ফর্ম রিসেট হয়েছে', 'success');
-}
-
-function makeFormEditable(editable) {
-    var inputs = document.querySelectorAll('#entryView input[type="text"], #entryView input[type="number"], #entryView input[type="date"]');
-    inputs.forEach(function(inp) {
-        if (inp.readOnly && inp.id !== 'dicName' && inp.id !== 'dicDate') return;
-        if (inp.id === 'depotName' || inp.id === 'regionField' || inp.id === 'territory' || inp.id === 'mpoNameDisplay' || inp.id === 'amNameDisplay' || inp.id === 'rsmNameDisplay' || inp.id === 'formIdDisplay2') return;
-        inp.readOnly = !editable;
-        inp.style.background = editable ? '#fff' : '#f5f5f5';
-    });
-    sigKeys.forEach(function(key) {
-        var area = document.getElementById('sigArea_' + key);
-        area.style.cursor = editable ? 'pointer' : 'default';
-        if (!editable) area.onclick = null;
-        else area.onclick = (function(k) { return function() { triggerSigUpload(k); }; })(key);
-    });
-    var vfArea = document.getElementById('vfSigArea_dic');
-    vfArea.style.cursor = editable ? 'pointer' : 'default';
-    if (!editable) vfArea.onclick = null;
-    else vfArea.onclick = triggerVfSigUpload;
-}
-
-function generateFormNumber() {
-    var now = new Date();
-    var y = now.getFullYear();
-    var m = String(now.getMonth() + 1).padStart(2, '0');
-    var prefix = 'DCC-KUS-' + y + m + '-';
-    var formId = prefix + String(Math.floor(Math.random() * 9000) + 1000);
-    document.getElementById('formNumberDisplay').textContent = formId;
-    document.getElementById('formIdDisplay').textContent = formId;
-    document.getElementById('formIdDisplay2').textContent = formId;
-    var today = getTodayBangla();
-    document.getElementById('dateDisplay').textContent = today;
-    document.getElementById('headerDateDisplay').textContent = today;
-}
-
-function collectFormData() {
-    return {
-        formNumber: document.getElementById('formNumberDisplay').textContent,
-        formId: document.getElementById('formIdDisplay').textContent,
-        date: document.getElementById('dateDisplay').textContent,
-        chemistCode: document.getElementById('chemistCode').value.trim(),
-        chemistName: document.getElementById('chemistName').value.trim(),
-        pharmacyName: document.getElementById('pharmacyName').value.trim(),
-        dccName: document.getElementById('dccName').value.trim(),
-        startDate: document.getElementById('startDate').value,
-        endDate: document.getElementById('endDate').value,
-        discountPercent: document.getElementById('discountPercent').value,
-        applicantId: document.getElementById('applicantId').value.trim(),
-        depotName: document.getElementById('depotName').value,
-        region: document.getElementById('regionField').value,
-        territory: document.getElementById('territory').value,
-        mpoName: document.getElementById('mpoNameDisplay').value,
-        amName: document.getElementById('amNameDisplay').value,
-        rsmName: document.getElementById('rsmNameDisplay').value,
-        dicName: document.getElementById('dicName').value.trim(),
-        dicDate: document.getElementById('dicDate').value.trim(),
-        signatures: getAllSignatures(),
-        status: 'pending',
-        createdAt: firebase.database.ServerValue.TIMESTAMP
-    };
-}
-
-function loadFormData(data) {
-    document.getElementById('formNumberDisplay').textContent = data.formNumber || '---';
-    document.getElementById('formIdDisplay').textContent = data.formId || '---';
-    document.getElementById('formIdDisplay2').textContent = data.formId || '---';
-    document.getElementById('dateDisplay').textContent = data.date || '---';
-    document.getElementById('headerDateDisplay').textContent = data.date || '---';
-    document.getElementById('chemistCode').value = data.chemistCode || '';
-    document.getElementById('chemistName').value = data.chemistName || '';
-    document.getElementById('pharmacyName').value = data.pharmacyName || '';
-    document.getElementById('dccName').value = data.dccName || '';
-    document.getElementById('startDate').value = data.startDate || '';
-    document.getElementById('endDate').value = data.endDate || '';
-    document.getElementById('discountPercent').value = data.discountPercent || '';
-    document.getElementById('applicantId').value = data.applicantId || '';
-    document.getElementById('depotName').value = data.depotName || '';
-    document.getElementById('regionField').value = data.region || '';
-    document.getElementById('territory').value = data.territory || '';
-    document.getElementById('mpoNameDisplay').value = data.mpoName || '';
-    document.getElementById('amNameDisplay').value = data.amName || '';
-    document.getElementById('rsmNameDisplay').value = data.rsmName || '';
-    document.getElementById('dicName').value = data.dicName || '';
-    document.getElementById('dicDate').value = data.dicDate || '';
-    updateDynamicSubject();
-    setSignatures(data.signatures);
-}
-
-function saveToFirebase() {
-    var d = collectFormData();
-    if (!d.chemistName) { showToast('কেমিস্টের নাম লিখুন', 'error'); return; }
-    if (!d.discountPercent) { showToast('ডিসকাউন্টের পরিমাণ লিখুন', 'error'); return; }
-    showLoading('ডেটা সংরক্ষণ হচ্ছে...');
-    db.ref('applications').push(d)
-    .then(function() { hideLoading(); showToast('সফলভাবে সংরক্ষিত হয়েছে', 'success'); resetForm(false); generateFormNumber(); })
-    .catch(function(err) { hideLoading(); showToast('সমস্যা: ' + err.message, 'error'); });
-}
-
-function updateInFirebase() {
-    if (!_editingKey) { showToast('সমস্যা: এডিট কী পাওয়া যায়নি', 'error'); return; }
-    var d = collectFormData();
-    if (!d.chemistName) { showToast('কেমিস্টের নাম লিখুন', 'error'); return; }
-    showLoading('আপডেট হচ্ছে...');
-    db.ref('applications/' + _editingKey).update(d)
-    .then(function() { hideLoading(); showToast('সফলভাবে আপডেট হয়েছে', 'success'); _editingKey = null; showView('history'); })
-    .catch(function(err) { hideLoading(); showToast('সমস্যা: ' + err.message, 'error'); });
-}
-
-/* ===== ড্যাশবোর্ড ===== */
-function loadDashboard() {
-    db.ref('applications').once('value', function(snap) {
-        var all = [], pending = 0, approved = 0, rejected = 0;
-        snap.forEach(function(c) { var d = c.val(); d._key = c.key; all.push(d); if (d.status === 'pending') pending++; else if (d.status === 'approved') approved++; else if (d.status === 'rejected') rejected++; });
-        all.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-        var recent = all.slice(0, 5);
-        document.getElementById('statTotal').textContent = all.length;
-        document.getElementById('statPending').textContent = pending;
-        document.getElementById('statApproved').textContent = approved;
-        document.getElementById('statRejected').textContent = rejected;
-        var tbody = document.getElementById('recentTableBody');
-        if (recent.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#999;padding:30px">কোনো আবেদন নেই</td></tr>'; return; }
-        var h = '';
-        recent.forEach(function(r) {
-            var sc = r.status === 'approved' ? 'status-approved' : r.status === 'rejected' ? 'status-rejected' : 'status-pending';
-            var sl = r.status === 'approved' ? 'অনুমোদিত' : r.status === 'rejected' ? 'প্রত্যাখ্যাত' : 'অপেক্ষমাণ';
-            h += '<tr><td style="font-weight:600">' + (r.formNumber||'---') + '</td><td>' + (r.date||'---') + '</td><td>' + (r.chemistName||'---') + '</td><td>' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td><td><span class="status-badge ' + sc + '">' + sl + '</span></td></tr>';
-        });
-        tbody.innerHTML = h;
-    });
-}
-
-/* ===== ইতিহাস ===== */
-function loadHistory() {
-    var query = document.getElementById('searchInput').value.trim().toLowerCase();
-    var body = document.getElementById('historyBody');
-    db.ref('applications').once('value', function(snap) {
-        var items = [];
-        snap.forEach(function(c) { var d = c.val(); d._key = c.key; items.push(d); });
-        items.sort(function(a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
-        if (query) { items = items.filter(function(r) { return (r.formNumber||'').toLowerCase().indexOf(query) > -1 || (r.chemistName||'').toLowerCase().indexOf(query) > -1 || (r.dccName||'').toLowerCase().indexOf(query) > -1; }); }
-        if (items.length === 0) { body.innerHTML = '<div class="hist-empty"><i class="fas fa-inbox" style="font-size:28px;display:block;margin-bottom:10px"></i>কোনো আবেদন পাওয়া যায়নি</div>'; return; }
-        var h = '<table class="hist-table"><thead><tr><th>ফর্ম নং</th><th>তারিখ</th><th>কেমিস্ট</th><th>ফার্মেসি</th><th>ডিসকাউন্ট</th><th>অবস্থা</th><th>অ্যাকশন</th></tr></thead><tbody>';
-        items.forEach(function(r) {
-            var sc = r.status === 'approved' ? 'status-approved' : r.status === 'rejected' ? 'status-rejected' : 'status-pending';
-            var sl = r.status === 'approved' ? 'অনুমোদিত' : r.status === 'rejected' ? 'প্রত্যাখ্যাত' : 'অপেক্ষমাণ';
-            h += '<tr><td style="font-weight:600;white-space:nowrap">' + (r.formNumber||'---') + '</td><td>' + (r.date||'---') + '</td><td>' + (r.chemistName||'---') + '</td><td>' + (r.pharmacyName||'---') + '</td><td>' + (r.discountPercent ? r.discountPercent + '%' : '---') + '</td><td><span class="status-badge ' + sc + '">' + sl + '</span></td><td style="white-space:nowrap">';
-            h += '<button class="hist-action-btn" onclick="viewForm(\'' + r._key + '\')"><i class="fas fa-eye"></i> দেখুন</button>';
-            h += '<button class="hist-action-btn" style="border-color:#b8860b;color:#b8860b" onclick="editForm(\'' + r._key + '\')"><i class="fas fa-edit"></i> এডিট</button>';
-            if (r.status === 'pending') {
-                h += '<button class="hist-action-btn" style="border-color:#155724;color:#155724" onclick="changeStatus(\'' + r._key + '\',\'approved\')"><i class="fas fa-check"></i></button>';
-                h += '<button class="hist-action-btn del" onclick="changeStatus(\'' + r._key + '\',\'rejected\')"><i class="fas fa-times"></i></button>';
-            }
-            h += '<button class="hist-action-btn del" onclick="deleteForm(\'' + r._key + '\')"><i class="fas fa-trash"></i></button></td></tr>';
-        });
-        h += '</tbody></table>';
-        body.innerHTML = h;
-    });
-}
-
-function viewForm(key) {
-    db.ref('applications/' + key).once('value', function(snap) {
-        var d = snap.val(); if (!d) { showToast('আবেদন পাওয়া যায়নি', 'error'); return; }
-        _editingKey = key; _viewMode = true;
-        document.getElementById('dashboardView').classList.remove('show');
-        document.getElementById('historyView').classList.remove('show');
-        document.getElementById('managementView').classList.remove('show');
-        document.getElementById('entryView').classList.add('show');
-        document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.nav-btn')[1].classList.add('active');
-        loadFormData(d); makeFormEditable(false); setEntryActions('view');
-        window.scrollTo(0, 0);
-    });
-}
-
-function editForm(key) {
-    db.ref('applications/' + key).once('value', function(snap) {
-        var d = snap.val(); if (!d) { showToast('আবেদন পাওয়া যায়নি', 'error'); return; }
-        _editingKey = key; _viewMode = false;
-        document.getElementById('dashboardView').classList.remove('show');
-        document.getElementById('historyView').classList.remove('show');
-        document.getElementById('managementView').classList.remove('show');
-        document.getElementById('entryView').classList.add('show');
-        document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
-        document.querySelectorAll('.nav-btn')[1].classList.add('active');
-        loadFormData(d); makeFormEditable(true); setEntryActions('edit');
-        window.scrollTo(0, 0);
-    });
-}
-
-function deleteForm(key) {
-    if (!confirm('এই আবেদনটি মুছে ফেলতে চান?')) return;
-    db.ref('applications/' + key).remove()
-    .then(function() { showToast('মুছে ফেলা হয়েছে', 'success'); loadHistory(); })
-    .catch(function(err) { showToast('সমস্যা: ' + err.message, 'error'); });
-}
-
-function changeStatus(key, status) {
-    var label = status === 'approved' ? 'অনুমোদিত' : 'প্রত্যাখ্যাত';
-    if (!confirm('এই আবেদনটি "' + label + '" করতে চান?')) return;
-    db.ref('applications/' + key).update({ status: status })
-    .then(function() { showToast(label + ' করা হয়েছে', 'success'); loadHistory(); loadDashboard(); })
-    .catch(function(err) { showToast('সমস্যা: ' + err.message, 'error'); });
-}
-
-/* ===== ইনিশিয়াল ===== */
-generateFormNumber();
-loadDashboard();
+/* ===== ইনিশিয়াল লোড ===== */
+document.addEventListener('DOMContentLoaded', function() {
+    setCurrentDate();
+    loadDashboard();
+});
 </script>
 
 </body>
