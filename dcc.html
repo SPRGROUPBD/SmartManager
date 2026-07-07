@@ -748,7 +748,7 @@ var _currentHistKey=null;
 var _remarksAction=null;
 var _editingUserKey=null;
 var _editingApplicantKey=null;
-var _pendingAction=null; // অ্যাপ্রুভ বা ফরোয়ার্ড অ্যাকশন ট্র্যাক করার জন্য
+var _pendingAction=null; 
 var sigKeys=['mpo','am','rsm','pmd','hop','it','dic'];
 var SUPER_ADMIN_ID='KS';
 var SUPER_ADMIN_PASS='Monico@Ku007';
@@ -778,7 +778,7 @@ function roleLabel(r){if(r==='super_admin')return 'Super Admin';if(r==='rsm')ret
 /* কে কোন স্বাক্ষর করতে পারবে তার লজিক */
 function canSign(key) {
     if(!currentUser) return false;
-    if(currentUser.role === 'super_admin') return true; // Super Admin সব স্বাক্ষর করতে পারবে
+    if(currentUser.role === 'super_admin') return true; 
     if(currentUser.role === 'mpo' && key === 'mpo') return true;
     if(currentUser.role === 'am' && key === 'am') return true;
     if(currentUser.role === 'rsm' && key === 'rsm') return true;
@@ -999,7 +999,6 @@ function editForm(key){
         
         populateFormFromData(d);
         
-        // MPO শুধু স্বাক্ষর দিচ্ছে কিনা তা চেক করা
         var signOnly = false;
         if (currentUser.role === 'mpo' && d.applicantId === (currentUser.applicantId || currentUser.id) && d.status !== 'Returned to MPO' && d.status !== 'Pending at AM') {
             signOnly = true;
@@ -1036,29 +1035,33 @@ function startApproval(key, action) {
 
 function setFormReadonly(ro, signOnly) {
     var inputs=document.querySelectorAll('#entryView input[type="text"],#entryView input[type="number"],#entryView input[type="date"]');
-    var isReadOnly = ro || signOnly;
+    var fieldsReadOnly = ro || signOnly;
     inputs.forEach(function(inp){
         if(inp.id==='applicantId'&&(currentUser.role==='mpo'||currentUser.role==='am')){inp.readOnly=true;return;}
-        inp.readOnly = isReadOnly;
-        inp.style.background = isReadOnly ? '#f5f5f5' : '';
+        inp.readOnly = fieldsReadOnly;
+        inp.style.background = fieldsReadOnly ? '#f5f5f5' : '';
     });
     
     sigKeys.forEach(function(k){
         var el=document.getElementById(k==='dic'?'vfSigArea_dic':'sigArea_'+k);
         if(el) {
-            if(isReadOnly || !canSign(k)) {
+            // যদি ফর্ম ভিউ মোডে থাকে (ro=true) অথবা ইউজারের সাইন করার অনুমতি না থাকে
+            if(ro || !canSign(k)) {
                 el.style.cursor='default';
                 el.style.pointerEvents='none';
+                var btn = el.querySelector('.sig-remove, .vf-sig-rm');
+                if(btn) btn.style.display = 'none';
             } else {
+                // ইউজার সাইন করতে পারবে
                 el.style.cursor='pointer';
                 el.style.pointerEvents='auto';
+                var btn = el.querySelector('.sig-remove, .vf-sig-rm');
+                if(btn) {
+                    btn.style.display = el.classList.contains('has-sig') ? 'flex' : 'none';
+                }
             }
         }
     });
-    
-    if(isReadOnly) {
-        document.querySelectorAll('.sig-remove,.vf-sig-rm').forEach(function(b){b.style.display='none';});
-    }
 }
 
 function populateFormFromData(d){
@@ -1221,9 +1224,9 @@ function saveForm(){
                 fd.createdAt=old.createdAt;
                 
                 if (currentUser.role === 'mpo' && old.status !== 'Returned to MPO' && old.status !== 'Pending at AM') {
-                    fd.status = old.status; // MPO শুধু স্বাক্ষর দিলে স্ট্যাটাস পরিবর্তন হবে না
+                    fd.status = old.status; 
                 } else if (currentUser.role === 'mpo' && old.status === 'Returned to MPO') {
-                    fd.status = 'Pending at AM'; // রিটার্নড থেকে আবার AM এর কাছে পাঠাবে
+                    fd.status = 'Pending at AM'; 
                 } else {
                     fd.status = old.status || 'Pending at AM';
                 }
@@ -1237,7 +1240,7 @@ function saveForm(){
         });
     }else{
         if (currentUser.role === 'am') {
-            fd.status = 'Pending at RSM'; // AM এন্ট্রি করলে সরাসরি RSM এর কাছে চলে যাবে
+            fd.status = 'Pending at RSM'; 
         } else {
             fd.status = 'Pending at AM';
         }
@@ -1256,7 +1259,6 @@ function executePendingAction() {
     var newStatus = '';
     var sigs = getAllSignatures();
     
-    // নিশ্চিত করা যে ইউজার স্বাক্ষর করেছে কিনা
     var expectedSigKey = currentUser.role === 'super_admin' ? 'dic' : currentUser.role;
     if(!sigs[expectedSigKey]) {
         if(!confirm('আপনি এখনো স্বাক্ষর করেননি। আপনি কি স্বাক্ষর ছাড়াই ফরোয়ার্ড/অনুমোদন করতে চান?')) {
@@ -1440,7 +1442,6 @@ function autoFillUserDetails() {
     if(!checkId) checkId = document.getElementById('newUserId').value.trim();
     if(!checkId) return;
     
-    // প্রথমে MPO আবেদনকারী লিস্টে খুঁজবে
     db.ref('applicants/'+checkId).once('value', function(snap) {
         if(snap.exists()) {
             var d = snap.val();
@@ -1457,7 +1458,6 @@ function autoFillUserDetails() {
             document.getElementById('newUserRole').value = 'mpo';
             showToast('আবেদনকারী (MPO) তথ্য অটো ফিল হয়েছে','success');
         } else {
-            // এমপিও না থাকলে AM লিস্টে খুঁজবে
             db.ref('management/am/'+checkId).once('value', function(amSnap) {
                 if(amSnap.exists()) {
                     var d = amSnap.val();
@@ -1469,7 +1469,6 @@ function autoFillUserDetails() {
                         document.getElementById('newUserId').value = d.id;
                     showToast('AM এর তথ্য অটো ফিল হয়েছে','success');
                 } else {
-                    // AM না থাকলে RSM লিস্টে খুঁজবে
                     db.ref('management/rsm/'+checkId).once('value', function(rsmSnap) {
                         if(rsmSnap.exists()) {
                             var d = rsmSnap.val();
