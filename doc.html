@@ -103,6 +103,9 @@
             .po-print-table tr, .ps-print-table tr { page-break-inside: avoid; }
             .doc-row-inactive { display: none !important; }
             .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; }
+            body.force-print .main-content > .top-bar,
+            body.force-print .main-content > .print-area { display: none !important; }
+            body.force-print #hiddenPrintArea { display: block !important; padding: 20px; }
         }
         .input-focus:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15)}
         table:not(.po-print-table):not(.ps-print-table){border-collapse:collapse}
@@ -180,7 +183,15 @@
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile *</label><input type="text" id="docMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="docTerritory" list="territoryList" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"><datalist id="territoryList"></datalist></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Amount *</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="docAmount" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none"></div></div>
-                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">MPO</label><select id="docAssignedMpo" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Optional --</option></select></div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">MPO (Search)</label>
+                            <div class="doctor-search-wrapper relative" id="mpoSearchWrapper">
+                                <input type="text" id="docAssignedMpoSearch" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none pr-9" placeholder="Search MPO name..." autocomplete="off">
+                                <input type="hidden" id="docAssignedMpo" value="">
+                                <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                                <div id="mpoSearchDropdown" class="doctor-search-dropdown hidden"></div>
+                            </div>
+                        </div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Active</label><div class="flex items-center gap-3 mt-1"><div id="docActiveToggle" class="toggle-track on" onclick="toggleDocActive()"><div class="toggle-thumb"></div></div><span id="docActiveLabel" class="text-sm font-semibold text-emerald-600">Active</span></div></div>
                     </div>
                     <div class="flex gap-3 mt-6"><button onclick="saveDoctor()" id="btnSaveDoctor" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button><button onclick="cancelEditDoctor()" id="btnCancelEdit" class="hidden px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Back</button><button onclick="resetDoctorForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Reset</button></div>
@@ -188,7 +199,18 @@
             </div>
 
             <!-- DOCTOR LIST -->
-            <div id="page-doctor-list" class="page-content hidden"><div class="bg-white rounded-xl border border-slate-200 overflow-hidden"><div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><h3 class="font-bold text-slate-700">All Doctors</h3><a href="#" onclick="showPage('add-doctor');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i> Add</a></div><div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doc ID</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Degree</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">MPO</th><th class="text-center px-4 py-3">Active</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="doctorEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No doctors</div></div></div>
+            <div id="page-doctor-list" class="page-content hidden">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="font-bold text-slate-700">All Doctors</h3>
+                        <div class="flex gap-2">
+                            <button onclick="printDoctorList()" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i> Print</button>
+                            <a href="#" onclick="showPage('add-doctor');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i> Add</a>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doc ID</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Degree</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">MPO</th><th class="text-center px-4 py-3">Active</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="doctorEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No doctors</div>
+                </div>
+            </div>
 
             <!-- ADD MPO -->
             <div id="page-add-mpo" class="page-content hidden"><div class="max-w-2xl"><div class="bg-white rounded-xl border border-slate-200 p-6"><h3 class="text-lg font-bold mb-6 flex items-center gap-2"><i class="fas fa-user-tie text-brand-600"></i> Add MPO</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Name *</label><input type="text" id="mpoName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">EMP Code *</label><input type="text" id="mpoEmpId" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Area *</label><select id="mpoArea" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select Area --</option></select></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="mpoTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile *</label><input type="text" id="mpoMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Join Date *</label><input type="date" id="mpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div></div><div class="flex gap-3 mt-6"><button onclick="saveMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save</button><button onclick="resetMPOForm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Reset</button></div></div></div></div>
@@ -223,7 +245,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1">Doctor * (Search)</label>
-                            <div class="doctor-search-wrapper" id="poDoctorSearchWrapper">
+                            <div class="doctor-search-wrapper relative" id="poDoctorSearchWrapper">
                                 <input type="text" id="poDoctorSearch" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none pr-9" placeholder="Type doctor name..." autocomplete="off">
                                 <input type="hidden" id="poDoctor" value="">
                                 <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
@@ -313,6 +335,9 @@
             </div>
         </div>
     </div>
+    
+    <!-- HIDDEN PRINT AREA FOR DOCTOR LIST -->
+    <div id="hiddenPrintArea" class="hidden"></div>
 
     <!-- MODALS -->
     <div id="modalEditMPO" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalEditMPO')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-edit text-brand-600 mr-2"></i>Edit MPO</h3><button onclick="closeModal('modalEditMPO')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><input type="hidden" id="editMpoId"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Name</label><input type="text" id="editMpoName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">EMP Code</label><input type="text" id="editMpoEmpId" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Area</label><select id="editMpoArea" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none bg-white"><option value="">-- Select Area --</option></select></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><input type="text" id="editMpoTerritory" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile</label><input type="text" id="editMpoMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Join Date</label><input type="date" id="editMpoJoinDate" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div></div><div class="flex gap-3 mt-6"><button onclick="updateMPO()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i> Update</button><button onclick="closeModal('modalEditMPO')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
@@ -360,7 +385,7 @@
 
         const COMPANY = { name: "Monico Pharma Ltd", address: "04-01, Dr Anowarul Karim Sarok, Kanabiler More, Jugiya, Kushtia-7000", depot: "Depot: Kushtia" };
         const QUALIFIED_SALES_AMOUNT = 70000; 
-        const signatureLabels = ['Prepared by', 'Checked by', 'ReChecked by', 'Verified by', 'Approved By', 'Applicant by (MPL)', 'Regional Sales Manager (MPL)', 'Accounts Officer', 'Officer', 'Branch Manager'];
+        const signatureLabels = ['Prepared by', 'Checked by', 'ReChecked by', 'Verified by', 'Approved By', 'Applicant by (MPL)', 'Regional Sales Manager (MPL)', 'Accounts Officer (IBBL)', 'Officer (IBBL)', 'Branch Manager (IBBL)'];
         let tempSignatures = {};
 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
@@ -450,7 +475,7 @@
             });
         }
         
-        function populateMPODropdowns(){const opts=Object.entries(mposCache).sort((a,b)=>{const areaA=a[1].area||'',areaB=b[1].area||'';if(areaA!==areaB)return areaA.localeCompare(areaB);return a[1].name.localeCompare(b[1].name);}).map(([id,m])=>`<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');['docAssignedMpo','poEntryMPO'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">-- Optional --</option>'+opts;sel.value=v;});}
+        function populateMPODropdowns(){const opts=Object.entries(mposCache).sort((a,b)=>{const areaA=a[1].area||'',areaB=b[1].area||'';if(areaA!==areaB)return areaA.localeCompare(areaB);return a[1].name.localeCompare(b[1].name);}).map(([id,m])=>`<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');['poEntryMPO'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">-- Optional --</option>'+opts;sel.value=v;});}
         function updateTerritoryDatalist(){const ts=new Set();Object.values(doctorsCache).forEach(d=>{if(d.territory)ts.add(d.territory);});Object.values(mposCache).forEach(m=>{if(m.territory)ts.add(m.territory);});const dl=document.getElementById('territoryList');if(dl)dl.innerHTML=[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">`).join('');['printTerritory','poRptTerritory'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const cv=sel.value;sel.innerHTML='<option value="">All</option>'+[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">${t}</option>`).join('');sel.value=cv;});}
         function formatDateDMY(d){if(!d)return'';const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();}
         function getTodayISO(){return new Date().toISOString().split('T')[0];}
@@ -501,7 +526,7 @@
 
         onValue(ref(db,'.info/connected'),(snap)=>{const ok=snap.val()===true,b=document.getElementById('connBanner'),s=document.getElementById('sidebarStatus');if(ok){b.className='conn-ok text-white text-center py-2 px-4 text-sm font-medium no-print';b.innerHTML='<i class="fas fa-check-circle mr-1"></i> Firebase Connected';setTimeout(()=>{b.style.display='none';},3000);s.innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Connected';}else{b.className='conn-err text-white text-center py-2 px-4 text-sm font-medium no-print';b.innerHTML='<i class="fas fa-exclamation-triangle mr-1"></i> Disconnected';b.style.display='';s.innerHTML='<span class="w-2 h-2 rounded-full bg-red-400 pulse-dot"></span> Disconnected';}});
         onValue(ref(db,'doctors'),snap=>{doctorsCache=snap.val()||{};updateTerritoryDatalist();refreshCurrentPage();});
-        onValue(ref(db,'mpos'),snap=>{mposCache=snap.val()||{};updateTerritoryDatalist();populateMPODropdowns();refreshCurrentPage();});
+        onValue(ref(db,'mpos'),snap=>{mposCache=snap.val()||{};updateTerritoryDatalist();refreshCurrentPage();});
         onValue(ref(db,'honorarium'),snap=>{honorariumCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'mpoSales'),snap=>{mpoSalesCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'areas'),snap=>{
@@ -547,7 +572,6 @@
                 case'dashboard':loadDashboard();break;
                 case'doctor-list':loadDoctors();break;
                 case'add-doctor':
-                    populateMPODropdowns();
                     if(!document.getElementById('editDocId').value){
                         document.getElementById('docId').value=generateNextDoctorId();
                     }
@@ -582,7 +606,15 @@
             document.getElementById('docMobile').value=d.mobile||'';
             document.getElementById('docTerritory').value=d.territory||'';
             document.getElementById('docAmount').value=d.amount||'';
-            populateMPODropdowns();document.getElementById('docAssignedMpo').value=d.assignedMpoId||'';
+            
+            document.getElementById('docAssignedMpo').value=d.assignedMpoId||'';
+            if(d.assignedMpoId && mposCache[d.assignedMpoId]){
+                const mpo = mposCache[d.assignedMpoId];
+                document.getElementById('docAssignedMpoSearch').value = `${mpo.name} (${mpo.employeeId})`;
+            } else {
+                document.getElementById('docAssignedMpoSearch').value = '';
+            }
+
             docActiveTemp=d.active!==false;
             const t=document.getElementById('docActiveToggle'),l=document.getElementById('docActiveLabel');
             if(docActiveTemp){t.classList.add('on');l.textContent='Active';l.className='text-sm font-semibold text-emerald-600';}else{t.classList.remove('on');l.textContent='Inactive';l.className='text-sm font-semibold text-red-500';}
@@ -639,6 +671,7 @@
         function resetDoctorForm(){
             ['docName','docDegree','docSpecialty','docChamber','docMobile','docTerritory','docAmount'].forEach(id=>document.getElementById(id).value='');
             document.getElementById('docAssignedMpo').value='';
+            document.getElementById('docAssignedMpoSearch').value='';
             docActiveTemp=true;
             const t=document.getElementById('docActiveToggle'),l=document.getElementById('docActiveLabel');
             t.classList.add('on');l.textContent='Active';l.className='text-sm font-semibold text-emerald-600';
@@ -670,6 +703,65 @@
                 </tr>`;
             }).join('');
         }
+        
+        // ===== PRINT DOCTOR LIST =====
+        function printDoctorList() {
+            let html = `<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1100px;margin:0 auto;font-size:14px;">`;
+            html += `<div style="text-align:center;margin-bottom:15px;">
+                        <h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1>
+                        <p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
+                        <p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
+                     </div>
+                     <div style="text-align:center;margin-bottom:15px;">
+                        <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor List</h2>
+                     </div>`;
+            
+            const en = Object.entries(doctorsCache);
+            en.sort((a,b) => (a[1].name||'').localeCompare(b[1].name||''));
+            
+            html += `<table class="po-print-table"><thead><tr>
+                        <th style="padding:10px 5px;">SL</th>
+                        <th style="padding:10px 5px;">Doc ID</th>
+                        <th style="padding:10px 5px;">Name</th>
+                        <th style="padding:10px 5px;">Degree</th>
+                        <th style="padding:10px 5px;">Specialty</th>
+                        <th style="padding:10px 5px;">Territory</th>
+                        <th style="padding:10px 5px;">Chamber</th>
+                        <th style="padding:10px 5px;">Mobile</th>
+                        <th style="padding:10px 5px;">MPO</th>
+                     </tr></thead><tbody>`;
+                     
+            en.forEach(([id, d], i) => {
+                const mpo = d.assignedMpoId && mposCache[d.assignedMpoId] ? mposCache[d.assignedMpoId].name : '-';
+                html += `<tr>
+                            <td style="text-align:center;">${i+1}</td>
+                            <td style="font-weight:600;">${d.doctorId||'-'}</td>
+                            <td style="font-weight:600;">${d.name||'-'}</td>
+                            <td>${d.degree||'-'}</td>
+                            <td>${d.specialty||'-'}</td>
+                            <td>${d.territory||'-'}</td>
+                            <td>${d.chamber||'-'}</td>
+                            <td>${d.mobile||'-'}</td>
+                            <td>${mpo}</td>
+                         </tr>`;
+            });
+            
+            html += `</tbody></table></div>`;
+            
+            const area = document.getElementById('hiddenPrintArea');
+            area.innerHTML = html;
+            area.classList.remove('hidden');
+            document.body.classList.add('force-print');
+            
+            printAs('landscape');
+            
+            setTimeout(() => {
+                area.classList.add('hidden');
+                area.innerHTML = '';
+                document.body.classList.remove('force-print');
+            }, 500);
+        }
+        window.printDoctorList = printDoctorList;
         
         function saveMPO(){const n=document.getElementById('mpoName').value.trim(),e=document.getElementById('mpoEmpId').value.trim(),a=document.getElementById('mpoArea').value,t=document.getElementById('mpoTerritory').value.trim(),m=document.getElementById('mpoMobile').value.trim(),j=document.getElementById('mpoJoinDate').value;if(!n||!e||!t||!m||!j){showToast('সব ফিল্ড পূরণ করুন','error');return;}if(!a){showToast('Area সিলেক্ট করুন','error');return;}push(ref(db,'mpos'),{name:n,employeeId:e,area:a,territory:t,mobile:m,joiningDate:j,createdAt:Date.now()}).then(()=>{showToast('MPO সেভ হয়েছে');resetMPOForm();}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
         window.saveMPO=saveMPO;
@@ -881,7 +973,6 @@
         }
 
         function populatePOEntryDropdowns(){
-            // Validate current doctor selection
             const docId=document.getElementById('poDoctor').value;
             if(docId&&doctorsCache[docId]){
                 const doc=doctorsCache[docId];
@@ -891,7 +982,6 @@
                     document.getElementById('poDoctorSearch').value='';
                 }
             }
-            // Populate MPO dropdown
             const ms=document.getElementById('poEntryMPO');
             const mv=ms.value;
             const month=document.getElementById('poEntryMonth').value;
@@ -910,7 +1000,6 @@
             const searchInput = document.getElementById('poDoctorSearch');
             const dropdown = document.getElementById('poDoctorDropdown');
             const wrapper = document.getElementById('poDoctorSearchWrapper');
-            
             if(!searchInput) return;
             
             searchInput.addEventListener('focus', () => showDoctorOptions(''));
@@ -944,13 +1033,11 @@
         function showDoctorOptions(searchTerm) {
             const dropdown = document.getElementById('poDoctorDropdown');
             const month = document.getElementById('poEntryMonth').value;
-            
             const activeDocs = Object.entries(doctorsCache).filter(([id, d]) => {
                 if (d.active === false) return false;
                 if (!d.assignedMpoId) return false;
                 return isMPOQualified(month, d.assignedMpoId);
             });
-            
             const filtered = activeDocs.filter(([id, d]) => {
                 if (!searchTerm) return true;
                 const term = searchTerm.toLowerCase();
@@ -958,7 +1045,6 @@
                        (d.specialty && d.specialty.toLowerCase().includes(term)) ||
                        (d.doctorId && d.doctorId.toLowerCase().includes(term));
             });
-            
             if (filtered.length === 0) {
                 dropdown.innerHTML = '<div class="doctor-search-item" style="cursor:default;color:#94a3b8;">No doctors found</div>';
             } else {
@@ -969,7 +1055,6 @@
                     </div>`
                 ).join('');
             }
-            
             dropdown.classList.remove('hidden');
         }
         window.showDoctorOptions = showDoctorOptions;
@@ -983,6 +1068,80 @@
             autoFillPOFromDoctor();
         }
         window.selectPODoctor = selectPODoctor;
+
+        // ===== MPO SEARCH DROPDOWN (DOCTOR FORM) =====
+        function setupMPOSearch() {
+            const searchInput = document.getElementById('docAssignedMpoSearch');
+            const dropdown = document.getElementById('mpoSearchDropdown');
+            const wrapper = document.getElementById('mpoSearchWrapper');
+            if(!searchInput) return;
+            
+            searchInput.addEventListener('focus', () => showMPOOptions(''));
+            searchInput.addEventListener('input', () => {
+                document.getElementById('docAssignedMpo').value = '';
+                showMPOOptions(searchInput.value);
+            });
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const firstItem = dropdown.querySelector('.doctor-search-item');
+                    if (firstItem && !dropdown.classList.contains('hidden')) {
+                        firstItem.click();
+                    }
+                }
+                if (e.key === 'Escape') {
+                    dropdown.classList.add('hidden');
+                }
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (wrapper && !wrapper.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+        window.setupMPOSearch = setupMPOSearch;
+
+        function showMPOOptions(searchTerm) {
+            const dropdown = document.getElementById('mpoSearchDropdown');
+            const mpoEntries = Object.entries(mposCache);
+            mpoEntries.sort((a,b) => {
+                const areaA = a[1].area || '', areaB = b[1].area || '';
+                if(areaA !== areaB) return areaA.localeCompare(areaB);
+                return a[1].name.localeCompare(b[1].name);
+            });
+            
+            const filtered = mpoEntries.filter(([id, m]) => {
+                if (!searchTerm) return true;
+                const term = searchTerm.toLowerCase();
+                return (m.name && m.name.toLowerCase().includes(term)) || 
+                       (m.employeeId && m.employeeId.toLowerCase().includes(term)) ||
+                       (m.area && m.area.toLowerCase().includes(term));
+            });
+            
+            if (filtered.length === 0) {
+                dropdown.innerHTML = '<div class="doctor-search-item" style="cursor:default;color:#94a3b8;">No MPOs found</div>';
+            } else {
+                dropdown.innerHTML = filtered.map(([id, m]) => 
+                    `<div class="doctor-search-item" onclick="selectAssignedMPO('${id}')">
+                        <div class="doc-name">${m.name}</div>
+                        <div class="doc-meta">${m.employeeId||''} ${m.area ? '• ' + m.area : ''} • ${m.territory||''}</div>
+                    </div>`
+                ).join('');
+            }
+            dropdown.classList.remove('hidden');
+        }
+        window.showMPOOptions = showMPOOptions;
+
+        function selectAssignedMPO(id) {
+            const mpo = mposCache[id];
+            if (!mpo) return;
+            document.getElementById('docAssignedMpo').value = id;
+            document.getElementById('docAssignedMpoSearch').value = `${mpo.name} (${mpo.employeeId})`;
+            document.getElementById('mpoSearchDropdown').classList.add('hidden');
+        }
+        window.selectAssignedMPO = selectAssignedMPO;
 
         function autoFillPOFromDoctor(){
             const docId=document.getElementById('poDoctor').value;
@@ -1014,16 +1173,13 @@
             const type = document.getElementById('poEntryType').value;
             const amount = parseFloat(document.getElementById('poEntryAmount').value) || 0;
             const slabs = settingsCache.commissionSlabs || [];
-            
             const typeSlabs = slabs.filter(s => s.type === type);
             if (typeSlabs.length === 0) {
                 document.getElementById('poEntryCommission').value = 0;
                 return;
             }
-            
             typeSlabs.sort((a, b) => (a.amount || 0) - (b.amount || 0));
             let comm = typeSlabs[0].commission || 0;
-            
             if (amount > 0) {
                 typeSlabs.sort((a, b) => (b.amount || 0) - (a.amount || 0));
                 for (let s of typeSlabs) {
@@ -1065,7 +1221,6 @@
         function enterEditPO(id){
             const h=honorariumCache[id];if(!h)return;
             document.getElementById('editPOId').value=id;
-            // Set doctor via search
             document.getElementById('poDoctor').value=h.doctorId||'';
             if(h.doctorId&&doctorsCache[h.doctorId]){
                 const doc=doctorsCache[h.doctorId];
@@ -1103,7 +1258,7 @@
             document.getElementById('poFormTitle').innerHTML='<i class="fas fa-hashtag text-purple-600"></i> Pay Order Entry';
             document.getElementById('btnSavePO').className='btn-purple text-white px-6 py-2.5 rounded-lg text-sm font-semibold';
             document.getElementById('btnSavePO').innerHTML='<i class="fas fa-save mr-1"></i> Save Pay Order';
-            document.getElementById('btnCancelPO').classList.add('hidden');
+            document.getElementById('btnCancelPO').classList.remove('hidden');
             document.getElementById('poFormCard').classList.remove('ring-2','ring-purple-500','ring-offset-2');
         }
         
@@ -1218,7 +1373,7 @@
                     html+=`</tbody><tfoot><tr style="background:#eff6ff;"><td colspan="4" style="font-weight:700;text-align:right;padding:8px 5px;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${pageEntries.length} Items)</td><td style="text-align:right;font-weight:700;font-size:13px;padding:8px 5px;border:1px solid #333;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td style="text-align:right;font-weight:700;font-size:12px;padding:8px 5px;border:1px solid #333;">${Number(pageComm).toLocaleString()}</td><td colspan="4" style="border:1px solid #333;"></td></tr></tfoot></table>`;
                     if(isLastPage){
                         html+=`<div style="margin-top:15px;background:#fef3c7;border:1px solid #999;border-top:3px solid #333;padding:12px 15px;font-size:15px;"><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Pay Order Total</span><span style="font-weight:800;">${Number(totalAmount).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Total Commission (Auto from Entries)</span><span style="font-weight:600;">${Number(totalCommission).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:8px 0 2px;"><span style="font-weight:800;font-size:14px;">Grand Total</span><span style="font-weight:800;font-size:18px;">${Number(grandTotal).toLocaleString()}</span></div></div>`;
-                        html+=`<div style="margin-top:10px;font-size:11px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>${sigRowHTML(['Applicant by (MPL)','Regional Sales Manager (MPL)','Accounts Officer','Officer','Branch Manager'])}`;
+                        html+=`<div style="margin-top:10px;font-size:11px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>${sigRowHTML(['Applicant by (MPL)','Regional Sales Manager (MPL)','Accounts Officer (IBBL)','Officer (IBBL)','Branch Manager (IBBL)'])}`;
                     }
                     html+=`</div>`;
                 });
@@ -1395,16 +1550,9 @@
             if(territory) allDocs = allDocs.filter(([id,d]) => d.territory===territory);
 
             const monthEntries = Object.entries(honorariumCache).filter(([,h])=>h.month===month);
-            
-            // Read current remarks from DOM inputs
             const remarkInputs = document.querySelectorAll('.ps-remark-input');
             const remarksMap = {};
-            remarkInputs.forEach(inp => {
-                remarksMap[inp.dataset.docid] = inp.value.trim();
-            });
-            
-            let rows = [];
-            let sl = 0;
+            remarkInputs.forEach(inp => { remarksMap[inp.dataset.docid] = inp.value.trim(); });
             
             const mpoGroups = {};
             allDocs.forEach(([docId, doc]) => {
@@ -1421,6 +1569,18 @@
                 return (mpoGroups[a].mpo.employeeId||'').localeCompare(mpoGroups[b].mpo.employeeId||'');
             });
             
+            let aoa = [];
+            aoa.push([COMPANY.name]);
+            aoa.push([COMPANY.address]);
+            aoa.push([COMPANY.depot]);
+            aoa.push([`Doctor Honorarium List ${month}`]);
+            aoa.push([]);
+            
+            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Amount', 'Remarks']);
+            
+            let sl = 0;
+            let totalAmount = 0;
+            
             sortedMpoIds.forEach(mpoId => {
                 const group = mpoGroups[mpoId];
                 const mpo = group.mpo;
@@ -1430,58 +1590,52 @@
                     if(item.doc.active === false) return;
                     sl++;
                     const amount = item.entry ? (item.entry.amount||0) : (item.doc.amount||0);
+                    totalAmount += amount;
                     const remarks = remarksMap[item.docId] !== undefined ? remarksMap[item.docId] : (item.entry ? (item.entry.remarks||'') : '');
                     
-                    rows.push({
-                        'SL': sl,
-                        'Doc ID': item.doc.doctorId || '-',
-                        'Doctor Name': item.doc.name || '-',
-                        'EMP Code': mpo.employeeId || '-',
-                        'MPO Name': mpo.name || '-',
-                        'Area': mpo.area || '-',
-                        'Territory': mpo.territory || '-',
-                        [tpP.tp1Full]: sales.tp1 || '-',
-                        [tpP.tp2Full]: sales.tp2 || '-',
-                        'Amount': amount,
-                        'Remarks': remarks
-                    });
+                    aoa.push([
+                        sl,
+                        mpo.employeeId || '-',
+                        mpo.name || '-',
+                        mpo.area || '-',
+                        mpo.territory || '-',
+                        sales.tp1 || '-',
+                        sales.tp2 || '-',
+                        item.doc.doctorId || '-',
+                        item.doc.name || '-',
+                        amount,
+                        remarks
+                    ]);
                 });
             });
             
-            if(rows.length === 0) {
+            if(sl === 0) {
                 showToast('No data to export','error');
                 return;
             }
             
-            // Add total row
-            const totalAmount = rows.reduce((s,r) => s + r.Amount, 0);
-            rows.push({
-                'SL': '',
-                'Doc ID': '',
-                'Doctor Name': '',
-                'EMP Code': '',
-                'MPO Name': '',
-                'Area': '',
-                'Territory': '',
-                [tpP.tp1Full]: '',
-                [tpP.tp2Full]: 'Grand Total:',
-                'Amount': totalAmount,
-                'Remarks': ''
-            });
+            aoa.push([]);
+            aoa.push(['', '', '', '', '', '', '', '', 'Grand Total:', totalAmount, '']);
+            aoa.push([]);
+            aoa.push([`Date: ${formatDateDMY(new Date())}`]);
+            aoa.push([`Taka In Word: ${numberToWords(totalAmount)}`]);
             
-            const ws = XLSX.utils.json_to_sheet(rows);
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
             
-            // Set column widths
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } },
+                { s: { r: 3, c: 0 }, e: { r: 3, c: 10 } }
+            ];
+            
             ws['!cols'] = [
-                {wch: 5}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 20},
-                {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 12}, {wch: 25}
+                {wch: 5}, {wch: 10}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 12}, {wch: 25}
             ];
             
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Print Sheet');
-            
-            const fileName = `PrintSheet_${month}${filterArea?'_'+filterArea:''}${territory?'_'+territory:''}.xlsx`;
-            XLSX.writeFile(wb, fileName);
+            XLSX.writeFile(wb, `PrintSheet_${month}.xlsx`);
             showToast('Excel exported successfully');
         }
         window.exportPrintSheetToExcel = exportPrintSheetToExcel;
@@ -1538,11 +1692,12 @@
 
         function updateClock(){const n=new Date();document.getElementById('currentDateTime').textContent=n.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' '+n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
         setInterval(updateClock,1000);updateClock();
-        populateMonthSelects();populateMPODropdowns();
+        populateMonthSelects();
         const poDateField=document.getElementById('poEntryDate');
         if(poDateField)poDateField.value=getTodayISO();
         populatePOTypeDropdown();
         setupDoctorSearch();
+        setupMPOSearch();
         
         document.getElementById('newAreaInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') { e.preventDefault(); addNewArea(); }
