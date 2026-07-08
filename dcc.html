@@ -26,7 +26,6 @@
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Noto Sans Bengali',sans-serif;color:var(--text-main)}
 html, body { overflow-x: hidden; background: #eef2f7; }
 
-/* Auto Uppercase for all text inputs */
 input[type="text"], textarea {
     text-transform: uppercase;
 }
@@ -61,9 +60,12 @@ input[type="text"], textarea {
 .login-role-hint i{margin-right:4px}
 
 /* Top Bar */
-.top-bar{max-width:1200px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;background:#fff;border-radius:12px;padding:12px 20px;border:1px solid var(--border-color);box-shadow:0 4px 15px rgba(0,0,0,.05)}
+.top-bar{max-width:1200px;margin:0 auto 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;background:#fff;border-radius:12px;padding:12px 20px;border:1px solid var(--border-color);box-shadow:0 4px 15px rgba(0,0,0,.05);position:relative;}
 .top-bar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .top-bar-right{display:flex;align-items:center;gap:12px}
+
+.hamburger-btn { display: none; background: transparent; border: none; font-size: 24px; cursor: pointer; color: var(--text-main); padding: 0 5px; }
+
 .user-badge{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-main);background:var(--light-bg);padding:7px 14px;border-radius:8px;border:1px solid var(--border-color)}
 .user-badge .role-tag{font-size:10px;background:var(--accent);color:#fff;padding:3px 8px;border-radius:12px;font-weight:700;letter-spacing:.5px}
 .logout-btn{padding:7px 16px;font-size:12px;font-weight:600;color:var(--danger);background:#fff;border:1.5px solid var(--danger);border-radius:8px;cursor:pointer;font-family:'Noto Sans Bengali',sans-serif;transition:all .15s;display:flex;align-items:center;gap:5px}
@@ -307,6 +309,7 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 .sig-upload-area:hover{border-color:var(--accent);background:#eff6ff}
 .sig-upload-area i{font-size:32px;color:var(--text-muted);display:block;margin-bottom:10px}
 .sig-upload-area p{font-size:14px;color:var(--text-muted)}
+.sig-upload-preview{display:none;max-width:100%;max-height:150px;margin-top:15px;border:1px solid var(--border-color);border-radius:8px;padding:5px;background:#fff}
 .sig-modal-footer{padding:0 24px 20px;display:flex;gap:10px;justify-content:flex-end}
 
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;display:none;align-items:center;justify-content:center}
@@ -377,12 +380,32 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
     .info-grid-4 { grid-template-columns: 1fr; }
     .info-cell-4 { border-right: none !important; border-bottom: 1px solid #000; }
     .info-cell-4:last-child { border-bottom: none; }
-    .top-bar { flex-direction: column; align-items: stretch; padding: 12px; }
-    .top-bar-left { flex-direction: column; width: 100%; gap: 8px; }
-    .top-bar-left .nav-btn { width: 100%; justify-content: center; }
-    .top-bar-right { width: 100%; flex-direction: column; gap: 8px; }
-    .user-badge { justify-content: center; }
-    .logout-btn { width: 100%; justify-content: center; }
+    
+    .hamburger-btn { display: inline-block; }
+    .top-bar { flex-wrap: nowrap; align-items: center; padding: 10px 15px; }
+    .top-bar-left {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: #fff;
+        flex-direction: column;
+        padding: 15px;
+        box-shadow: 0 10px 15px rgba(0,0,0,.1);
+        z-index: 999;
+        border-radius: 0 0 12px 12px;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .top-bar-left.menu-open { display: flex; }
+    .top-bar-left .nav-btn { width: 100%; justify-content: flex-start; }
+    .top-bar-right { flex-direction: row; gap: 8px; }
+    .user-badge { padding: 6px 10px; font-size: 12px; }
+    .logout-btn { padding: 6px 12px; font-size: 11px; }
+    
     .header-meta { flex-direction: column; }
     .header-meta-item { border-right: none !important; border-bottom: 1px solid #000; justify-content: flex-start !important; text-align: left; }
     .header-meta-item:last-child { border-bottom: none; }
@@ -403,6 +426,7 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
     .dash-actions { padding: 8px 16px 16px; flex-direction: column; }
     .dash-action-btn { width: 100%; justify-content: center; }
     .dash-recent { padding: 0 16px 16px; }
+    .dash-recent-header { flex-direction: column; align-items: flex-start; gap: 10px; }
     .mgmt-form { grid-template-columns: 1fr !important; }
     .mgmt-form .full { flex-direction: column; gap: 8px; }
     .mgmt-form .full button { width: 100%; }
@@ -504,6 +528,7 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
                 <p>ক্লিক করে স্বাক্ষরের ছবি আপলোড করুন</p>
                 <p style="font-size:11px;color:#aaa;margin-top:4px">PNG, JPG — সর্বোচ্চ ৫০০KB</p>
             </div>
+            <img id="sigUploadPreview" src="#" alt="Preview" class="sig-upload-preview">
             <input type="file" id="sigModalFileInput" accept="image/*" style="display:none" onchange="handleSigModalUpload()">
         </div>
     </div>
@@ -518,7 +543,10 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 <div class="toast" id="toast"></div>
 
 <div class="top-bar" id="topBar" style="display:none">
-    <div class="top-bar-left">
+    <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileMenu()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="top-bar-left" id="topBarLeft">
         <button class="nav-btn active" data-view="dashboard" onclick="showView('dashboard')"><i class="fas fa-tachometer-alt"></i> ড্যাশবোর্ড</button>
         <button class="nav-btn" data-view="entry" id="navEntry" onclick="showView('entry')"><i class="fas fa-plus-circle"></i> নতুন আবেদন</button>
         <button class="nav-btn" data-view="history" onclick="showView('history')"><i class="fas fa-history"></i> ইতিহাস</button>
@@ -850,6 +878,10 @@ function statusBadgeClass(s){
 }
 function roleLabel(r){if(r==='super_admin')return 'Super Admin';if(r==='rsm')return 'RSM';if(r==='am')return 'AM';if(r==='mpo')return 'MPO';return r;}
 
+function toggleMobileMenu() {
+    document.getElementById('topBarLeft').classList.toggle('menu-open');
+}
+
 /* কে কোন স্বাক্ষর করতে পারবে তার লজিক */
 function canSign(key) {
     if(!currentUser) return false;
@@ -909,6 +941,7 @@ function doLogout(){
 /* ====== ভিউ সুইচিং ====== */
 function showView(view){
     _viewMode=false;_editingKey=null;_currentHistKey=null;_pendingAction=null;
+    document.getElementById('topBarLeft').classList.remove('menu-open');
     document.querySelectorAll('.top-bar-left .nav-btn').forEach(function(b){b.classList.remove('active');});
     var tn=document.querySelector('.top-bar-left .nav-btn[data-view="'+view+'"]');if(tn)tn.classList.add('active');
     ['dashboardView','historyView','managementView'].forEach(function(id){document.getElementById(id).style.display='none';document.getElementById(id).classList.remove('show');});
@@ -1118,7 +1151,7 @@ function startApproval(key, action) {
         if (currentUser.role === 'super_admin' && d.status !== 'Pending at DIC') { showToast('শুধুমাত্র Pending at DIC অবস্থায় অনুমোদন যাবে','error'); return; }
         
         populateFormFromData(d);
-        setFormReadonly(false, true); // true মানে শুধু স্বাক্ষর ছাড়া বাকি সব রিড-ওনলি
+        setFormReadonly(false, true); 
         showEntryActions('edit');
         document.getElementById('entryView').classList.add('show');
         document.querySelectorAll('.top-bar-left .nav-btn').forEach(function(b){b.classList.remove('active');});
@@ -1217,8 +1250,17 @@ function openSigModal(key){
     switchSigMode('draw');
     clearSigCanvas();
     document.getElementById('sigModalFileInput').value='';
+    var preview=document.getElementById('sigUploadPreview');
+    if(preview){preview.src='#';preview.style.display='none';}
 }
-function closeSigModal(){document.getElementById('sigModal').classList.remove('show');_sigModalTarget=null;_sigUploadedData=null;}
+function closeSigModal(){
+    document.getElementById('sigModal').classList.remove('show');
+    _sigModalTarget=null;
+    _sigUploadedData=null;
+    var preview=document.getElementById('sigUploadPreview');
+    if(preview){preview.src='#';preview.style.display='none';}
+    document.getElementById('sigModalFileInput').value='';
+}
 function switchSigMode(mode){
     document.getElementById('sigChoiceDraw').classList.toggle('active',mode==='draw');
     document.getElementById('sigChoiceUpload').classList.toggle('active',mode==='upload');
@@ -1247,7 +1289,15 @@ function redrawSigCanvas(){_sigCtx.clearRect(0,0,_sigCanvas.width/2,_sigCanvas.h
 function handleSigModalUpload(){
     var file=document.getElementById('sigModalFileInput').files[0];if(!file)return;
     if(file.size>512000){showToast('৫০০KB এর কম হতে হবে','error');return;}
-    var reader=new FileReader();reader.onload=function(e){_sigUploadedData=e.target.result;showToast('ছবি লোড হয়েছে','success');};reader.readAsDataURL(file);
+    var reader=new FileReader();
+    reader.onload=function(e){
+        _sigUploadedData=e.target.result;
+        var preview=document.getElementById('sigUploadPreview');
+        preview.src=_sigUploadedData;
+        preview.style.display='block';
+        showToast('ছবি লোড হয়েছে','success');
+    };
+    reader.readAsDataURL(file);
 }
 function saveSigFromModal(){
     var dataUrl='';
