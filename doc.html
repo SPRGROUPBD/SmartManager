@@ -78,6 +78,9 @@
         
         .doc-row-inactive td { color: #999 !important; text-decoration: line-through; background:#f8fafc; }
         
+        .paid-bg td { background-color: #f0fdf4 !important; }
+        .pending-bg td { background-color: #fffbeb !important; }
+        
         .sig-box{min-width:140px;height:100px;display:inline-flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:10px;font-weight:600;flex-shrink:0}
         .sig-box .sig-line{width:100%;border-top:1px solid #333;padding-top:5px;text-align:center}
         
@@ -96,6 +99,7 @@
             .print-area{padding:0!important}
             body{background:white!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
             .po-print-table td,.po-print-table th,.ps-print-table td,.ps-print-table th{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
+            .paid-bg td, .pending-bg td, .doc-row-inactive td {-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
             .po-print-table{font-size:14px!important;line-height:36px!important}
             .ps-print-table{font-size:10px!important;line-height:14px!important}
             .ps-print-table td{padding:1px 3px!important}
@@ -269,6 +273,8 @@
                         </div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Commission/PO</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="poEntryCommission" value="58" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none bg-slate-50" readonly></div></div>
                         
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">VAT/PO</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="poEntryVat" value="0" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none bg-slate-50" readonly></div></div>
+                        
                         <div class="md:col-span-3"><label class="block text-xs font-semibold text-slate-500 mb-1">Remarks</label><input type="text" id="poEntryRemarks" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
                     </div>
                     <div class="flex gap-3 mt-6">
@@ -278,8 +284,14 @@
                     </div>
                 </div></div>
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-6">
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between"><h3 class="font-bold text-slate-700">Pay Order Entries</h3><select id="poListMonth" onchange="loadPOEntriesList()" class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none bg-white"></select></div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doc ID</th><th class="text-left px-4 py-3">Doctor</th><th class="text-left px-4 py-3">PO No</th><th class="text-left px-4 py-3">Type</th><th class="text-left px-4 py-3">MPO</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">PO Date</th><th class="text-left px-4 py-3">Month</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="poEntryListBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+                        <h3 class="font-bold text-slate-700">Pay Order Entries</h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-slate-500 font-semibold">Filter by Month:</label>
+                            <select id="poListMonth" onchange="loadPOEntriesList()" class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none bg-white"></select>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doc ID</th><th class="text-left px-4 py-3">Doctor</th><th class="text-left px-4 py-3">PO No</th><th class="text-left px-4 py-3">Type</th><th class="text-left px-4 py-3">MPO</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">Comm.</th><th class="text-left px-4 py-3">VAT</th><th class="text-left px-4 py-3">PO Date</th><th class="text-left px-4 py-3">Month</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="poEntryListBody" class="divide-y divide-slate-100"></tbody></table></div>
                     <div id="poEntryEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No pay order entries</div>
                 </div>
             </div>
@@ -351,11 +363,12 @@
 
     <!-- SLAB SETTINGS MODAL -->
     <div id="modalSlabSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSlabSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-xl p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-sliders text-blue-600 mr-2"></i>Commission Slab Settings</h3><button onclick="closeModal('modalSlabSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div>
-    <p class="text-xs text-slate-500 mb-3">Rule: If Amount (>=) is set, it will match for that amount or higher. If 0, it matches any amount for that type.</p>
+    <p class="text-xs text-slate-500 mb-3">Rule: If Amount (>=) is set, it will match for that amount or higher. If 0, it matches any amount for that type. (VAT is auto 15% but editable)</p>
     <div class="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 mb-2 px-1">
-        <div class="col-span-4">Payment Type</div>
-        <div class="col-span-3">Amount (>=)</div>
-        <div class="col-span-4">Commission (৳)</div>
+        <div class="col-span-3">Payment Type</div>
+        <div class="col-span-2">Amount (>=)</div>
+        <div class="col-span-3">Commission (৳)</div>
+        <div class="col-span-3">VAT 15% (৳)</div>
         <div class="col-span-1"></div>
     </div>
     <div id="slabSettingsContainer" class="space-y-3 max-h-60 overflow-y-auto"></div><button onclick="addSlabRow()" class="mt-3 text-sm text-brand-600 font-semibold flex items-center gap-1"><i class="fas fa-plus"></i> Add Slab Row</button><div class="flex gap-3 mt-6"><button onclick="saveSlabSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Settings</button></div></div></div>
@@ -390,10 +403,10 @@
 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
         let settingsCache = { commissionSlabs: [
-            { type: 'IBBL', amount: 1000, commission: 58 },
-            { type: 'IBBL', amount: 2000, commission: 58 },
-            { type: 'IBBL', amount: 3000, commission: 58 },
-            { type: 'Bkash', amount: 0, commission: 0 }
+            { type: 'IBBL', amount: 1000, commission: 58, vat: 8.7 },
+            { type: 'IBBL', amount: 2000, commission: 58, vat: 8.7 },
+            { type: 'IBBL', amount: 3000, commission: 58, vat: 8.7 },
+            { type: 'Bkash', amount: 0, commission: 0, vat: 0 }
         ]}; 
         let docActiveTemp = true;
 
@@ -422,6 +435,14 @@
         }
         function getCurrentMonth(){const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],n=new Date();return ms[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);}
         
+        function getMonthEndDate(monthStr) {
+            const ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const parts = monthStr.split('-');
+            const monthIdx = ms.indexOf(parts[0]);
+            const year = parseInt('20' + parts[1]);
+            return new Date(year, monthIdx + 1, 0, 23, 59, 59, 999).getTime(); 
+        }
+
         function getPrevMonthStr(appMonth) {
             const ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const parts = appMonth.split('-');
@@ -433,7 +454,6 @@
             return ms[prevMonthIdx] + '-' + String(prevYear).slice(-2);
         }
 
-        // ===== AUTO DOCTOR ID GENERATOR =====
         function generateNextDoctorId() {
             let maxNum = 0;
             Object.values(doctorsCache).forEach(d => {
@@ -540,7 +560,7 @@
             if(val && Array.isArray(val.commissionSlabs)) {
                 settingsCache.commissionSlabs = val.commissionSlabs;
             } else {
-                settingsCache.commissionSlabs = val && val.commissionSlabs ? Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v})) : settingsCache.commissionSlabs;
+                settingsCache.commissionSlabs = val && val.commissionSlabs ? Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0})) : settingsCache.commissionSlabs;
             }
             populatePOTypeDropdown();
             refreshCurrentPage();
@@ -704,7 +724,6 @@
             }).join('');
         }
         
-        // ===== PRINT DOCTOR LIST =====
         function printDoctorList() {
             let html = `<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1100px;margin:0 auto;font-size:14px;">`;
             html += `<div style="text-align:center;margin-bottom:15px;">
@@ -777,7 +796,6 @@
         function confirmDelete(){const id=document.getElementById('deleteTargetId').value,type=document.getElementById('deleteTargetType').value;let path=type==='doctor'?'doctors/':type==='mpo'?'mpos/':type==='area'?'areas/':'honorarium/';if(type==='area'){const newAreas=areasCache.filter(a=>a!==id);set(ref(db,'areas'),newAreas).then(()=>{showToast('Area ডিলিট হয়েছে');closeModal('modalConfirmDelete');openAreaSettings();}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}else{remove(ref(db,path+id)).then(()=>{showToast('ডিলিট হয়েছে');closeModal('modalConfirmDelete');}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}}
         window.confirmDelete=confirmDelete;
 
-        // ===== AREA MANAGEMENT =====
         function openAreaSettings() {
             const container = document.getElementById('areaListContainer');
             if (areasCache.length === 0) {
@@ -815,7 +833,6 @@
         }
         window.addNewArea = addNewArea;
 
-        // ===== SIGNATURE SETTINGS =====
         function openSignatureSettings() {
             const container = document.getElementById('sigUploadContainer');
             container.innerHTML = '';
@@ -864,7 +881,17 @@
         }
         window.saveSignatureSettings = saveSignatureSettings;
 
-        // ===== SLAB SETTINGS =====
+        function calculateVAT(element) {
+            const comm = parseFloat(element.value) || 0;
+            const vat = (comm * 0.15).toFixed(2);
+            const row = element.closest('.slab-row');
+            if(row) {
+                const vatInput = row.querySelector('.slab-vat');
+                if(vatInput) vatInput.value = vat;
+            }
+        }
+        window.calculateVAT = calculateVAT;
+
         function openSlabSettings() {
             const container = document.getElementById('slabSettingsContainer');
             container.innerHTML = '';
@@ -873,11 +900,14 @@
                 addSlabRow();
             } else {
                 slabs.forEach(s => {
+                    const commVal = parseFloat(s.commission||0);
+                    const vatVal = parseFloat(s.vat||0).toFixed(2);
                     container.insertAdjacentHTML('beforeend', `
                         <div class="grid grid-cols-12 gap-2 items-center slab-row">
-                            <input type="text" value="${s.type||''}" class="slab-type col-span-4 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Type (e.g., IBBL)">
-                            <input type="number" value="${s.amount||0}" class="slab-amount col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Amount >=">
-                            <input type="number" value="${s.commission||0}" class="slab-comm col-span-4 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Commission">
+                            <input type="text" value="${s.type||''}" class="slab-type col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Type (e.g., IBBL)">
+                            <input type="number" value="${s.amount||0}" class="slab-amount col-span-2 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Amount >=">
+                            <input type="number" oninput="calculateVAT(this)" value="${commVal}" class="slab-comm col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Commission">
+                            <input type="number" value="${vatVal}" class="slab-vat col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="VAT">
                             <button onclick="this.parentElement.remove()" class="col-span-1 text-red-400 hover:text-red-600 text-lg"><i class="fas fa-times-circle"></i></button>
                         </div>`);
                 });
@@ -890,9 +920,10 @@
             const container = document.getElementById('slabSettingsContainer');
             container.insertAdjacentHTML('beforeend', `
                 <div class="grid grid-cols-12 gap-2 items-center slab-row">
-                    <input type="text" class="slab-type col-span-4 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Type (e.g., IBBL)">
-                    <input type="number" value="0" class="slab-amount col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Amount >=">
-                    <input type="number" value="0" class="slab-comm col-span-4 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Commission">
+                    <input type="text" class="slab-type col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Type (e.g., IBBL)">
+                    <input type="number" value="0" class="slab-amount col-span-2 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Amount >=">
+                    <input type="number" oninput="calculateVAT(this)" value="0" class="slab-comm col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="Commission">
+                    <input type="number" value="0.00" class="slab-vat col-span-3 input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm" placeholder="VAT">
                     <button onclick="this.parentElement.remove()" class="col-span-1 text-red-400 hover:text-red-600 text-lg"><i class="fas fa-times-circle"></i></button>
                 </div>`);
         }
@@ -902,13 +933,15 @@
             const types = document.querySelectorAll('.slab-type');
             const amounts = document.querySelectorAll('.slab-amount');
             const comms = document.querySelectorAll('.slab-comm');
+            const vats = document.querySelectorAll('.slab-vat');
             const newSlabs = [];
             types.forEach((t, i) => {
                 if (t.value.trim()) {
                     newSlabs.push({
                         type: t.value.trim(),
                         amount: parseFloat(amounts[i].value) || 0,
-                        commission: parseFloat(comms[i].value) || 0
+                        commission: parseFloat(comms[i].value) || 0,
+                        vat: parseFloat(vats[i].value) || 0
                     });
                 }
             });
@@ -920,7 +953,6 @@
         }
         window.saveSlabSettings = saveSlabSettings;
 
-        // ===== MPO SALES ENTRY =====
         function loadMPOSalesTable(){
             const month=document.getElementById('salesMonth').value;
             const filterArea=document.getElementById('salesArea').value;
@@ -959,7 +991,6 @@
         function saveAllMPOSales(){const month=document.getElementById('salesMonth').value;if(!month){showToast('Month সিলেক্ট করুন','error');return;}const updates={};const tp1Inputs=document.querySelectorAll('.sales-tp1');const tp2Inputs=document.querySelectorAll('.sales-tp2');tp1Inputs.forEach(inp=>{const mpoId=inp.dataset.mpoid;const tp2Inp=[...tp2Inputs].find(i=>i.dataset.mpoid===mpoId);updates[mpoId]={tp1:inp.value.trim(),tp2:tp2Inp?tp2Inp.value.trim():''};});set(ref(db,'mpoSales/'+month),updates).then(()=>{showToast('MPO Sales সেভ হয়েছে ('+Object.keys(updates).length+' MPOs)');document.querySelectorAll('.sales-tp1,.sales-tp2').forEach(inp=>{inp.classList.add('sales-saved');setTimeout(()=>inp.classList.remove('sales-saved'),1000);});}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
         window.saveAllMPOSales=saveAllMPOSales;
 
-        // ===== PAY ORDER ENTRY =====
         function populatePOTypeDropdown() {
             const sel = document.getElementById('poEntryType');
             if(!sel) return;
@@ -995,7 +1026,6 @@
             ms.value=mv;
         }
 
-        // ===== DOCTOR SEARCH DROPDOWN =====
         function setupDoctorSearch() {
             const searchInput = document.getElementById('poDoctorSearch');
             const dropdown = document.getElementById('poDoctorDropdown');
@@ -1069,7 +1099,6 @@
         }
         window.selectPODoctor = selectPODoctor;
 
-        // ===== MPO SEARCH DROPDOWN (DOCTOR FORM) =====
         function setupMPOSearch() {
             const searchInput = document.getElementById('docAssignedMpoSearch');
             const dropdown = document.getElementById('mpoSearchDropdown');
@@ -1176,20 +1205,24 @@
             const typeSlabs = slabs.filter(s => s.type === type);
             if (typeSlabs.length === 0) {
                 document.getElementById('poEntryCommission').value = 0;
+                document.getElementById('poEntryVat').value = 0;
                 return;
             }
             typeSlabs.sort((a, b) => (a.amount || 0) - (b.amount || 0));
             let comm = typeSlabs[0].commission || 0;
+            let vat = typeSlabs[0].vat || 0;
             if (amount > 0) {
                 typeSlabs.sort((a, b) => (b.amount || 0) - (a.amount || 0));
                 for (let s of typeSlabs) {
                     if (amount >= (s.amount || 0)) {
                         comm = s.commission || 0;
+                        vat = s.vat || 0;
                         break;
                     }
                 }
             }
             document.getElementById('poEntryCommission').value = comm;
+            document.getElementById('poEntryVat').value = vat;
         }
         window.updatePOCommission = updatePOCommission;
 
@@ -1213,6 +1246,7 @@
                     document.getElementById('poEntryTp2').value='';
                     document.getElementById('poEntryAmount').value='';
                     document.getElementById('poEntryCommission').value=0;
+                    document.getElementById('poEntryVat').value=0;
                     showToast('Doctor no longer qualified for this month','info');
                 }
             }
@@ -1238,6 +1272,7 @@
             if(![...typeSelect.options].some(opt=>opt.value===typeVal)){typeSelect.innerHTML+=`<option value="${typeVal}">${typeVal}</option>`;}
             typeSelect.value=typeVal;
             document.getElementById('poEntryCommission').value=h.commission!==undefined?h.commission:0;
+            document.getElementById('poEntryVat').value=h.vat!==undefined?h.vat:0;
             document.getElementById('poEntryRemarks').value=h.remarks||'';
             document.getElementById('poEditBanner').classList.remove('hidden');
             document.getElementById('poFormTitle').innerHTML='<i class="fas fa-edit text-purple-600"></i> Update Pay Order';
@@ -1279,10 +1314,11 @@
             tp2=document.getElementById('poEntryTp2').value.trim(),
             poType=document.getElementById('poEntryType').value,
             commission=parseFloat(document.getElementById('poEntryCommission').value)||0,
+            vat=parseFloat(document.getElementById('poEntryVat').value)||0,
             remarks=document.getElementById('poEntryRemarks').value.trim();
             if(!docId||!mpoId||!amount||!month){showToast('ফিল্ড পূরণ করুন','error');return;}
             if(amount<=0){showToast('Amount > 0 হতে হবে','error');return;}
-            const data={doctorId:docId,mpoId:mpoId,amount:amount,month:month,payOrderNo:payOrderNo,poDate:poDate,poType:poType,commission:commission,tp1:tp1,tp2:tp2,remarks:remarks};
+            const data={doctorId:docId,mpoId:mpoId,amount:amount,month:month,payOrderNo:payOrderNo,poDate:poDate,poType:poType,commission:commission,vat:vat,tp1:tp1,tp2:tp2,remarks:remarks};
             if(editId){
                 update(ref(db,'honorarium/'+editId),data).then(()=>{showToast('আপডেট হয়েছে','purple');exitEditPO();resetPOEntryForm();}).catch(err=>showToast('সমস্যা: '+err.message,'error'));
             }else{
@@ -1313,6 +1349,10 @@
             e.classList.add('hidden');
             b.innerHTML=entries.map(([id,h],i)=>{
                 const doc=doctorsCache[h.doctorId]||{},mpo=mposCache[h.mpoId]||{};
+                const hasPO = h.payOrderNo && h.payOrderNo.trim() !== '';
+                const actionsHtml = hasPO ? 
+                    `<span class="text-xs text-red-500 font-semibold">🔒 PO Issued</span>` : 
+                    `<button onclick="enterEditPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="deletePOEntry('${id}')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button>`;
                 return`<tr class="table-row">
                     <td class="px-4 py-3 text-xs">${i+1}</td>
                     <td class="px-4 py-3"><code class="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-0.5 rounded">${doc.doctorId||'-'}</code></td>
@@ -1321,15 +1361,16 @@
                     <td class="px-4 py-3 text-xs"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">${h.poType||'N/A'}</span></td>
                     <td class="px-4 py-3 text-xs">${mpo.name||'-'}</td>
                     <td class="px-4 py-3 font-semibold text-brand-700">${formatBDT(h.amount)}</td>
+                    <td class="px-4 py-3 text-xs text-blue-700 font-semibold">${formatBDT(h.commission||0)}</td>
+                    <td class="px-4 py-3 text-xs text-orange-700 font-semibold">${formatBDT(h.vat||0)}</td>
                     <td class="px-4 py-3 text-xs">${formatDateDMY(h.poDate)||'-'}</td>
                     <td class="px-4 py-3"><span class="bg-slate-100 text-xs font-semibold px-2 py-0.5 rounded-full">${h.month}</span></td>
-                    <td class="px-4 py-3 text-center"><button onclick="enterEditPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="deletePOEntry('${id}')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button></td>
+                    <td class="px-4 py-3 text-center">${actionsHtml}</td>
                 </tr>`;
             }).join('');
         }
         window.loadPOEntriesList=loadPOEntriesList;
 
-        // ===== PAY ORDER REPORT =====
         function loadPayOrderReport(){
             const month=document.getElementById('poRptMonth').value,
             filterDate=document.getElementById('poRptDate').value,
@@ -1349,32 +1390,35 @@
             });
             const totalAmount=entries.reduce((s,[,h])=>s+(h.amount||0),0);
             const totalCommission=entries.reduce((s,[,h])=>s+(h.commission||0),0);
-            const grandTotal=totalAmount+totalCommission;
+            const totalVat=entries.reduce((s,[,h])=>s+(h.vat||0),0);
+            const grandTotal=totalAmount+totalCommission+totalVat;
             const today=formatDateDMY(new Date());
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
-            const ROWS_PER_PAGE=getRowsPerPage('landscape');
+            const ROWS_PER_PAGE = 8;
             let paginatedEntries=[];
             if(entries.length>0){let offset=0;while(offset<entries.length){paginatedEntries.push(entries.slice(offset,offset+ROWS_PER_PAGE));offset+=ROWS_PER_PAGE;}}
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1400px;margin:0 auto;font-size:15px;">`;
             let globalIndex=0;
             if(entries.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
             }else{
                 paginatedEntries.forEach((pageEntries,pageIndex)=>{
                     const isLastPage=(pageIndex===paginatedEntries.length-1);
                     const pageTotal=pageEntries.reduce((s,[,h])=>s+(h.amount||0),0);
                     const pageComm=pageEntries.reduce((s,[,h])=>s+(h.commission||0),0);
-                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
+                    const pageVat=pageEntries.reduce((s,[,h])=>s+(h.vat||0),0);
+                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
                     pageEntries.forEach(([id,h])=>{
                         globalIndex++;
                         const doc=doctorsCache[h.doctorId]||{},mpo=mposCache[h.mpoId]||{};
-                        html+=`<tr><td style="text-align:center;">${globalIndex}</td><td style="font-weight:600;font-size:14px;">${h.payOrderNo||''}</td><td style="font-weight:600;font-size:12px;">${doc.doctorId||'-'}</td><td style="font-weight:500;">${doc.name||'-'}</td><td style="text-align:right;font-weight:700;">${Number(h.amount||0).toLocaleString()}</td><td style="text-align:center;font-size:12px;">${h.poType||'-'}</td><td style="text-align:right;font-size:12px;">${Number(h.commission||0).toLocaleString()}</td><td>${mpo.name||'-'}</td><td>${mpo.area||'-'}</td><td>${doc.territory||'-'}</td><td style="font-size:13px;">${h.remarks||''}</td></tr>`;
+                        html+=`<tr><td style="text-align:center;">${globalIndex}</td><td style="font-weight:600;font-size:14px;">${h.payOrderNo||''}</td><td style="font-weight:600;font-size:12px;">${doc.doctorId||'-'}</td><td style="font-weight:500;">${doc.name||'-'}</td><td style="text-align:right;font-weight:700;">${Number(h.amount||0).toLocaleString()}</td><td style="text-align:center;font-size:12px;">${h.poType||'-'}</td><td style="text-align:right;font-size:12px;">${Number(h.commission||0).toLocaleString()}</td><td style="text-align:right;font-size:12px;">${Number(h.vat||0).toLocaleString()}</td><td>${mpo.name||'-'}</td><td>${mpo.area||'-'}</td><td>${doc.territory||'-'}</td><td style="font-size:13px;">${h.remarks||''}</td></tr>`;
                     });
-                    html+=`</tbody><tfoot><tr style="background:#eff6ff;"><td colspan="4" style="font-weight:700;text-align:right;padding:8px 5px;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${pageEntries.length} Items)</td><td style="text-align:right;font-weight:700;font-size:13px;padding:8px 5px;border:1px solid #333;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td style="text-align:right;font-weight:700;font-size:12px;padding:8px 5px;border:1px solid #333;">${Number(pageComm).toLocaleString()}</td><td colspan="4" style="border:1px solid #333;"></td></tr></tfoot></table>`;
+                    html+=`</tbody><tfoot><tr style="background:#eff6ff;"><td colspan="4" style="font-weight:700;text-align:right;padding:8px 5px;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${pageEntries.length} Items)</td><td style="text-align:right;font-weight:700;font-size:13px;padding:8px 5px;border:1px solid #333;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td style="text-align:right;font-weight:700;font-size:12px;padding:8px 5px;border:1px solid #333;">${Number(pageComm).toLocaleString()}</td><td style="text-align:right;font-weight:700;font-size:12px;padding:8px 5px;border:1px solid #333;">${Number(pageVat).toLocaleString()}</td><td colspan="4" style="border:1px solid #333;"></td></tr></tfoot></table>`;
                     if(isLastPage){
-                        html+=`<div style="margin-top:15px;background:#fef3c7;border:1px solid #999;border-top:3px solid #333;padding:12px 15px;font-size:15px;"><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Pay Order Total</span><span style="font-weight:800;">${Number(totalAmount).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Total Commission (Auto from Entries)</span><span style="font-weight:600;">${Number(totalCommission).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:8px 0 2px;"><span style="font-weight:800;font-size:14px;">Grand Total</span><span style="font-weight:800;font-size:18px;">${Number(grandTotal).toLocaleString()}</span></div></div>`;
-                        html+=`<div style="margin-top:10px;font-size:11px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>${sigRowHTML(['Applicant by (MPL)','Regional Sales Manager (MPL)','Accounts Officer (Bank)','Officer (Bank)','Branch Manager (Bank)'])}`;
+                        html+=`<div style="margin-top:15px;background:#fef3c7;border:1px solid #999;border-top:3px solid #333;padding:12px 15px;font-size:15px;"><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Pay Order Total</span><span style="font-weight:800;">${Number(totalAmount).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Total Commission</span><span style="font-weight:600;">${Number(totalCommission).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #aaa;"><span style="font-weight:600;">Total VAT</span><span style="font-weight:600;">${Number(totalVat).toLocaleString()}</span></div><div style="display:flex;justify-content:space-between;padding:8px 0 2px;"><span style="font-weight:800;font-size:14px;">Grand Total</span><span style="font-weight:800;font-size:18px;">${Number(grandTotal).toLocaleString()}</span></div></div>`;
+                        html+=`<div style="margin-top:10px;font-size:11px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>`;
                     }
+                    html += sigRowHTML(['Applicant by (MPL)','Regional Sales Manager (MPL)','Accounts Officer (Bank)','Officer (Bank)','Branch Manager (Bank)']);
                     html+=`</div>`;
                 });
             }
@@ -1404,25 +1448,34 @@
                     getMPOName(h.mpoId),
                     mposCache[h.mpoId]?.area||'-',
                     `<span class="font-semibold text-brand-700">${formatBDT(h.amount)}</span>`,
+                    h.commission ? formatBDT(h.commission) : '-',
+                    h.vat ? formatBDT(h.vat) : '-',
                     h.payOrderNo||'-',
                     h.remarks||'-'
                 ]),
-                ['#','Doc ID','Doctor','EMP','MPO','Area','Amount','PO No','Remarks']
+                ['#','Doc ID','Doctor','EMP','MPO','Area','Amount','Comm.','VAT','PO No','Remarks']
             );
-            document.getElementById('monthlyReportFooter').innerHTML='Total: '+formatBDT(e.reduce((s,[,h])=>s+(h.amount||0),0))+' | Entries: '+e.length+(filterArea?' | Area: '+filterArea:'');
+            const totalAmt=e.reduce((s,[,h])=>s+(h.amount||0),0);
+            const totalComm=e.reduce((s,[,h])=>s+(h.commission||0),0);
+            const totalVat=e.reduce((s,[,h])=>s+(h.vat||0),0);
+            document.getElementById('monthlyReportFooter').innerHTML='Total Amount: '+formatBDT(totalAmt)+' | Comm: '+formatBDT(totalComm)+' | VAT: '+formatBDT(totalVat)+' | Entries: '+e.length+(filterArea?' | Area: '+filterArea:'');
         }
         window.loadMonthlyReport=loadMonthlyReport;
 
-        // ===== PRINT SHEET =====
         function loadPrintSheet(){
             const month=document.getElementById('printMonth').value,territory=document.getElementById('printTerritory').value,filterArea=document.getElementById('printArea').value,showAll=document.getElementById('printShowAll').checked;
             const tpP=getTPPeriods(month);
             const monthSales=mpoSalesCache[month]||{};
+            const monthEndDate = getMonthEndDate(month);
             
             let qualifiedMpoIds = Object.entries(mposCache).filter(([id,m]) => isMPOQualified(month, id)).map(([id]) => id);
             if(filterArea) qualifiedMpoIds = qualifiedMpoIds.filter(id => mposCache[id].area === filterArea);
             
-            let allDocs=Object.entries(doctorsCache).filter(([id,d]) => d.assignedMpoId && qualifiedMpoIds.includes(d.assignedMpoId));
+            let allDocs=Object.entries(doctorsCache).filter(([id,d]) => {
+                if(!d.assignedMpoId || !qualifiedMpoIds.includes(d.assignedMpoId)) return false;
+                if(d.createdAt && d.createdAt > monthEndDate) return false;
+                return true;
+            });
             if(territory) allDocs = allDocs.filter(([id,d]) => d.territory===territory);
 
             const monthEntries=Object.entries(honorariumCache).filter(([,h])=>h.month===month);
@@ -1447,13 +1500,15 @@
                 group.doctors.forEach(item=>{
                     const amount=item.entry?(item.entry.amount||0):(item.doc.amount||0);
                     const remarks=item.entry?(item.entry.remarks||''):'';
+                    const isPaid = !!item.entry; 
                     flatRows.push({
                         docId:item.docId,
                         docIdCode:item.doc.doctorId||'-',
                         mpoId:mpoId,
                         active:item.doc.active!==false,
                         mpoEmpId:mpo.employeeId||'-',mpoName:mpo.name||'-',mpoArea:mpo.area||'-',territory:mpo.territory||'-',
-                        tp1:sales.tp1||'-',tp2:sales.tp2||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks
+                        tp1:sales.tp1||'-',tp2:sales.tp2||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks,
+                        isPaid: isPaid
                     });
                 });
             });
@@ -1469,7 +1524,7 @@
             
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
             if(flatRows.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < 70,000)</td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < 70,000)</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
                 pages.forEach((pageRows,pageIndex)=>{
@@ -1480,12 +1535,12 @@
                     html+=`<div style="${!isLastPage?'page-break-after: always;':''}">`;
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
                     html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
-                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
+                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
                     
                     pageRows.forEach(row=>{
                         globalSl++;
                         if(row.active) globalActiveSl++;
-                        html+=`<tr class="${!row.active?'doc-row-inactive':''}">
+                        html+=`<tr class="${!row.active?'doc-row-inactive':''} ${row.isPaid?'paid-bg':'pending-bg'}">
                             <td style="text-align:center;">${row.active?globalActiveSl:'-'}</td>
                             <td style="font-weight:600;">${row.mpoEmpId}</td>
                             <td>${row.mpoName}</td>
@@ -1495,6 +1550,7 @@
                             <td style="text-align:right;font-weight:600;">${row.tp2}</td>
                             <td style="font-weight:600;font-size:10px;">${row.docIdCode}</td>
                             <td style="font-weight:500;">${row.docName}</td>
+                            <td class="no-print" style="text-align:center;font-weight:700;${row.isPaid?'color:#059669;':'color:#dc2626;'}">${row.isPaid?'✔ Paid':'Pending'}</td>
                             <td style="text-align:right;font-weight:700;">${row.active?Number(row.amount).toLocaleString():'-'}</td>
                             <td style="font-size:10px;">
                                 <input type="text" class="ps-remark-input w-full text-[10px] border border-slate-300 rounded px-1" value="${row.remarks}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-amount="${row.amount}">
@@ -1509,15 +1565,15 @@
                     
                     html+=`</tbody><tfoot>`;
                     if(pages.length>1&&!isLastPage){
-                        html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td style="padding:5px;text-align:right;border:1px solid #333;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #333;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     if(isLastPage){
                         if(pages.length>1){
                             const previousPagesTotal=pages.slice(0,pageIndex).reduce((s,pg)=>s+pg.filter(r=>r.active).reduce((ss,r)=>ss+r.amount,0),0);
-                            html+=`<tr style="background:#eff6ff;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
-                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Previous Pages Total</td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#eff6ff;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Previous Pages Total</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                         }
-                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #333;">Grand Total (${totalActiveItems} Active Doctor)</td><td style="padding:6px;text-align:right;border:1px solid #333;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #333;">Grand Total (${totalActiveItems} Active Doctor)</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #333;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     html+=`</tfoot></table>`;
                     if(isLastPage){
@@ -1532,21 +1588,24 @@
         }
         window.loadPrintSheet=loadPrintSheet;
 
-        // ===== EXCEL EXPORT FOR PRINT SHEET =====
         function exportPrintSheetToExcel() {
             const month=document.getElementById('printMonth').value;
             const territory=document.getElementById('printTerritory').value;
             const filterArea=document.getElementById('printArea').value;
             const showAll=document.getElementById('printShowAll').checked;
             const tpP=getTPPeriods(month);
+            const monthEndDate = getMonthEndDate(month);
             
             let qualifiedMpoIds = Object.entries(mposCache)
                 .filter(([id,m]) => isMPOQualified(month, id))
                 .map(([id]) => id);
             if(filterArea) qualifiedMpoIds = qualifiedMpoIds.filter(id => mposCache[id].area === filterArea);
             
-            let allDocs = Object.entries(doctorsCache)
-                .filter(([id,d]) => d.assignedMpoId && qualifiedMpoIds.includes(d.assignedMpoId));
+            let allDocs = Object.entries(doctorsCache).filter(([id,d]) => {
+                if(!d.assignedMpoId || !qualifiedMpoIds.includes(d.assignedMpoId)) return false;
+                if(d.createdAt && d.createdAt > monthEndDate) return false;
+                return true;
+            });
             if(territory) allDocs = allDocs.filter(([id,d]) => d.territory===territory);
 
             const monthEntries = Object.entries(honorariumCache).filter(([,h])=>h.month===month);
@@ -1576,7 +1635,7 @@
             aoa.push([`Doctor Honorarium List ${month}`]);
             aoa.push([]);
             
-            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Amount', 'Remarks']);
+            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Amount', 'Remarks']);
             
             let sl = 0;
             let totalAmount = 0;
@@ -1591,6 +1650,7 @@
                     sl++;
                     const amount = item.entry ? (item.entry.amount||0) : (item.doc.amount||0);
                     totalAmount += amount;
+                    const isPaid = !!item.entry;
                     const remarks = remarksMap[item.docId] !== undefined ? remarksMap[item.docId] : (item.entry ? (item.entry.remarks||'') : '');
                     
                     aoa.push([
@@ -1603,6 +1663,7 @@
                         sales.tp2 || '-',
                         item.doc.doctorId || '-',
                         item.doc.name || '-',
+                        isPaid ? 'Paid' : 'Pending',
                         amount,
                         remarks
                     ]);
@@ -1615,7 +1676,7 @@
             }
             
             aoa.push([]);
-            aoa.push(['', '', '', '', '', '', '', '', 'Grand Total:', totalAmount, '']);
+            aoa.push(['', '', '', '', '', '', '', '', '', 'Grand Total:', totalAmount, '']);
             aoa.push([]);
             aoa.push([`Date: ${formatDateDMY(new Date())}`]);
             aoa.push([`Taka In Word: ${numberToWords(totalAmount)}`]);
@@ -1623,14 +1684,14 @@
             const ws = XLSX.utils.aoa_to_sheet(aoa);
             
             ws['!merges'] = [
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 10 } },
-                { s: { r: 1, c: 0 }, e: { r: 1, c: 10 } },
-                { s: { r: 2, c: 0 }, e: { r: 2, c: 10 } },
-                { s: { r: 3, c: 0 }, e: { r: 3, c: 10 } }
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 11 } },
+                { s: { r: 3, c: 0 }, e: { r: 3, c: 11 } }
             ];
             
             ws['!cols'] = [
-                {wch: 5}, {wch: 10}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 12}, {wch: 25}
+                {wch: 5}, {wch: 10}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 12}, {wch: 25}
             ];
             
             const wb = XLSX.utils.book_new();
@@ -1663,6 +1724,7 @@
                     if (remarks !== '') {
                         const defaultSlab = settingsCache.commissionSlabs.filter(s => s.type === 'IBBL').sort((a,b) => (a.amount||0) - (b.amount||0))[0];
                         const defaultComm = defaultSlab && amount >= (defaultSlab.amount||0) ? defaultSlab.commission : 0;
+                        const defaultVat = defaultSlab && amount >= (defaultSlab.amount||0) ? defaultSlab.vat : 0;
                         
                         const data = {
                             doctorId: docId,
@@ -1673,6 +1735,7 @@
                             poDate: getTodayISO(),
                             poType: 'IBBL',
                             commission: defaultComm,
+                            vat: defaultVat,
                             date: Date.now(),
                             createdAt: Date.now()
                         };
