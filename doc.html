@@ -397,7 +397,6 @@
         const db = getDatabase(fbApp);
 
         const COMPANY = { name: "Monico Pharma Ltd", address: "04-01, Dr Anowarul Karim Sarok, Kanabiler More, Jugiya, Kushtia-7000", depot: "Depot: Kushtia" };
-        const QUALIFIED_SALES_AMOUNT = 70000; 
         const signatureLabels = ['Prepared by', 'Checked by', 'ReChecked by', 'Verified by', 'Approved By', 'Applicant by (MPL)', 'Regional Sales Manager (MPL)', 'Accounts Officer (Bank)', 'Officer (Bank)', 'Branch Manager (Bank)'];
         let tempSignatures = {};
 
@@ -409,6 +408,34 @@
             { type: 'Bkash', amount: 0, commission: 0, vat: 0 }
         ]}; 
         let docActiveTemp = true;
+
+        // ===== DYNAMIC QUALIFIED SALES AMOUNT =====
+        function getQualifiedSalesAmount(appMonth) {
+            if (!appMonth) return 70000;
+            const ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const parts = appMonth.split('-');
+            if (parts.length < 2) return 70000;
+            const monthIdx = ms.indexOf(parts[0]);
+            const year = parseInt('20' + parts[1]);
+            
+            const now = new Date();
+            const currentMonthIdx = now.getMonth();
+            const currentYear = now.getFullYear();
+            
+            let nextMonthIdx = (currentMonthIdx + 1) % 12;
+            let nextYear = currentYear;
+            if (currentMonthIdx === 11) nextYear = currentYear + 1;
+
+            const targetDate = new Date(year, monthIdx, 1);
+            const nextDate = new Date(nextYear, nextMonthIdx, 1);
+
+            // Next month er jonno ba tar porer maaser jonno 80,000
+            if (targetDate >= nextDate) {
+                return 80000;
+            }
+            // Current month ba ager maaser jonno 70,000
+            return 70000;
+        }
 
         function printAs(orientation) {
             const styleEl = document.getElementById('dynamicPrintStyle');
@@ -537,7 +564,7 @@
             if(!mpoId) return false;
             const sales = mpoSalesCache[month]?.[mpoId];
             const tp2 = parseAmount(sales?.tp2);
-            return tp2 >= QUALIFIED_SALES_AMOUNT;
+            return tp2 >= getQualifiedSalesAmount(month);
         }
 
         function getDoctorsForMPO(mpoId){
@@ -982,7 +1009,7 @@
                     tp1Val = prevMonthSales[id].tp2;
                 }
                 const docCount=getDoctorsForMPO(id).length;
-                const isQualified = parseAmount(tp2Val) >= QUALIFIED_SALES_AMOUNT;
+                const isQualified = parseAmount(tp2Val) >= getQualifiedSalesAmount(month);
                 return`<tr class="table-row"><td class="px-4 py-3 text-slate-400 text-xs">${i+1}</td><td class="px-4 py-3 font-semibold">${m.name}</td><td class="px-4 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td><td class="px-4 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.area}</span>`:'-'}</td><td class="px-4 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.territory}</span></td><td class="px-4 py-3"><input type="text" class="sales-tp1 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 bg-slate-50" value="${tp1Val}" data-mpoid="${id}" title="Auto carried from last month"></td><td class="px-4 py-3"><input type="text" class="sales-tp2 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 ${isQualified?'bg-emerald-50 font-bold text-emerald-700':''}" value="${tp2Val}" data-mpoid="${id}" placeholder="0"></td><td class="px-4 py-3 text-center"><span class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">${docCount} Doctors</span></td></tr>`;
             }).join('');
         }
@@ -1524,7 +1551,7 @@
             
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
             if(flatRows.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < 70,000)</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
                 pages.forEach((pageRows,pageIndex)=>{
