@@ -686,11 +686,34 @@
         if(cv&&banks.filter(b=>b.isActive!==false).some(b=>b.id===cv))s.value=cv;
         else{s.value='';$('depositAccNo').value='';$('depositBranch').value='';}
     }
+    
+    // --- MODIFIED FUNCTION: Show ALL Banks (Active + Inactive) in Statement Filter ---
     function populateBankFilterDropdown() {
-        const s=$('depositFilterBank'),cv=s.value; s.innerHTML='<option value="">All Banks</option>';
-        banks.filter(b=>b.isActive!==false).sort((a,b)=>a.name.localeCompare(b.name)).forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.name;s.appendChild(o);});
-        if(cv&&banks.filter(b=>b.isActive!==false).some(b=>b.id===cv))s.value=cv;
+        const s=$('depositFilterBank'),cv=s.value; 
+        s.innerHTML='<option value="">All Banks</option>';
+        
+        // Sort: Active banks first, then alphabetically — show ALL banks (active + inactive)
+        banks.slice().sort((a,b)=>{
+            const aActive = a.isActive !== false;
+            const bActive = b.isActive !== false;
+            if (aActive !== bActive) return aActive ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        }).forEach(b=>{
+            const o=document.createElement('option');
+            o.value=b.id;
+            const isActive = b.isActive !== false;
+            o.textContent = isActive ? b.name : b.name + ' (Inactive)';
+            if(!isActive){
+                o.style.color = '#94a3b8';
+                o.style.fontStyle = 'italic';
+            }
+            s.appendChild(o);
+        });
+        
+        // Preserve current selection if it still exists (regardless of active status)
+        if(cv && banks.some(b=>b.id===cv)) s.value=cv;
     }
+    
     window.saveBank = async () => {
         const id=$('bankEditId').value,n=$('bankNameInput').value.trim(),a=$('bankAccNoInput').value.trim(),br=$('bankBranchInput').value.trim();
         if(!n||!a){showToast('Bank Name & Account No required','error');return;}
@@ -1068,8 +1091,15 @@
             let slipHtml='<span style="color:#cbd5e1">-</span>';
             if(d.slipImage)slipHtml=`<img src="${d.slipImage}" class="table-thumb" onclick="viewDepositImage('${d.id}')" alt="Slip">`;
             const tx=d.trxNo?`<span class="trx-no-cell" title="${d.trxNo}">${d.trxNo}</span>`:'<span style="color:#cbd5e1">-</span>';
+            
+            // Check if bank is inactive to show a badge in the statement table
+            const bankData = banks.find(b => b.id === d.bankId);
+            const bankNameHtml = (bankData && bankData.isActive === false) 
+                ? `${d.bankName} <span style="font-size:0.65rem;color:#ef4444;font-weight:400;">(Inactive)</span>` 
+                : d.bankName;
+                
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td><td>${ds}</td><td style="font-weight:600">${d.bankName}</td><td>${tx}</td><td>${slipHtml}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td><td style="text-align:right"><button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
+            tr.innerHTML=`<td style="text-align:center"><input type="checkbox" class="row-check" data-id="${d.id}" onchange="toggleRowSelection(this)"></td><td>${ds}</td><td style="font-weight:600">${bankNameHtml}</td><td>${tx}</td><td>${slipHtml}</td><td>${d.territory||'-'}</td><td style="text-align:right;font-weight:700">${fmt(d.amount)}</td><td style="text-align:right"><button class="action-btn" onclick="editDeposit('${d.id}')" title="Edit">&#9998;</button><button class="action-btn delete" onclick="confirmDelete('deposit','${d.id}')" title="Delete">&#10005;</button></td>`;
             tb.appendChild(tr);
         });
         $('depositTotalAmount').textContent=fmt(total);
