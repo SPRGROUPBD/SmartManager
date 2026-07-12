@@ -208,7 +208,7 @@
         .month-filter-bar .btn { white-space: nowrap; }
         .month-summary-card { background: var(--win-white); border: 2px solid; border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); padding: 0; margin-bottom: 15px; overflow: hidden; }
         .month-summary-card .card-title { background: linear-gradient(90deg, #000080, #1084d0); color: var(--win-white); padding: 5px 10px; font-weight: bold; font-size: 13px; letter-spacing: 0.5px; }
-        .month-summary-card .card-body { padding: 12px 15px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .month-summary-card .card-body { padding: 12px 15px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; }
         .stat-item { text-align: center; border-right: 1px dotted var(--win-dark-gray); padding: 5px 10px; }
         .stat-item:last-child { border-right: none; }
         .stat-item .stat-label { display: block; font-size: 11px; color: var(--win-dark-gray); font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
@@ -411,6 +411,7 @@
                                 <div class="stat-item"><span class="stat-label">Grand Total</span><span class="stat-value highlight-green" id="statGrandTotal">-</span></div>
                                 <div class="stat-item"><span class="stat-label">With IOU</span><span class="stat-value" id="statIouCount">-</span></div>
                                 <div class="stat-item"><span class="stat-label">IOU Amount</span><span class="stat-value highlight-red" id="statIouTotal">-</span></div>
+                                <div class="stat-item"><span class="stat-label">Balance (GT - IOU)</span><span class="stat-value highlight-blue" id="statBalance">-</span></div>
                             </div>
                         </div>
                         <div id="nameBreakdownContainer" style="display:none;">
@@ -437,6 +438,15 @@
                             <input type="hidden" id="iouKey">
                             <table style="width:100%">
                                 <tr><th style="width:40%">IOU No</th><td><input type="text" id="iouNo" readonly></td></tr>
+                                <tr style="background:#d4d0c8;">
+                                    <th style="font-weight:bold; color:var(--win-navy);">IOU Type</th>
+                                    <td>
+                                        <select id="iouType">
+                                            <option value="Bill Entry">Bill Entry (Requires Bill)</option>
+                                            <option value="Bill Payment No Bill">Bill Payment No Bill (Auto Used)</option>
+                                        </select>
+                                    </td>
+                                </tr>
                                 <tr><th>Date</th><td><input type="date" id="iouDate"></td></tr>
                                 <tr><th>Name</th><td><input type="text" id="iouName" value="Md Sajjad Ahmed"></td></tr>
                                 <tr><th>Depot</th><td><input type="text" id="iouDepot" value="Kushtia"></td></tr>
@@ -451,7 +461,7 @@
                         </div>
                         <div class="list-box iou-list-container">
                             <h3 style="margin-top:0; border-bottom:1px solid navy; color:navy; padding-bottom:5px;">IOU Database</h3>
-                            <table id="iouListTable"><thead><tr><th>IOU No</th><th>Date</th><th>Name</th><th>Conv Type</th><th id="iouListCnTh">Ref No</th><th>Ref.</th><th>Amount</th><th>Status</th><th>X</th></tr></thead><tbody id="iouListBody"></tbody></table>
+                            <table id="iouListTable"><thead><tr><th>IOU No</th><th>Date</th><th>Name</th><th>Conv Type</th><th id="iouListCnTh">Ref No</th><th>Ref.</th><th>Amount</th><th>IOU Type</th><th>Status</th><th>X</th></tr></thead><tbody id="iouListBody"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -543,7 +553,7 @@
         <div class="toast-body"><span class="toast-icon">&#9432;</span><span id="toast-msg">Notification</span></div>
     </div>
 
-    <!-- FIREBASE COMPAT SDK (Replaces module imports to fix "ref is not a function") -->
+    <!-- FIREBASE COMPAT SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -586,7 +596,7 @@
         }
     </script>
 
-    <!-- APP LOGIC (Compat SDK) -->
+    <!-- APP LOGIC -->
     <script>
         // Firebase Init
         const firebaseConfig={apiKey:"AIzaSyAYZsMKqvLLB4hRes00zPmiOBW0NpH0uuo",authDomain:"delivery-bill-report.firebaseapp.com",databaseURL:"https://delivery-bill-report-default-rtdb.europe-west1.firebasedatabase.app",projectId:"delivery-bill-report",storageBucket:"delivery-bill-report.firebasestorage.app",messagingSenderId:"956980153576",appId:"1:956980153576:web:690c129f48c0179ca8cd5d",measurementId:"G-Y9XEBB6X74"};
@@ -630,18 +640,125 @@
 
         async function generateIOUNo(){const now=new Date(),yr=now.getFullYear(),mo=String(now.getMonth()+1).padStart(2,'0'),prefix=`IOU-${yr}${mo}`;try{const s=await iousRef.once('value');let mx=0;if(s.exists()){Object.values(s.val()).forEach(i=>{if(i.iouNo&&i.iouNo.startsWith(prefix)){const sq=parseInt(i.iouNo.slice(-3),10);if(!isNaN(sq)&&sq>mx)mx=sq;}});}document.getElementById('iouNo').value=`${prefix}${String(mx+1).padStart(3,'0')}`;}catch(e){document.getElementById('iouNo').value=`${prefix}Err`;}}
 
-        function saveIOU(){const iouNo=document.getElementById('iouNo').value,iouDate=document.getElementById('iouDate').value,name=document.getElementById('iouName').value,depot=document.getElementById('iouDepot').value,dept=document.getElementById('iouDept').value,purpose=document.getElementById('iouPurpose').value,convType=document.getElementById('iouConvType').value,cnNumber=document.getElementById('iouCnNumber').value.trim(),ref=document.getElementById('iouRef').value.trim(),amount=parseFloat(document.getElementById('iouAmount').value),iouKey=document.getElementById('iouKey').value;if(!name||!depot||!amount){showToast("Please fill all required fields");return;}if(!iouDate){showToast("Please select IOU Date");return;}const iouData={iouNo,iouDate,name,depot,dept,purpose,convType,cnNumber,ref,amount,status:'Pending',timestamp:Date.now()};if(iouKey){db.ref('ious/'+iouKey).once('value',(sn)=>{const ex=sn.val();if(ex)db.ref('ious/'+iouKey).update({...iouData,status:ex.status}).then(()=>{showToast("IOU Updated!");resetIOUForm();});});}else{iousRef.push(iouData).then(()=>{showToast("IOU Saved!");resetIOUForm();});}}
+        function saveIOU(){
+            const iouNo=document.getElementById('iouNo').value,
+                  iouDate=document.getElementById('iouDate').value,
+                  name=document.getElementById('iouName').value,
+                  depot=document.getElementById('iouDepot').value,
+                  dept=document.getElementById('iouDept').value,
+                  purpose=document.getElementById('iouPurpose').value,
+                  convType=document.getElementById('iouConvType').value,
+                  cnNumber=document.getElementById('iouCnNumber').value.trim(),
+                  ref=document.getElementById('iouRef').value.trim(),
+                  amount=parseFloat(document.getElementById('iouAmount').value),
+                  iouType=document.getElementById('iouType').value,
+                  iouKey=document.getElementById('iouKey').value;
+                  
+            if(!name||!depot||!amount){showToast("Please fill all required fields");return;}
+            if(!iouDate){showToast("Please select IOU Date");return;}
+            
+            const autoStatus = (iouType === 'Bill Payment No Bill') ? 'Auto Used' : 'Pending';
+            const iouData={iouNo,iouDate,name,depot,dept,purpose,convType,cnNumber,ref,amount,iouType,status:autoStatus,timestamp:Date.now()};
+            
+            if(iouKey){
+                db.ref('ious/'+iouKey).once('value',(sn)=>{
+                    const ex=sn.val();
+                    if(ex) db.ref('ious/'+iouKey).update({...iouData, status: (ex.iouType !== iouType ? autoStatus : ex.status)}).then(()=>{
+                        showToast("IOU Updated!"); resetIOUForm();
+                    });
+                });
+            }else{
+                iousRef.push(iouData).then(()=>{
+                    showToast("IOU Saved!"); resetIOUForm();
+                });
+            }
+        }
 
-        function resetIOUForm(){document.getElementById('iouKey').value='';document.getElementById('iouDate').value='';document.getElementById('iouName').value='Md Sajjad Ahmed';document.getElementById('iouDepot').value='Kushtia';document.getElementById('iouDept').value='Distribution';document.getElementById('iouPurpose').value='';document.getElementById('iouConvType').value='';document.getElementById('iouCnNumber').value='';document.getElementById('iouRef').value='';document.getElementById('iouAmount').value='';document.getElementById('iouCnLabel').innerText='CN Number';document.getElementById('iouCnNumber').placeholder='e.g. AJR-12345';generateIOUNo();}
+        function resetIOUForm(){
+            document.getElementById('iouKey').value='';
+            document.getElementById('iouDate').value='';
+            document.getElementById('iouName').value='Md Sajjad Ahmed';
+            document.getElementById('iouDepot').value='Kushtia';
+            document.getElementById('iouDept').value='Distribution';
+            document.getElementById('iouPurpose').value='';
+            document.getElementById('iouConvType').value='';
+            document.getElementById('iouCnNumber').value='';
+            document.getElementById('iouRef').value='';
+            document.getElementById('iouAmount').value='';
+            document.getElementById('iouType').value='Bill Entry'; 
+            document.getElementById('iouCnLabel').innerText='CN Number';
+            document.getElementById('iouCnNumber').placeholder='e.g. AJR-12345';
+            generateIOUNo();
+        }
 
-        function editIOU(key){db.ref('ious/'+key).once('value',(snapshot)=>{const d=snapshot.val();if(!d)return;document.getElementById('iouKey').value=key;document.getElementById('iouNo').value=d.iouNo;document.getElementById('iouDate').value=d.iouDate||'';document.getElementById('iouName').value=d.name;document.getElementById('iouDepot').value=d.depot;document.getElementById('iouDept').value=d.dept;document.getElementById('iouPurpose').value=d.purpose;document.getElementById('iouConvType').value=d.convType||'';document.getElementById('iouCnNumber').value=d.cnNumber||'';document.getElementById('iouRef').value=d.ref||'';document.getElementById('iouAmount').value=d.amount;onIouConvTypeChange();});}
+        function editIOU(key){
+            db.ref('ious/'+key).once('value',(snapshot)=>{
+                const d=snapshot.val();
+                if(!d)return;
+                document.getElementById('iouKey').value=key;
+                document.getElementById('iouNo').value=d.iouNo;
+                document.getElementById('iouDate').value=d.iouDate||'';
+                document.getElementById('iouName').value=d.name;
+                document.getElementById('iouDepot').value=d.depot;
+                document.getElementById('iouDept').value=d.dept;
+                document.getElementById('iouPurpose').value=d.purpose;
+                document.getElementById('iouConvType').value=d.convType||'';
+                document.getElementById('iouCnNumber').value=d.cnNumber||'';
+                document.getElementById('iouRef').value=d.ref||'';
+                document.getElementById('iouAmount').value=d.amount;
+                document.getElementById('iouType').value=d.iouType||'Bill Entry';
+                onIouConvTypeChange();
+            });
+        }
 
         function deleteIOU(key){if(confirm("Delete this IOU?"))db.ref('ious/'+key).remove().then(()=>showToast("IOU Deleted!"));}
 
         function getRefLabel(tid){const tc=findConvType(tid);return tc?tc.refLabel:'CN Number';}
         function getRefDisplay(cn){if(!cn)return'-';return`<span class="cn-number-cell">${cn}</span>`;}
 
-        iousRef.on('value',(snapshot)=>{const tb=document.getElementById('iouListBody'),sel=document.getElementById('iouSelect'),lth=document.getElementById('iouListCnTh');tb.innerHTML='';sel.innerHTML='<option value="">-- No IOU --</option>';if(snapshot.exists()){const d=snapshot.val();const ios=Object.entries(d).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.timestamp-a.timestamp);const rls=new Set();ios.forEach(i=>{if(i.convType)rls.add(getRefLabel(i.convType));});if(lth){lth.innerText=rls.size===1?[...rls][0]:'Ref No';}ios.forEach(iou=>{const sc=iou.status==='Used'?'status-used':'status-pending',dd=formatDate(iou.iouDate),cnD=iou.cnNumber?`<span class="cn-number-cell">${iou.cnNumber}</span>`:'-',refD=iou.ref?`<span style="color:#555;font-size:12px;">${iou.ref}</span>`:'-',tc=findConvType(iou.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-';tb.innerHTML+=`<tr onclick="editIOU('${iou.key}')" style="cursor:pointer"><td>${iou.iouNo}</td><td>${dd}</td><td>${iou.name}</td><td>${tn}</td><td>${cnD}</td><td>${refD}</td><td>${iou.amount.toFixed(2)}</td><td><span class="status-badge ${sc}">${iou.status}</span></td><td><button class="btn btn-delete" onclick="event.stopPropagation();deleteIOU('${iou.key}')">X</button></td></tr>`;if(iou.status==='Pending'){const rl=getRefLabel(iou.convType),cnL=iou.cnNumber?` | ${rl}: ${iou.cnNumber}`:'',refL=iou.ref?` | Ref: ${iou.ref}`:'';sel.innerHTML+=`<option value="${iou.key}" data-amount="${iou.amount}" data-date="${iou.iouDate||''}" data-name="${iou.name}" data-depot="${iou.depot}" data-dept="${iou.dept}" data-purpose="${iou.purpose}" data-cn="${iou.cnNumber||''}" data-convtype="${iou.convType||''}" data-reflabel="${rl}" data-ref="${iou.ref||''}">${iou.iouNo} - ${dd} - ${iou.amount} Tk${cnL}${refL}</option>`;}});}else{if(lth)lth.innerText='Ref No';}});
+        iousRef.on('value',(snapshot)=>{
+            const tb=document.getElementById('iouListBody'),
+                  sel=document.getElementById('iouSelect'),
+                  lth=document.getElementById('iouListCnTh');
+            tb.innerHTML='';
+            sel.innerHTML='<option value="">-- No IOU --</option>';
+            if(snapshot.exists()){
+                const d=snapshot.val();
+                const ios=Object.entries(d).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.timestamp-a.timestamp);
+                const rls=new Set();
+                ios.forEach(i=>{if(i.convType)rls.add(getRefLabel(i.convType));});
+                if(lth){lth.innerText=rls.size===1?[...rls][0]:'Ref No';}
+                
+                ios.forEach(iou=>{
+                    const isUsed = (iou.status === 'Used' || iou.status === 'Auto Used');
+                    const sc = isUsed ? 'status-used' : 'status-pending';
+                    const dd=formatDate(iou.iouDate),
+                          cnD=iou.cnNumber?`<span class="cn-number-cell">${iou.cnNumber}</span>`:'-',
+                          refD=iou.ref?`<span style="color:#555;font-size:12px;">${iou.ref}</span>`:'-',
+                          tc=findConvType(iou.convType),
+                          tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-',
+                          typeLabel = iou.iouType || 'Bill Entry',
+                          typeBadge = `<span class="conv-type-badge" style="background:#d0e0ff; color:navy;">${typeLabel}</span>`;
+                          
+                    tb.innerHTML+=`<tr onclick="editIOU('${iou.key}')" style="cursor:pointer">
+                        <td>${iou.iouNo}</td><td>${dd}</td><td>${iou.name}</td><td>${tn}</td>
+                        <td>${cnD}</td><td>${refD}</td><td>${iou.amount.toFixed(2)}</td>
+                        <td>${typeBadge}</td>
+                        <td><span class="status-badge ${sc}">${iou.status}</span></td>
+                        <td><button class="btn btn-delete" onclick="event.stopPropagation();deleteIOU('${iou.key}')">X</button></td>
+                    </tr>`;
+                    
+                    if(iou.status==='Pending' && typeLabel === 'Bill Entry'){
+                        const rl=getRefLabel(iou.convType),
+                              cnL=iou.cnNumber?` | ${rl}: ${iou.cnNumber}`:'',
+                              refL=iou.ref?` | Ref: ${iou.ref}`:'';
+                        sel.innerHTML+=`<option value="${iou.key}" data-amount="${iou.amount}" data-date="${iou.iouDate||''}" data-name="${iou.name}" data-depot="${iou.depot}" data-dept="${iou.dept}" data-purpose="${iou.purpose}" data-cn="${iou.cnNumber||''}" data-convtype="${iou.convType||''}" data-reflabel="${rl}" data-ref="${iou.ref||''}">${iou.iouNo} - ${dd} - ${iou.amount} Tk${cnL}${refL}</option>`;
+                    }
+                });
+            }else{
+                if(lth)lth.innerText='Ref No';
+            }
+        });
 
         function handleIOUSelect(){const sel=document.getElementById('iouSelect'),hint=document.getElementById('iouAmountHint');if(sel.value){const opt=sel.options[sel.selectedIndex];document.getElementById('billName').value=opt.getAttribute('data-name');document.getElementById('billDepot').value=opt.getAttribute('data-depot');document.getElementById('billDept').value=opt.getAttribute('data-dept');document.getElementById('billPurpose').value=opt.getAttribute('data-purpose');document.getElementById('iouAmtDisplay').innerText=opt.getAttribute('data-amount');const iD=opt.getAttribute('data-date');document.getElementById('iouDateDisplay').innerText=iD?formatDate(iD):'-';document.getElementById('iouCnDisplay').innerText=opt.getAttribute('data-cn')||'-';document.getElementById('iouCnLabelDisplay').innerText=opt.getAttribute('data-reflabel')||'CN No';if(iD)document.getElementById('billDate').value=iD;hint.style.display='block';}else{hint.style.display='none';}}
 
@@ -659,7 +776,41 @@
         function printBill(key){db.ref('bills/'+key).once('value',(snapshot)=>{const d=snapshot.val();if(!d)return;const tc=findConvType(d.convType);document.getElementById('pDocTitle').innerText=tc?tc.printTitle:'Conveyance Bill';document.getElementById('pName').innerText=d.name;document.getElementById('pDept').innerText=d.dept;document.getElementById('pPurpose').innerText=d.purpose;document.getElementById('pDepot').innerText=d.depot;document.getElementById('pBillNo').innerText=d.billNo;document.getElementById('pDate').innerText=formatDate(d.billDate);const refRow=document.getElementById('pRefRow'),refLabel=document.getElementById('pRefLabel'),refNumber=document.getElementById('pRefNumber'),refValue=document.getElementById('pRefValue');const hasCn=d.cnNumber||false;const hasRef=d.ref||false;if(hasCn||hasRef){refLabel.innerText=tc?tc.refLabel:'CN Number';refNumber.innerText=d.cnNumber||'';refValue.innerText=d.ref||'';refRow.style.display='';}else{refRow.style.display='none';}const tb=document.getElementById('pTableBody');tb.innerHTML='';d.rows.forEach(r=>{tb.innerHTML+=`<tr><td>${r.from}</td><td>${r.to}</td><td>${r.mode}</td><td>${r.amount}</td><td>${r.remarks}</td></tr>`;});document.getElementById('pTotal').innerText=d.total.toFixed(2);const tn=parseFloat(d.total),tp=Math.floor(tn),pp=Math.round((tn-tp)*100);let w=numberToEnglish(tp)+" Taka";if(pp>0)w+=" and "+numberToEnglish(pp)+" Paisa";w+=" Only";document.getElementById('pWords').innerText=w;const pa=document.getElementById('print-area');if(localStorage.getItem('printBorder')==='true')pa.classList.add('with-border');else pa.classList.remove('with-border');const li=document.getElementById('pLogo'),lu=localStorage.getItem('logoUrl');if(lu){li.src=lu;li.style.display='block';}else{li.style.display='none';}setTimeout(()=>{window.print();},500);});}
 
         // MONTH WISE
-        function applyMonthFilter(){const sm=document.getElementById('monthPicker').value;if(!sm)return;const filtered=allBillsCache.filter(b=>b.billDate&&b.billDate.substring(0,7)===sm).sort((a,b)=>(a.billDate||'').localeCompare(b.billDate||''));document.getElementById('monthCardTitle').innerText='Report: '+formatMonthLabel(sm);const tb=filtered.length,gt=filtered.reduce((s,b)=>s+(parseFloat(b.total)||0),0);const ib=filtered.filter(b=>b.iouId),ic=ib.length;let it=0;if(window._cachedIous){ib.forEach(b=>{const id=window._cachedIous[b.iouId];if(id)it+=parseFloat(id.amount)||0;});}document.getElementById('statBillCount').innerText=tb;document.getElementById('statGrandTotal').innerText=gt.toFixed(2)+' Tk';document.getElementById('statIouCount').innerText=ic;document.getElementById('statIouTotal').innerText=it.toFixed(2)+' Tk';const nm={};filtered.forEach(b=>{const n=b.name||'Unknown';if(!nm[n])nm[n]={count:0,total:0,iouCount:0};nm[n].count++;nm[n].total+=parseFloat(b.total)||0;if(b.iouId)nm[n].iouCount++;});const nb=document.getElementById('nameBreakdownBody'),nf=document.getElementById('nameBreakdownFoot');nb.innerHTML='';let ni=1,ngt=0;const ne=Object.entries(nm).sort((a,b)=>b[1].total-a[1].total);ne.forEach(([n,s])=>{ngt+=s.total;nb.innerHTML+=`<tr><td style="text-align:center;">${ni}</td><td><strong>${n}</strong></td><td style="text-align:center;">${s.count}</td><td style="text-align:right;padding-right:10px;">${s.total.toFixed(2)}</td><td style="text-align:center;">${s.iouCount>0?'<span style="color:#cc0000;font-weight:bold;">'+s.iouCount+'</span>':'-'}</td></tr>`;ni++;});nf.innerHTML=`<tr><td colspan="3" style="text-align:right;font-weight:bold;padding-right:10px;">Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:10px;background:#e0e0e0;">${ngt.toFixed(2)}</td><td></td></tr>`;document.getElementById('nameBreakdownContainer').style.display=ne.length>0?'block':'none';const dm={};filtered.forEach(b=>{const dk=b.billDate||'unknown';if(!dm[dk])dm[dk]=[];dm[dk].push(b);});const ad=document.getElementById('dailyAccordion');ad.innerHTML='';const dks=Object.keys(dm).sort();dks.forEach(dk=>{const db2=dm[dk],dt=db2.reduce((s,b)=>s+(parseFloat(b.total)||0),0),dd=formatDate(dk),dl=`${dd} (${db2.length} bill${db2.length>1?'s':''})`;const hd=document.createElement('div');hd.className='daily-breakdown-header';hd.innerHTML=`<span>${dl}</span><span style="font-weight:bold;">${dt.toFixed(2)} Tk <span class="arrow">&#9654;</span></span>`;hd.onclick=function(){this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');};const bd=document.createElement('div');bd.className='daily-breakdown-body';let th=`<table><thead><tr><th>Bill No</th><th>Name</th><th>Type</th><th>Total</th><th>Ref No</th><th>Act</th></tr></thead><tbody>`;db2.forEach(b=>{const tc=findConvType(b.convType),tn=tc?tc.name:'-',rd=getRefDisplay(b.cnNumber);th+=`<tr><td>${b.billNo}</td><td>${b.name}</td><td style="font-size:11px;">${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)}</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});th+=`</tbody></table><div class="daily-subtotal">Day Total: ${dt.toFixed(2)} Tk</div>`;bd.innerHTML=th;ad.appendChild(hd);ad.appendChild(bd);});document.getElementById('dailyBreakdownContainer').style.display=dks.length>0?'block':'none';const fb=document.getElementById('monthFullTableBody'),ff=document.getElementById('monthFullTableFoot');fb.innerHTML='';let ft=0;const df=[...filtered].sort((a,b)=>(b.billDate||'').localeCompare(a.billDate||''));df.forEach(b=>{ft+=parseFloat(b.total)||0;const tc=findConvType(b.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-',rd=getRefDisplay(b.cnNumber),dd=formatDate(b.billDate);fb.innerHTML+=`<tr><td>${b.billNo}</td><td>${dd}</td><td>${b.name}</td><td>${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)} Tk</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="editBill('${b.key}')">Edit</button> <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});ff.innerHTML=`<tr><td colspan="4" style="text-align:right;font-weight:bold;padding-right:10px;">Month Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:8px;background:#e0e0e0;">${ft.toFixed(2)} Tk</td><td colspan="2"></td></tr>`;document.getElementById('monthFullTableContainer').style.display=df.length>0?'block':'none';document.getElementById('monthNoData').style.display=filtered.length===0?'block':'none';}
+        function applyMonthFilter(){
+            const sm=document.getElementById('monthPicker').value;
+            if(!sm)return;
+            const filtered=allBillsCache.filter(b=>b.billDate&&b.billDate.substring(0,7)===sm).sort((a,b)=>(a.billDate||'').localeCompare(b.billDate||''));
+            document.getElementById('monthCardTitle').innerText='Report: '+formatMonthLabel(sm);
+            const tb=filtered.length,
+                  gt=filtered.reduce((s,b)=>s+(parseFloat(b.total)||0),0);
+            
+            const ib=filtered.filter(b=>b.iouId), ic=ib.length;
+            let it=0;
+            
+            if(window._cachedIous){
+                // 1. IOUs attached to bills
+                ib.forEach(b=>{
+                    const id=window._cachedIous[b.iouId];
+                    if(id) it+=parseFloat(id.amount)||0;
+                });
+                
+                // 2. "Bill Payment No Bill" IOUs directly added in this month
+                Object.values(window._cachedIous).forEach(iou => {
+                    if(iou.iouDate && iou.iouDate.substring(0,7) === sm && iou.iouType === 'Bill Payment No Bill') {
+                        it += parseFloat(iou.amount) || 0;
+                    }
+                });
+            }
+            
+            const balance = gt - it; 
+            document.getElementById('statBillCount').innerText=tb;
+            document.getElementById('statGrandTotal').innerText=gt.toFixed(2)+' Tk';
+            document.getElementById('statIouCount').innerText=ic;
+            document.getElementById('statIouTotal').innerText=it.toFixed(2)+' Tk';
+            document.getElementById('statBalance').innerText=balance.toFixed(2)+' Tk'; 
+            
+            const nm={};filtered.forEach(b=>{const n=b.name||'Unknown';if(!nm[n])nm[n]={count:0,total:0,iouCount:0};nm[n].count++;nm[n].total+=parseFloat(b.total)||0;if(b.iouId)nm[n].iouCount++;});const nb=document.getElementById('nameBreakdownBody'),nf=document.getElementById('nameBreakdownFoot');nb.innerHTML='';let ni=1,ngt=0;const ne=Object.entries(nm).sort((a,b)=>b[1].total-a[1].total);ne.forEach(([n,s])=>{ngt+=s.total;nb.innerHTML+=`<tr><td style="text-align:center;">${ni}</td><td><strong>${n}</strong></td><td style="text-align:center;">${s.count}</td><td style="text-align:right;padding-right:10px;">${s.total.toFixed(2)}</td><td style="text-align:center;">${s.iouCount>0?'<span style="color:#cc0000;font-weight:bold;">'+s.iouCount+'</span>':'-'}</td></tr>`;ni++;});nf.innerHTML=`<tr><td colspan="3" style="text-align:right;font-weight:bold;padding-right:10px;">Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:10px;background:#e0e0e0;">${ngt.toFixed(2)}</td><td></td></tr>`;document.getElementById('nameBreakdownContainer').style.display=ne.length>0?'block':'none';const dm={};filtered.forEach(b=>{const dk=b.billDate||'unknown';if(!dm[dk])dm[dk]=[];dm[dk].push(b);});const ad=document.getElementById('dailyAccordion');ad.innerHTML='';const dks=Object.keys(dm).sort();dks.forEach(dk=>{const db2=dm[dk],dt=db2.reduce((s,b)=>s+(parseFloat(b.total)||0),0),dd=formatDate(dk),dl=`${dd} (${db2.length} bill${db2.length>1?'s':''})`;const hd=document.createElement('div');hd.className='daily-breakdown-header';hd.innerHTML=`<span>${dl}</span><span style="font-weight:bold;">${dt.toFixed(2)} Tk <span class="arrow">&#9654;</span></span>`;hd.onclick=function(){this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');};const bd=document.createElement('div');bd.className='daily-breakdown-body';let th=`<table><thead><tr><th>Bill No</th><th>Name</th><th>Type</th><th>Total</th><th>Ref No</th><th>Act</th></tr></thead><tbody>`;db2.forEach(b=>{const tc=findConvType(b.convType),tn=tc?tc.name:'-',rd=getRefDisplay(b.cnNumber);th+=`<tr><td>${b.billNo}</td><td>${b.name}</td><td style="font-size:11px;">${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)}</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});th+=`</tbody></table><div class="daily-subtotal">Day Total: ${dt.toFixed(2)} Tk</div>`;bd.innerHTML=th;ad.appendChild(hd);ad.appendChild(bd);});document.getElementById('dailyBreakdownContainer').style.display=dks.length>0?'block':'none';const fb=document.getElementById('monthFullTableBody'),ff=document.getElementById('monthFullTableFoot');fb.innerHTML='';let ft=0;const df=[...filtered].sort((a,b)=>(b.billDate||'').localeCompare(a.billDate||''));df.forEach(b=>{ft+=parseFloat(b.total)||0;const tc=findConvType(b.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-',rd=getRefDisplay(b.cnNumber),dd=formatDate(b.billDate);fb.innerHTML+=`<tr><td>${b.billNo}</td><td>${dd}</td><td>${b.name}</td><td>${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)} Tk</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="editBill('${b.key}')">Edit</button> <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});ff.innerHTML=`<tr><td colspan="4" style="text-align:right;font-weight:bold;padding-right:10px;">Month Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:8px;background:#e0e0e0;">${ft.toFixed(2)} Tk</td><td colspan="2"></td></tr>`;document.getElementById('monthFullTableContainer').style.display=df.length>0?'block':'none';document.getElementById('monthNoData').style.display=filtered.length===0?'block':'none';
+        }
         function goToPrevMonth(){const p=document.getElementById('monthPicker');if(!p.value){goToCurrentMonth();return;}const[y,m]=p.value.split('-').map(Number);let nm=m-1,ny=y;if(nm<1){nm=12;ny--;}p.value=`${ny}-${String(nm).padStart(2,'0')}`;applyMonthFilter();}
         function goToNextMonth(){const p=document.getElementById('monthPicker');if(!p.value){goToCurrentMonth();return;}const[y,m]=p.value.split('-').map(Number);let nm=m+1,ny=y;if(nm>12){nm=1;ny++;}p.value=`${ny}-${String(nm).padStart(2,'0')}`;applyMonthFilter();}
         function goToCurrentMonth(){const n=new Date();document.getElementById('monthPicker').value=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;applyMonthFilter();}
