@@ -744,7 +744,9 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
             <table class="form-table">
                 <tr><td class="label-cell">কেমিস্টের কোড</td><td><b><input type="text" id="chemistCode" placeholder="কেমিস্টের কোড"></b></td></tr>
                 <tr><td class="label-cell">ফার্মেসির নাম</td><td><input type="text" id="pharmacyName" placeholder="ফার্মেসির নাম"></td></tr>
+                <tr><td class="label-cell">ফার্মেসির ঠিকানা</td><td><input type="text" id="pharmacyAddress" placeholder="ফার্মেসির সম্পূর্ণ ঠিকানা"></td></tr>
                 <tr><td class="label-cell">DCC (ডাক্তার/কেমিস্টের নাম)</td><td><input type="text" id="dccName" placeholder="ডাক্তার ও কেমিস্টের নাম"></td></tr>
+                <tr><td class="label-cell">মোবাইল নম্বর</td><td><input type="text" id="dccMobile" placeholder="ডাক্তার/কেমিস্টের মোবাইল নম্বর"></td></tr>
                 <tr><td class="label-cell">কার্যকর সময়কাল</td><td style="display:flex;gap:6px;align-items:center"><input type="date" id="startDate" style="width:120px"> <span style="font-size:10px;white-space:nowrap">হতে —</span> <input type="date" id="endDate" style="width:120px"> <span style="font-size:10px;white-space:nowrap">পর্যন্ত</span></td></tr>
                 <tr><td class="label-cell">Sales (টাকা)</td><td><input type="number" id="salesAmount" placeholder="মোট সেলস এমাউন্ট"></td></tr>
                 <tr><td class="label-cell">প্রস্তাবিত ডিসকাউন্ট (%)</td><td><input type="number" step="0.01" id="discountPercent" placeholder="যেমন: 5, 7.5, 10%"></td></tr>
@@ -1377,7 +1379,9 @@ function populateFormFromData(d){
     document.getElementById('dateDisplay').textContent=d.dateBangla||'---';
     document.getElementById('chemistCode').value=d.chemistCode||'';
     document.getElementById('pharmacyName').value=d.pharmacyName||'';
+    document.getElementById('pharmacyAddress').value=d.pharmacyAddress||'';
     document.getElementById('dccName').value=d.dccName||'';
+    document.getElementById('dccMobile').value=d.dccMobile||'';
     document.getElementById('startDate').value=d.startDate||'';
     document.getElementById('endDate').value=d.endDate||'';
     document.getElementById('salesAmount').value=d.salesAmount||'';
@@ -1421,7 +1425,9 @@ function collectFormData(){
         dateBangla:getTodayBangla(),
         chemistCode:document.getElementById('chemistCode').value.trim(),
         pharmacyName:document.getElementById('pharmacyName').value.trim(),
+        pharmacyAddress:document.getElementById('pharmacyAddress').value.trim(),
         dccName:document.getElementById('dccName').value.trim(),
+        dccMobile:document.getElementById('dccMobile').value.trim(),
         startDate:document.getElementById('startDate').value,
         endDate:document.getElementById('endDate').value,
         salesAmount:document.getElementById('salesAmount').value.trim(),
@@ -1539,7 +1545,7 @@ function deleteCurrentDraft(){
 }
 
 function setupAutoSaveListeners(){
-    var fields=['chemistCode','pharmacyName','dccName','startDate','endDate','salesAmount','discountPercent','applicantId','dicName','dicDate','chemistSignText'];
+    var fields=['chemistCode','pharmacyName','pharmacyAddress','dccName','dccMobile','startDate','endDate','salesAmount','discountPercent','applicantId','dicName','dicDate','chemistSignText'];
     fields.forEach(function(id){
         var el=document.getElementById(id);
         if(el){
@@ -1562,7 +1568,7 @@ function setupAutoSaveListeners(){
 
 function resetForm(){
     _editingKey=null;_pendingAction=null;
-    ['chemistCode','pharmacyName','dccName','endDate','salesAmount','discountPercent','applicantId','territory','mpoNameDisplay','amNameDisplay','rsmNameDisplay','dicName','dicDate','chemistSignText'].forEach(function(id){document.getElementById(id).value='';});
+    ['chemistCode','pharmacyName','pharmacyAddress','dccName','dccMobile','endDate','salesAmount','discountPercent','applicantId','territory','mpoNameDisplay','amNameDisplay','rsmNameDisplay','dicName','dicDate','chemistSignText'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('depotName').value='কুষ্টিয়া ডিপো';document.getElementById('regionField').value='কুষ্টিয়া';
     clearAllSigs();setFormReadonly(false);setCurrentDate();
     if(currentUser.role==='mpo'&&currentUser.applicantId){document.getElementById('applicantId').value=currentUser.applicantId;document.getElementById('applicantId').readOnly=true;fetchApplicantData();}
@@ -1689,7 +1695,7 @@ function saveForm(){
     var pn=document.getElementById('pharmacyName').value.trim(),dn=document.getElementById('dccName').value.trim(),dp=document.getElementById('discountPercent').value.trim(),sales=document.getElementById('salesAmount').value.trim();
     if(!pn){showToast('ফার্মেসির নাম লিখুন','error');return;}if(!dn){showToast('DCC এর নাম লিখুন','error');return;}if(!dp){showToast('ডিসকাউন্ট লিখুন','error');return;}
     showLoading('সংরক্ষণ হচ্ছে...');
-    var fd={formNumber:document.getElementById('formNumberDisplay').textContent,formId:document.getElementById('formIdDisplay').textContent,dateBangla:getTodayBangla(),chemistCode:document.getElementById('chemistCode').value.trim(),pharmacyName:pn,dccName:dn,startDate:document.getElementById('startDate').value,endDate:document.getElementById('endDate').value,salesAmount:sales,discountPercent:dp,applicantId:document.getElementById('applicantId').value.trim(),depotName:document.getElementById('depotName').value,region:document.getElementById('regionField').value,territory:document.getElementById('territory').value,mpoName:document.getElementById('mpoNameDisplay').value,amName:document.getElementById('amNameDisplay').value,rsmName:document.getElementById('rsmNameDisplay').value,dicName:document.getElementById('dicName').value,dicDate:document.getElementById('dicDate').value,chemistSignText:document.getElementById('chemistSignText').value.trim(),signatures:getAllSignatures(),createdBy:currentUser.id,createdByName:currentUser.name,createdByRole:currentUser.role,createdByApplicantId:currentUser.applicantId||'',remarks:'',createdAt:firebase.database.ServerValue.TIMESTAMP,updatedAt:firebase.database.ServerValue.TIMESTAMP};
+    var fd={formNumber:document.getElementById('formNumberDisplay').textContent,formId:document.getElementById('formIdDisplay').textContent,dateBangla:getTodayBangla(),chemistCode:document.getElementById('chemistCode').value.trim(),pharmacyName:pn,pharmacyAddress:document.getElementById('pharmacyAddress').value.trim(),dccName:dn,dccMobile:document.getElementById('dccMobile').value.trim(),startDate:document.getElementById('startDate').value,endDate:document.getElementById('endDate').value,salesAmount:sales,discountPercent:dp,applicantId:document.getElementById('applicantId').value.trim(),depotName:document.getElementById('depotName').value,region:document.getElementById('regionField').value,territory:document.getElementById('territory').value,mpoName:document.getElementById('mpoNameDisplay').value,amName:document.getElementById('amNameDisplay').value,rsmName:document.getElementById('rsmNameDisplay').value,dicName:document.getElementById('dicName').value,dicDate:document.getElementById('dicDate').value,chemistSignText:document.getElementById('chemistSignText').value.trim(),signatures:getAllSignatures(),createdBy:currentUser.id,createdByName:currentUser.name,createdByRole:currentUser.role,createdByApplicantId:currentUser.applicantId||'',remarks:'',createdAt:firebase.database.ServerValue.TIMESTAMP,updatedAt:firebase.database.ServerValue.TIMESTAMP};
     
     if(_editingKey){
         db.ref('forms/'+_editingKey).once('value',function(snap){
@@ -1722,7 +1728,10 @@ function saveForm(){
         db.ref('forms').push(fd,function(err){
             hideLoading();
             if(err)showToast('সমস্যা হয়েছে','error');
-            else{showToast('সংরক্ষিত হয়েছে','success');showView('history');}
+            else{
+                deleteCurrentDraft();
+                showToast('সংরক্ষিত হয়েছে','success');showView('history');
+            }
         });
     }
 }
