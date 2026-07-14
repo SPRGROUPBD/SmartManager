@@ -322,11 +322,12 @@
         .search-bar-wrap .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
         .search-bar-wrap input{padding-left:38px}
         
-        /* Image Preview Modal with Navigation */
+        /* Image Preview Modal with Navigation & Zoom */
         .img-preview-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:300;display:none;justify-content:center;align-items:center;cursor:zoom-out;padding:20px}
         .img-preview-modal.open{display:flex}
-        .img-preview-content {display:flex;flex-direction:column;align-items:center;position:relative;z-index:2}
-        .img-preview-modal img{max-width:90vw;max-height:85vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);animation:imgZoomIn .3s ease-out;object-fit:contain}
+        .img-preview-content {display:flex;flex-direction:column;align-items:center;position:relative;z-index:2;animation:imgZoomIn .3s ease-out}
+        .img-preview-modal img{max-width:90vw;max-height:85vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,.5);object-fit:contain;cursor:grab;user-select:none;-webkit-user-drag:none;transition:transform .1s ease-out}
+        .img-preview-modal img.dragging{cursor:grabbing;transition:none}
         @keyframes imgZoomIn{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
         .img-preview-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.3rem;display:flex;align-items:center;justify-content:center;transition:.2s;z-index:10}
         .img-preview-close:hover{background:rgba(255,255,255,.3)}
@@ -1096,10 +1097,24 @@ window.viewBillImages = (id) => {
     showCurrentImage();
 };
 
+// Image Zoom and Pan State Variables
+let zoomLevel = 1, panX = 0, panY = 0, isDragging = false, hasDragged = false, startX = 0, startY = 0;
+
+function applyImageTransform() {
+    const img = $('imgPreviewImg');
+    if(img) {
+        img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+    }
+}
+
 function showCurrentImage() {
     if(currentViewingImages.length === 0) return;
     $('imgPreviewImg').src = currentViewingImages[currentImgIndex];
     $('imgPreviewModal').classList.add('open');
+    
+    // Reset zoom and pan whenever a new image is shown
+    zoomLevel = 1; panX = 0; panY = 0;
+    applyImageTransform();
     
     const counter = $('imgCounter');
     const prevBtn = $('imgNavPrev');
@@ -1556,8 +1571,76 @@ function renderFileList(){const container=$('fileListContainer');const query=$('
  $('fileSearchInput').addEventListener('input',()=>renderFileList());window.clearFileSearch=()=>{$('fileSearchInput').value='';renderFileList()};
 window.downloadFile=id=>{const f=uploadedFiles.find(x=>x.id===id);if(!f||!f.base64){showToast('File data not found','error');return}try{const link=document.createElement('a');link.href=f.base64;const ext=(f.fileExt||'jpg').toLowerCase();const billNo=(f.billNo||'download').replace(/[^a-zA-Z0-9\-_]/g,'_');link.download=billNo+'.'+ext;document.body.appendChild(link);link.click();document.body.removeChild(link);showToast('Downloading...','success')}catch(e){showToast('Download failed','error')}};
 window.previewImage=id=>{const f=uploadedFiles.find(x=>x.id===id);if(!f||!f.base64)return;currentViewingImages=[f.base64];currentImgIndex=0;showCurrentImage()};
-function closeImgPreview(e){if(e&&e.target!==e.currentTarget&&!e.target.closest('.img-preview-close')&&!e.target.closest('.img-nav-btn')&&!e.target.closest('.img-preview-content'))return;$('imgPreviewModal').classList.remove('open');$('imgPreviewImg').src='';currentViewingImages=[];}
+
+// Close image preview modal
+function closeImgPreview(e){
+    // Prevent closing if the user was dragging the image
+    if(hasDragged) return;
+    if(e && e.target!==e.currentTarget && !e.target.closest('.img-preview-close') && !e.target.closest('.img-nav-btn') && !e.target.closest('.img-preview-content')) return;
+    $('imgPreviewModal').classList.remove('open');
+    $('imgPreviewImg').src='';
+    currentViewingImages=[];
+    // Reset zoom state on close
+    zoomLevel = 1; panX = 0; panY = 0; isDragging = false; hasDragged = false;
+    applyImageTransform();
+}
 window.closeImgPreview=closeImgPreview;
+
+// Setup Zoom and Pan Event Listeners
+function setupImageZoomPan() {
+    const imgEl = $('imgPreviewImg');
+
+    // Mouse wheel zoom
+    imgEl.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY > 0 ? -0.2 : 0.2;
+        zoomLevel = Math.min(Math.max(1, zoomLevel + delta), 5); // Limit zoom between 1x and 5x
+        
+        // Reset pan if zoomed out completely
+        if (zoomLevel === 1) {
+            panX = 0;
+            panY = 0;
+        }
+        applyImageTransform();
+    });
+
+    // Mouse drag to pan (only if zoomed in)
+    imgEl.addEventListener('mousedown', (e) => {
+        if (zoomLevel > 1) {
+            e.preventDefault();
+            isDragging = true;
+            hasDragged = false;
+            startX = e.clientX - panX;
+            startY = e.clientY - panY;
+            imgEl.classList.add('dragging');
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        hasDragged = true;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        applyImageTransform();
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isDragging) {
+            isDragging = false;
+            imgEl.classList.remove('dragging');
+            // Delay resetting hasDragged to prevent click event from closing the modal immediately
+            setTimeout(() => { hasDragged = false; }, 100);
+        }
+    });
+
+    // Double click to reset zoom
+    imgEl.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        zoomLevel = 1; panX = 0; panY = 0;
+        applyImageTransform();
+    });
+}
 
 // Keyboard navigation for images
 document.addEventListener('keydown',e=>{
@@ -1568,6 +1651,15 @@ document.addEventListener('keydown',e=>{
     } else if($('imgPreviewModal').classList.contains('open')) {
         if(e.key === 'ArrowRight') nextImage();
         if(e.key === 'ArrowLeft') prevImage();
+        if(e.key === '+' || e.key === '=') { // Zoom in with keyboard
+            zoomLevel = Math.min(zoomLevel + 0.2, 5);
+            applyImageTransform();
+        }
+        if(e.key === '-') { // Zoom out with keyboard
+            zoomLevel = Math.max(zoomLevel - 0.2, 1);
+            if(zoomLevel === 1) { panX = 0; panY = 0; }
+            applyImageTransform();
+        }
     }
 });
 
@@ -1576,6 +1668,7 @@ function showToast(msg,type=''){const t=$('toast');t.textContent=msg;t.className
 /* ===== INIT ===== */
 document.addEventListener('DOMContentLoaded',async()=>{
     await seedDefaults();
+    setupImageZoomPan(); // Initialize zoom and pan listeners
 
     const m=new Date().toISOString().slice(0,7);
     $('billMonth').value=m;$('reportMonth').value=m;$('topSheetMonth').value=m;$('depositMonth').value=m;$('depositDate').value=new Date().toISOString().slice(0,10);
