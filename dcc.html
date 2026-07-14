@@ -332,13 +332,25 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 .spinner{width:40px;height:40px;border:4px solid var(--light-bg);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-text{font-size:14px;color:var(--text-main);font-weight:500}
+
 .entry-action-bar{max-width:1200px;margin:0 auto 30px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+
+/* Auto-Save Draft Indicator */
+.draft-container{max-width:1200px;margin:0 auto 5px;display:flex;justify-content:flex-end;}
+.draft-indicator {font-size:12px;padding:6px 14px;border-radius:20px;font-weight:600;background:#f1f5f9;color:#64748b;display:none;align-items:center;gap:6px;transition:all .25s;}
+.draft-indicator.show{display:inline-flex;}
+.draft-indicator.saving {background:#fef3c7;color:#92400e;}
+.draft-indicator.saved {background:#dcfce7;color:#166534;}
+.draft-indicator.offline {background:#fee2e2;color:#991b1b;}
+.draft-indicator::before {content:'';width:6px;height:6px;border-radius:50%;background:currentColor;}
+.draft-indicator.saved::before {animation:none;}
+.draft-indicator.saving::before {animation:spin 1s linear infinite;border:2px solid currentColor;border-top-color:transparent;width:10px;height:10px;}
 
 @media print{
     @page{size:A4;margin:7mm;scale:1}
     *{color:#000!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
     html,body{margin:0!important;padding:0!important;background:#fff!important;width:auto!important;overflow:visible!important}
-    .top-bar,.dashboard,.history,.management,.toast,.loading-overlay,.entry-action-bar,.login-screen,.modal-overlay,.sig-modal-overlay{display:none!important}
+    .top-bar,.dashboard,.history,.management,.toast,.loading-overlay,.entry-action-bar,.draft-container,.login-screen,.modal-overlay,.sig-modal-overlay{display:none!important}
     .print-area{display:block!important}
     .page{border:none!important;box-shadow:none!important;margin:0!important;width:100%!important;min-height:auto!important;page-break-after:avoid!important;background:#fff!important;overflow:visible!important;padding:0!important}
     .page-inner{padding:0!important}
@@ -840,6 +852,9 @@ textarea{border:1.5px solid #000;resize:vertical;min-height:28px;line-height:1.5
 </div>
 <div class="page-number">Page - 1</div>
 </div>
+<div class="draft-container">
+    <span id="draftIndicator" class="draft-indicator"></span>
+</div>
 <div class="entry-action-bar" id="entryActions"></div>
 </div>
 
@@ -861,6 +876,10 @@ var _pendingAction=null;
 var sigKeys=['mpo','am','rsm','pmd','hop','it','dic'];
 var SUPER_ADMIN_ID='KS';
 var SUPER_ADMIN_PASS='Monico@Ku007';
+
+/* ====== Auto-Save Draft Variables ====== */
+var _autoSaveTimer=null;
+var _currentDraftKey=null;
 
 /* ====== Signature Pad Variables ====== */
 var _sigModalTarget=null;
@@ -1115,6 +1134,8 @@ function loadHistory(){
                     h+=' <button class="hist-action-btn reject-action" onclick="openWorkflowModal(\''+it.key+'\',\'reject\')"><i class="fas fa-times"></i> Reject</button>';
                     h+=' <button class="hist-action-btn approve-action" onclick="startApproval(\''+it.key+'\',\'approve\')"><i class="fas fa-check"></i> Approve & Sign</button>';
                 }
+                // Super Admin সব সময় এডিট/সাবমিট করতে পারবে (অনুমোদনের পরেও)
+                h+=' <button class="hist-action-btn edit-action" onclick="superAdminEditForm(\''+it.key+'\')"><i class="fas fa-edit"></i> Edit/Submit</button>';
                 h+=' <button class="hist-action-btn del" onclick="deleteForm(\''+it.key+'\')"><i class="fas fa-trash"></i></button>';
             }
             h+='</td></tr>';
@@ -1156,6 +1177,144 @@ function editForm(key){
         document.getElementById('entryView').classList.add('show');
         document.querySelectorAll('.top-bar-left .nav-btn').forEach(function(b){b.classList.remove('active');});
         window.scrollTo({top:0,behavior:'smooth'});
+    });
+}
+
+/* ====== Super Admin: সব সময় এডিট/সাবমিট করতে পারবে ====== */
+function superAdminEditForm(key){
+    _viewMode=false;_editingKey=key;_currentHistKey=key;_pendingAction='super_admin_edit';
+    db.ref('forms/'+key).once('value',function(snap){
+        if(!snap.exists()){showToast('ফর্ম পাওয়া যায়নি','error');return;}
+        var d=snap.val();
+        populateFormFromData(d);
+        setFormReadonly(false,false); // Super Admin - সব ফিল্ড এডিটেবল
+        showSuperAdminActions(d.status||'Pending at AM');
+        document.getElementById('entryView').classList.add('show');
+        document.querySelectorAll('.top-bar-left .nav-btn').forEach(function(b){b.classList.remove('active');});
+        window.scrollTo({top:0,behavior:'smooth'});
+    });
+}
+
+function showSuperAdminActions(currentStatus){
+    var bar=document.getElementById('entryActions');
+    var h='<input type="text" id="inlineRemarks" placeholder="রিমার্কস (ঐচ্ছিক)" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid #ccc;border-radius:5px;font-size:13px">';
+    
+    // যদি Pending at DIC হয় — চূড়ান্ত অনুমোদন বাটন
+    if(currentStatus==='Pending at DIC'){
+        h+='<button class="nav-btn approve-btn" onclick="superAdminFinalApprove()"><i class="fas fa-check-circle"></i> চূড়ান্ত অনুমোদন</button>';
+    }
+    // যদি ইতিমধ্যে Approved হয়ে থাকে — Re-approve / পুনরায় সাবমিট
+    if(currentStatus==='Approved'){
+        h+='<button class="nav-btn approve-btn" onclick="superAdminReapprove()"><i class="fas fa-redo"></i> পুনরায় অনুমোদন</button>';
+    }
+    
+    h+='<button class="nav-btn save-btn" onclick="superAdminUpdateForm()"><i class="fas fa-save"></i> আপডেট করুন</button>';
+    h+='<button class="nav-btn print-btn" onclick="doPrint()"><i class="fas fa-print"></i> প্রিন্ট</button>';
+    h+='<button class="nav-btn" onclick="cancelEdit()"><i class="fas fa-arrow-left"></i> ফিরে যান</button>';
+    bar.innerHTML=h;
+}
+
+function superAdminUpdateForm(){
+    if(!_editingKey) return;
+    var remarks=document.getElementById('inlineRemarks')?document.getElementById('inlineRemarks').value.trim():'';
+    showLoading('আপডেট হচ্ছে...');
+    var fd=collectFormData();
+    fd.updatedAt=firebase.database.ServerValue.TIMESTAMP;
+    fd.reviewedBy=currentUser.id;
+    fd.reviewedByName=currentUser.name;
+    
+    db.ref('forms/'+_editingKey).once('value',function(snap){
+        if(!snap.exists()){hideLoading();return;}
+        var old=snap.val();
+        fd.createdAt=old.createdAt;
+        fd.status=old.status; // বর্তমান স্ট্যাটাস অপরিবর্তিত থাকবে
+        fd.remarks=remarks||old.remarks||'';
+        fd.createdBy=old.createdBy;
+        fd.createdByName=old.createdByName;
+        fd.createdByRole=old.createdByRole;
+        fd.createdByApplicantId=old.createdByApplicantId;
+        
+        db.ref('forms/'+_editingKey).update(fd,function(err){
+            hideLoading();
+            if(err) showToast('সমস্যা হয়েছে','error');
+            else{
+                showToast('Super Admin কর্তৃক আপডেট হয়েছে','success');
+                _editingKey=null;_pendingAction=null;
+                showView('history');
+            }
+        });
+    });
+}
+
+function superAdminFinalApprove(){
+    if(!_editingKey) return;
+    var remarks=document.getElementById('inlineRemarks')?document.getElementById('inlineRemarks').value.trim():'';
+    var sigs=getAllSignatures();
+    if(!sigs['dic']){
+        if(!confirm('আপনি DIC স্বাক্ষর করেননি। স্বাক্ষর ছাড়াই চূড়ান্ত অনুমোদন করবেন?')) return;
+    }
+    showLoading('চূড়ান্ত অনুমোদন হচ্ছে...');
+    var fd=collectFormData();
+    fd.signatures=sigs;
+    fd.status='Approved';
+    fd.remarks=remarks;
+    fd.updatedAt=firebase.database.ServerValue.TIMESTAMP;
+    fd.reviewedBy=currentUser.id;
+    fd.reviewedByName=currentUser.name;
+    
+    db.ref('forms/'+_editingKey).once('value',function(snap){
+        if(!snap.exists()){hideLoading();return;}
+        var old=snap.val();
+        fd.createdAt=old.createdAt;
+        fd.createdBy=old.createdBy;
+        fd.createdByName=old.createdByName;
+        fd.createdByRole=old.createdByRole;
+        fd.createdByApplicantId=old.createdByApplicantId;
+        
+        db.ref('forms/'+_editingKey).update(fd,function(err){
+            hideLoading();
+            if(err) showToast('সমস্যা','error');
+            else{
+                showToast('চূড়ান্ত অনুমোদন সম্পন্ন','success');
+                _editingKey=null;_pendingAction=null;
+                showView('history');
+            }
+        });
+    });
+}
+
+function superAdminReapprove(){
+    if(!_editingKey) return;
+    if(!confirm('এই ফর্মটি ইতিমধ্যে অনুমোদিত। পুনরায় অনুমোদন করতে চান?')) return;
+    var remarks=document.getElementById('inlineRemarks')?document.getElementById('inlineRemarks').value.trim():'';
+    var sigs=getAllSignatures();
+    showLoading('পুনরায় অনুমোদন হচ্ছে...');
+    var fd=collectFormData();
+    fd.signatures=sigs;
+    fd.status='Approved';
+    fd.remarks=remarks||'Re-approved by Super Admin';
+    fd.updatedAt=firebase.database.ServerValue.TIMESTAMP;
+    fd.reviewedBy=currentUser.id;
+    fd.reviewedByName=currentUser.name;
+    
+    db.ref('forms/'+_editingKey).once('value',function(snap){
+        if(!snap.exists()){hideLoading();return;}
+        var old=snap.val();
+        fd.createdAt=old.createdAt;
+        fd.createdBy=old.createdBy;
+        fd.createdByName=old.createdByName;
+        fd.createdByRole=old.createdByRole;
+        fd.createdByApplicantId=old.createdByApplicantId;
+        
+        db.ref('forms/'+_editingKey).update(fd,function(err){
+            hideLoading();
+            if(err) showToast('সমস্যা','error');
+            else{
+                showToast('পুনরায় অনুমোদন সম্পন্ন','success');
+                _editingKey=null;_pendingAction=null;
+                showView('history');
+            }
+        });
     });
 }
 
@@ -1253,6 +1412,154 @@ function generateFormNumber(cb){
         if(cb)cb(fn,fid);
     });
 }
+
+/* ====== Auto-Save Draft (ইন্টারনেট লস্ট হলেও ডেটা থাকবে) ====== */
+function collectFormData(){
+    return {
+        formNumber:document.getElementById('formNumberDisplay').textContent,
+        formId:document.getElementById('formIdDisplay').textContent,
+        dateBangla:getTodayBangla(),
+        chemistCode:document.getElementById('chemistCode').value.trim(),
+        pharmacyName:document.getElementById('pharmacyName').value.trim(),
+        dccName:document.getElementById('dccName').value.trim(),
+        startDate:document.getElementById('startDate').value,
+        endDate:document.getElementById('endDate').value,
+        salesAmount:document.getElementById('salesAmount').value.trim(),
+        discountPercent:document.getElementById('discountPercent').value.trim(),
+        applicantId:document.getElementById('applicantId').value.trim(),
+        depotName:document.getElementById('depotName').value,
+        region:document.getElementById('regionField').value,
+        territory:document.getElementById('territory').value,
+        mpoName:document.getElementById('mpoNameDisplay').value,
+        amName:document.getElementById('amNameDisplay').value,
+        rsmName:document.getElementById('rsmNameDisplay').value,
+        dicName:document.getElementById('dicName').value,
+        dicDate:document.getElementById('dicDate').value,
+        chemistSignText:document.getElementById('chemistSignText').value.trim(),
+        signatures:getAllSignatures()
+    };
+}
+
+function autoSaveDraft(){
+    // শুধুমাত্র নতুন এন্ট্রি মোডে অটো-সেভ চলবে (এডিট/ভিউ মোডে নয়)
+    if(_editingKey || _viewMode || _pendingAction) return;
+    if(!currentUser) return;
+    
+    clearTimeout(_autoSaveTimer);
+    showDraftIndicator('সেভ হচ্ছে...','saving');
+    
+    _autoSaveTimer=setTimeout(function(){
+        var draftData=collectFormData();
+        draftData.savedAt=firebase.database.ServerValue.TIMESTAMP;
+        draftData.userId=currentUser.id;
+        draftData.userRole=currentUser.role;
+        
+        // LocalStorage ব্যাকআপ (ইন্টারনেট না থাকলেও এটা কাজ করবে)
+        try{
+            localStorage.setItem('dcc_draft_'+currentUser.id,JSON.stringify(draftData));
+        }catch(e){}
+        
+        // Firebase-এ সেভ
+        if(_currentDraftKey){
+            db.ref('drafts/'+_currentDraftKey).update(draftData,function(err){
+                if(err) showDraftIndicator('অফলাইনে সেভড — অনলাইন হলে সিঙ্ক হবে','offline');
+                else showDraftIndicator('সেভড ✓','saved');
+            });
+        }else{
+            var newRef=db.ref('drafts').push();
+            newRef.set(draftData,function(err){
+                if(!err){
+                    _currentDraftKey=newRef.key;
+                    showDraftIndicator('সেভড ✓','saved');
+                }else{
+                    showDraftIndicator('অফলাইনে সেভড — অনলাইন হলে সিঙ্ক হবে','offline');
+                }
+            });
+        }
+    },1200); // ১.২ সেকেন্ড পর সেভ হবে (ডিবাউন্সিং)
+}
+
+function showDraftIndicator(text,type){
+    var ind=document.getElementById('draftIndicator');
+    if(!ind) return;
+    ind.textContent=text;
+    ind.className='draft-indicator '+(type||'')+' show';
+}
+function hideDraftIndicator(){
+    var ind=document.getElementById('draftIndicator');
+    if(ind) ind.classList.remove('show');
+}
+
+function loadDraftForUser(){
+    if(!currentUser) return;
+    if(currentUser.role!=='mpo' && currentUser.role!=='am') return; // শুধু এন্ট্রি করা ইউজারদের জন্য
+    
+    // প্রথমে localStorage চেক
+    var localDraft=null;
+    try{
+        var ls=localStorage.getItem('dcc_draft_'+currentUser.id);
+        if(ls) localDraft=JSON.parse(ls);
+    }catch(e){}
+    
+    // Firebase থেকে চেক
+    db.ref('drafts').orderByChild('userId').equalTo(currentUser.id).limitToLast(1).once('value',function(snap){
+        var fbDraft=null,fbKey=null;
+        snap.forEach(function(c){fbDraft=c.val();fbKey=c.key;});
+        
+        var useFb=fbDraft && (!localDraft || (fbDraft.savedAt||0)>=(localDraft.savedAt||0));
+        var draft=useFb?fbDraft:localDraft;
+        if(useFb) _currentDraftKey=fbKey;
+        
+        if(draft && (draft.pharmacyName||draft.dccName||draft.chemistCode||draft.salesAmount)){
+            if(confirm('আপনার আগের অসম্পূর্ণ ড্রাফট পাওয়া গেছে। লোড করবেন?\n\n(বাতিল করলে ড্রাফট মুছে যাবে)')){
+                populateFormFromData(draft);
+                showDraftIndicator('ড্রাফট লোড হয়েছে','saved');
+            }else{
+                deleteCurrentDraft();
+            }
+        }
+    },function(){
+        // Firebase পড়তে ব্যর্থ হলে localStorage দিয়ে চেষ্টা করো
+        if(localDraft && (localDraft.pharmacyName||localDraft.dccName)){
+            if(confirm('অফলাইন ড্রাফট পাওয়া গেছে। লোড করবেন?')){
+                populateFormFromData(localDraft);
+                showDraftIndicator('অফলাইন ড্রাফট লোড হয়েছে','offline');
+            }
+        }
+    });
+}
+
+function deleteCurrentDraft(){
+    if(_currentDraftKey){
+        db.ref('drafts/'+_currentDraftKey).remove();
+        _currentDraftKey=null;
+    }
+    try{localStorage.removeItem('dcc_draft_'+currentUser.id);}catch(e){}
+    hideDraftIndicator();
+}
+
+function setupAutoSaveListeners(){
+    var fields=['chemistCode','pharmacyName','dccName','startDate','endDate','salesAmount','discountPercent','applicantId','dicName','dicDate','chemistSignText'];
+    fields.forEach(function(id){
+        var el=document.getElementById(id);
+        if(el){
+            el.addEventListener('input',autoSaveDraft);
+            el.addEventListener('change',autoSaveDraft);
+            el.addEventListener('blur',autoSaveDraft);
+        }
+    });
+    // স্বাক্ষর সেভ হলেও অটো-সেভ
+    if(typeof sigKeys!=='undefined'){
+        sigKeys.forEach(function(k){
+            var el=document.getElementById(k==='dic'?'vfSigArea_dic':'sigArea_'+k);
+            if(el){
+                var obs=new MutationObserver(autoSaveDraft);
+                obs.observe(el,{attributes:true,attributeFilter:['class']});
+            }
+        });
+    }
+}
+
 function resetForm(){
     _editingKey=null;_pendingAction=null;
     ['chemistCode','pharmacyName','dccName','endDate','salesAmount','discountPercent','applicantId','territory','mpoNameDisplay','amNameDisplay','rsmNameDisplay','dicName','dicDate','chemistSignText'].forEach(function(id){document.getElementById(id).value='';});
@@ -1261,6 +1568,11 @@ function resetForm(){
     if(currentUser.role==='mpo'&&currentUser.applicantId){document.getElementById('applicantId').value=currentUser.applicantId;document.getElementById('applicantId').readOnly=true;fetchApplicantData();}
     if(currentUser.role==='am'){document.getElementById('applicantId').value='';document.getElementById('applicantId').readOnly=false;document.getElementById('applicantId').placeholder='MPO এর আইডি লিখুন ও ব্লার করুন';}
     generateFormNumber();
+    
+    _currentDraftKey=null;
+    hideDraftIndicator();
+    setupAutoSaveListeners();
+    loadDraftForUser();
 }
 
 /* ====== স্বাক্ষর প্যাড ====== */
@@ -1692,6 +2004,17 @@ document.body.addEventListener('input', function(e) {
         e.target.value = e.target.value.toUpperCase();
         e.target.setSelectionRange(p, p);
     }
+});
+
+/* ====== অনলাইন/অফলাইন স্ট্যাটাস মনিটর ====== */
+window.addEventListener('online',function(){
+    if(_currentDraftKey && currentUser && !_editingKey && !_viewMode){
+        autoSaveDraft(); // অনলাইন হলে পেন্ডিং ড্রাফট সিঙ্ক করো
+        showToast('অনলাইন — ড্রাফট সিঙ্ক হচ্ছে','success');
+    }
+});
+window.addEventListener('offline',function(){
+    showToast('ইন্টারনেট বিচ্ছিন্ন — ড্রাফট লোকালি সেভ হবে','error');
 });
 </script>
 </body>
