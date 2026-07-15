@@ -189,7 +189,8 @@
         <button class="tab-btn" onclick="tab(1)"><i class="fa-solid fa-pen-to-square"></i>&nbsp; Entry</button>
         <button class="tab-btn" onclick="tab(2)"><i class="fa-solid fa-clock-rotate-left"></i>&nbsp; History</button>
         <button class="tab-btn" onclick="tab(3)"><i class="fa-solid fa-boxes-stacked"></i>&nbsp; Product</button>
-        <button class="tab-btn" onclick="tab(4)"><i class="fa-solid fa-signature"></i>&nbsp; Signatures</button>
+        <button class="tab-btn" onclick="tab(4)"><i class="fa-solid fa-tags"></i>&nbsp; Reasons</button>
+        <button class="tab-btn" onclick="tab(5)"><i class="fa-solid fa-signature"></i>&nbsp; Signatures</button>
     </div>
 
     <!-- TAB 0: DASHBOARD -->
@@ -236,7 +237,7 @@
         </div>
     </div>
 
-    <!-- TAB 1: ENTRY (Repacking + Damage with sub-toggle) -->
+    <!-- TAB 1: ENTRY -->
     <div class="tab-content" id="tab-1">
         <div class="entry-sub-tabs">
             <button class="est-btn active" id="estR" onclick="switchEntry('repacking')"><i class="fa-solid fa-pen-to-square"></i>&nbsp; Repacking Entry</button>
@@ -291,12 +292,7 @@
 
                 <div class="form-group" style="margin-top:18px">
                     <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#000">Repacking Reason *</label>
-                    <div class="dmg-reason-grid">
-                        <label><input type="radio" name="repR" value="Bottle Label Replacement" checked onchange="toggleRepOther(this)"><span>Bottle Label Replacement</span></label>
-                        <label><input type="radio" name="repR" value="Inner Pack Replacement" onchange="toggleRepOther(this)"><span>Inner Pack Replacement</span></label>
-                        <label><input type="radio" name="repR" value="MRP Sticker Replacement" onchange="toggleRepOther(this)"><span>MRP Sticker Replacement</span></label>
-                        <label><input type="radio" name="repR" value="Other" onchange="toggleRepOther(this)"><span>Other</span></label>
-                    </div>
+                    <div class="dmg-reason-grid" id="repReasonGrid"></div>
                     <input type="text" id="repOtherText" class="ss-input" style="display:none; margin-top:10px;" placeholder="Please specify reason...">
                 </div>
 
@@ -377,14 +373,7 @@
                 
                 <div class="form-group" style="margin-top:18px">
                     <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#000">Damage Reason *</label>
-                    <div class="dmg-reason-grid">
-                        <label><input type="radio" name="dmgR" value="Broken" checked onchange="toggleDmgOther(this)"><span>Broken</span></label>
-                        <label><input type="radio" name="dmgR" value="Expired" onchange="toggleDmgOther(this)"><span>Expired</span></label>
-                        <label><input type="radio" name="dmgR" value="Box & Strep Damage" onchange="toggleDmgOther(this)"><span>Box & Strep Damage</span></label>
-                        <label><input type="radio" name="dmgR" value="CP Broken" onchange="toggleDmgOther(this)"><span>CP Broken</span></label>
-                        <label><input type="radio" name="dmgR" value="Mislabeled" onchange="toggleDmgOther(this)"><span>Mislabeled</span></label>
-                        <label><input type="radio" name="dmgR" value="Other" onchange="toggleDmgOther(this)"><span>Other</span></label>
-                    </div>
+                    <div class="dmg-reason-grid" id="dmgReasonGrid"></div>
                     <input type="text" id="dmgOtherText" class="ss-input" style="display:none; margin-top:10px;" placeholder="Please specify reason...">
                 </div>
 
@@ -463,8 +452,31 @@
         <div class="table-wrap" id="pWrap"><div class="empty-state"><i class="fa-solid fa-box-open"></i><p>Loading products...</p></div></div>
     </div>
 
-    <!-- TAB 4: SIGNATURES -->
+    <!-- TAB 4: REASONS -->
     <div class="tab-content" id="tab-4">
+        <div class="entry-form" style="border-bottom:1.5px solid #000">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;text-transform:uppercase;letter-spacing:1px"><i class="fa-solid fa-plus-circle"></i>&nbsp; Add / Edit Reason</div>
+            <div class="form-grid">
+                <div class="form-group"><label>Reason Name *</label><input type="text" id="rName" placeholder="e.g. Broken"></div>
+                <div class="form-group">
+                    <label>Type *</label>
+                    <select id="rType">
+                        <option value="repacking">Repacking</option>
+                        <option value="damage">Damage</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" id="rSaveBtn" onclick="addReason()"><i class="fa-solid fa-plus"></i>&nbsp; Add Reason</button>
+                <button class="btn btn-secondary" onclick="clr('rName');document.getElementById('rType').value='repacking';resetReasonEditBtn()"><i class="fa-solid fa-eraser"></i>&nbsp; Clear</button>
+            </div>
+        </div>
+        <div class="section-bar"><div class="info"><i class="fa-solid fa-database"></i>&nbsp; Reasons: <span id="rCnt">0</span></div></div>
+        <div class="table-wrap" id="rWrap"><div class="empty-state"><i class="fa-solid fa-tags"></i><p>Loading reasons...</p></div></div>
+    </div>
+
+    <!-- TAB 5: SIGNATURES -->
+    <div class="tab-content" id="tab-5">
         <div class="sig-tab-content">
             <h3 style="font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Upload Signatures</h3>
             <p style="font-size:13px;color:#666;margin-bottom:30px;">Upload once. Signatures are auto-saved and will be used in all printed documents.</p>
@@ -548,11 +560,14 @@
 <script>
 var products = [];
 var histData = [];
+var reasons = [];
 var refR = 0, refD = 0;
 var sessR = [], sessD = [];
 var ssHLIdx = {R:-1, D:-1};
 var editingProductId = null;
+var editingReasonId = null;
 var editingHistKey = null;
+var editingHistType = 'repacking';
 var signatures = { dic: null, srRsm: null };
 var csvData = [];
 var currentEntryType = 'repacking';
@@ -587,6 +602,14 @@ document.addEventListener('DOMContentLoaded', function() {
         drawDashboard();
     });
 
+    db.ref('mp_reasons').on('value', function(snapshot) {
+        var data = snapshot.val() || {};
+        reasons = Object.keys(data).map(function(key) { return Object.assign({ id: key }, data[key]); });
+        if (reasons.length === 0) { seedDefaultReasons(); return; }
+        drawReasons();
+        renderReasonGrids();
+    });
+
     db.ref('mp_counters/mp_ref_r').on('value', function(s) { refR = s.val() || 0; updateRefPreview('repacking'); });
     db.ref('mp_counters/mp_ref_d').on('value', function(s) { refD = s.val() || 0; updateRefPreview('damage'); });
 
@@ -602,6 +625,40 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('fSearch').addEventListener('keydown', function(e) { ssKey(e, 'R'); });
     document.getElementById('dSearch').addEventListener('keydown', function(e) { ssKey(e, 'D'); });
 });
+
+function seedDefaultReasons() {
+    var def = [
+        { name: "Bottle Label Replacement", type: "repacking" },
+        { name: "Inner Pack Replacement", type: "repacking" },
+        { name: "MRP Sticker Replacement", type: "repacking" },
+        { name: "Broken", type: "damage" },
+        { name: "Expired", type: "damage" },
+        { name: "Box & Strep Damage", type: "damage" },
+        { name: "CP Broken", type: "damage" },
+        { name: "Mislabeled", type: "damage" }
+    ];
+    def.forEach(function(r) { db.ref('mp_reasons').push(r); });
+}
+
+function renderReasonGrids() {
+    var dmgGrid = document.getElementById('dmgReasonGrid');
+    var repGrid = document.getElementById('repReasonGrid');
+    
+    var dmgReasons = reasons.filter(function(r) { return r.type === 'damage'; });
+    var repReasons = reasons.filter(function(r) { return r.type === 'repacking'; });
+
+    var buildRadio = function(r, name, onchangeFn, checked) {
+        return '<label><input type="radio" name="' + name + '" value="' + esc(r.name) + '" ' + (checked ? 'checked' : '') + ' onchange="' + onchangeFn + '(this)"><span>' + esc(r.name) + '</span></label>';
+    };
+
+    var dmgHtml = dmgReasons.map(function(r, i) { return buildRadio(r, 'dmgR', 'toggleDmgOther', i === 0); }).join('');
+    dmgHtml += '<label><input type="radio" name="dmgR" value="Other" onchange="toggleDmgOther(this)"><span>Other</span></label>';
+    dmgGrid.innerHTML = dmgHtml;
+
+    var repHtml = repReasons.map(function(r, i) { return buildRadio(r, 'repR', 'toggleRepOther', i === 0); }).join('');
+    repHtml += '<label><input type="radio" name="repR" value="Other" onchange="toggleRepOther(this)"><span>Other</span></label>';
+    repGrid.innerHTML = repHtml;
+}
 
 function toggleDmgOther(input) {
     var textWrap = document.getElementById('dmgOtherText');
@@ -763,6 +820,7 @@ function tab(i) {
     if (i === 1) updateRefPreview(currentEntryType);
     if (i === 2) drawHistory();
     if (i === 3) drawProducts();
+    if (i === 4) drawReasons();
 }
 function switchEntry(type) {
     currentEntryType = type;
@@ -856,6 +914,49 @@ function ssHighlight(type, items) {
     if (ssHLIdx[type] >= 0) items[ssHLIdx[type]].scrollIntoView({ block: 'nearest' });
 }
 
+/* Reasons CRUD */
+function resetReasonEditBtn() { editingReasonId = null; var btn = document.getElementById('rSaveBtn'); btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Reason'; btn.onclick = addReason; }
+function addReason() {
+    var name = document.getElementById('rName').value.trim(), type = document.getElementById('rType').value;
+    if (!name) { msg('Reason Name দিন', 'err'); return; }
+    if (reasons.some(function(r) { return r.name.toLowerCase() === name.toLowerCase() && r.type === type; })) { msg('এই নামে আগেই আছে', 'err'); return; }
+    db.ref('mp_reasons').push({ name: name, type: type }).then(function() {
+        clr('rName'); msg('Reason যোগ হয়েছে', 'ok');
+    }).catch(function(err) { msg('Error: ' + err.message, 'err'); });
+}
+function delReason(id) {
+    var r = reasons.find(function(x) { return x.id === id; }); if (!r) return;
+    if (!confirm(r.name + ' মুছবেন?')) return;
+    db.ref('mp_reasons/' + id).remove().then(function() { msg('মুছে ফেলা হয়েছে', 'ok'); if (editingReasonId === id) resetReasonEditBtn(); });
+}
+function openEditReason(id) {
+    var r = reasons.find(function(x) { return x.id === id; }); if (!r) return;
+    editingReasonId = id;
+    document.getElementById('rName').value = r.name; document.getElementById('rType').value = r.type;
+    var btn = document.getElementById('rSaveBtn'); btn.innerHTML = '<i class="fa-solid fa-check"></i>&nbsp; Update Reason'; btn.onclick = saveReasonEdit;
+    document.getElementById('rName').focus();
+}
+function saveReasonEdit() {
+    if (!editingReasonId) return;
+    var name = document.getElementById('rName').value.trim(), type = document.getElementById('rType').value;
+    if (!name) { msg('Reason Name দিন', 'err'); return; }
+    if (reasons.some(function(r) { return r.id !== editingReasonId && r.name.toLowerCase() === name.toLowerCase() && r.type === type; })) { msg('এই নামে আগেই আছে', 'err'); return; }
+    db.ref('mp_reasons/' + editingReasonId).update({ name: name, type: type }).then(function() {
+        clr('rName'); resetReasonEditBtn(); msg('Reason আপডেট হয়েছে', 'ok');
+    });
+}
+function drawReasons() {
+    document.getElementById('rCnt').textContent = reasons.length;
+    var w = document.getElementById('rWrap');
+    if (!reasons.length) { w.innerHTML = '<div class="empty-state"><i class="fa-solid fa-tags"></i><p>No reasons yet.</p></div>'; return; }
+    var h = '<table><thead><tr><th>SL</th><th style="text-align:left">Reason Name</th><th>Type</th><th>Action</th></tr></thead><tbody>';
+    reasons.forEach(function(r, i) {
+        h += '<tr><td>' + String(i + 1).padStart(2, '0') + '</td><td style="text-align:left;font-weight:600">' + esc(r.name) + '</td><td><span class="type-badge ' + (r.type === 'damage' ? 'damage' : 'repacking') + '">' + (r.type === 'damage' ? 'Damage' : 'Repacking') + '</span></td><td><button class="edit-row" onclick="openEditReason(\'' + r.id + '\')"><i class="fa-solid fa-pen-to-square"></i></button> <button class="del-row" onclick="delReason(\'' + r.id + '\')"><i class="fa-solid fa-xmark"></i></button></td></tr>';
+    });
+    w.innerHTML = h + '</tbody></table>';
+}
+
+/* Products CRUD */
 function resetEditBtn() { editingProductId = null; var btn = document.getElementById('pSaveBtn'); btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Product'; btn.onclick = addProduct; }
 function addProduct() {
     var name = document.getElementById('pName').value.trim(), pack = document.getElementById('pPack').value.trim(), mrp = parseFloat(document.getElementById('pMrp').value) || 0;
@@ -905,14 +1006,14 @@ function clearForm(px) {
         clr('fSearch', 'fProdIdx', 'fPack', 'fBatch', 'fQty', 'fMrp', 'fRemarks');
         resetDateSelects('fMfgMonth', 'fMfgYear'); resetDateSelects('fExpMonth', 'fExpYear');
         document.getElementById('fBadge').classList.remove('show'); document.getElementById('fSearch').focus();
-        document.querySelector('input[name="repR"][value="Bottle Label Replacement"]').checked = true;
-        toggleRepOther(document.querySelector('input[name="repR"][value="Bottle Label Replacement"]'));
+        var firstRep = document.querySelector('input[name="repR"]');
+        if (firstRep) { firstRep.checked = true; toggleRepOther(firstRep); }
     } else {
         clr('dSearch', 'dProdIdx', 'dPack', 'dBatch', 'dQty', 'dMrp', 'dRemarks');
         resetDateSelects('dMfgMonth', 'dMfgYear'); resetDateSelects('dExpMonth', 'dExpYear');
         document.getElementById('dBadge').classList.remove('show');
-        document.querySelector('input[name="dmgR"][value="Broken"]').checked = true;
-        toggleDmgOther(document.querySelector('input[name="dmgR"][value="Broken"]'));
+        var firstDmg = document.querySelector('input[name="dmgR"]');
+        if (firstDmg) { firstDmg.checked = true; toggleDmgOther(firstDmg); }
         document.getElementById('dSearch').focus();
     }
 }
@@ -1044,6 +1145,7 @@ function toggleView(key) {
 function editRec(key) {
     var r = histData.find(function(x) { return x.key === key; }); if (!r) return;
     editingHistKey = key;
+    editingHistType = r.type || 'repacking';
     document.getElementById('histInfo').innerHTML = '<div><b>Ref:</b> ' + esc(r.ref || 'N/A') + '</div><div><b>Type:</b> ' + (r.type || 'repacking').toUpperCase() + '</div><div><b>Date:</b> ' + esc(r.date) + '</div>';
     var sel = document.getElementById('editAddProd');
     sel.innerHTML = products.length ? products.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + ' (' + esc(p.pack) + ') - ৳' + p.mrp + '</option>'; }).join('') : '<option value="">No products</option>';
@@ -1054,7 +1156,20 @@ function editRec(key) {
 function addHistRow(e) {
     var tbody = document.getElementById('editHistTableBody'), tr = document.createElement('tr'), sl = tbody.children.length + 1;
     var tv = (e.qty || 0) * (e.mrp || 0);
-    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="Dec-25"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="Nov-27"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-reason" value="' + esc(e.reason || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
+    
+    // Build Reason Dropdown based on editingHistType
+    var filteredReasons = reasons.filter(function(r) { return r.type === editingHistType; });
+    var reasonOptions = '<option value="">Select Reason</option>';
+    filteredReasons.forEach(function(r) {
+        var sel = (e.reason === r.name) ? 'selected' : '';
+        reasonOptions += '<option value="' + esc(r.name) + '" ' + sel + '>' + esc(r.name) + '</option>';
+    });
+    var otherSel = (e.reason && !filteredReasons.some(r => r.name === e.reason)) ? 'selected' : '';
+    if (otherSel) {
+        reasonOptions += '<option value="' + esc(e.reason) + '" selected>' + esc(e.reason) + '</option>';
+    }
+
+    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="Dec-25"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="Nov-27"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><select class="inp-reason">' + reasonOptions + '</select></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
     tbody.appendChild(tr);
 }
 function updateRowTotal(input) {
