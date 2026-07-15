@@ -190,7 +190,7 @@
         <button class="tab-btn" onclick="tab(2)"><i class="fa-solid fa-clock-rotate-left"></i>&nbsp; History</button>
         <button class="tab-btn" onclick="tab(3)"><i class="fa-solid fa-boxes-stacked"></i>&nbsp; Product</button>
         <button class="tab-btn" onclick="tab(4)"><i class="fa-solid fa-tags"></i>&nbsp; Reasons</button>
-        <button class="tab-btn" onclick="tab(5)"><i class="fa-solid fa-signature"></i>&nbsp; Signatures</button>
+        <button class="tab-btn" onclick="tab(5)"><i class="fa-solid fa-signature"></i>&nbsp; Signature</button>
     </div>
 
     <!-- TAB 0: DASHBOARD -->
@@ -478,8 +478,8 @@
     <!-- TAB 5: SIGNATURES -->
     <div class="tab-content" id="tab-5">
         <div class="sig-tab-content">
-            <h3 style="font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Upload Signatures</h3>
-            <p style="font-size:13px;color:#666;margin-bottom:30px;">Upload once. Signatures are auto-saved and will be used in all printed documents.</p>
+            <h3 style="font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Upload Signature</h3>
+            <p style="font-size:13px;color:#666;margin-bottom:30px;">Upload once. Signature is auto-saved and will be used in all printed documents.</p>
             
             <div style="display:flex;flex-wrap:wrap;gap:30px;justify-content:center;">
                 <div class="sig-upload-box">
@@ -492,18 +492,6 @@
                         <input type="file" accept="image/*" style="display:none" onchange="uploadSign('dic',this)">
                     </label>
                     <button class="btn btn-danger" id="dicSignRemove" style="display:none;width:100%;justify-content:center;margin-top:10px;" onclick="removeSign('dic')"><i class="fa-solid fa-xmark"></i> Remove</button>
-                </div>
-                
-                <div class="sig-upload-box">
-                    <i class="fa-solid fa-user-shield" style="font-size:32px;margin-bottom:10px;"></i>
-                    <h4 style="font-size:14px;font-weight:700;text-transform:uppercase;margin-bottom:15px;">Sr RSM Sign</h4>
-                    <img class="su-preview" id="srRsmSignThumb" style="width:100%;height:120px;object-fit:contain;border:1px solid #ccc;margin-bottom:15px;background:#fff;border-radius:6px;" alt="No signature">
-                    <span class="su-status" id="srRsmSignStatus" style="display:block;margin-bottom:10px;font-size:12px;font-weight:600;color:#888;"></span>
-                    <label class="btn btn-primary" style="width:100%;justify-content:center;cursor:pointer;">
-                        <i class="fa-solid fa-upload"></i> Upload
-                        <input type="file" accept="image/*" style="display:none" onchange="uploadSign('srRsm',this)">
-                    </label>
-                    <button class="btn btn-danger" id="srRsmSignRemove" style="display:none;width:100%;justify-content:center;margin-top:10px;" onclick="removeSign('srRsm')"><i class="fa-solid fa-xmark"></i> Remove</button>
                 </div>
             </div>
         </div>
@@ -568,7 +556,7 @@ var editingProductId = null;
 var editingReasonId = null;
 var editingHistKey = null;
 var editingHistType = 'repacking';
-var signatures = { dic: null, srRsm: null };
+var signatures = { dic: null };
 var csvData = [];
 var currentEntryType = 'repacking';
 
@@ -616,7 +604,6 @@ document.addEventListener('DOMContentLoaded', function() {
     db.ref('mp_signatures').on('value', function(snapshot) {
         var data = snapshot.val() || {};
         loadSignFromDB('dic', data.dic);
-        loadSignFromDB('srRsm', data.srRsm);
     });
 
     document.addEventListener('click', function(e) {
@@ -1157,7 +1144,6 @@ function addHistRow(e) {
     var tbody = document.getElementById('editHistTableBody'), tr = document.createElement('tr'), sl = tbody.children.length + 1;
     var tv = (e.qty || 0) * (e.mrp || 0);
     
-    // Build Reason Dropdown based on editingHistType
     var filteredReasons = reasons.filter(function(r) { return r.type === editingHistType; });
     var reasonOptions = '<option value="">Select Reason</option>';
     filteredReasons.forEach(function(r) {
@@ -1204,7 +1190,7 @@ function clearHist() { if (!histData.length) { msg('কিছু নেই', 'er
 function buildSignCell(label, imgSrc) {
     var imgHtml = imgSrc ? '<img src="' + imgSrc + '" style="max-height:50px;max-width:140px;display:block;margin:0 auto 4px">' : '';
     var gap = imgSrc ? '8px' : '55px';
-    return '<td style="width:25%;text-align:center;padding:10px 6px 0;border:none;vertical-align:bottom;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">' + imgHtml + '<div style="height:' + gap + '"></div><div style="border-top:1.5px solid #000;padding-top:5px">' + label + '</div></td>';
+    return '<td style="width:33.33%;text-align:center;padding:10px 6px 0;border:none;vertical-align:bottom;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">' + imgHtml + '<div style="height:' + gap + '"></div><div style="border-top:1.5px solid #000;padding-top:5px">' + label + '</div></td>';
 }
 
 function buildPrint(r) {
@@ -1254,10 +1240,8 @@ function buildPrint(r) {
 
     html += '<div style="margin-top:110px"><table style="width:100%;border:none;border-collapse:collapse"><tr>';
     html += buildSignCell('DIC', signatures.dic);
-    html += buildSignCell('Sr. RSM', signatures.srRsm);
     html += buildSignCell('PMD', null);
     html += buildSignCell('HO Operation', null);
-    html += buildSignCell('Central Warehouse', null);
     html += '</tr></table></div>';
     html += '</div>';
     return html;
