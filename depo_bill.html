@@ -1256,19 +1256,37 @@ function buildReportHTML(items,openingBalance,salesTPVAT,monthVal){
         balance+=salesAmt;
         html+=`<tr><td style="text-align:center">${monthDisplay}</td><td class="text-left"><strong>Sales TP+VAT</strong></td><td></td><td class="text-right"></td><td class="text-right">${fmt(salesAmt)}</td><td class="text-right"><strong>${fmt(balance)}</strong></td></tr>`
     }
-    [...items].sort((a,b)=>a.particular.localeCompare(b.particular)).forEach(i=>{
-        let debit='',credit='';
-        if(i.type==='Debit'){
-            debit=fmt(i.amount);
-            totalDebit+=i.amount;
-            balance-=i.amount
-        }else{
-            credit=fmt(i.amount);
-            totalCredit+=i.amount;
-            balance+=i.amount
+
+    // --- GROUPING LOGIC ---
+    // Group items by particular and type to avoid duplicate rows
+    const grouped = {};
+    [...items].forEach(i => {
+        const key = i.particular + '||' + i.type;
+        if (!grouped[key]) {
+            grouped[key] = { ...i, amount: 0, ref: '' };
         }
-        html+=`<tr><td style="text-align:center">${monthDisplay}</td><td class="text-left">${i.particular}</td><td style="text-align:center">${i.ref||''}</td><td class="text-right">${debit}</td><td class="text-right">${credit}</td><td class="text-right">${fmt(balance)}</td></tr>`
+        grouped[key].amount += parseFloat(i.amount);
+        if (i.ref) {
+            grouped[key].ref = grouped[key].ref ? grouped[key].ref + ', ' + i.ref : i.ref;
+        }
     });
+
+    Object.values(grouped)
+        .sort((a, b) => a.particular.localeCompare(b.particular))
+        .forEach(i => {
+            let debit='',credit='';
+            if(i.type==='Debit'){
+                debit=fmt(i.amount);
+                totalDebit+=i.amount;
+                balance-=i.amount
+            }else{
+                credit=fmt(i.amount);
+                totalCredit+=i.amount;
+                balance+=i.amount
+            }
+            html+=`<tr><td style="text-align:center">${monthDisplay}</td><td class="text-left">${i.particular}</td><td style="text-align:center">${i.ref||''}</td><td class="text-right">${debit}</td><td class="text-right">${credit}</td><td class="text-right">${fmt(balance)}</td></tr>`
+        });
+
     $('rptGrandTotalRow').innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:6px"><span><strong>Total Credit:</strong> ${fmt(totalCredit)}</span><span><strong>Total Debit:</strong> ${fmt(totalDebit)}</span></div><div style="display:flex;justify-content:space-between;border-top:2px solid #000;padding-top:6px;font-size:14px"><strong>Closing Balance</strong><strong>${fmt(balance)}</strong></div><div style="font-size:11px;color:#000;margin-top:4px;font-style:italic">(Check: ${fmt(parseFloat(openingBalance)||0)} + ${fmt(totalCredit)} - ${fmt(totalDebit)} = ${fmt(balance)})</div>`;
     return html
 }
@@ -1293,7 +1311,28 @@ window.viewSavedReport=rid=>{
     $('reportPaper').scrollIntoView({behavior:'smooth',block:'start'})
 };
 
-window.generateReport=async()=>{if(!isDic()){showToast('Only DIC can generate reports','error');return}const month=$('reportMonth').value;if(!month){showToast('Please select a month','error');return}if(monthHasReport(month)){showToast(getExistingReportForMonth(month).billNo+' already exists!','error');return}const filteredBills=bills.filter(b=>b.month===month);if(!filteredBills.length&&!bankDeposits.some(d=>d.month===month)){showToast('No bills or deposits for '+mn(month),'error');return}const btn=$('generateReportBtn'),bt=$('genBtnText');btn.disabled=true;bt.textContent='Generating...';try{const[y,m]=month.split('-');const ss=await getNextSerialForYearFromDB(y);const billNo='KS'+y+m+ss;const reEntry=reportEntries.find(e=>e.month===month);const openBal=reEntry?(parseFloat(reEntry.openingBalance)||0):0;const salesTPVAT=reEntry?(parseFloat(reEntry.salesTPVAT)||0):0;const depositsForMonth=bankDeposits.filter(d=>d.month===month);let reportItems=[];filteredBills.forEach(b=>{reportItems.push({particular:b.particular,type:b.type,amount:b.amount,category:b.category,ref:b.ref||''})});if(depositsForMonth.length>0){reportItems.push({particular:'Bank Deposit',type:'Debit',amount:depositsForMonth.reduce((s,d)=>s+d.amount,0),category:'Banking & Financial',ref:''});}let grandTotal=openBal+salesTPVAT;reportItems.forEach(b=>{if(b.type==='Credit')grandTotal+=b.amount;else grandTotal-=b.amount});await push(reportsRef,{billNo,month,openingBalance:openBal,salesTPVAT,grandTotal,items:reportItems,generatedAt:new Date().toISOString()});$('reportBillNo').value=billNo;$('rptMonthDisplay').textContent="For the Month of "+mn(month);$('rptBillNoDisplay').textContent="Bill No: "+billNo;$('rptTableBody').innerHTML=buildReportHTML(reportItems,openBal,salesTPVAT,month);$('rptInWords').textContent="Taka "+numberToWords(Math.floor(Math.abs(grandTotal)))+" Only";$('reportPaper').style.display='block';$('printBtnContainer').style.display='block';showToast('Report saved! '+billNo,'success');setTimeout(()=>$('reportPaper').scrollIntoView({behavior:'smooth',block:'start'}),200)}catch(e){console.error(e);showToast('Error generating report','error')}finally{btn.disabled=false;bt.textContent='Generate Report'}};
+window.generateReport=async()=>{if(!isDic()){showToast('Only DIC can generate reports','error');return}const month=$('reportMonth').value;if(!month){showToast('Please select a month','error');return}if(monthHasReport(month)){showToast(getExistingReportForMonth(month).billNo+' already exists!','error');return}const filteredBills=bills.filter(b=>b.month===month);if(!filteredBills.length&&!bankDeposits.some(d=>d.month===month)){showToast('No bills or deposits for '+mn(month),'error');return}const btn=$('generateReportBtn'),bt=$('genBtnText');btn.disabled=true;bt.textContent='Generating...';try{const[y,m]=month.split('-');const ss=await getNextSerialForYearFromDB(y);const billNo='KS'+y+m+ss;const reEntry=reportEntries.find(e=>e.month===month);const openBal=reEntry?(parseFloat(reEntry.openingBalance)||0):0;const salesTPVAT=reEntry?(parseFloat(reEntry.salesTPVAT)||0):0;const depositsForMonth=bankDeposits.filter(d=>d.month===month);
+    
+    let rawReportItems=[];
+    filteredBills.forEach(b=>{rawReportItems.push({particular:b.particular,type:b.type,amount:b.amount,category:b.category,ref:b.ref||''})});
+    if(depositsForMonth.length>0){rawReportItems.push({particular:'Bank Deposit',type:'Debit',amount:depositsForMonth.reduce((s,d)=>s+d.amount,0),category:'Banking & Financial',ref:''});}
+    
+    // --- GROUPING LOGIC BEFORE SAVING TO DB ---
+    const reportItems = [];
+    const groupMap = {};
+    rawReportItems.forEach(i => {
+        const key = i.particular + '||' + i.type;
+        if (!groupMap[key]) {
+            groupMap[key] = { ...i, amount: 0, ref: '' };
+            reportItems.push(groupMap[key]);
+        }
+        groupMap[key].amount += i.amount;
+        if (i.ref) {
+            groupMap[key].ref = groupMap[key].ref ? groupMap[key].ref + ', ' + i.ref : i.ref;
+        }
+    });
+
+    let grandTotal=openBal+salesTPVAT;reportItems.forEach(b=>{if(b.type==='Credit')grandTotal+=b.amount;else grandTotal-=b.amount});await push(reportsRef,{billNo,month,openingBalance:openBal,salesTPVAT,grandTotal,items:reportItems,generatedAt:new Date().toISOString()});$('reportBillNo').value=billNo;$('rptMonthDisplay').textContent="For the Month of "+mn(month);$('rptBillNoDisplay').textContent="Bill No: "+billNo;$('rptTableBody').innerHTML=buildReportHTML(reportItems,openBal,salesTPVAT,month);$('rptInWords').textContent="Taka "+numberToWords(Math.floor(Math.abs(grandTotal)))+" Only";$('reportPaper').style.display='block';$('printBtnContainer').style.display='block';showToast('Report saved! '+billNo,'success');setTimeout(()=>$('reportPaper').scrollIntoView({behavior:'smooth',block:'start'}),200)}catch(e){console.error(e);showToast('Error generating report','error')}finally{btn.disabled=false;bt.textContent='Generate Report'}};
 
 /* ===== TOP SHEET ===== */
 function getTopSheetSerialForYear(year){const pfx='TS'+year;let mx=0;topSheets.forEach(r=>{if(r.billNo&&r.billNo.startsWith(pfx)&&r.billNo.length===10){const s=parseInt(r.billNo.substring(8),10);if(!isNaN(s)&&s>mx)mx=s}});return String(mx+1).padStart(2,'0')}
@@ -1303,7 +1342,30 @@ function getExistingTopSheetForMonth(m){return topSheets.find(r=>r.month===m)}
 function monthHasTopSheet(m){return topSheets.some(r=>r.month===m)}
 function updateTopSheetBillNoPreview(){const m=$('topSheetMonth').value,sd=$('topSheetBillStatus'),ie=$('topSheetBillNo');if(!m){ie.value='TS??????';ie.className='';sd.style.display='none';$('generateTopSheetBtn').disabled=false;return}const ex=getExistingTopSheetForMonth(m);if(ex){ie.value=ex.billNo;ie.className='bill-exists';sd.style.display='flex';$('topSheetStatusDot').className='status-dot exists';$('topSheetStatusText').innerHTML=`<span style="color:var(--danger)">Already generated — Delete to regenerate</span>`;$('generateTopSheetBtn').disabled=true}else{ie.value=getTopSheetBillNoForMonth(m);ie.className='bill-ready';sd.style.display='flex';$('topSheetStatusDot').className='status-dot ready';$('topSheetStatusText').innerHTML='<span style="color:#15803d">Ready to generate</span>';$('generateTopSheetBtn').disabled=!isDic()}}
  $('topSheetMonth').addEventListener('change',updateTopSheetBillNoPreview);
-function buildTopSheetHTML(items,month){let totalDebit=0,sl=0;let shortDate='';if(month){const[y,m]=month.split('-');shortDate=new Date(y,m-1,1).toLocaleString('default',{month:'short'})+'-'+y.substring(2)}const debitItems=items.filter(i=>i.type==='Debit').sort((a,b)=>a.particular.localeCompare(b.particular));let html='';debitItems.forEach(i=>{sl++;totalDebit+=i.amount;html+=`<tr><td>${sl}</td><td style="text-align:center">${shortDate}</td><td class="text-left">${i.particular}</td><td style="text-align:center">${i.qty||1}</td><td class="text-right">${fmt(i.amount)}</td></tr>`});$('tsGrandTotalRow').innerHTML=`<div style="display:flex;justify-content:space-between;font-size:14px"><strong>Grand Total</strong><strong>${fmt(totalDebit)}</strong></div>`;return html}
+function buildTopSheetHTML(items,month){let totalDebit=0,sl=0;let shortDate='';if(month){const[y,m]=month.split('-');shortDate=new Date(y,m-1,1).toLocaleString('default',{month:'short'})+'-'+y.substring(2)}
+    
+    // --- GROUPING LOGIC ---
+    // Group items by particular to sum up multiple entries of the same particular
+    const grouped = {};
+    items.filter(i => i.type === 'Debit').forEach(i => {
+        if (!grouped[i.particular]) {
+            grouped[i.particular] = { ...i, amount: 0, qty: 0 };
+        }
+        grouped[i.particular].amount += parseFloat(i.amount);
+        grouped[i.particular].qty += (parseInt(i.qty) || 1);
+    });
+
+    let html='';
+    Object.values(grouped)
+        .sort((a, b) => a.particular.localeCompare(b.particular))
+        .forEach(i => {
+            sl++;
+            totalDebit+=i.amount;
+            html+=`<tr><td>${sl}</td><td style="text-align:center">${shortDate}</td><td class="text-left">${i.particular}</td><td style="text-align:center">${i.qty || 1}</td><td class="text-right">${fmt(i.amount)}</td></tr>`
+        });
+
+    $('tsGrandTotalRow').innerHTML=`<div style="display:flex;justify-content:space-between;font-size:14px"><strong>Grand Total</strong><strong>${fmt(totalDebit)}</strong></div>`;return html
+}
 function renderTopSheetHistory(){const c=$('topSheetHistoryList');$('topSheetHistoryCount').textContent=topSheets.length>0?'('+topSheets.length+')':'';if(!topSheets.length){c.innerHTML='<div class="empty-state">No top sheets generated yet</div>';return}c.innerHTML=topSheets.map(r=>{const d=r.generatedAt?new Date(r.generatedAt).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';return`<div class="history-item"><div><div class="history-billno">${r.billNo}</div><div class="history-meta">${mn(r.month)} &bull; ${d}</div></div><div style="display:flex;align-items:center;gap:12px"><span class="history-amount">${fmt(r.grandTotal)}</span><button class="action-btn" onclick="viewSavedTopSheet('${r.id}')" title="View">&#128065;</button>${isDic()?`<button class="action-btn delete" onclick="confirmDelete('topSheet','${r.id}')" title="Delete">&#10005;</button>`:''}</div></div>`}).join('')}
 
 window.viewSavedTopSheet=id=>{
@@ -1325,7 +1387,24 @@ window.viewSavedTopSheet=id=>{
     $('topSheetPaper').scrollIntoView({behavior:'smooth',block:'start'})
 };
 
-window.generateTopSheet=async()=>{if(!isDic()){showToast('Only DIC can generate top sheets','error');return}const month=$('topSheetMonth').value;if(!month){showToast('Please select a month','error');return}if(monthHasTopSheet(month)){showToast('Already exists! Delete it first.','error');return}const filteredBills=bills.filter(b=>b.month===month&&b.type==='Debit');if(!filteredBills.length){showToast('No Debit bills found for '+mn(month),'error');return}const btn=$('generateTopSheetBtn'),bt=$('topSheetGenBtnText');btn.disabled=true;bt.textContent='Generating...';try{const[y,m]=month.split('-');const ss=await getNextTopSheetSerialForYearFromDB(y);const billNo='TS'+y+m+ss;let topSheetItems=[];filteredBills.forEach(b=>{topSheetItems.push({particular:b.particular,type:b.type,amount:b.amount,qty:b.qty||1,category:b.category,ref:b.ref||''})});let grandTotal=0;topSheetItems.forEach(b=>{grandTotal+=b.amount});await push(topSheetsRef,{billNo,month,grandTotal,items:topSheetItems,generatedAt:new Date().toISOString()});$('topSheetBillNo').value=billNo;$('tsMonthDisplay').textContent="For the Month of "+mn(month);$('tsBillNoDisplay').textContent="Bill No: "+billNo;$('tsTableBody').innerHTML=buildTopSheetHTML(topSheetItems,month);$('tsInWords').textContent="Taka "+numberToWords(Math.floor(Math.abs(grandTotal)))+" Only";$('topSheetPaper').style.display='block';$('topSheetPrintBtnContainer').style.display='block';showToast('Top Sheet saved! '+billNo,'success');setTimeout(()=>$('topSheetPaper').scrollIntoView({behavior:'smooth',block:'start'}),200)}catch(e){console.error(e);showToast('Error generating top sheet','error')}finally{btn.disabled=false;bt.textContent='Generate Top Sheet'}};
+window.generateTopSheet=async()=>{if(!isDic()){showToast('Only DIC can generate top sheets','error');return}const month=$('topSheetMonth').value;if(!month){showToast('Please select a month','error');return}if(monthHasTopSheet(month)){showToast('Already exists! Delete it first.','error');return}const filteredBills=bills.filter(b=>b.month===month&&b.type==='Debit');if(!filteredBills.length){showToast('No Debit bills found for '+mn(month),'error');return}const btn=$('generateTopSheetBtn'),bt=$('topSheetGenBtnText');btn.disabled=true;bt.textContent='Generating...';try{const[y,m]=month.split('-');const ss=await getNextTopSheetSerialForYearFromDB(y);const billNo='TS'+y+m+ss;
+    
+    let rawTopSheetItems=[];
+    filteredBills.forEach(b=>{rawTopSheetItems.push({particular:b.particular,type:b.type,amount:b.amount,qty:b.qty||1,category:b.category,ref:b.ref||''})});
+    
+    // --- GROUPING LOGIC BEFORE SAVING TO DB ---
+    const topSheetItems = [];
+    const groupMap = {};
+    rawTopSheetItems.forEach(i => {
+        if (!groupMap[i.particular]) {
+            groupMap[i.particular] = { ...i, amount: 0, qty: 0 };
+            topSheetItems.push(groupMap[i.particular]);
+        }
+        groupMap[i.particular].amount += i.amount;
+        groupMap[i.particular].qty += (parseInt(i.qty) || 1);
+    });
+
+    let grandTotal=0;topSheetItems.forEach(b=>{grandTotal+=b.amount});await push(topSheetsRef,{billNo,month,grandTotal,items:topSheetItems,generatedAt:new Date().toISOString()});$('topSheetBillNo').value=billNo;$('tsMonthDisplay').textContent="For the Month of "+mn(month);$('tsBillNoDisplay').textContent="Bill No: "+billNo;$('tsTableBody').innerHTML=buildTopSheetHTML(topSheetItems,month);$('tsInWords').textContent="Taka "+numberToWords(Math.floor(Math.abs(grandTotal)))+" Only";$('topSheetPaper').style.display='block';$('topSheetPrintBtnContainer').style.display='block';showToast('Top Sheet saved! '+billNo,'success');setTimeout(()=>$('topSheetPaper').scrollIntoView({behavior:'smooth',block:'start'}),200)}catch(e){console.error(e);showToast('Error generating top sheet','error')}finally{btn.disabled=false;bt.textContent='Generate Top Sheet'}};
 
 /* ===== BANKING ===== */
 function populateBankDropdown(){const sel=$('depositBank');sel.innerHTML='<option value="" disabled selected>Select Bank</option>';banks.sort((a,b)=>a.name.localeCompare(b.name)).forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.name;sel.appendChild(o)})}
