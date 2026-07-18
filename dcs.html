@@ -135,21 +135,6 @@
             font-size: 11px; padding: 4px; box-sizing: border-box; resize: vertical; color: #000;
         }
 
-        .signature-section {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 60px;
-            padding-top: 5px;
-        }
-
-        .sig-col {
-            text-align: center;
-            width: 33%;
-            border-top: 1px solid #000;
-            padding-top: 5px;
-            font-weight: bold;
-        }
-
         .action-bar {
             text-align: right; margin: 10px 0 0 0; padding: 5px;
             border-top: 1px solid #808080; border-right: 1px solid #ffffff;
@@ -239,7 +224,7 @@
                 box-shadow: none !important;
             }
             
-            body, .form-header, .header-sub, .field-name, .field-value, .section-label, .sig-col, .win98-textarea { 
+            body, .form-header, .header-sub, .field-name, .field-value, .section-label, .win98-textarea { 
                 font-size: 12px !important;
                 line-height: 1.4 !important;
             }
@@ -304,14 +289,6 @@
             }
             .header-sub, .header-info { 
                 border: 1px solid #000 !important;
-                background-color: #fff !important;
-            }
-            
-            .signature-section { margin-top: 40px !important; }
-            .sig-col { 
-                border-top: 1px solid #000 !important; 
-                border-left: none !important; 
-                border-right: none !important; 
                 background-color: #fff !important;
             }
             
@@ -381,20 +358,24 @@
         </div>
     </div>
 
+    <!-- Productivity Frame -->
+    <div class="section-frame" style="cursor: default; margin-bottom: 15px;">
+        <div class="section-label">Productivity (Month Total TP / Total Open MPO)</div>
+        <table class="data-table">
+            <tr>
+                <td class="field-name">Total Productivity</td>
+                <td class="field-value" id="d-productivity" style="font-weight: bold;">Tk. 0</td>
+            </tr>
+        </table>
+    </div>
+
     <!-- Remarks Frame -->
     <div class="section-frame">
         <div class="section-label">Remarks</div>
         <textarea id="remarks-box" class="win98-textarea" placeholder="Enter your remarks here..."></textarea>
     </div>
 
-    <div class="signature-section">
-        <div class="sig-col">Prepared by DIC</div>
-        <div class="sig-col">Rechecked by Sr RSM/RSM</div>
-        <div class="sig-col">Verified by PMD Manager</div>
-    </div>
-
     <div class="action-bar">
-        <!-- Changed to call custom printReport() function -->
         <button class="win98-btn" onclick="printReport()">🖨️ Print Report</button>
     </div>
 </div>
@@ -498,6 +479,8 @@
                 }
                 
                 document.getElementById('remarks-box').value = data.remarks || '';
+                
+                calculateProductivity(); // Calculate productivity on load
             }
             renderPrevMonthsTable();
         } catch (error) {
@@ -572,6 +555,21 @@
         let salesVat = extractNum(document.getElementById('d-sales-month-vat').innerText);
         let collTotal = extractNum(document.getElementById('d-coll-current-total').innerText);
         document.getElementById('d-coll-current-outstanding').innerText = formatTk(salesVat - collTotal);
+    }
+
+    // Calculate Productivity: Month Total (TP) / Total Open MPO
+    function calculateProductivity() {
+        let monthTotalTP = extractNum(document.getElementById('d-sales-month').innerText);
+        let totalOpenMPO = extractNum(document.getElementById('d-mpo-total').innerText);
+        
+        let productivity = 0;
+        if (totalOpenMPO > 0) {
+            productivity = monthTotalTP / totalOpenMPO;
+        }
+        
+        // Format to 2 decimal places
+        let formattedProductivity = Number(productivity.toFixed(2)).toLocaleString('en-IN');
+        document.getElementById('d-productivity').innerText = "Tk. " + formattedProductivity;
     }
 
     function openModal(section) {
@@ -684,6 +682,7 @@
             ['d-mpo-today', 'd-mpo-total', 'd-am-total', 'd-rsm'].forEach(id => {
                 document.getElementById(id).innerText = document.getElementById(`input-${id}`).value;
             });
+            calculateProductivity(); // Update productivity when MPO changes
         } 
         else if (currentSection === 'sales') {
             ['d-sales-today', 'd-sales-vat', 'd-sales-month', 'd-sales-month-vat'].forEach(id => {
@@ -691,6 +690,7 @@
                 document.getElementById(id).innerText = formatTk(val);
             });
             calculateCurrentOutstanding();
+            calculateProductivity(); // Update productivity when Sales change
         } 
         else if (currentSection === 'coll_current') {
             let todayVal = parseFloat(document.getElementById('input-d-coll-today').value) || 0;
