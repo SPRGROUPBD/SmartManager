@@ -119,6 +119,8 @@
         
         .edit-hist-table input,.edit-hist-table select{width:100%;padding:6px 8px;border:1px solid #ccc;font-family:'Inter',sans-serif;font-size:12px;box-sizing:border-box}
         .edit-hist-table input:focus,.edit-hist-table select:focus{border-color:#000;outline:none}
+        .edit-hist-table input.inp-mfg, .edit-hist-table input.inp-exp { text-transform: uppercase; }
+        
         .import-section{margin-top:18px;padding-top:18px;border-top:1.5px solid #000}
         .import-section .form-hint{font-size:11px;color:#666;margin-bottom:10px;line-height:1.6}
         .csv-preview-box{margin-top:10px;max-height:150px;overflow-y:auto;border:1.5px solid #ccc;padding:8px;font-size:11px;background:#fafafa;line-height:1.8;border-radius:6px}
@@ -262,29 +264,11 @@
                     <div class="form-group"><label>Batch No *</label><input type="text" id="fBatch" placeholder="e.g. 231225"></div>
                     <div class="form-group">
                         <label>Manufacture Date *</label>
-                        <div class="date-row">
-                            <select id="fMfgMonth" class="date-month-sel">
-                                <option value="">Month</option>
-                                <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option>
-                                <option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
-                            </select>
-                            <select id="fMfgYear" class="date-year-sel yr-sel">
-                                <option value="">Year</option>
-                            </select>
-                        </div>
+                        <input type="text" id="fMfgDate" placeholder="e.g. DEC-25" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group">
                         <label>Expiry Date *</label>
-                        <div class="date-row">
-                            <select id="fExpMonth" class="date-month-sel">
-                                <option value="">Month</option>
-                                <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option>
-                                <option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
-                            </select>
-                            <select id="fExpYear" class="date-year-sel yr-sel">
-                                <option value="">Year</option>
-                            </select>
-                        </div>
+                        <input type="text" id="fExpDate" placeholder="e.g. NOV-27" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group"><label>Repacking Qty *</label><input type="number" id="fQty" placeholder="0" min="0"></div>
                     <div class="form-group"><label>MRP (৳)</label><input type="text" id="fMrp" readonly></div>
@@ -343,29 +327,11 @@
                     <div class="form-group"><label>Batch No *</label><input type="text" id="dBatch" placeholder="e.g. 231225"></div>
                     <div class="form-group">
                         <label>Manufacture Date *</label>
-                        <div class="date-row">
-                            <select id="dMfgMonth" class="date-month-sel">
-                                <option value="">Month</option>
-                                <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option>
-                                <option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
-                            </select>
-                            <select id="dMfgYear" class="date-year-sel yr-sel">
-                                <option value="">Year</option>
-                            </select>
-                        </div>
+                        <input type="text" id="dMfgDate" placeholder="e.g. DEC-25" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group">
                         <label>Expiry Date *</label>
-                        <div class="date-row">
-                            <select id="dExpMonth" class="date-month-sel">
-                                <option value="">Month</option>
-                                <option>Jan</option><option>Feb</option><option>Mar</option><option>Apr</option><option>May</option><option>Jun</option>
-                                <option>Jul</option><option>Aug</option><option>Sep</option><option>Oct</option><option>Nov</option><option>Dec</option>
-                            </select>
-                            <select id="dExpYear" class="date-year-sel yr-sel">
-                                <option value="">Year</option>
-                            </select>
-                        </div>
+                        <input type="text" id="dExpDate" placeholder="e.g. NOV-27" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group"><label>Damage Qty *</label><input type="number" id="dQty" placeholder="0" min="0"></div>
                     <div class="form-group"><label>MRP (৳)</label><input type="text" id="dMrp" readonly></div>
@@ -508,7 +474,6 @@
         <div style="margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Entries</div>
             <div style="display:flex;gap:10px;align-items:flex-end">
-                <!-- Updated to Search Option -->
                 <div class="form-group" style="margin:0;min-width:280px">
                     <label style="font-size:10px">Add Product</label>
                     <div class="ss-wrap" id="ssWrapE">
@@ -571,7 +536,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var n = new Date();
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     document.getElementById('headerDate').textContent = 'Date: ' + String(n.getDate()).padStart(2,'0') + '-' + months[n.getMonth()] + '-' + String(n.getFullYear()).slice(-2);
-    populateYearSelects();
 
     db.ref('mp_products').on('value', function(snapshot) {
         var data = snapshot.val() || {};
@@ -706,20 +670,6 @@ function msg(t, type) {
     void e.offsetWidth; e.classList.add('show');
     clearTimeout(_tt); _tt = setTimeout(function() { e.classList.remove('show'); }, 2800);
 }
-
-function populateYearSelects() {
-    document.querySelectorAll('.date-year-sel').forEach(function(sel) {
-        for (var y = 2020; y <= 2035; y++) {
-            var opt = document.createElement('option'); opt.value = String(y).slice(-2); opt.textContent = y; sel.appendChild(opt);
-        }
-    });
-}
-
-function getDateVal(mId, yId) {
-    var m = document.getElementById(mId).value, y = document.getElementById(yId).value;
-    return (m && y) ? m + '-' + y : '';
-}
-function resetDateSelects(mId, yId) { document.getElementById(mId).value = ''; document.getElementById(yId).value = ''; }
 
 function uploadSign(type, input) {
     var file = input.files[0]; if (!file) return;
@@ -898,7 +848,6 @@ function ssPick(type, id) {
     var badge = document.getElementById(px + 'Badge'); badge.textContent = p.pack; badge.classList.add('show');
     ssClose(type);
     
-    // Only set pack and mrp for main forms (R, D), not for edit modal (E)
     if (type !== 'E') {
         document.getElementById(px + 'Pack').value = p.pack;
         document.getElementById(px + 'Mrp').value = p.mrp;
@@ -920,7 +869,6 @@ function ssHighlight(type, items) {
     if (ssHLIdx[type] >= 0) items[ssHLIdx[type]].scrollIntoView({ block: 'nearest' });
 }
 
-/* Reasons CRUD */
 function resetReasonEditBtn() { editingReasonId = null; var btn = document.getElementById('rSaveBtn'); btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Reason'; btn.onclick = addReason; }
 function addReason() {
     var name = document.getElementById('rName').value.trim(), type = document.getElementById('rType').value;
@@ -962,7 +910,6 @@ function drawReasons() {
     w.innerHTML = h + '</tbody></table>';
 }
 
-/* Products CRUD */
 function resetEditBtn() { editingProductId = null; var btn = document.getElementById('pSaveBtn'); btn.innerHTML = '<i class="fa-solid fa-plus"></i>&nbsp; Add Product'; btn.onclick = addProduct; }
 function addProduct() {
     var name = document.getElementById('pName').value.trim(), pack = document.getElementById('pPack').value.trim(), mrp = parseFloat(document.getElementById('pMrp').value) || 0;
@@ -1009,14 +956,12 @@ function drawProducts() {
 
 function clearForm(px) {
     if (px === 'f') {
-        clr('fSearch', 'fProdIdx', 'fPack', 'fBatch', 'fQty', 'fMrp', 'fRemarks');
-        resetDateSelects('fMfgMonth', 'fMfgYear'); resetDateSelects('fExpMonth', 'fExpYear');
+        clr('fSearch', 'fProdIdx', 'fPack', 'fBatch', 'fQty', 'fMrp', 'fRemarks', 'fMfgDate', 'fExpDate');
         document.getElementById('fBadge').classList.remove('show'); document.getElementById('fSearch').focus();
         var firstRep = document.querySelector('input[name="repR"]');
         if (firstRep) { firstRep.checked = true; toggleRepOther(firstRep); }
     } else {
-        clr('dSearch', 'dProdIdx', 'dPack', 'dBatch', 'dQty', 'dMrp', 'dRemarks');
-        resetDateSelects('dMfgMonth', 'dMfgYear'); resetDateSelects('dExpMonth', 'dExpYear');
+        clr('dSearch', 'dProdIdx', 'dPack', 'dBatch', 'dQty', 'dMrp', 'dRemarks', 'dMfgDate', 'dExpDate');
         document.getElementById('dBadge').classList.remove('show');
         var firstDmg = document.querySelector('input[name="dmgR"]');
         if (firstDmg) { firstDmg.checked = true; toggleDmgOther(firstDmg); }
@@ -1031,12 +976,13 @@ function addEntry(type) {
     var p = products.find(function(x) { return x.id === id; });
     if (!p) { msg('প্রোডাক্ট পাওয়া যায়নি', 'err'); clearForm(px); return; }
     var batch = document.getElementById(px + 'Batch').value.trim();
-    var mfg = getDateVal(px + 'MfgMonth', px + 'MfgYear');
-    var exp = getDateVal(px + 'ExpMonth', px + 'ExpYear');
+    // Ensuring values are converted to uppercase permanently
+    var mfg = document.getElementById(px + 'MfgDate').value.trim().toUpperCase();
+    var exp = document.getElementById(px + 'ExpDate').value.trim().toUpperCase();
     var qty = parseInt(document.getElementById(px + 'Qty').value) || 0;
     if (!batch) { msg('Batch No দিন', 'err'); document.getElementById(px + 'Batch').focus(); return; }
-    if (!mfg) { msg('Manufacture Date সিলেক্ট করুন', 'err'); return; }
-    if (!exp) { msg('Expiry Date সিলেক্ট করুন', 'err'); return; }
+    if (!mfg) { msg('Manufacture Date দিন', 'err'); return; }
+    if (!exp) { msg('Expiry Date দিন', 'err'); return; }
     if (qty <= 0) { msg('Quantity দিন', 'err'); document.getElementById(px + 'Qty').focus(); return; }
 
     var reason = '', remarks = '';
@@ -1154,7 +1100,6 @@ function editRec(key) {
     editingHistType = r.type || 'repacking';
     document.getElementById('histInfo').innerHTML = '<div><b>Ref:</b> ' + esc(r.ref || 'N/A') + '</div><div><b>Type:</b> ' + (r.type || 'repacking').toUpperCase() + '</div><div><b>Date:</b> ' + esc(r.date) + '</div>';
     
-    // Clear search box on open
     document.getElementById('eSearch').value = '';
     document.getElementById('eProdIdx').value = '';
     document.getElementById('eBadge').classList.remove('show');
@@ -1178,7 +1123,7 @@ function addHistRow(e) {
         reasonOptions += '<option value="' + esc(e.reason) + '" selected>' + esc(e.reason) + '</option>';
     }
 
-    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="Dec-25"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="Nov-27"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><select class="inp-reason">' + reasonOptions + '</select></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
+    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="DEC-25" oninput="this.value = this.value.toUpperCase();"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="NOV-27" oninput="this.value = this.value.toUpperCase();"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><select class="inp-reason">' + reasonOptions + '</select></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
     tbody.appendChild(tr);
 }
 function updateRowTotal(input) {
@@ -1194,7 +1139,6 @@ function addRowToHist() {
     if (!p) return;
     addHistRow({ product: p.name, packSize: p.pack, batch: '', mfgDate: '', expDate: '', qty: 0, mrp: p.mrp, reason: '', remarks: '' });
     
-    // Clear search after adding
     document.getElementById('eSearch').value = '';
     document.getElementById('eProdIdx').value = '';
     document.getElementById('eBadge').classList.remove('show');
@@ -1204,7 +1148,7 @@ function saveHistUpdate() {
     if (!editingHistKey) return;
     var rows = document.getElementById('editHistTableBody').querySelectorAll('tr'), ue = [], ok = true, em = '';
     for (var i = 0; i < rows.length; i++) {
-        var r = rows[i], b = r.querySelector('.inp-batch').value.trim(), m = r.querySelector('.inp-mfg').value.trim(), x = r.querySelector('.inp-exp').value.trim(), q = parseInt(r.querySelector('.inp-qty').value) || 0;
+        var r = rows[i], b = r.querySelector('.inp-batch').value.trim(), m = r.querySelector('.inp-mfg').value.trim().toUpperCase(), x = r.querySelector('.inp-exp').value.trim().toUpperCase(), q = parseInt(r.querySelector('.inp-qty').value) || 0;
         if (!b) { ok = false; em = 'Batch No খালি (SL: ' + (i + 1) + ')'; break; }
         if (!m) { ok = false; em = 'Mfg Date খালি (SL: ' + (i + 1) + ')'; break; }
         if (!x) { ok = false; em = 'Exp Date খালি (SL: ' + (i + 1) + ')'; break; }
