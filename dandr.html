@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monico Pharma Ltd - Depot Management</title>
+    <title>Monico Pharma Ltd - Damage & Repacking Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -177,7 +177,7 @@
     <div class="company-header">
         <div class="ch-top">
             <div class="ch-name">Monico Pharma Ltd</div>
-            <div class="ch-badge">Depot Management</div>
+            <div class="ch-badge">Damage & Repacking Management</div>
         </div>
         <div class="ch-depot">Kushtia Depot</div>
         <div class="ch-addr">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>
@@ -500,6 +500,7 @@
 
 <div id="printArea"></div>
 
+<!-- EDIT HISTORY MODAL -->
 <div class="modal-overlay" id="editHistMod">
     <div class="modal-box large">
         <h3><i class="fa-solid fa-pen-to-square"></i>&nbsp; Edit History Record</h3>
@@ -507,9 +508,15 @@
         <div style="margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
             <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:1px">Entries</div>
             <div style="display:flex;gap:10px;align-items:flex-end">
-                <div class="form-group" style="margin:0">
+                <!-- Updated to Search Option -->
+                <div class="form-group" style="margin:0;min-width:280px">
                     <label style="font-size:10px">Add Product</label>
-                    <select id="editAddProd" style="padding:8px 10px;border:1.5px solid #000;font-size:12px;min-width:200px"></select>
+                    <div class="ss-wrap" id="ssWrapE">
+                        <input type="text" class="ss-input" id="eSearch" placeholder="Type to search product..." autocomplete="off" onfocus="ssOpen('E')" oninput="ssFilter('E')">
+                        <span class="ss-badge" id="eBadge"></span>
+                        <div class="ss-list" id="eList"></div>
+                    </div>
+                    <input type="hidden" id="eProdIdx" value="">
                 </div>
                 <button class="btn btn-primary btn-sm" onclick="addRowToHist()"><i class="fa-solid fa-plus"></i> Add Row</button>
             </div>
@@ -551,7 +558,7 @@ var histData = [];
 var reasons = [];
 var refR = 0, refD = 0;
 var sessR = [], sessD = [];
-var ssHLIdx = {R:-1, D:-1};
+var ssHLIdx = {R:-1, D:-1, E:-1};
 var editingProductId = null;
 var editingReasonId = null;
 var editingHistKey = null;
@@ -573,6 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
         drawDashboard();
         if (document.getElementById('fList').classList.contains('open')) ssBuildList('R');
         if (document.getElementById('dList').classList.contains('open')) ssBuildList('D');
+        if (document.getElementById('eList').classList.contains('open')) ssBuildList('E');
     });
 
     db.ref('mp_history').on('value', function(snapshot) {
@@ -607,10 +615,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.ss-wrap')) { ssClose('R'); ssClose('D'); }
+        if (!e.target.closest('.ss-wrap')) { ssClose('R'); ssClose('D'); ssClose('E'); }
     });
     document.getElementById('fSearch').addEventListener('keydown', function(e) { ssKey(e, 'R'); });
     document.getElementById('dSearch').addEventListener('keydown', function(e) { ssKey(e, 'D'); });
+    document.getElementById('eSearch').addEventListener('keydown', function(e) { ssKey(e, 'E'); });
 });
 
 function seedDefaultReasons() {
@@ -861,8 +870,8 @@ function drawDashboard() {
 }
 
 function ssBuildList(type) {
-    var inputId = type === 'R' ? 'fSearch' : 'dSearch';
-    var listId = type === 'R' ? 'fList' : 'dList';
+    var inputId = type === 'R' ? 'fSearch' : type === 'D' ? 'dSearch' : 'eSearch';
+    var listId = type === 'R' ? 'fList' : type === 'D' ? 'dList' : 'eList';
     var q = document.getElementById(inputId).value.trim().toLowerCase();
     var el = document.getElementById(listId); ssHLIdx[type] = -1;
     if (!products.length) { el.innerHTML = '<div class="ss-empty">No products found.</div>'; el.classList.add('open'); return; }
@@ -876,19 +885,29 @@ function ssBuildList(type) {
 }
 function ssOpen(type) { ssBuildList(type); }
 function ssFilter(type) { ssBuildList(type); }
-function ssClose(type) { document.getElementById(type === 'R' ? 'fList' : 'dList').classList.remove('open'); ssHLIdx[type] = -1; }
+function ssClose(type) { 
+    var listId = type === 'R' ? 'fList' : type === 'D' ? 'dList' : 'eList';
+    document.getElementById(listId).classList.remove('open'); 
+    ssHLIdx[type] = -1; 
+}
 function ssPick(type, id) {
     var p = products.find(function(x) { return x.id === id; }); if (!p) return;
-    var px = type === 'R' ? 'f' : 'd';
+    var px = type === 'R' ? 'f' : type === 'D' ? 'd' : 'e';
     document.getElementById(px + 'Search').value = p.name;
     document.getElementById(px + 'ProdIdx').value = id;
-    document.getElementById(px + 'Pack').value = p.pack;
-    document.getElementById(px + 'Mrp').value = p.mrp;
     var badge = document.getElementById(px + 'Badge'); badge.textContent = p.pack; badge.classList.add('show');
-    ssClose(type); document.getElementById(px + 'Batch').focus();
+    ssClose(type);
+    
+    // Only set pack and mrp for main forms (R, D), not for edit modal (E)
+    if (type !== 'E') {
+        document.getElementById(px + 'Pack').value = p.pack;
+        document.getElementById(px + 'Mrp').value = p.mrp;
+        document.getElementById(px + 'Batch').focus();
+    }
 }
 function ssKey(e, type) {
-    var el = document.getElementById(type === 'R' ? 'fList' : 'dList');
+    var listId = type === 'R' ? 'fList' : type === 'D' ? 'dList' : 'eList';
+    var el = document.getElementById(listId);
     var items = el.querySelectorAll('.ss-item');
     if (!el.classList.contains('open') || !items.length) { ssOpen(type); return; }
     if (e.key === 'ArrowDown') { e.preventDefault(); ssHLIdx[type] = Math.min(ssHLIdx[type] + 1, items.length - 1); ssHighlight(type, items); }
@@ -1134,8 +1153,12 @@ function editRec(key) {
     editingHistKey = key;
     editingHistType = r.type || 'repacking';
     document.getElementById('histInfo').innerHTML = '<div><b>Ref:</b> ' + esc(r.ref || 'N/A') + '</div><div><b>Type:</b> ' + (r.type || 'repacking').toUpperCase() + '</div><div><b>Date:</b> ' + esc(r.date) + '</div>';
-    var sel = document.getElementById('editAddProd');
-    sel.innerHTML = products.length ? products.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + ' (' + esc(p.pack) + ') - ৳' + p.mrp + '</option>'; }).join('') : '<option value="">No products</option>';
+    
+    // Clear search box on open
+    document.getElementById('eSearch').value = '';
+    document.getElementById('eProdIdx').value = '';
+    document.getElementById('eBadge').classList.remove('show');
+    
     var tbody = document.getElementById('editHistTableBody'); tbody.innerHTML = '';
     (Array.isArray(r.entries) ? r.entries : []).forEach(function(e) { addHistRow(e); });
     document.getElementById('editHistMod').classList.add('show');
@@ -1165,9 +1188,17 @@ function updateRowTotal(input) {
     row.querySelector('.inp-total').textContent = qty * mrp;
 }
 function addRowToHist() {
-    var id = document.getElementById('editAddProd').value; if (!id) { msg('No product', 'err'); return; }
-    var p = products.find(function(x) { return x.id === id; }); if (!p) return;
+    var id = document.getElementById('eProdIdx').value; 
+    if (!id) { msg('প্রোডাক্ট সিলেক্ট করুন', 'err'); document.getElementById('eSearch').focus(); return; }
+    var p = products.find(function(x) { return x.id === id; }); 
+    if (!p) return;
     addHistRow({ product: p.name, packSize: p.pack, batch: '', mfgDate: '', expDate: '', qty: 0, mrp: p.mrp, reason: '', remarks: '' });
+    
+    // Clear search after adding
+    document.getElementById('eSearch').value = '';
+    document.getElementById('eProdIdx').value = '';
+    document.getElementById('eBadge').classList.remove('show');
+    document.getElementById('eSearch').focus();
 }
 function saveHistUpdate() {
     if (!editingHistKey) return;
