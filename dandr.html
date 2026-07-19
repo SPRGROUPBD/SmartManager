@@ -35,7 +35,6 @@
         
         .entry-form{padding:24px 28px}
         .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
-        .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
         .form-group{display:flex;flex-direction:column;gap:5px}
         .form-group label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#000}
         .form-group input,.form-group select{padding:10px 12px;border:1.5px solid #000;font-family:'Inter',sans-serif;font-size:13px;color:#000;background:#fff;outline:none;border-radius:6px;transition:all .2s}
@@ -569,11 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     db.ref('mp_products').on('value', function(snapshot) {
         var data = snapshot.val() || {};
-        products = Object.keys(data).map(function(key) { 
-            return Object.assign({ id: key }, data[key]); 
-        }).sort(function(a, b) {
-            return a.name.localeCompare(b.name);
-        });
+        products = Object.keys(data).map(function(key) { return Object.assign({ id: key }, data[key]); });
         drawProducts();
         drawDashboard();
         if (document.getElementById('fList').classList.contains('open')) ssBuildList('R');
@@ -586,10 +581,6 @@ document.addEventListener('DOMContentLoaded', function() {
             histData = Object.keys(data).map(function(key) {
                 var item = Object.assign({ key: key }, data[key]);
                 if (!Array.isArray(item.entries)) item.entries = [];
-                
-                item.entries.sort(function(a, b) {
-                    return (a.product || '').localeCompare(b.product || '');
-                });
                 return item;
             }).sort(function(a, b) {
                 return (b.id || parseInt(b.key) || 0) - (a.id || parseInt(a.key) || 0);
@@ -1174,46 +1165,117 @@ function updateRowTotal(input) {
     row.querySelector('.inp-total').textContent = qty * mrp;
 }
 function addRowToHist() {
-    var id = document.getElementById('editAddProd').value; if (!id) { msg('No product selected', 'err'); return; }
+    var id = document.getElementById('editAddProd').value; if (!id) { msg('No product', 'err'); return; }
     var p = products.find(function(x) { return x.id === id; }); if (!p) return;
     addHistRow({ product: p.name, packSize: p.pack, batch: '', mfgDate: '', expDate: '', qty: 0, mrp: p.mrp, reason: '', remarks: '' });
 }
 function saveHistUpdate() {
     if (!editingHistKey) return;
-    var entries = [];
-    var rows = document.getElementById('editHistTableBody').querySelectorAll('tr');
+    var rows = document.getElementById('editHistTableBody').querySelectorAll('tr'), ue = [], ok = true, em = '';
     for (var i = 0; i < rows.length; i++) {
-        var r = rows[i];
-        var prod = r.cells[1].textContent.trim();
-        var pack = r.cells[2].textContent.trim();
-        var batch = r.querySelector('.inp-batch').value.trim();
-        var mfg = r.querySelector('.inp-mfg').value.trim();
-        var exp = r.querySelector('.inp-exp').value.trim();
-        var qty = parseInt(r.querySelector('.inp-qty').value) || 0;
-        var mrp = parseFloat(r.cells[7].textContent.trim()) || 0;
-        var reason = r.querySelector('.inp-reason').value;
-        var remarks = r.querySelector('.inp-remarks').value.trim();
-        
-        if (!batch || !mfg || !exp || qty <= 0) { msg('Row ' + (i+1) + ': সব ঘর ঠিকভাবে পূরণ করুন', 'err'); return; }
-        entries.push({ product: prod, packSize: pack, batch: batch, mfgDate: mfg, expDate: exp, qty: qty, mrp: mrp, reason: reason, remarks: remarks });
+        var r = rows[i], b = r.querySelector('.inp-batch').value.trim(), m = r.querySelector('.inp-mfg').value.trim(), x = r.querySelector('.inp-exp').value.trim(), q = parseInt(r.querySelector('.inp-qty').value) || 0;
+        if (!b) { ok = false; em = 'Batch No খালি (SL: ' + (i + 1) + ')'; break; }
+        if (!m) { ok = false; em = 'Mfg Date খালি (SL: ' + (i + 1) + ')'; break; }
+        if (!x) { ok = false; em = 'Exp Date খালি (SL: ' + (i + 1) + ')'; break; }
+        if (q <= 0) { ok = false; em = 'Quantity সঠিক নয় (SL: ' + (i + 1) + ')'; break; }
+        ue.push({ product: r.cells[1].textContent.trim(), packSize: r.cells[2].textContent.trim(), batch: b, mfgDate: m, expDate: x, qty: q, mrp: parseFloat(r.cells[7].textContent.trim()) || 0, reason: r.querySelector('.inp-reason').value.trim(), remarks: r.querySelector('.inp-remarks').value.trim() });
     }
-    
-    entries.sort(function(a, b) {
-        return a.product.localeCompare(b.product);
-    });
+    if (!ok) { msg(em, 'err'); return; }
+    if (!ue.length) { msg('অন্তত একটি এন্ট্রি থাকতে হবে', 'err'); return; }
+    db.ref('mp_history/' + editingHistKey).update({ entries: ue }).then(function() { document.getElementById('editHistMod').classList.remove('show'); msg('রেকর্ড আপডেট হয়েছে', 'ok'); }).catch(function(err) { msg('আপডেট ব্যর্থ: ' + err.message, 'err'); });
+}
+function delRec(key) { if (!confirm('মুছবেন?')) return; db.ref('mp_history/' + key).remove().then(function() { msg('মুছে ফেলা হয়েছে', 'ok'); }); }
+function clearHist() { if (!histData.length) { msg('কিছু নেই', 'err'); return; } if (!confirm('সব রেকর্ড মুছবেন?')) return; db.ref('mp_history').remove().then(function() { msg('সব মুছে ফেলা হয়েছে', 'ok'); }); }
 
-    db.ref('mp_history/' + editingHistKey + '/entries').set(entries).then(function() {
-        document.getElementById('editHistMod').classList.remove('show');
-        msg('রেকর্ড আপডেট ও A-Z সর্ট করা হয়েছে', 'ok');
+function buildSignCell(label, imgSrc) {
+    var imgHtml = imgSrc ? '<img src="' + imgSrc + '" style="max-height:50px;max-width:140px;display:block;margin:0 auto 4px">' : '';
+    var gap = imgSrc ? '8px' : '55px';
+    return '<td style="width:33.33%;text-align:center;padding:10px 6px 0;border:none;vertical-align:bottom;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">' + imgHtml + '<div style="height:' + gap + '"></div><div style="border-top:1.5px solid #000;padding-top:5px">' + label + '</div></td>';
+}
+
+function buildPrint(r) {
+    var type = r.type || 'repacking', ref = r.ref || 'N/A';
+    var sheetTitle = type === 'damage' ? 'DAMAGE SHEET' : 'REPACKING SHEET';
+    var entries = Array.isArray(r.entries) ? r.entries : [];
+    var date = r.date || '';
+
+    var html = '<div style="font-family:Inter,sans-serif;color:#000;padding:20px;max-width:1000px;margin:0 auto">';
+    html += '<div style="text-align:center;border:2px solid #000;padding:20px 24px">';
+    html += '<div style="font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:2px">MONICO PHARMA LTD</div>';
+    html += '<div style="font-size:14px;font-weight:700;margin-top:6px">Kushtia Depot</div>';
+    html += '<div style="font-size:11px;margin-top:2px;color:#333">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</div>';
+    html += '<div style="margin-top:12px;font-size:16px;font-weight:800;text-transform:uppercase;letter-spacing:2px;border:2px solid #000;display:inline-block;padding:6px 24px">' + sheetTitle + '</div>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;border:2px solid #000;border-top:none;padding:10px 16px;font-size:12px;font-weight:600">';
+    html += '<div>Ref: <span style="font-family:JetBrains Mono,monospace;letter-spacing:.5px">' + esc(ref) + '</span></div>';
+    html += '<div>Date: ' + esc(date) + '</div>';
+    html += '</div>';
+
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<thead><tr>';
+    ['SL','Product','Pack Size','Batch No','Mfg Date','Exp Date','Qty','MRP (৳)','Total Value (৳)','Reason','Remarks'].forEach(function(th, idx) {
+        var al = idx === 1 ? 'left' : 'center';
+        html += '<th style="padding:9px 8px;border:1.5px solid #000;background:#000;color:#fff;font-size:11px;font-weight:700;text-align:' + al + '">' + th + '</th>';
     });
+    html += '</tr></thead><tbody>';
+    var grandTotal = 0;
+    entries.forEach(function(e, i) {
+        var tv = (e.qty || 0) * (e.mrp || 0); grandTotal += tv;
+        html += '<tr>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + String(i + 1).padStart(2, '0') + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:left;font-weight:600">' + esc(e.product) + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.packSize) + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.batch) + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.mfgDate) + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.expDate) + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + e.qty + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + e.mrp + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center;font-weight:700">' + tv + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.reason||'') + '</td>';
+        html += '<td style="padding:9px 8px;border:1.5px solid #000;text-align:center">' + esc(e.remarks||'') + '</td>';
+        html += '</tr>';
+    });
+    html += '<tr style="font-weight:800;background:#f0f0f0"><td colspan="8" style="border:1.5px solid #000;padding:9px 8px;text-align:right">TOTAL VALUE (৳)</td><td style="border:1.5px solid #000;padding:9px 8px;text-align:center">' + grandTotal + '</td><td colspan="2" style="border:1.5px solid #000"></td></tr>';
+    html += '</tbody></table>';
+
+    html += '<div style="margin-top:110px"><table style="width:100%;border:none;border-collapse:collapse"><tr>';
+    html += buildSignCell('DIC', signatures.dic);
+    html += buildSignCell('PMD', null);
+    html += buildSignCell('HO Operation', null);
+    html += '</tr></table></div>';
+    html += '</div>';
+    return html;
 }
-function delRec(key) {
-    if (!confirm('এই চালানটি সম্পূর্ণ মুছে ফেলবেন?')) return;
-    db.ref('mp_history/' + key).remove().then(function() { msg('চালান মুছে ফেলা হয়েছে', 'ok'); });
+
+function printOne(key) {
+    var r = histData.find(function(x) { return x.key === key; }); if (!r) return;
+    document.getElementById('printArea').innerHTML = buildPrint(r);
+    setTimeout(function() { window.print(); }, 250);
 }
-function clearHist() {
-    if (!confirm('সতর্কতা! সব হিস্ট্রি রেকর্ড মুছে যাবে। নিশ্চিত?')) return;
-    db.ref('mp_history').remove().then(function() { msg('সব রেকর্ড মুছে ফেলা হয়েছে'); });
+function printAll() {
+    if (!histData.length) { msg('No records', 'err'); return; }
+    var html = '';
+    histData.forEach(function(r, i) { html += buildPrint(r); if (i < histData.length - 1) html += '<div style="page-break-after:always"></div>'; });
+    document.getElementById('printArea').innerHTML = html;
+    setTimeout(function() { window.print(); }, 250);
+}
+function wordOne(key) {
+    var r = histData.find(function(x) { return x.key === key; }); if (!r) return;
+    var doc = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:12px}table{border-collapse:collapse}td,th{border:1.5px solid #000;padding:6px 8px}</style></head><body>' + buildPrint(r) + '</body></html>';
+    var blob = new Blob(['\ufeff', doc], { type: 'application/msword' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = (r.ref || 'record').replace(/\//g, '-') + '.doc';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+function wordAll() {
+    if (!histData.length) { msg('No records', 'err'); return; }
+    var html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><style>body{font-family:Calibri,sans-serif;font-size:12px}table{border-collapse:collapse}td,th{border:1.5px solid #000;padding:6px 8px}</style></head><body>';
+    histData.forEach(function(r, i) { html += buildPrint(r); if (i < histData.length - 1) html += '<br clear="all" style="page-break-before:always">'; });
+    html += '</body></html>';
+    var blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'All-Records.doc';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 </script>
 </body>
