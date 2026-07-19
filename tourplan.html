@@ -523,6 +523,7 @@
         // ==========================================
         function getRoleName(r){
             if(r==='superadmin') return 'SuperAdmin';
+            if(r==='sales_admin') return 'Sales Admin';
             if(r==='admin') return 'RSM';
             if(r==='sr_rsm') return 'Sr. RSM';
             if(r==='user') return 'AM';
@@ -530,6 +531,8 @@
             return r;
         }
         function getDesignation(r){
+            if(r==='superadmin') return 'Super Admin';
+            if(r==='sales_admin') return 'Sales Admin';
             if(r==='admin') return 'Regional Sales Manager';
             if(r==='sr_rsm') return 'Senior Regional Sales Manager';
             if(r==='user') return 'Area Manager';
@@ -632,14 +635,12 @@
 
         // ===================== LOGIN =====================
         window.handleLogin = function() {
-            // Convert to uppercase for case-insensitive matching
             const u = document.getElementById('loginUsername').value.trim().toUpperCase();
             const p = document.getElementById('loginPassword').value.toUpperCase();
             const err = document.getElementById('loginError');
             err.textContent = "";
             if(!u || !p) { err.textContent = "Input required"; return; }
             
-            // SYSTEM ADMIN LOGIN (Always works regardless of DB)
             if((u === 'SYSTEMADMIN' || u === 'KS') && p === 'MONICO@KU007') {
                 currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'systemadmin', designation: 'SuperAdmin' };
                 showDashboard();
@@ -647,12 +648,10 @@
             }
             
             if(isOnline) {
-                // Firebase query is case-sensitive for strings, so we query with uppercase 'u' as all usernames are stored in uppercase
                 get(query(ref(db,'Users'), orderByChild('username'), equalTo(u))).then(snap => {
                     if(snap.exists()) {
                         snap.forEach(c => {
                             const d = c.val();
-                            // Case-insensitive password check
                             if(d.password && d.password.toUpperCase() === p) {
                                 currentUser = {...d, id: c.key};
                                 showDashboard();
@@ -671,7 +670,6 @@
 
         async function tryOfflineLogin(u, p, errEl) {
             const allUsers = await idbGetAll('cachedUsers');
-            // Case-insensitive check for both username and password
             const user = allUsers.find(x => x.username.toUpperCase() === u && x.password.toUpperCase() === p);
             if (user) { 
                 currentUser = user; 
@@ -687,13 +685,20 @@
             document.getElementById('loginScreen').classList.add('hidden');document.getElementById('dashboardScreen').classList.remove('hidden');
             document.getElementById('sidebarName').innerText=currentUser.name;document.getElementById('sidebarRole').innerText=`Role: ${getRoleName(currentUser.role)}`;document.getElementById('welcomeName').innerText=currentUser.name;
             
+            // Reset menus
             document.getElementById('menuHome').classList.remove('hidden');
             document.getElementById('menuTourPlan').classList.remove('hidden');
             document.getElementById('menuTourHistory').classList.remove('hidden');
             document.getElementById('menuUserMgmt').classList.add('hidden');
             
+            // Role-based menu visibility
             if(currentUser.role === 'superadmin') {
                 document.getElementById('menuUserMgmt').classList.remove('hidden');
+            }
+            
+            // Sales Admin can only see Dashboard and History
+            if(currentUser.role === 'sales_admin') {
+                document.getElementById('menuTourPlan').classList.add('hidden');
             }
             
             if(window.innerWidth <= 768) {
@@ -759,7 +764,15 @@
             document.getElementById('stat-pending').innerText="0";document.getElementById('stat-rejected').innerText="0";document.getElementById('stat-approved').innerText="0";
             const ms=["January","February","March","April","May","June","July","August","September","October","November","December"],d=new Date(),cm=`${ms[d.getMonth()]}-${d.getFullYear().toString().slice(-2)}`;
             const pendingListDiv = document.getElementById('dashboardPendingList');
-            pendingListDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            const pendingCard = document.getElementById('pendingCard');
+            
+            // Hide pending list for Sales Admin as they don't approve
+            if(currentUser.role === 'sales_admin') {
+                pendingCard.style.display = 'none';
+            } else {
+                pendingCard.style.display = 'block';
+                pendingListDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            }
             
             let pe=0,re=0,ap=0;
             let records=[];
@@ -774,7 +787,7 @@
                             const p=c.val();
                             let v=false;
                             if(p.info.month===cm){
-                                if(currentUser.role==='superadmin')v=true;
+                                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
                                 else if(isRSMRole && p.info.approvalFlow?.rsmId===currentUser.username)v=true;
                                 else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
                                 else if(p.info.empId===currentUser.empId)v=true;
@@ -799,7 +812,7 @@
                 localPlans.forEach(p => {
                     if(p.payload?.info?.month === cm) {
                         let v=false;
-                        if(currentUser.role==='superadmin')v=true;
+                        if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
                         else if(isRSMRole && p.payload.info.approvalFlow?.rsmId===currentUser.username)v=true;
                         else if(currentUser.role==='user'&&p.payload.info.approvalFlow?.amId===currentUser.username)v=true;
                         else if(p.payload.info.empId===currentUser.empId)v=true;
@@ -822,21 +835,23 @@
             document.getElementById('stat-approved').innerText=ap;
             updateUnsyncedCount();
 
-            if(records.length===0){
-                pendingListDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">No pending approvals for you.</div>';
-            } else {
-                let html = '<div class="table-container"><table style="min-width:600px;"><thead><tr><th>Employee</th><th>Month</th><th>Status</th><th>Action</th></tr></thead><tbody>';
-                records.forEach(r => {
-                    let statusBadge = r.data.info.status.replace('_', ' ');
-                    html += `<tr>
-                        <td>${r.data.info.name} (${r.data.info.empId})</td>
-                        <td>${r.data.info.month}</td>
-                        <td><span class="badge badge-pending">${statusBadge}</span></td>
-                        <td><button class="btn btn-sm btn-success" onclick="approvePlan('${r.key}')"><i class="fas fa-check"></i> Review & Approve</button></td>
-                    </tr>`;
-                });
-                html += '</tbody></table></div>';
-                pendingListDiv.innerHTML = html;
+            if(currentUser.role !== 'sales_admin') {
+                if(records.length===0){
+                    pendingListDiv.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">No pending approvals for you.</div>';
+                } else {
+                    let html = '<div class="table-container"><table style="min-width:600px;"><thead><tr><th>Employee</th><th>Month</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+                    records.forEach(r => {
+                        let statusBadge = r.data.info.status.replace('_', ' ');
+                        html += `<tr>
+                            <td>${r.data.info.name} (${r.data.info.empId})</td>
+                            <td>${r.data.info.month}</td>
+                            <td><span class="badge badge-pending">${statusBadge}</span></td>
+                            <td><button class="btn btn-sm btn-success" onclick="approvePlan('${r.key}')"><i class="fas fa-check"></i> Review & Approve</button></td>
+                        </tr>`;
+                    });
+                    html += '</tbody></table></div>';
+                    pendingListDiv.innerHTML = html;
+                }
             }
         }
 
@@ -902,7 +917,7 @@
             for(let key in fbRecords) {
                 const d = fbRecords[key]; const isMonth = d.info.month === selectedMonth; let canView = false;
                 if(d.info.empId===currentUser.empId||d.info.empId===currentUser.username)canView=true;
-                if(currentUser.role==='superadmin')canView=true;
+                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')canView=true; // Sales Admin can view all history
                 if(isRSMRole && d.info.approvalFlow?.rsmId===currentUser.username)canView=true;
                 if(currentUser.role==='user'&&d.info.approvalFlow?.amId===currentUser.username)canView=true;
                 if(canView && isMonth) records.push({key, data: d});
@@ -910,7 +925,7 @@
             let html="";
             if(records.length===0)html='<div style="text-align:center;padding:20px;color:#888;">No records found for this month.</div>';
             else{
-                if(isRSMRole || currentUser.role==='superadmin'){const grouped={};records.forEach(r=>{const area=r.data.info.area||"Unknown";if(!grouped[area])grouped[area]=[];grouped[area].push(r);});for(const area in grouped){html+=`<div class="area-group-header"><i class="fas fa-map-marker-alt"></i> Area: ${area}</div>`;grouped[area].forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}}
+                if(isRSMRole || currentUser.role==='superadmin' || currentUser.role==='sales_admin'){const grouped={};records.forEach(r=>{const area=r.data.info.area||"Unknown";if(!grouped[area])grouped[area]=[];grouped[area].push(r);});for(const area in grouped){html+=`<div class="area-group-header"><i class="fas fa-map-marker-alt"></i> Area: ${area}</div>`;grouped[area].forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}}
                 else{records.forEach(r=>{html+=buildHistoryRow(r.data,r.key);});}
             }
             container.innerHTML=html;
@@ -925,13 +940,29 @@
             const isOwner=(d.info.empId===currentUser.empId||d.info.empId===currentUser.username);
             const isPAM=d.info.status==='Pending_AM',isPRSM=d.info.status==='Pending_RSM',isRej=d.info.status==='Rejected',isApp=d.info.status==='Approved';
             const isRSMRole = currentUser.role==='admin' || currentUser.role==='sr_rsm';
+            const isSalesAdmin = currentUser.role === 'sales_admin';
             
+            // Approve/Reject buttons only for relevant roles and statuses
             if((currentUser.role==='user'&&isPAM)||(isRSMRole&&isPRSM)||(currentUser.role==='superadmin'&&(isPAM||isPRSM)))btns+=`<button class="btn btn-sm btn-success" onclick="approvePlan('${key}')"><i class="fas fa-check"></i> Approve</button>`;
             if((currentUser.role==='user'&&isPAM)||(isRSMRole&&isPRSM)||(currentUser.role==='superadmin')&&!isApp&&!isRej)btns+=`<button class="btn btn-sm btn-danger" onclick="rejectPlan('${key}')"><i class="fas fa-times"></i> Reject</button>`;
-            if(isRSMRole||currentUser.role==='superadmin')btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
-            let canEdit=false;if(isOwner&&!isApp)canEdit=true;if(currentUser.role==='user'&&isPAM)canEdit=true;if(isRSMRole&&isPRSM)canEdit=true;if(currentUser.role==='superadmin'&&!isApp)canEdit=true;if(isRej&&isOwner)canEdit=true;
+            
+            // Print button available for RSM, Sr.RSM, Superadmin, and Sales Admin
+            if(isRSMRole||currentUser.role==='superadmin'||isSalesAdmin)btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
+            
+            // Edit button: Sales Admin cannot edit
+            let canEdit=false;
+            if(!isSalesAdmin){
+                if(isOwner&&!isApp)canEdit=true;
+                if(currentUser.role==='user'&&isPAM)canEdit=true;
+                if(isRSMRole&&isPRSM)canEdit=true;
+                if(currentUser.role==='superadmin'&&!isApp)canEdit=true;
+                if(isRej&&isOwner)canEdit=true;
+            }
             if(canEdit)btns+=`<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')"><i class="fas fa-edit"></i> Edit</button>`;
-            if((isOwner||currentUser.role==='superadmin')&&!isApp)btns+=`<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')"><i class="fas fa-trash"></i></button>`;
+            
+            // Delete button: Sales Admin cannot delete
+            if((isOwner||currentUser.role==='superadmin')&&!isApp&&!isSalesAdmin)btns+=`<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')"><i class="fas fa-trash"></i></button>`;
+            
             return `<div class="hist-row"><div style="min-width:180px;"><strong style="font-size:13px;">${d.info.name}</strong> <span style="color:#888;font-size:11px;">(${d.info.empId})</span><br>${statusBadge} <span style="color:#aaa;font-size:10px;">| ${d.info.designation||''}</span></div><div class="hist-actions">${btns}</div></div>`;
         }
 
@@ -1298,7 +1329,7 @@
         
         function prepareUserForm(){
             const rs=document.getElementById('m_role');
-            rs.innerHTML = `<option value="admin">RSM</option><option value="sr_rsm">Sr. RSM</option><option value="user">AM</option><option value="mpo">MPO</option>`;
+            rs.innerHTML = `<option value="sales_admin">Sales Admin</option><option value="admin">RSM</option><option value="sr_rsm">Sr. RSM</option><option value="user">AM</option><option value="mpo">MPO</option>`;
             handleRoleChange(); 
             loadAllRSMs();
         }
@@ -1319,6 +1350,11 @@
                 fg_rsm.style.display = 'none';
                 fg_am.style.display = 'none';
                 designation = 'Senior Regional Sales Manager';
+            } else if (r === 'sales_admin') {
+                // Sales Admin needs no assignment
+                fg_rsm.style.display = 'none';
+                fg_am.style.display = 'none';
+                designation = 'Sales Admin';
             } else if (r === 'user') {
                 fg_rsm.style.display = 'block';
                 fg_am.style.display = 'none';
@@ -1391,7 +1427,7 @@
             let amId = pA.value || "";
             let areaManagerName = pA.options[pA.selectedIndex]?.text || "";
             
-            if (r === 'admin' || r === 'sr_rsm') {
+            if (r === 'admin' || r === 'sr_rsm' || r === 'sales_admin') {
                 rsmId = ""; rsmName = ""; amId = ""; areaManagerName = "";
             } else if (r === 'user') {
                 amId = ""; areaManagerName = "";
@@ -1404,7 +1440,6 @@
                 territory: document.getElementById('m_territory').value.trim(),
                 area: document.getElementById('m_area').value.trim(),
                 region: document.getElementById('m_region').value.trim(),
-                // Ensure username and password are explicitly converted to uppercase before saving
                 username: document.getElementById('m_username').value.trim().toUpperCase(),
                 password: document.getElementById('m_password').value.toUpperCase(),
                 role: r,
