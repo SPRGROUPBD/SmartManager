@@ -211,7 +211,7 @@
             <div class="user-info"><span id="sidebarName">User</span><div id="sidebarRole">Role</div></div>
             <nav class="nav-menu">
                 <a class="nav-item active" id="menuHome" onclick="showSection('home')"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-                <a class="nav-item" id="menuTourPlan" onclick="showSection('tourPlan')"><i class="fas fa-calendar-alt"></i> Tour Plan Entry</a>
+                <a class="nav-item" id="menuTourPlan" onclick="promptSelectMonth()"><i class="fas fa-calendar-alt"></i> Tour Plan Entry</a>
                 <a class="nav-item" id="menuTourHistory" onclick="showSection('tourHistory')"><i class="fas fa-history"></i> Tour Plan History</a>
                 <a class="nav-item" id="menuSignature" onclick="showSection('signature')"><i class="fas fa-signature"></i> My Signature</a>
                 <a class="nav-item hidden" id="menuUserMgmt" onclick="showSection('userMgmt')"><i class="fas fa-users-cog"></i> User Management</a>
@@ -455,6 +455,42 @@
         </div>
     </div>
 
+    <!-- FORCE SIGNATURE UPLOAD MODAL -->
+    <div id="forceSigModal" class="modal-bg" style="z-index: 1003;">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-signature"></i> Upload Signature</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:20px;">Please upload your signature to continue. It will be used for all Tour Plans.</p>
+            <div style="text-align:center; margin: 20px 0;">
+                <div style="min-height: 100px; border: 1px dashed #ccc; padding: 10px; display: inline-block; min-width: 250px; background: #f9f9f9;">
+                    <img id="forceSigPreview" src="" style="max-height: 90px; display:none;">
+                    <span id="forceNoSigMsg" style="color:#888; line-height: 90px;">No signature selected.</span>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <input type="file" id="forceSigUpload" accept="image/*" style="display:none;" onchange="previewForceSign(event)">
+                <button class="btn btn-primary" onclick="document.getElementById('forceSigUpload').click()"><i class="fas fa-upload"></i> Select Image</button>
+                <button class="btn btn-success" onclick="saveForceSign()" style="display:none;" id="saveForceSigBtn"><i class="fas fa-save"></i> Save & Continue</button>
+            </div>
+            <div id="forceSigError" class="status-msg error" style="text-align:center; margin-top:10px;"></div>
+        </div>
+    </div>
+
+    <!-- SELECT MONTH MODAL -->
+    <div id="selectMonthModal" class="modal-bg" style="z-index: 1003;">
+        <div class="modal-content" style="max-width: 380px; text-align: center;">
+            <h3 style="color:var(--primary); margin-bottom:15px;"><i class="fas fa-calendar-alt"></i> Select Month</h3>
+            <p style="font-size:12px; color:#666; margin-bottom:20px;">Please select the month for which you want to create or edit the Tour Plan.</p>
+            <div class="form-group" style="text-align:left;">
+                <label>Month</label>
+                <select id="selectMonthInput" style="padding:10px 12px; border:1px solid #ccc; border-radius:6px; width:100%; font-size:14px;"></select>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <button class="btn btn-danger" style="flex:1;" onclick="cancelMonthSelection()">Cancel</button>
+                <button class="btn btn-success" style="flex:1;" onclick="confirmMonthSelection()">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="history-print-container" style="display:none;"></div>
 
     <script type="module">
@@ -631,9 +667,11 @@
         function getDayNameByDate(d,m){const ms=["January","February","March","April","May","June","July","August","September","October","November","December"],p=m.split("-"),y=2000+parseInt(p[1]),mi=ms.indexOf(p[0]),dt=new Date(y,mi+1,0),ds=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];const targetDate=new Date(y,mi,d);return ds[targetDate.getDay()];}
 
         function populateMonthDropdowns(){
-            const se=document.getElementById('tp_month'),sh=document.getElementById('historyMonthFilter'),ms=["January","February","March","April","May","June","July","August","September","October","November","December"],cd=new Date();let h="";
+            const se=document.getElementById('tp_month'),sh=document.getElementById('historyMonthFilter'),sm=document.getElementById('selectMonthInput'),ms=["January","February","March","April","May","June","July","August","September","October","November","December"],cd=new Date();let h="";
             for(let y=cd.getFullYear();y<=cd.getFullYear()+1;y++){let ys=y.toString().slice(-2);ms.forEach(m=>{h+=`<option value="${m}-${ys}">${m}-${ys}</option>`;});}
-            se.innerHTML=h;sh.innerHTML=h;let cv=`${ms[cd.getMonth()]}-${cd.getFullYear().toString().slice(-2)}`;se.value=cv;sh.value=cv;
+            se.innerHTML=h;sh.innerHTML=h;sm.innerHTML=h;
+            let cv=`${ms[cd.getMonth()]}-${cd.getFullYear().toString().slice(-2)}`;
+            se.value=cv;sh.value=cv;sm.value=cv;
         }
 
         function generateTourPlanTable(){
@@ -656,86 +694,21 @@
             }
         }
 
-        // ===== AUTO-SAVE DRAFT =====
-        function saveDraft() {
-            if (currentEditingKeyId) return; 
-            const empId = document.getElementById('tp_empId').value;
-            const month = document.getElementById('tp_month').value;
-            if (!empId || !month) return;
-            
-            let planData = [];
-            document.querySelectorAll('#tourPlanTableBody tr').forEach(r => {
-                if (r.style.display !== 'none') {
-                    const i = r.id.split('_')[1];
-                    const hq = document.querySelector(`[name="hq_${i}"]`);
-                    const mw = document.querySelector(`[name="morning_wp_${i}"]`);
-                    const ew = document.querySelector(`[name="evening_wp_${i}"]`);
-                    planData.push({
-                        date: i,
-                        hq: hq ? hq.value : '',
-                        morning_wp: mw ? mw.value : '',
-                        evening_wp: ew ? ew.value : ''
-                    });
-                }
-            });
-            
-            const draftId = `draft_${empId}_${month.replace(/\s/g, '_')}`;
-            const draftPayload = {
-                info: {
-                    empId, month,
-                    name: document.getElementById('tp_name').value,
-                    designation: document.getElementById('tp_designation').value,
-                    areaManager: document.getElementById('tp_areaManager').value,
-                    rsm: document.getElementById('tp_rsm').value,
-                    territory: document.getElementById('tp_territory').value,
-                    area: document.getElementById('tp_area').value,
-                    region: document.getElementById('tp_region').value,
-                    timestamp: Date.now(),
-                    status: 'Draft',
-                    approvalFlow: {},
-                    signatures: currentEditSignatures
-                },
-                plan: planData
-            };
-            
-            idbPut('tourPlans', { id: draftId, payload: draftPayload });
-        }
+        // ===== PROMPT SELECT MONTH =====
+        window.promptSelectMonth = function() {
+            populateMonthDropdowns();
+            document.getElementById('selectMonthModal').style.display = 'flex';
+        };
 
-        function triggerAutoSave(){
-            if (currentEditingKeyId) return; 
-            clearTimeout(autoSaveTimer);
-            document.getElementById('autoSaveStatus').innerText = "Typing...";
-            autoSaveTimer = setTimeout(() => {
-                saveDraft();
-                document.getElementById('autoSaveStatus').innerText = "Draft Saved";
-                document.getElementById('autoSaveStatus').style.color = "green";
-            }, 1500);
-        }
+        window.cancelMonthSelection = function() {
+            document.getElementById('selectMonthModal').style.display = 'none';
+        };
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') {
-                const tourPlanSection = document.getElementById('sectionTourPlan');
-                if (tourPlanSection && !tourPlanSection.classList.contains('hidden')) {
-                    saveDraft();
-                }
-            }
-        });
-
-        window.addEventListener('beforeunload', () => {
-            const tourPlanSection = document.getElementById('sectionTourPlan');
-            if (tourPlanSection && !tourPlanSection.classList.contains('hidden')) {
-                saveDraft();
-            }
-        });
-
-        window.addEventListener('offline', () => {
-            const tourPlanSection = document.getElementById('sectionTourPlan');
-            if (tourPlanSection && !tourPlanSection.classList.contains('hidden')) {
-                saveDraft();
-                document.getElementById('autoSaveStatus').innerText = "Offline - Draft Saved";
-                document.getElementById('autoSaveStatus').style.color = "orange";
-            }
-        });
+        window.confirmMonthSelection = function() {
+            const selectedMonth = document.getElementById('selectMonthInput').value;
+            document.getElementById('selectMonthModal').style.display = 'none';
+            showSection('tourPlan', selectedMonth);
+        };
 
         window.handleHQChange = function(i) {
             const hqSel = document.querySelector(`[name="hq_${i}"]`);
@@ -798,36 +771,26 @@
 
             if (!isEditingExistingPlan) {
                 const empId = document.getElementById('tp_empId').value;
-                const draftId = `draft_${empId}_${mv.replace(/\s/g, '_')}`;
                 const planId = `${empId}_${mv.replace(/\s/g, '_')}`;
                 
+                // If existing plan (draft or submitted) exists, load it
                 const existingPlan = await idbGet('tourPlans', planId);
-                if (existingPlan && existingPlan.payload && existingPlan.payload.info.status !== 'Draft') {
+                if (existingPlan && existingPlan.payload) {
                     editTourPlan(planId);
                     return;
-                }
-                
-                const draft = await idbGet('tourPlans', draftId);
-                if (draft && draft.payload) {
-                    const d = draft.payload;
-                    d.plan.forEach(p => {
-                        if (p.date) {
-                            const hq = document.querySelector(`[name="hq_${p.date}"]`);
-                            const mw = document.querySelector(`[name="morning_wp_${p.date}"]`);
-                            const ew = document.querySelector(`[name="evening_wp_${p.date}"]`);
-                            if (hq) hq.value = p.hq || '';
-                            if (mw) mw.value = p.morning_wp || '';
-                            if (ew) ew.value = p.evening_wp || '';
-                            const row = document.getElementById(`row_${p.date}`);
-                            if (row && p.hq === 'Holiday') row.classList.add('holiday-row');
-                        }
-                    });
-                    document.getElementById('autoSaveStatus').innerText = "Draft Loaded";
-                    document.getElementById('autoSaveStatus').style.color = "blue";
                 }
             }
             isEditingExistingPlan = false;
         };
+
+        // ===== AUTO-SAVE LOGIC (Only entered rows to Database) =====
+        function triggerAutoSave(){
+            clearTimeout(autoSaveTimer);
+            document.getElementById('autoSaveStatus').innerText = "Typing...";
+            autoSaveTimer = setTimeout(() => {
+                validateAndSave(true); // true means isAuto
+            }, 2000); // 2 seconds debounce
+        }
 
         window.toggleSidebar=function(){document.getElementById('sidebar').classList.toggle('active');document.getElementById('overlay').classList.toggle('active');};
         document.getElementById('topBarDate').innerText=new Date().toDateString();
@@ -843,7 +806,7 @@
             
             if((u === 'SYSTEMADMIN' || u === 'KS') && p === 'MONICO@KU007') {
                 currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'systemadmin', designation: 'SuperAdmin', mustChangePassword: false };
-                showDashboard();
+                checkFirstLogin(currentUser);
                 return;
             }
             
@@ -880,12 +843,15 @@
             else { errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
         }
 
+        // ===== FIRST LOGIN CHECK (Password -> Signature -> Dashboard) =====
         function checkFirstLogin(user) {
             if(user.mustChangePassword === true) {
                 document.getElementById('changePasswordModal').style.display = 'flex';
                 document.getElementById('changePassError').textContent = '';
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmNewPassword').value = '';
+            } else if (!user.signature) {
+                showForceSigModal();
             } else {
                 showDashboard();
             }
@@ -912,7 +878,11 @@
                     update(ref(db, 'Users/' + safeKey), updates).then(() => {
                         currentUser = updatedUser;
                         document.getElementById('changePasswordModal').style.display = 'none';
-                        showDashboard();
+                        if (!currentUser.signature) {
+                            showForceSigModal();
+                        } else {
+                            showDashboard();
+                        }
                     }).catch(err => {
                         errEl.textContent = "Update failed. Try again.";
                     });
@@ -920,6 +890,63 @@
                     addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
                     currentUser = updatedUser;
                     document.getElementById('changePasswordModal').style.display = 'none';
+                    if (!currentUser.signature) {
+                        showForceSigModal();
+                    } else {
+                        showDashboard();
+                    }
+                }
+            });
+        };
+
+        function showForceSigModal() {
+            document.getElementById('forceSigModal').style.display = 'flex';
+            document.getElementById('forceSigPreview').src = '';
+            document.getElementById('forceSigPreview').style.display = 'none';
+            document.getElementById('forceNoSigMsg').style.display = 'block';
+            document.getElementById('saveForceSigBtn').style.display = 'none';
+            document.getElementById('forceSigUpload').value = '';
+            document.getElementById('forceSigError').textContent = '';
+        }
+
+        window.previewForceSign = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const dataUrl = e.target.result;
+                document.getElementById('forceSigPreview').src = dataUrl;
+                document.getElementById('forceSigPreview').style.display = 'inline-block';
+                document.getElementById('forceNoSigMsg').style.display = 'none';
+                document.getElementById('saveForceSigBtn').style.display = 'inline-block';
+                document.getElementById('forceSigError').textContent = '';
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.saveForceSign = function() {
+            const sigUrl = document.getElementById('forceSigPreview').src;
+            if (!sigUrl) {
+                document.getElementById('forceSigError').textContent = "Please select an image first.";
+                return;
+            }
+            const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
+            const updates = { signature: sigUrl };
+            const updatedUser = { ...currentUser, ...updates };
+            
+            idbPut('cachedUsers', updatedUser).then(() => {
+                if(isOnline) {
+                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                        currentUser = updatedUser;
+                        document.getElementById('forceSigModal').style.display = 'none';
+                        showDashboard();
+                    }).catch(err => {
+                        document.getElementById('forceSigError').textContent = "Failed to save. Try again.";
+                    });
+                } else {
+                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
+                    currentUser = updatedUser;
+                    document.getElementById('forceSigModal').style.display = 'none';
                     showDashboard();
                 }
             });
@@ -956,7 +983,7 @@
             showSection('home');
         }
 
-        window.showSection=async function(id){
+        window.showSection=async function(id, preSelectedMonth = null){
             if(window.innerWidth<=768){
                 document.getElementById('sidebar').classList.remove('active');
                 document.getElementById('overlay').classList.remove('active');
@@ -1030,7 +1057,11 @@
                     document.getElementById('tp_rsm').value=currentUser.rsmName||'';
                 }
                 document.getElementById('tp_status').innerHTML = '';
-                document.getElementById('autoSaveStatus').innerText = '';
+                
+                if(preSelectedMonth) {
+                    document.getElementById('tp_month').value = preSelectedMonth;
+                }
+                
                 await handleMonthChange();
             }
         };
@@ -1153,7 +1184,7 @@
                             else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
                             else if(p.info.empId===currentUser.empId)v=true;
                             
-                            if(v){
+                            if(v && p.info.status !== 'Draft'){ // EXCLUDE DRAFTS
                                 if(p.info.status.includes('Pending'))pe++;
                                 if(p.info.status==='Rejected')re++;
                                 if(p.info.status==='Approved')ap++;
@@ -1175,7 +1206,7 @@
                     else if(isRSMRole && p.payload.info.approvalFlow?.rsmId===currentUser.username)v=true;
                     else if(currentUser.role==='user'&&p.payload.info.approvalFlow?.amId===currentUser.username)v=true;
                     else if(p.payload.info.empId===currentUser.empId)v=true;
-                    if(v){
+                    if(v && p.payload.info.status !== 'Draft'){ // EXCLUDE DRAFTS
                         if(p.payload.info.status.includes('Pending'))pe++;
                         if(p.payload.info.status==='Rejected')re++;
                         if(p.payload.info.status==='Approved')ap++;
@@ -1212,45 +1243,50 @@
             }
         }
 
-        // ===================== SAVE PLAN =====================
+        // ===================== SAVE PLAN (AUTO-SAVE ONLY ENTERED ROWS) =====================
         window.validateAndSave = function(isAuto=false){
             const empId=document.getElementById('tp_empId').value,month=document.getElementById('tp_month').value,sDiv=document.getElementById('tp_status'),aDiv=document.getElementById('autoSaveStatus');
-            let planData=[],rows=document.querySelectorAll('#tourPlanTableBody tr'),ok=true;
+            let planData=[],rows=document.querySelectorAll('#tourPlanTableBody tr'),hasData=false;
             
             rows.forEach(r=>{
                 if(r.style.display!=="none"){
                     const i=r.id.split('_')[1],hq=document.querySelector(`[name="hq_${i}"]`),mw=document.querySelector(`[name="morning_wp_${i}"]`),ew=document.querySelector(`[name="evening_wp_${i}"]`);
-                    if(!hq.value || !mw.value || !ew.value) ok=false;
-                    planData.push({date:i,hq:hq.value,morning_wp:mw.value,evening_wp:ew.value});
+                    
+                    // ONLY SAVE ROWS THAT HAVE AT LEAST ONE FIELD FILLED
+                    if(hq.value || mw.value || ew.value) {
+                        planData.push({date:i,hq:hq.value,morning_wp:mw.value,evening_wp:ew.value});
+                        hasData = true;
+                    }
                 }
             });
             
-            if(!ok){
-                if(!isAuto) {
-                    sDiv.innerHTML="<span class='error'>Fill all required fields.</span>";
-                } else {
-                    saveDraft();
-                    aDiv.innerText="Draft Saved (Incomplete)";
-                    aDiv.style.color="orange";
-                }
+            if(!hasData){
+                if(!isAuto) sDiv.innerHTML="<span class='error'>Please enter at least one row.</span>";
                 return;
             }
             
-            let st="Pending",af={};
-            if(currentUser.role==='mpo'){st="Pending_AM";af={amId:currentUser.amId,rsmId:currentUser.rsmId};}
-            else if(currentUser.role==='user'){st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};}
-            else if(currentUser.role==='admin' || currentUser.role==='sr_rsm'){
-                st="Approved"; 
-                currentEditSignatures.rsm = currentUser.name; 
-                currentEditSignatures.rsm_signature = currentUser.signature || currentEditSignatures.rsm_signature; 
-            }
-            else if(currentUser.role==='superadmin'){
-                st = editingPlanOriginalStatus || "Approved";
-                af = editingPlanOriginalApprovalFlow || {};
+            let st="Draft",af={};
+            
+            if(!isAuto) { // If clicking Submit
+                if(currentUser.role==='mpo'){st="Pending_AM";af={amId:currentUser.amId,rsmId:currentUser.rsmId};}
+                else if(currentUser.role==='user'){st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};}
+                else if(currentUser.role==='admin' || currentUser.role==='sr_rsm'){
+                    st="Approved"; 
+                    currentEditSignatures.rsm = currentUser.name; 
+                    currentEditSignatures.rsm_signature = currentUser.signature || currentEditSignatures.rsm_signature; 
+                }
+                else if(currentUser.role==='superadmin'){
+                    st = editingPlanOriginalStatus || "Approved";
+                    af = editingPlanOriginalApprovalFlow || {};
+                } else {
+                    st = "Pending";
+                }
+            } else {
+                // If Auto-saving, keep it as Draft (or original status if editing an existing submitted plan)
+                st = editingPlanOriginalStatus && currentEditingKeyId ? editingPlanOriginalStatus : "Draft";
             }
             
             const recordId = `${empId}_${month.replace(/\s/g,'_')}`;
-            const draftId = `draft_${empId}_${month.replace(/\s/g,'_')}`;
             
             const payload = {
                 info:{empId,month,name:document.getElementById('tp_name').value,designation:document.getElementById('tp_designation').value,areaManager:document.getElementById('tp_areaManager').value,rsm:document.getElementById('tp_rsm').value,territory:document.getElementById('tp_territory').value,area:document.getElementById('tp_area').value,region:document.getElementById('tp_region').value,timestamp:Date.now(),status:st,approvalFlow:af,signatures: currentEditSignatures}, 
@@ -1258,10 +1294,10 @@
             };
 
             idbPut('tourPlans', { id: recordId, payload }).then(() => {
-                idbDelete('tourPlans', draftId);
-                
-                if(isAuto){aDiv.innerText="Saved Locally";aDiv.style.color="green";}
-                else{
+                if(isAuto){
+                    aDiv.innerText = "Auto-saved to Database";
+                    aDiv.style.color = "green";
+                } else {
                     sDiv.innerHTML="<span class='success'>Saved Locally!</span>"; 
                     if(currentEditingKeyId) {
                         setTimeout(() => {
@@ -1276,10 +1312,10 @@
 
             if(isOnline) {
                 set(ref(db,'tourPlans/'+recordId), payload).then(()=>{
-                    remove(ref(db, 'tourPlans/' + draftId)).catch(()=>{});
-                    
-                    if(isAuto){aDiv.innerText="Saved & Synced";aDiv.style.color="green";}
-                    else{
+                    if(isAuto){
+                        aDiv.innerText = "Auto-saved to Database";
+                        aDiv.style.color = "green";
+                    } else {
                         if(currentEditingKeyId) {
                             alert("Tour Plan Updated Successfully!");
                             currentEditingKeyId = null;
@@ -1370,7 +1406,7 @@
             let records=[];
             for(let key in fbRecords) {
                 const d = fbRecords[key]; 
-                if (d.info.status === 'Draft') continue;
+                if (d.info.status === 'Draft') continue; // HIDE DRAFTS FROM HISTORY
                 
                 const isMonth = d.info.month === selectedMonth; 
                 let canView = false;
