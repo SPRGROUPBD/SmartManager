@@ -58,7 +58,8 @@
         .brand { padding: 18px 15px; background: var(--secondary); text-align: center; }
         .brand h2 { margin: 0; font-size: 17px; color: white; }
         .brand p { margin: 4px 0 0; font-size: 10px; opacity: 0.7; }
-        .user-info { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 12px; }
+        .user-info { padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 12px; display: flex; align-items: center; gap: 10px; }
+        .user-info img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #555; }
         .user-info span { font-weight: bold; color: #ffc107; display: block; margin-bottom: 3px; }
         .nav-menu { flex: 1; padding: 10px 0; }
         .nav-item { display: flex; align-items: center; padding: 11px 18px; color: #ccc; cursor: pointer; transition: 0.2s; text-decoration: none; font-size: 13px; }
@@ -208,12 +209,18 @@
     <div id="dashboardScreen" class="dashboard hidden">
         <div class="sidebar no-print" id="sidebar">
             <div class="brand"><h2>MONICO PHARMA</h2><p>Health. We Care.</p></div>
-            <div class="user-info"><span id="sidebarName">User</span><div id="sidebarRole">Role</div></div>
+            <div class="user-info">
+                <img id="sidebarProfileImg" src="https://via.placeholder.com/40" alt="Profile">
+                <div>
+                    <span id="sidebarName">User</span>
+                    <div id="sidebarRole">Role</div>
+                </div>
+            </div>
             <nav class="nav-menu">
                 <a class="nav-item active" id="menuHome" onclick="showSection('home')"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
                 <a class="nav-item" id="menuTourPlan" onclick="promptSelectMonth()"><i class="fas fa-calendar-alt"></i> Tour Plan Entry</a>
                 <a class="nav-item" id="menuTourHistory" onclick="showSection('tourHistory')"><i class="fas fa-history"></i> Tour Plan History</a>
-                <a class="nav-item" id="menuSignature" onclick="showSection('signature')"><i class="fas fa-signature"></i> My Signature</a>
+                <a class="nav-item" id="menuProfile" onclick="showSection('profile')"><i class="fas fa-user-circle"></i> Profile Settings</a>
                 <a class="nav-item hidden" id="menuUserMgmt" onclick="showSection('userMgmt')"><i class="fas fa-users-cog"></i> User Management</a>
             </nav>
             <div style="padding:12px;border-top:1px solid rgba(255,255,255,0.1);"><button onclick="logout()" class="btn btn-danger" style="width:100%;font-size:12px;"><i class="fas fa-sign-out-alt"></i> Logout</button></div>
@@ -234,13 +241,16 @@
                 <div id="sectionHome" class="section">
                     <div class="card">
                         <div class="card-header">Dashboard Overview</div>
+                        <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px;">
+                            <img id="dashboardProfileImg" src="https://via.placeholder.com/60" style="width:60px; height:60px; border-radius:50%; object-fit:cover;">
+                            <div><p style="color:#666;font-size:13px;">Welcome,</p><h3 id="welcomeName" style="margin:0;"></h3></div>
+                        </div>
                         <div class="widget-grid">
                             <div class="widget"><div class="widget-info"><h3 id="stat-pending">0</h3><p>Pending</p></div><div class="widget-icon bg-warning"><i class="fas fa-clock"></i></div></div>
                             <div class="widget"><div class="widget-info"><h3 id="stat-rejected">0</h3><p>Rejected</p></div><div class="widget-icon bg-danger"><i class="fas fa-times-circle"></i></div></div>
                             <div class="widget"><div class="widget-info"><h3 id="stat-approved">0</h3><p>Approved</p></div><div class="widget-icon bg-success"><i class="fas fa-check-circle"></i></div></div>
                             <div class="widget"><div class="widget-info"><h3 id="stat-unsynced">0</h3><p>Unsynced</p></div><div class="widget-icon bg-primary"><i class="fas fa-database"></i></div></div>
                         </div>
-                        <p style="color:#666;font-size:13px;">Welcome, <strong id="welcomeName"></strong>!</p>
                     </div>
                     <div class="card" id="pendingCard">
                         <div class="card-header">Approval Pending List (All Months)</div>
@@ -330,29 +340,36 @@
                                 <label style="font-size:12px;font-weight:600;">Month:</label>
                                 <select id="historyMonthFilter" onchange="loadTourHistory()" style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:12px;"></select>
                             </div>
-                            <input type="text" id="mpoSearch" oninput="loadTourHistory()" placeholder="Search MPO Name/ID..." style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:12px; width:200px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="text" id="mpoSearch" oninput="loadTourHistory()" placeholder="Search MPO Name/ID..." style="padding:6px 10px;border:1px solid #ccc;border-radius:4px;font-size:12px; width:200px;">
+                                <button class="btn btn-sm btn-primary" onclick="loadTourHistory()" style="padding:6px 10px;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                            </div>
                         </div>
                         <div id="tourHistoryContent"></div>
                     </div>
                 </div>
 
-                <!-- MY SIGNATURE -->
-                <div id="sectionSignature" class="section hidden">
+                <!-- PROFILE SETTINGS -->
+                <div id="sectionProfile" class="section hidden">
                     <div class="card">
-                        <div class="card-header">My Signature</div>
-                        <p style="text-align:center; font-size:13px; color:#555; margin-bottom:20px;">Upload your signature once. It will be automatically used when you create or approve Tour Plans.</p>
-                        <div style="text-align:center; margin: 20px 0;">
-                            <div id="mySigPreviewBox" style="min-height: 150px; border: 1px dashed #ccc; padding: 10px; display: inline-block; min-width: 300px; background: #f9f9f9;">
-                                <img id="mySigPreview" src="" style="max-height: 140px; display:none;">
-                                <span id="noSigMsg" style="color:#888; line-height: 140px;">No signature uploaded yet.</span>
-                            </div>
+                        <div class="card-header">Profile Settings</div>
+                        <div style="text-align:center; margin-bottom: 30px;">
+                            <img id="profileImgPreview" src="https://via.placeholder.com/100" style="width:100px; height:100px; border-radius:50%; object-fit:cover; margin-bottom:15px; border:3px solid var(--primary);">
+                            <br>
+                            <input type="file" id="profileImgUpload" accept="image/*" style="display:none;" onchange="previewProfileImg(event)">
+                            <button class="btn btn-primary" onclick="document.getElementById('profileImgUpload').click()"><i class="fas fa-upload"></i> Change Picture</button>
+                            <button class="btn btn-success" id="saveProfileImgBtn" onclick="saveProfileImg()" style="display:none;"><i class="fas fa-save"></i> Save Picture</button>
+                            <div id="profileImgStatus" class="status-msg" style="margin-top:10px;"></div>
                         </div>
-                        <div style="text-align:center;">
-                            <input type="file" id="mySigUpload" accept="image/*" style="display:none;" onchange="previewMySign(event)">
-                            <button class="btn btn-primary" onclick="document.getElementById('mySigUpload').click()"><i class="fas fa-upload"></i> Select Image</button>
-                            <button class="btn btn-success" onclick="saveMySignature()" style="display:none;" id="saveSigBtn"><i class="fas fa-save"></i> Save Signature</button>
+                        <hr style="margin:20px 0;">
+                        <h4 style="text-align:center; margin-bottom:20px;">Change Password</h4>
+                        <div style="max-width:400px; margin:0 auto;">
+                            <div class="form-group"><label>Current Password</label><input type="password" id="profileCurrentPass" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>New Password</label><input type="password" id="profileNewPass" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()"></div>
+                            <div class="form-group"><label>Confirm New Password</label><input type="password" id="profileConfirmPass" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()"></div>
+                            <button class="btn btn-primary" onclick="changePasswordFromProfile()" style="width:100%;">Update Password</button>
+                            <div id="profilePassStatus" class="status-msg" style="margin-top:10px; text-align:center;"></div>
                         </div>
-                        <div id="sigStatus" class="status-msg" style="text-align:center; margin-top:15px;"></div>
                     </div>
                 </div>
 
@@ -520,6 +537,7 @@
         let editingPlanOriginalApprovalFlow = null;
         let isEditingExistingPlan = false;
         let currentEditingKeyId = null; 
+        let tempProfileImg = null;
         
         let currentEditSignatures = { prepared: "", prepared_signature: "", am: "", am_signature: "", rsm: "", rsm_signature: "", approved: "" };
 
@@ -773,7 +791,6 @@
                 const empId = document.getElementById('tp_empId').value;
                 const planId = `${empId}_${mv.replace(/\s/g, '_')}`;
                 
-                // If existing plan (draft or submitted) exists, load it
                 const existingPlan = await idbGet('tourPlans', planId);
                 if (existingPlan && existingPlan.payload) {
                     editTourPlan(planId);
@@ -797,17 +814,18 @@
         generateTourPlanTable();populateMonthDropdowns();
 
         // ===================== LOGIN =====================
-        window.handleLogin = function() {
+        window.handleLogin = function(isAutoLogin = false) {
             const u = document.getElementById('loginUsername').value.trim().toUpperCase();
             const p = document.getElementById('loginPassword').value.toUpperCase();
             const err = document.getElementById('loginError');
             err.textContent = "";
-            if(!u || !p) { err.textContent = "Input required"; return; }
+            if(!u || !p) { if(!isAutoLogin) err.textContent = "Input required"; return false; }
             
             if((u === 'SYSTEMADMIN' || u === 'KS') && p === 'MONICO@KU007') {
                 currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'systemadmin', designation: 'SuperAdmin', mustChangePassword: false };
+                if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
                 checkFirstLogin(currentUser);
-                return;
+                return true;
             }
             
             const safeKey = u.replace(/[.#$\[\]]/g,'_');
@@ -818,29 +836,31 @@
                         const d = snap.val();
                         if(d.password && d.password.toUpperCase() === p) {
                             currentUser = {...d, id: safeKey};
+                            if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
                             checkFirstLogin(currentUser);
                         } else {
-                            err.textContent = "Password Incorrect";
+                            if(!isAutoLogin) err.textContent = "Password Incorrect";
                         }
                     } else {
-                        tryOfflineLogin(u, p, err);
+                        tryOfflineLogin(u, p, err, isAutoLogin);
                     }
                 }).catch(() => { 
-                    tryOfflineLogin(u, p, err); 
+                    tryOfflineLogin(u, p, err, isAutoLogin); 
                 });
             } else { 
-                tryOfflineLogin(u, p, err); 
+                tryOfflineLogin(u, p, err, isAutoLogin); 
             }
         };
 
-        async function tryOfflineLogin(u, p, errEl) {
+        async function tryOfflineLogin(u, p, errEl, isAutoLogin) {
             const allUsers = await idbGetAll('cachedUsers');
             const user = allUsers.find(x => x.username.toUpperCase() === u && x.password.toUpperCase() === p);
             if (user) { 
                 currentUser = {...user, id: user.username.replace(/[.#$\[\]]/g,'_')}; 
+                if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
                 checkFirstLogin(currentUser);
             }
-            else { errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
+            else { if(!isAutoLogin) errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
         }
 
         // ===== FIRST LOGIN CHECK (Password -> Signature -> Dashboard) =====
@@ -952,17 +972,25 @@
             });
         };
 
-        window.logout=function(){location.reload();};
+        window.logout=function(){
+            localStorage.removeItem('monico_session');
+            location.reload();
+        };
 
         // ===================== SHOW SECTION =====================
         async function showDashboard(){
             document.getElementById('loginScreen').classList.add('hidden');document.getElementById('dashboardScreen').classList.remove('hidden');
             document.getElementById('sidebarName').innerText=currentUser.name;document.getElementById('sidebarRole').innerText=`Role: ${getRoleName(currentUser.role)}`;document.getElementById('welcomeName').innerText=currentUser.name;
             
+            // Set Profile Images
+            const imgUrl = currentUser.profileImage || "https://via.placeholder.com/40";
+            document.getElementById('sidebarProfileImg').src = imgUrl;
+            document.getElementById('dashboardProfileImg').src = imgUrl;
+            
             document.getElementById('menuHome').classList.remove('hidden');
             document.getElementById('menuTourPlan').classList.remove('hidden');
             document.getElementById('menuTourHistory').classList.remove('hidden');
-            document.getElementById('menuSignature').classList.remove('hidden');
+            document.getElementById('menuProfile').classList.remove('hidden');
             document.getElementById('menuUserMgmt').classList.add('hidden');
             
             if(currentUser.role === 'superadmin') {
@@ -971,7 +999,6 @@
             
             if(currentUser.role === 'sales_admin') {
                 document.getElementById('menuTourPlan').classList.add('hidden');
-                document.getElementById('menuSignature').classList.add('hidden');
             }
             
             if(window.innerWidth <= 768) {
@@ -991,11 +1018,11 @@
             document.querySelectorAll('.section').forEach(el=>el.classList.add('hidden'));document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
             document.getElementById('section'+id.charAt(0).toUpperCase()+id.slice(1)).classList.remove('hidden');
             document.querySelectorAll('.nav-item').forEach(item=>{if(item.id.toLowerCase().includes(id.toLowerCase()))item.classList.add('active');});
-            document.getElementById('printBtn').style.display=(id==='tourPlan'||id==='home'||id==='userMgmt'||id==='signature')?'none':'block';
+            document.getElementById('printBtn').style.display=(id==='tourPlan'||id==='home'||id==='userMgmt'||id==='signature'||id==='profile')?'none':'block';
             if(id==='home')loadDashboardStats();
             if(id==='userMgmt')initUserMgmt();
             if(id==='tourHistory')loadTourHistory();
-            if(id==='signature')initSignatureTab();
+            if(id==='profile')initProfileTab();
             if(id==='tourPlan'){
                 isEditingExistingPlan = false;
                 currentEditingKeyId = null; 
@@ -1094,62 +1121,93 @@
             document.getElementById('sig_approved').innerText = currentEditSignatures.approved || "";
         }
 
-        // ===================== MY SIGNATURE TAB =====================
-        function initSignatureTab() {
-            const preview = document.getElementById('mySigPreview');
-            const noSigMsg = document.getElementById('noSigMsg');
-            const saveBtn = document.getElementById('saveSigBtn');
-            tempMySignatureData = null;
-            document.getElementById('sigStatus').innerHTML = '';
-            document.getElementById('mySigUpload').value = '';
-            saveBtn.style.display = 'none';
+        // ===================== PROFILE SETTINGS TAB =====================
+        function initProfileTab() {
+            tempProfileImg = null;
+            document.getElementById('profileImgStatus').innerHTML = '';
+            document.getElementById('profilePassStatus').innerHTML = '';
+            document.getElementById('profileCurrentPass').value = '';
+            document.getElementById('profileNewPass').value = '';
+            document.getElementById('profileConfirmPass').value = '';
+            document.getElementById('saveProfileImgBtn').style.display = 'none';
+            document.getElementById('profileImgUpload').value = '';
 
-            if(currentUser.signature) {
-                preview.src = currentUser.signature;
-                preview.style.display = 'inline-block';
-                noSigMsg.style.display = 'none';
-            } else {
-                preview.src = '';
-                preview.style.display = 'none';
-                noSigMsg.style.display = 'block';
-            }
+            const imgUrl = currentUser.profileImage || "https://via.placeholder.com/100";
+            document.getElementById('profileImgPreview').src = imgUrl;
         }
 
-        window.previewMySign = function(event) {
+        window.previewProfileImg = function(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
-                tempMySignatureData = e.target.result;
-                const preview = document.getElementById('mySigPreview');
-                preview.src = tempMySignatureData;
-                preview.style.display = 'inline-block';
-                document.getElementById('noSigMsg').style.display = 'none';
-                document.getElementById('saveSigBtn').style.display = 'inline-block';
+                tempProfileImg = e.target.result;
+                document.getElementById('profileImgPreview').src = tempProfileImg;
+                document.getElementById('saveProfileImgBtn').style.display = 'inline-block';
             };
             reader.readAsDataURL(file);
         };
 
-        window.saveMySignature = function() {
-            if (!tempMySignatureData) return;
+        window.saveProfileImg = function() {
+            if (!tempProfileImg) return;
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
-            const updates = { signature: tempMySignatureData };
+            const updates = { profileImage: tempProfileImg };
             const updatedUser = { ...currentUser, ...updates };
             
             idbPut('cachedUsers', updatedUser).then(() => {
                 if(isOnline) {
                     update(ref(db, 'Users/' + safeKey), updates).then(() => {
                         currentUser = updatedUser;
-                        document.getElementById('sigStatus').innerHTML = "<span class='success'>Signature saved successfully!</span>";
-                        document.getElementById('saveSigBtn').style.display = 'none';
+                        document.getElementById('sidebarProfileImg').src = tempProfileImg;
+                        document.getElementById('dashboardProfileImg').src = tempProfileImg;
+                        document.getElementById('profileImgStatus').innerHTML = "<span class='success'>Profile picture updated!</span>";
+                        document.getElementById('saveProfileImgBtn').style.display = 'none';
                     }).catch(err => {
-                        document.getElementById('sigStatus').innerHTML = "<span class='error'>Failed to save. Try again.</span>";
+                        document.getElementById('profileImgStatus').innerHTML = "<span class='error'>Failed to save.</span>";
                     });
                 } else {
                     addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
                     currentUser = updatedUser;
-                    document.getElementById('sigStatus').innerHTML = "<span class='success'>Signature saved locally!</span>";
-                    document.getElementById('saveSigBtn').style.display = 'none';
+                    document.getElementById('sidebarProfileImg').src = tempProfileImg;
+                    document.getElementById('dashboardProfileImg').src = tempProfileImg;
+                    document.getElementById('profileImgStatus').innerHTML = "<span class='success'>Saved locally!</span>";
+                    document.getElementById('saveProfileImgBtn').style.display = 'none';
+                }
+            });
+        };
+
+        window.changePasswordFromProfile = function() {
+            const currPass = document.getElementById('profileCurrentPass').value.toUpperCase();
+            const newPass = document.getElementById('profileNewPass').value.toUpperCase();
+            const confPass = document.getElementById('profileConfirmPass').value.toUpperCase();
+            const stat = document.getElementById('profilePassStatus');
+
+            if(!currPass || !newPass || !confPass) { stat.innerHTML = "<span class='error'>All fields are required</span>"; return; }
+            if(currPass !== currentUser.password) { stat.innerHTML = "<span class='error'>Current password incorrect</span>"; return; }
+            if(newPass !== confPass) { stat.innerHTML = "<span class='error'>New passwords do not match</span>"; return; }
+
+            const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
+            const updates = { password: newPass };
+            const updatedUser = { ...currentUser, ...updates };
+
+            idbPut('cachedUsers', updatedUser).then(() => {
+                if(isOnline) {
+                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                        currentUser = updatedUser;
+                        stat.innerHTML = "<span class='success'>Password changed successfully!</span>";
+                        document.getElementById('profileCurrentPass').value = '';
+                        document.getElementById('profileNewPass').value = '';
+                        document.getElementById('profileConfirmPass').value = '';
+                    }).catch(err => {
+                        stat.innerHTML = "<span class='error'>Failed to change password.</span>";
+                    });
+                } else {
+                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
+                    currentUser = updatedUser;
+                    stat.innerHTML = "<span class='success'>Password saved locally!</span>";
+                    document.getElementById('profileCurrentPass').value = '';
+                    document.getElementById('profileNewPass').value = '';
+                    document.getElementById('profileConfirmPass').value = '';
                 }
             });
         };
@@ -1172,50 +1230,38 @@
 
             const isRSMRole = currentUser.role==='admin' || currentUser.role==='sr_rsm';
 
+            let fbRecords = {};
             if(isOnline) {
                 try {
                     const snap = await get(ref(db,'tourPlans'));
                     if(snap.exists()){
-                        snap.forEach(c=>{
-                            const p=c.val();
-                            let v=false;
-                            if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
-                            else if(isRSMRole && p.info.approvalFlow?.rsmId===currentUser.username)v=true;
-                            else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
-                            else if(p.info.empId===currentUser.empId)v=true;
-                            
-                            if(v && p.info.status !== 'Draft'){ // EXCLUDE DRAFTS
-                                if(p.info.status.includes('Pending'))pe++;
-                                if(p.info.status==='Rejected')re++;
-                                if(p.info.status==='Approved')ap++;
-                                
-                                let isPendingForMe = false;
-                                if(currentUser.role==='user' && p.info.status==='Pending_AM') isPendingForMe = true;
-                                if(isRSMRole && p.info.status==='Pending_RSM') isPendingForMe = true;
-                                
-                                if(isPendingForMe) records.push({key:c.key, data:p});
-                            }
-                        });
+                        snap.forEach(c=>{ fbRecords[c.key] = c.val(); idbPut('tourPlans', { id: c.key, payload: c.val() }); });
                     }
                 } catch(e) {}
-            } else {
-                const localPlans = await idbGetAll('tourPlans');
-                localPlans.forEach(p => {
-                    let v=false;
-                    if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
-                    else if(isRSMRole && p.payload.info.approvalFlow?.rsmId===currentUser.username)v=true;
-                    else if(currentUser.role==='user'&&p.payload.info.approvalFlow?.amId===currentUser.username)v=true;
-                    else if(p.payload.info.empId===currentUser.empId)v=true;
-                    if(v && p.payload.info.status !== 'Draft'){ // EXCLUDE DRAFTS
-                        if(p.payload.info.status.includes('Pending'))pe++;
-                        if(p.payload.info.status==='Rejected')re++;
-                        if(p.payload.info.status==='Approved')ap++;
-                        let isPendingForMe = false;
-                        if(currentUser.role==='user' && p.payload.info.status==='Pending_AM') isPendingForMe = true;
-                        if(isRSMRole && p.payload.info.status==='Pending_RSM') isPendingForMe = true;
-                        if(isPendingForMe) records.push({key:p.id, data:p.payload});
-                    }
-                });
+            }
+            // Always merge local records to ensure offline data is visible
+            const localRecords = await idbGetAll('tourPlans');
+            localRecords.forEach(r => { if (!fbRecords[r.id] || (r.payload.info.timestamp > (fbRecords[r.id].info?.timestamp || 0))) { fbRecords[r.id] = r.payload; } });
+
+            for(let key in fbRecords) {
+                const p = fbRecords[key];
+                let v=false;
+                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
+                else if(isRSMRole && p.info.approvalFlow?.rsmId===currentUser.username)v=true;
+                else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
+                else if(p.info.empId===currentUser.empId)v=true;
+                
+                if(v && p.info.status !== 'Draft'){
+                    if(p.info.status.includes('Pending'))pe++;
+                    if(p.info.status==='Rejected')re++;
+                    if(p.info.status==='Approved')ap++;
+                    
+                    let isPendingForMe = false;
+                    if(currentUser.role==='user' && p.info.status==='Pending_AM') isPendingForMe = true;
+                    if(isRSMRole && p.info.status==='Pending_RSM') isPendingForMe = true;
+                    
+                    if(isPendingForMe) records.push({key: key, data: p});
+                }
             }
 
             document.getElementById('stat-pending').innerText=pe;
@@ -1243,7 +1289,7 @@
             }
         }
 
-        // ===================== SAVE PLAN (AUTO-SAVE ONLY ENTERED ROWS) =====================
+        // ===================== SAVE PLAN =====================
         window.validateAndSave = function(isAuto=false){
             const empId=document.getElementById('tp_empId').value,month=document.getElementById('tp_month').value,sDiv=document.getElementById('tp_status'),aDiv=document.getElementById('autoSaveStatus');
             let planData=[],rows=document.querySelectorAll('#tourPlanTableBody tr'),hasData=false;
@@ -1252,7 +1298,6 @@
                 if(r.style.display!=="none"){
                     const i=r.id.split('_')[1],hq=document.querySelector(`[name="hq_${i}"]`),mw=document.querySelector(`[name="morning_wp_${i}"]`),ew=document.querySelector(`[name="evening_wp_${i}"]`);
                     
-                    // ONLY SAVE ROWS THAT HAVE AT LEAST ONE FIELD FILLED
                     if(hq.value || mw.value || ew.value) {
                         planData.push({date:i,hq:hq.value,morning_wp:mw.value,evening_wp:ew.value});
                         hasData = true;
@@ -1282,7 +1327,6 @@
                     st = "Pending";
                 }
             } else {
-                // If Auto-saving, keep it as Draft (or original status if editing an existing submitted plan)
                 st = editingPlanOriginalStatus && currentEditingKeyId ? editingPlanOriginalStatus : "Draft";
             }
             
@@ -1360,6 +1404,7 @@
             if(isOnline) {
                 try { const snap = await get(ref(db,'tourPlans')); if(snap.exists()) { snap.forEach(c => { fbRecords[c.key] = c.val(); idbPut('tourPlans', { id: c.key, payload: c.val() }); }); } } catch(e) {}
             }
+            // Merge with local
             const localRecords = await idbGetAll('tourPlans');
             localRecords.forEach(r => { if (!fbRecords[r.id] || (r.payload.info.timestamp > (fbRecords[r.id].info?.timestamp || 0))) { fbRecords[r.id] = r.payload; } });
             
@@ -1406,7 +1451,7 @@
             let records=[];
             for(let key in fbRecords) {
                 const d = fbRecords[key]; 
-                if (d.info.status === 'Draft') continue; // HIDE DRAFTS FROM HISTORY
+                if (d.info.status === 'Draft') continue; 
                 
                 const isMonth = d.info.month === selectedMonth; 
                 let canView = false;
@@ -1472,9 +1517,10 @@
             else if(statusBadge==='Rejected')statusBadge="<span class='badge badge-rejected'>Rejected</span>";
             let btns=`<button class="btn btn-sm btn-info" onclick="viewTourPlan('${key}')"><i class="fas fa-eye"></i> View</button>`;
             const isOwner=(d.info.empId===currentUser.empId||d.info.empId===currentUser.username);
-            const isPAM=d.info.status==='Pending_AM',isPRSM=d.info.status==='Pending_RSM',isRej=d.info.status==='Rejected',isApp=d.info.status==='Approved';
+            const isPAM=d.info.status==='Pending_AM',isPRSM=d.info.status==='Pending_RSM',isRej=d.info.status==='Rejected',isApp=d.info.status==='Approved',isDraft=d.info.status==='Draft';
             const isRSMRole = currentUser.role==='admin' || currentUser.role==='sr_rsm';
             const isSalesAdmin = currentUser.role === 'sales_admin';
+            const isSuperadmin = currentUser.role === 'superadmin';
             
             if(currentUser.role==='user'&&isPAM) {
                 btns+=`<button class="btn btn-sm btn-success" onclick="approvePlan('${key}')"><i class="fas fa-check"></i> Approve</button>`;
@@ -1485,20 +1531,17 @@
                 btns+=`<button class="btn btn-sm btn-danger" onclick="rejectPlan('${key}')"><i class="fas fa-times"></i> Reject</button>`;
             }
             
-            if(isRSMRole||currentUser.role==='superadmin'||isSalesAdmin)btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
+            if(isRSMRole||isSuperadmin||isSalesAdmin)btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
             
+            // Edit Restrictions: Only SuperAdmin can always edit. Owner can edit if Draft. Others cannot edit submitted plans.
             let canEdit=false;
-            if(!isSalesAdmin){
-                if(isOwner&&!isApp)canEdit=true;
-                if(currentUser.role==='user'&&isPAM)canEdit=true;
-                if(isRSMRole&&isPRSM)canEdit=true;
-                if(currentUser.role==='superadmin')canEdit=true;
-                if(isRej&&isOwner)canEdit=true;
-            }
+            if(isSuperadmin) canEdit=true;
+            else if(!isSalesAdmin && isOwner && isDraft) canEdit=true;
             if(canEdit)btns+=`<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')"><i class="fas fa-edit"></i> Edit</button>`;
             
+            // Delete Restrictions
             if(!isSalesAdmin) {
-                if((isOwner && !isApp) || currentUser.role === 'superadmin') {
+                if((isOwner && !isApp) || isSuperadmin) {
                     btns+=`<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')"><i class="fas fa-trash"></i></button>`;
                 }
             }
@@ -1512,7 +1555,7 @@
             const signPreviewDiv = document.getElementById('approveSignPreview');
             
             if (!currentUser.signature) {
-                signPreviewDiv.innerHTML = `<span style="color: red; font-size: 12px;">No signature found! Please upload your signature in the 'My Signature' tab first.</span>`;
+                signPreviewDiv.innerHTML = `<span style="color: red; font-size: 12px;">No signature found! Please upload your signature in the 'Profile Settings' tab first.</span>`;
             } else {
                 signPreviewDiv.innerHTML = `<img src="${currentUser.signature}" style="max-height: 120px; max-width: 100%;">`;
             }
@@ -1590,7 +1633,7 @@
             }
             
             if (!currentUser.signature) {
-                alert("Please upload your signature in the 'My Signature' tab before approving.");
+                alert("Please upload your signature in the 'Profile Settings' tab before approving.");
                 return;
             }
 
@@ -2179,6 +2222,19 @@
         // ===================== INITIALIZATION =====================
         await openIDB();
         updateNetworkUI();
+        
+        // Auto Login Check
+        const savedSession = localStorage.getItem('monico_session');
+        if (savedSession) {
+            try {
+                const creds = JSON.parse(savedSession);
+                document.getElementById('loginUsername').value = creds.u;
+                document.getElementById('loginPassword').value = creds.p;
+                handleLogin(true);
+            } catch (e) {
+                localStorage.removeItem('monico_session');
+            }
+        }
     </script>
 </body>
 </html>
