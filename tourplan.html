@@ -531,7 +531,6 @@
         let autoSaveTimer = null;
         let isOnline = navigator.onLine;
         let currentApproveKeyId = null;
-        let tempMySignatureData = null;
         let tempUserSig = null; 
         let editingPlanOriginalStatus = null;
         let editingPlanOriginalApprovalFlow = null;
@@ -800,13 +799,13 @@
             isEditingExistingPlan = false;
         };
 
-        // ===== AUTO-SAVE LOGIC (Only entered rows to Database) =====
+        // ===== AUTO-SAVE LOGIC =====
         function triggerAutoSave(){
             clearTimeout(autoSaveTimer);
             document.getElementById('autoSaveStatus').innerText = "Typing...";
             autoSaveTimer = setTimeout(() => {
-                validateAndSave(true); // true means isAuto
-            }, 2000); // 2 seconds debounce
+                validateAndSave(true); 
+            }, 2000); 
         }
 
         window.toggleSidebar=function(){document.getElementById('sidebar').classList.toggle('active');document.getElementById('overlay').classList.toggle('active');};
@@ -814,7 +813,7 @@
         generateTourPlanTable();populateMonthDropdowns();
 
         // ===================== LOGIN =====================
-        window.handleLogin = function(isAutoLogin = false) {
+        window.handleLogin = async function(isAutoLogin = false) {
             const u = document.getElementById('loginUsername').value.trim().toUpperCase();
             const p = document.getElementById('loginPassword').value.toUpperCase();
             const err = document.getElementById('loginError');
@@ -831,24 +830,26 @@
             const safeKey = u.replace(/[.#$\[\]]/g,'_');
             
             if(isOnline) {
-                get(ref(db, 'Users/' + safeKey)).then(snap => {
+                try {
+                    const snap = await get(ref(db, 'Users/' + safeKey));
                     if(snap.exists()) {
                         const d = snap.val();
                         if(d.password && d.password.toUpperCase() === p) {
                             currentUser = {...d, id: safeKey};
+                            await idbPut('cachedUsers', currentUser); // Ensure latest data is cached
                             if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
                             checkFirstLogin(currentUser);
                         } else {
                             if(!isAutoLogin) err.textContent = "Password Incorrect";
                         }
                     } else {
-                        tryOfflineLogin(u, p, err, isAutoLogin);
+                        await tryOfflineLogin(u, p, err, isAutoLogin);
                     }
-                }).catch(() => { 
-                    tryOfflineLogin(u, p, err, isAutoLogin); 
-                });
+                } catch(e) { 
+                    await tryOfflineLogin(u, p, err, isAutoLogin); 
+                }
             } else { 
-                tryOfflineLogin(u, p, err, isAutoLogin); 
+                await tryOfflineLogin(u, p, err, isAutoLogin); 
             }
         };
 
@@ -863,7 +864,7 @@
             else { if(!isAutoLogin) errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
         }
 
-        // ===== FIRST LOGIN CHECK (Password -> Signature -> Dashboard) =====
+        // ===== FIRST LOGIN CHECK =====
         function checkFirstLogin(user) {
             if(user.mustChangePassword === true) {
                 document.getElementById('changePasswordModal').style.display = 'flex';
@@ -952,7 +953,7 @@
             }
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
             const updates = { signature: sigUrl };
-            const updatedUser = { ...currentUser, ...updates };
+            const updatedUser = { ...currentUser, ...updates }; // Update local user object immediately
             
             idbPut('cachedUsers', updatedUser).then(() => {
                 if(isOnline) {
@@ -1152,7 +1153,7 @@
             if (!tempProfileImg) return;
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
             const updates = { profileImage: tempProfileImg };
-            const updatedUser = { ...currentUser, ...updates };
+            const updatedUser = { ...currentUser, ...updates }; // Update local user object
             
             idbPut('cachedUsers', updatedUser).then(() => {
                 if(isOnline) {
