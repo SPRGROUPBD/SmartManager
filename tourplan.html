@@ -146,7 +146,8 @@
             .holiday-row { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .holiday-row td { background-color: #e0e0e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-            .header-print { text-align: center; margin-bottom: 10px; }
+            .header-print { text-align: center; margin-bottom: 10px; position: relative; }
+            .header-print .logo-print { position: absolute; left: 0; top: -10px; height: 70px; width: auto; }
             
             /* INFO TABLE PRINT - No Wrap, No Extra Space */
             .info-table-print { 
@@ -393,7 +394,6 @@
                                     <div class="form-group"><label>Password</label><input type="text" id="m_password" required style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()"></div>
                                     <div class="form-group"><label>Force Pass Change (1st Login)</label><select id="m_forceChange" style="padding:8px;"><option value="true">Yes</option><option value="false">No</option></select></div>
                                     
-                                    <!-- SuperAdmin Signature Upload for Users -->
                                     <div class="form-group" style="grid-column: span 2;">
                                         <label>Upload Signature for this User</label>
                                         <div style="display:flex; align-items:center; gap:10px;">
@@ -529,7 +529,6 @@
 
         let currentUser = null;
         let autoSaveTimer = null;
-        let isOnline = navigator.onLine;
         let currentApproveKeyId = null;
         let tempUserSig = null; 
         let editingPlanOriginalStatus = null;
@@ -539,126 +538,6 @@
         let tempProfileImg = null;
         
         let currentEditSignatures = { prepared: "", prepared_signature: "", am: "", am_signature: "", rsm: "", rsm_signature: "", approved: "" };
-
-        // ==========================================
-        // ===== OFFLINE DATABASE (INDEXED DB) =====
-        // ==========================================
-        const DB_NAME = 'MonicoPharmaDB';
-        const DB_VERSION = 3; 
-        let idb = null;
-
-        function openIDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                request.onupgradeneeded = (e) => {
-                    const db = e.target.result;
-                    if (e.oldVersion < 3) {
-                        if (db.objectStoreNames.contains('tourPlans')) db.deleteObjectStore('tourPlans');
-                        if (db.objectStoreNames.contains('syncQueue')) db.deleteObjectStore('syncQueue');
-                        if (db.objectStoreNames.contains('cachedUsers')) db.deleteObjectStore('cachedUsers');
-                    }
-                    if (!db.objectStoreNames.contains('tourPlans')) db.createObjectStore('tourPlans', { keyPath: 'id' });
-                    if (!db.objectStoreNames.contains('syncQueue')) {
-                        const sq = db.createObjectStore('syncQueue', { keyPath: 'id', autoIncrement: true });
-                        sq.createIndex('type', 'type', { unique: false });
-                    }
-                    if (!db.objectStoreNames.contains('cachedUsers')) db.createObjectStore('cachedUsers', { keyPath: 'username' });
-                };
-                request.onsuccess = (e) => { idb = e.target.result; resolve(idb); };
-                request.onerror = (e) => reject(e);
-            });
-        }
-
-        async function clearIDBStore(storeName) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction(storeName, 'readwrite');
-                tx.objectStore(storeName).clear();
-                tx.oncomplete = () => resolve();
-                tx.onerror = (e) => reject(e);
-            });
-        }
-
-        async function idbPut(storeName, data) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction(storeName, 'readwrite');
-                tx.objectStore(storeName).put(data);
-                tx.oncomplete = () => resolve();
-                tx.onerror = (e) => reject(e);
-            });
-        }
-
-        async function idbGet(storeName, key) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction(storeName, 'readonly');
-                const req = tx.objectStore(storeName).get(key);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
-        }
-
-        async function idbGetAll(storeName) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction(storeName, 'readonly');
-                const req = tx.objectStore(storeName).getAll();
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = (e) => reject(e);
-            });
-        }
-
-        async function idbDelete(storeName, key) {
-            if (!idb) await openIDB();
-            return new Promise((resolve, reject) => {
-                const tx = idb.transaction(storeName, 'readwrite');
-                tx.objectStore(storeName).delete(key);
-                tx.oncomplete = () => resolve();
-                tx.onerror = (e) => reject(e);
-            });
-        }
-
-        async function addToSyncQueue(type, data) {
-            await idbPut('syncQueue', { type, data, timestamp: Date.now() });
-            updateUnsyncedCount();
-        }
-
-        // ==========================================
-        // ===== NETWORK STATUS & SYNC LOGIC ========
-        // ==========================================
-        function updateNetworkUI() {
-            const el = document.getElementById('syncStatus');
-            if (!el) return;
-            if (isOnline) { el.className = 'sync-status sync-online'; el.innerText = 'Online'; }
-            else { el.className = 'sync-status sync-offline'; el.innerText = 'Offline'; }
-        }
-
-        window.addEventListener('online', () => { isOnline = true; updateNetworkUI(); processSyncQueue(); });
-        window.addEventListener('offline', () => { isOnline = false; updateNetworkUI(); });
-
-        async function processSyncQueue() {
-            const queue = await idbGetAll('syncQueue');
-            if (queue.length === 0) return;
-            for (const item of queue) {
-                try {
-                    if (item.type === 'saveTourPlan') { await set(ref(db, 'tourPlans/' + item.data.id), item.data.payload); await idbDelete('syncQueue', item.id); }
-                    else if (item.type === 'updateStatus') { await update(ref(db, 'tourPlans/' + item.data.key), item.data.updates); await idbDelete('syncQueue', item.id); }
-                    else if (item.type === 'deleteTourPlan') { await remove(ref(db, 'tourPlans/' + item.data.key)); await idbDelete('syncQueue', item.id); }
-                    else if (item.type === 'saveUser') { await set(ref(db, 'Users/' + item.data.safeKey), item.data.payload); await idbDelete('syncQueue', item.id); }
-                    else if (item.type === 'deleteUser') { await remove(ref(db, 'Users/' + item.data.key)); await idbDelete('syncQueue', item.id); }
-                } catch (err) { console.error("Sync failed:", err); break; }
-            }
-            updateUnsyncedCount();
-            if (!document.getElementById('sectionTourHistory').classList.contains('hidden')) loadTourHistory();
-            if (!document.getElementById('sectionUserMgmt').classList.contains('hidden')) loadUsers();
-        }
-
-        async function updateUnsyncedCount() {
-            const queue = await idbGetAll('syncQueue');
-            const el = document.getElementById('stat-unsynced');
-            if (el) el.innerText = queue.length;
-        }
 
         // ==========================================
         // ===== HELPERS ============================
@@ -751,7 +630,7 @@
             triggerAutoSave();
         };
 
-        window.handleMonthChange = async function(){
+        window.handleMonthChange = async function(skipFetch = false){
             for(let i=1;i<=31;i++){
                 const r=document.getElementById(`row_${i}`);
                 if(r) {
@@ -786,26 +665,26 @@
                 }
             }
 
-            if (!isEditingExistingPlan) {
+            if (!isEditingExistingPlan && !skipFetch) {
                 const empId = document.getElementById('tp_empId').value;
                 const planId = `${empId}_${mv.replace(/\s/g, '_')}`;
                 
-                const existingPlan = await idbGet('tourPlans', planId);
-                if (existingPlan && existingPlan.payload) {
-                    editTourPlan(planId);
+                const snap = await get(ref(db, 'tourPlans/' + planId));
+                if(snap.exists()) {
+                    editTourPlan(planId, snap.val());
                     return;
                 }
             }
             isEditingExistingPlan = false;
         };
 
-        // ===== AUTO-SAVE LOGIC =====
+        // ===== AUTO-SAVE LOGIC (DIRECT TO FIREBASE) =====
         function triggerAutoSave(){
             clearTimeout(autoSaveTimer);
             document.getElementById('autoSaveStatus').innerText = "Typing...";
             autoSaveTimer = setTimeout(() => {
                 validateAndSave(true); 
-            }, 2000); 
+            }, 3000); 
         }
 
         window.toggleSidebar=function(){document.getElementById('sidebar').classList.toggle('active');document.getElementById('overlay').classList.toggle('active');};
@@ -821,7 +700,20 @@
             if(!u || !p) { if(!isAutoLogin) err.textContent = "Input required"; return false; }
             
             if((u === 'SYSTEMADMIN' || u === 'KS') && p === 'MONICO@KU007') {
-                currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'systemadmin', designation: 'SuperAdmin', mustChangePassword: false };
+                const safeKey = 'SYSTEMADMIN';
+                try {
+                    const snap = await get(ref(db, 'Users/' + safeKey));
+                    if(snap.exists()) {
+                        currentUser = snap.val();
+                        currentUser.role = 'superadmin'; // FORCE ROLE TO PREVENT DB OVERRIDE BUG
+                        currentUser.username = safeKey;
+                    } else {
+                        currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'SYSTEMADMIN', designation: 'SuperAdmin', mustChangePassword: false };
+                    }
+                } catch(e) {
+                    currentUser = { name: 'System Admin', role: 'superadmin', id: 'superadmin_001', username: 'SYSTEMADMIN', designation: 'SuperAdmin', mustChangePassword: false };
+                }
+                
                 if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
                 checkFirstLogin(currentUser);
                 return true;
@@ -829,49 +721,37 @@
             
             const safeKey = u.replace(/[.#$\[\]]/g,'_');
             
-            if(isOnline) {
-                try {
-                    const snap = await get(ref(db, 'Users/' + safeKey));
-                    if(snap.exists()) {
-                        const d = snap.val();
-                        if(d.password && d.password.toUpperCase() === p) {
-                            currentUser = {...d, id: safeKey};
-                            await idbPut('cachedUsers', currentUser); // Ensure latest data is cached
-                            if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
-                            checkFirstLogin(currentUser);
-                        } else {
-                            if(!isAutoLogin) err.textContent = "Password Incorrect";
-                        }
+            try {
+                const snap = await get(ref(db, 'Users/' + safeKey));
+                if(snap.exists()) {
+                    const d = snap.val();
+                    if(d.password && d.password.toUpperCase() === p) {
+                        currentUser = {...d, id: safeKey};
+                        if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
+                        checkFirstLogin(currentUser);
                     } else {
-                        await tryOfflineLogin(u, p, err, isAutoLogin);
+                        if(!isAutoLogin) err.textContent = "Password Incorrect";
                     }
-                } catch(e) { 
-                    await tryOfflineLogin(u, p, err, isAutoLogin); 
+                } else {
+                    if(!isAutoLogin) err.textContent = "User not found";
                 }
-            } else { 
-                await tryOfflineLogin(u, p, err, isAutoLogin); 
+            } catch(e) {
+                if(!isAutoLogin) err.textContent = "Network error. Check connection.";
             }
         };
 
-        async function tryOfflineLogin(u, p, errEl, isAutoLogin) {
-            const allUsers = await idbGetAll('cachedUsers');
-            const user = allUsers.find(x => x.username.toUpperCase() === u && x.password.toUpperCase() === p);
-            if (user) { 
-                currentUser = {...user, id: user.username.replace(/[.#$\[\]]/g,'_')}; 
-                if(!isAutoLogin) localStorage.setItem('monico_session', JSON.stringify({u, p}));
-                checkFirstLogin(currentUser);
-            }
-            else { if(!isAutoLogin) errEl.textContent = isOnline ? "User not found" : "Offline: User not found in cache"; }
-        }
-
         // ===== FIRST LOGIN CHECK =====
         function checkFirstLogin(user) {
+            if (!user) return;
+            const role = (user.role || '').trim().toLowerCase();
+            const isAdminRole = (role === 'superadmin' || role === 'sales_admin');
+            
             if(user.mustChangePassword === true) {
                 document.getElementById('changePasswordModal').style.display = 'flex';
                 document.getElementById('changePassError').textContent = '';
                 document.getElementById('newPassword').value = '';
                 document.getElementById('confirmNewPassword').value = '';
-            } else if (!user.signature) {
+            } else if (!isAdminRole && !user.signature) { 
                 showForceSigModal();
             } else {
                 showDashboard();
@@ -894,29 +774,18 @@
             
             const updatedUser = {...currentUser, ...updates};
             
-            idbPut('cachedUsers', updatedUser).then(() => {
-                if(isOnline) {
-                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
-                        currentUser = updatedUser;
-                        document.getElementById('changePasswordModal').style.display = 'none';
-                        if (!currentUser.signature) {
-                            showForceSigModal();
-                        } else {
-                            showDashboard();
-                        }
-                    }).catch(err => {
-                        errEl.textContent = "Update failed. Try again.";
-                    });
+            update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                currentUser = updatedUser;
+                document.getElementById('changePasswordModal').style.display = 'none';
+                const role = (currentUser.role || '').trim().toLowerCase();
+                const isAdminRole = (role === 'superadmin' || role === 'sales_admin');
+                if (!isAdminRole && !currentUser.signature) {
+                    showForceSigModal();
                 } else {
-                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
-                    currentUser = updatedUser;
-                    document.getElementById('changePasswordModal').style.display = 'none';
-                    if (!currentUser.signature) {
-                        showForceSigModal();
-                    } else {
-                        showDashboard();
-                    }
+                    showDashboard();
                 }
+            }).catch(err => {
+                errEl.textContent = "Update failed. Try again.";
             });
         };
 
@@ -953,23 +822,14 @@
             }
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
             const updates = { signature: sigUrl };
-            const updatedUser = { ...currentUser, ...updates }; // Update local user object immediately
+            const updatedUser = { ...currentUser, ...updates };
             
-            idbPut('cachedUsers', updatedUser).then(() => {
-                if(isOnline) {
-                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
-                        currentUser = updatedUser;
-                        document.getElementById('forceSigModal').style.display = 'none';
-                        showDashboard();
-                    }).catch(err => {
-                        document.getElementById('forceSigError').textContent = "Failed to save. Try again.";
-                    });
-                } else {
-                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
-                    currentUser = updatedUser;
-                    document.getElementById('forceSigModal').style.display = 'none';
-                    showDashboard();
-                }
+            update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                currentUser = updatedUser;
+                document.getElementById('forceSigModal').style.display = 'none';
+                showDashboard();
+            }).catch(err => {
+                document.getElementById('forceSigError').textContent = "Failed to save. Try again.";
             });
         };
 
@@ -983,7 +843,6 @@
             document.getElementById('loginScreen').classList.add('hidden');document.getElementById('dashboardScreen').classList.remove('hidden');
             document.getElementById('sidebarName').innerText=currentUser.name;document.getElementById('sidebarRole').innerText=`Role: ${getRoleName(currentUser.role)}`;document.getElementById('welcomeName').innerText=currentUser.name;
             
-            // Set Profile Images
             const imgUrl = currentUser.profileImage || "https://via.placeholder.com/40";
             document.getElementById('sidebarProfileImg').src = imgUrl;
             document.getElementById('dashboardProfileImg').src = imgUrl;
@@ -1007,7 +866,6 @@
                 document.getElementById('overlay').classList.remove('active');
             }
             
-            if(isOnline) { try { const snap = await get(ref(db, 'Users')); if(snap.exists()) { await clearIDBStore('cachedUsers'); snap.forEach(c => idbPut('cachedUsers', c.val())); } } catch(e) {} }
             showSection('home');
         }
 
@@ -1153,27 +1011,18 @@
             if (!tempProfileImg) return;
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
             const updates = { profileImage: tempProfileImg };
-            const updatedUser = { ...currentUser, ...updates }; // Update local user object
             
-            idbPut('cachedUsers', updatedUser).then(() => {
-                if(isOnline) {
-                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
-                        currentUser = updatedUser;
-                        document.getElementById('sidebarProfileImg').src = tempProfileImg;
-                        document.getElementById('dashboardProfileImg').src = tempProfileImg;
-                        document.getElementById('profileImgStatus').innerHTML = "<span class='success'>Profile picture updated!</span>";
-                        document.getElementById('saveProfileImgBtn').style.display = 'none';
-                    }).catch(err => {
-                        document.getElementById('profileImgStatus').innerHTML = "<span class='error'>Failed to save.</span>";
-                    });
-                } else {
-                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
-                    currentUser = updatedUser;
-                    document.getElementById('sidebarProfileImg').src = tempProfileImg;
-                    document.getElementById('dashboardProfileImg').src = tempProfileImg;
-                    document.getElementById('profileImgStatus').innerHTML = "<span class='success'>Saved locally!</span>";
-                    document.getElementById('saveProfileImgBtn').style.display = 'none';
-                }
+            update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                currentUser.profileImage = tempProfileImg; 
+                
+                document.getElementById('sidebarProfileImg').src = tempProfileImg;
+                document.getElementById('dashboardProfileImg').src = tempProfileImg;
+                document.getElementById('profileImgPreview').src = tempProfileImg;
+                
+                document.getElementById('profileImgStatus').innerHTML = "<span class='success'>Profile picture updated!</span>";
+                document.getElementById('saveProfileImgBtn').style.display = 'none';
+            }).catch(err => {
+                document.getElementById('profileImgStatus').innerHTML = "<span class='error'>Failed to save.</span>";
             });
         };
 
@@ -1189,31 +1038,19 @@
 
             const safeKey = currentUser.username.replace(/[.#$\[\]]/g,'_');
             const updates = { password: newPass };
-            const updatedUser = { ...currentUser, ...updates };
 
-            idbPut('cachedUsers', updatedUser).then(() => {
-                if(isOnline) {
-                    update(ref(db, 'Users/' + safeKey), updates).then(() => {
-                        currentUser = updatedUser;
-                        stat.innerHTML = "<span class='success'>Password changed successfully!</span>";
-                        document.getElementById('profileCurrentPass').value = '';
-                        document.getElementById('profileNewPass').value = '';
-                        document.getElementById('profileConfirmPass').value = '';
-                    }).catch(err => {
-                        stat.innerHTML = "<span class='error'>Failed to change password.</span>";
-                    });
-                } else {
-                    addToSyncQueue('saveUser', { safeKey, payload: updatedUser });
-                    currentUser = updatedUser;
-                    stat.innerHTML = "<span class='success'>Password saved locally!</span>";
-                    document.getElementById('profileCurrentPass').value = '';
-                    document.getElementById('profileNewPass').value = '';
-                    document.getElementById('profileConfirmPass').value = '';
-                }
+            update(ref(db, 'Users/' + safeKey), updates).then(() => {
+                currentUser.password = newPass; 
+                stat.innerHTML = "<span class='success'>Password changed successfully!</span>";
+                document.getElementById('profileCurrentPass').value = '';
+                document.getElementById('profileNewPass').value = '';
+                document.getElementById('profileConfirmPass').value = '';
+            }).catch(err => {
+                stat.innerHTML = "<span class='error'>Failed to change password.</span>";
             });
         };
 
-        // ===================== DASHBOARD STATS & PENDING LIST (ALL MONTHS) =====================
+        // ===================== DASHBOARD STATS & PENDING LIST =====================
         async function loadDashboardStats(){
             document.getElementById('stat-pending').innerText="0";document.getElementById('stat-rejected').innerText="0";document.getElementById('stat-approved').innerText="0";
             const pendingListDiv = document.getElementById('dashboardPendingList');
@@ -1231,44 +1068,36 @@
 
             const isRSMRole = currentUser.role==='admin' || currentUser.role==='sr_rsm';
 
-            let fbRecords = {};
-            if(isOnline) {
-                try {
-                    const snap = await get(ref(db,'tourPlans'));
-                    if(snap.exists()){
-                        snap.forEach(c=>{ fbRecords[c.key] = c.val(); idbPut('tourPlans', { id: c.key, payload: c.val() }); });
-                    }
-                } catch(e) {}
-            }
-            // Always merge local records to ensure offline data is visible
-            const localRecords = await idbGetAll('tourPlans');
-            localRecords.forEach(r => { if (!fbRecords[r.id] || (r.payload.info.timestamp > (fbRecords[r.id].info?.timestamp || 0))) { fbRecords[r.id] = r.payload; } });
-
-            for(let key in fbRecords) {
-                const p = fbRecords[key];
-                let v=false;
-                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
-                else if(isRSMRole && p.info.approvalFlow?.rsmId===currentUser.username)v=true;
-                else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
-                else if(p.info.empId===currentUser.empId)v=true;
-                
-                if(v && p.info.status !== 'Draft'){
-                    if(p.info.status.includes('Pending'))pe++;
-                    if(p.info.status==='Rejected')re++;
-                    if(p.info.status==='Approved')ap++;
-                    
-                    let isPendingForMe = false;
-                    if(currentUser.role==='user' && p.info.status==='Pending_AM') isPendingForMe = true;
-                    if(isRSMRole && p.info.status==='Pending_RSM') isPendingForMe = true;
-                    
-                    if(isPendingForMe) records.push({key: key, data: p});
+            try {
+                const snap = await get(ref(db,'tourPlans'));
+                if(snap.exists()){
+                    snap.forEach(c=>{
+                        const p=c.val();
+                        let v=false;
+                        if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')v=true;
+                        else if(isRSMRole && p.info.region === currentUser.region)v=true; // RSM matches Region
+                        else if(currentUser.role==='user'&&p.info.approvalFlow?.amId===currentUser.username)v=true;
+                        else if(p.info.empId===currentUser.empId)v=true;
+                        
+                        if(v && p.info.status !== 'Draft'){
+                            if(p.info.status.includes('Pending'))pe++;
+                            if(p.info.status==='Rejected')re++;
+                            if(p.info.status==='Approved')ap++;
+                            
+                            let isPendingForMe = false;
+                            if(currentUser.role==='user' && p.info.status==='Pending_AM') isPendingForMe = true;
+                            if(isRSMRole && p.info.status==='Pending_RSM') isPendingForMe = true;
+                            
+                            if(isPendingForMe) records.push({key:c.key, data:p});
+                        }
+                    });
                 }
-            }
+            } catch(e) {}
 
             document.getElementById('stat-pending').innerText=pe;
             document.getElementById('stat-rejected').innerText=re;
             document.getElementById('stat-approved').innerText=ap;
-            updateUnsyncedCount();
+            document.getElementById('stat-unsynced').innerText='0';
 
             if(currentUser.role !== 'sales_admin' && currentUser.role !== 'superadmin') {
                 if(records.length===0){
@@ -1290,7 +1119,7 @@
             }
         }
 
-        // ===================== SAVE PLAN =====================
+        // ===================== SAVE PLAN DIRECT TO FIREBASE =====================
         window.validateAndSave = function(isAuto=false){
             const empId=document.getElementById('tp_empId').value,month=document.getElementById('tp_month').value,sDiv=document.getElementById('tp_status'),aDiv=document.getElementById('autoSaveStatus');
             let planData=[],rows=document.querySelectorAll('#tourPlanTableBody tr'),hasData=false;
@@ -1313,13 +1142,13 @@
             
             let st="Draft",af={};
             
-            if(!isAuto) { // If clicking Submit
+            if(!isAuto) {
                 if(currentUser.role==='mpo'){st="Pending_AM";af={amId:currentUser.amId,rsmId:currentUser.rsmId};}
                 else if(currentUser.role==='user'){st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};}
                 else if(currentUser.role==='admin' || currentUser.role==='sr_rsm'){
                     st="Approved"; 
-                    currentEditSignatures.rsm = currentUser.name; 
-                    currentEditSignatures.rsm_signature = currentUser.signature || currentEditSignatures.rsm_signature; 
+                    af={rsmId:currentUser.username}; // RSM submits own plan, auto-approved.
+                    // NO RSM Signature added here. It will only be in 'prepared' box.
                 }
                 else if(currentUser.role==='superadmin'){
                     st = editingPlanOriginalStatus || "Approved";
@@ -1338,117 +1167,95 @@
                 plan:planData
             };
 
-            idbPut('tourPlans', { id: recordId, payload }).then(() => {
+            set(ref(db,'tourPlans/'+recordId), payload).then(async ()=>{
                 if(isAuto){
                     aDiv.innerText = "Auto-saved to Database";
                     aDiv.style.color = "green";
                 } else {
-                    sDiv.innerHTML="<span class='success'>Saved Locally!</span>"; 
                     if(currentEditingKeyId) {
-                        setTimeout(() => {
-                            currentEditingKeyId = null;
-                            showSection('tourHistory');
-                        }, 1000);
-                    } else {
-                        handleMonthChange();
-                    }
-                }
-            });
-
-            if(isOnline) {
-                set(ref(db,'tourPlans/'+recordId), payload).then(()=>{
-                    if(isAuto){
-                        aDiv.innerText = "Auto-saved to Database";
-                        aDiv.style.color = "green";
-                    } else {
-                        if(currentEditingKeyId) {
-                            alert("Tour Plan Updated Successfully!");
-                            currentEditingKeyId = null;
-                            showSection('tourHistory');
-                        } else {
-                            alert("Tour Plan Submitted Successfully!");
-                            sDiv.innerHTML="<span class='success'>Successfully Saved & Synced!</span>";
-                            handleMonthChange();
-                        }
-                    }
-                }).catch(err => {
-                    addToSyncQueue('saveTourPlan', { id: recordId, payload });
-                    if(!isAuto) {
-                        alert("Saved locally. Will sync when online.");
-                        if(currentEditingKeyId) {
-                            currentEditingKeyId = null;
-                            showSection('tourHistory');
-                        }
-                    }
-                });
-            } else {
-                addToSyncQueue('saveTourPlan', { id: recordId, payload });
-                if(!isAuto) {
-                    alert("You are offline. Plan saved locally and will sync automatically.");
-                    if(currentEditingKeyId) {
+                        alert("Tour Plan Updated Successfully!");
                         currentEditingKeyId = null;
                         showSection('tourHistory');
+                    } else {
+                        alert("Tour Plan Submitted Successfully!");
+                        sDiv.innerHTML="<span class='success'>Successfully Saved & Synced!</span>";
+                        // CLEAR THE FORM INSTEAD OF GOING INTO EDIT MODE
+                        const tb = document.getElementById('tourPlanTableBody');
+                        tb.querySelectorAll('input[type="text"]').forEach(inp => inp.value = '');
+                        tb.querySelectorAll('select').forEach(sel => sel.value = '');
+                        tb.querySelectorAll('.holiday-row').forEach(r => r.classList.remove('holiday-row'));
+                        await handleMonthChange(true); // true = skip fetching saved plan
                     }
                 }
-            }
+            }).catch(err => {
+                if(isAuto){
+                    aDiv.innerText = "Auto-save failed";
+                    aDiv.style.color = "red";
+                } else {
+                    alert("Failed to save. Check connection.");
+                }
+            });
         };
 
         // ===================== TOUR HISTORY =====================
         window.loadTourHistory = async function(){
-            const container=document.getElementById('tourHistoryContent');container.innerHTML='<div style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            const container=document.getElementById('tourHistoryContent');
+            container.innerHTML='<div style="text-align:center;padding:20px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
             const selectedMonth=document.getElementById('historyMonthFilter').value;
             const searchQuery=document.getElementById('mpoSearch').value.toLowerCase();
             
             let fbRecords = {};
             const isRSMRole = currentUser.role==='admin' || currentUser.role==='sr_rsm';
             
-            if(isOnline) {
-                try { const snap = await get(ref(db,'tourPlans')); if(snap.exists()) { snap.forEach(c => { fbRecords[c.key] = c.val(); idbPut('tourPlans', { id: c.key, payload: c.val() }); }); } } catch(e) {}
-            }
-            // Merge with local
-            const localRecords = await idbGetAll('tourPlans');
-            localRecords.forEach(r => { if (!fbRecords[r.id] || (r.payload.info.timestamp > (fbRecords[r.id].info?.timestamp || 0))) { fbRecords[r.id] = r.payload; } });
-            
-            let allUsers = {};
-            if(isOnline) {
-                try { 
-                    const snap = await get(ref(db,'Users')); 
-                    if(snap.exists()) { 
-                        snap.forEach(c=>{ allUsers[c.key] = c.val(); }); 
-                    }
-                } catch(e) {}
-            } else {
-                const localUsers = await idbGetAll('cachedUsers');
-                localUsers.forEach(u => { allUsers[u.username] = u; });
+            try {
+                const snap = await get(ref(db,'tourPlans'));
+                if(snap.exists()) {
+                    snap.forEach(c => { fbRecords[c.key] = c.val(); });
+                }
+            } catch(e) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:red;">Error loading data. Check connection.</div>';
+                return;
             }
 
-            const areaMpoMap = {}; 
+            let allUsers = {};
+            try {
+                const snapU = await get(ref(db,'Users'));
+                if(snapU.exists()) { 
+                    snapU.forEach(c=>{ allUsers[c.key] = c.val(); }); 
+                }
+            } catch(e) {}
+
+            // 1. Group Users by Region/Area depending on Role
+            const grouped = {};
             for(let k in allUsers) {
                 const u = allUsers[k];
-                if(u.role === 'mpo') {
-                    const area = u.area || 'Unknown';
-                    if(!areaMpoMap[area]) areaMpoMap[area] = [];
-                    areaMpoMap[area].push({ username: u.username, empId: u.empId, name: u.name });
+                let include = false;
+                let groupKey = '';
+                
+                if(currentUser.role === 'superadmin' || currentUser.role === 'sales_admin') {
+                    include = true;
+                    groupKey = isRSMRole ? (u.region || 'Unknown Region') : (u.area || 'Unknown Area');
+                } else if(isRSMRole && (u.region === currentUser.region || u.rsmId === currentUser.username || u.username === currentUser.username)) {
+                    include = true;
+                    groupKey = u.region || 'Unknown Region';
+                } else if(currentUser.role === 'user' && (u.amId === currentUser.username || u.username === currentUser.username)) {
+                    include = true;
+                    groupKey = u.area || 'Unknown Area';
+                } else if(u.username === currentUser.username) {
+                    include = true;
+                    groupKey = isRSMRole ? (u.region || 'Unknown Region') : (u.area || 'Unknown Area');
                 }
-            }
-
-            const filteredAreaMpoMap = {};
-            for(const area in areaMpoMap) {
-                const mpos = areaMpoMap[area].filter(mpo => {
-                    const userObj = allUsers[mpo.username];
-                    if(!userObj) return false;
-                    
-                    if(currentUser.role === 'superadmin' || currentUser.role === 'sales_admin') return true;
-                    if(isRSMRole && userObj.rsmId === currentUser.username) return true;
-                    if(currentUser.role === 'user' && userObj.amId === currentUser.username) return true;
-                    if(userObj.username === currentUser.username) return true; 
-                    return false;
-                });
-                if(mpos.length > 0) {
-                    filteredAreaMpoMap[area] = mpos;
+                
+                if(include) {
+                    if(!grouped[groupKey]) grouped[groupKey] = { mpo: 0, am: 0, rsm: 0, total: 0, records: [] };
+                    if(u.role === 'mpo') grouped[groupKey].mpo++;
+                    else if(u.role === 'user') grouped[groupKey].am++;
+                    else if(u.role === 'admin' || u.role === 'sr_rsm') grouped[groupKey].rsm++;
+                    grouped[groupKey].total++;
                 }
             }
             
+            // 2. Fetch Visible Records
             let records=[];
             for(let key in fbRecords) {
                 const d = fbRecords[key]; 
@@ -1456,10 +1263,10 @@
                 
                 const isMonth = d.info.month === selectedMonth; 
                 let canView = false;
-                if(d.info.empId===currentUser.empId||d.info.empId===currentUser.username)canView=true;
-                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')canView=true; 
-                if(isRSMRole && d.info.approvalFlow?.rsmId===currentUser.username)canView=true;
-                if(currentUser.role==='user'&&d.info.approvalFlow?.amId===currentUser.username)canView=true;
+                if(d.info.empId===currentUser.empId||d.info.empId===currentUser.username)canView=true; // Own plan
+                if(currentUser.role==='superadmin' || currentUser.role==='sales_admin')canView=true; // All plans
+                if(isRSMRole && (d.info.region === currentUser.region || d.info.approvalFlow?.rsmId === currentUser.username))canView=true; // RSM matches Region or approval flow
+                if(currentUser.role==='user'&&d.info.approvalFlow?.amId===currentUser.username)canView=true; // AM's MPOs
                 if(canView && isMonth) {
                     if(searchQuery) {
                         if(!d.info.name.toLowerCase().includes(searchQuery) && !d.info.empId.toLowerCase().includes(searchQuery)) {
@@ -1470,43 +1277,50 @@
                 }
             }
             
+            // 3. Assign Records to Groups
+            records.forEach(r => {
+                const groupKey = isRSMRole ? (r.data.info.region || 'Unknown Region') : (r.data.info.area || 'Unknown Area');
+                if(!grouped[groupKey]) {
+                    grouped[groupKey] = { mpo: 0, am: 0, rsm: 0, total: 0, records: [] };
+                }
+                grouped[groupKey].records.push(r);
+            });
+            
             let html="";
-            if(records.length===0 && !searchQuery && Object.keys(filteredAreaMpoMap).length === 0) {
+            const groupLabel = isRSMRole ? "Region" : "Area";
+            const sortedKeys = Object.keys(grouped).sort();
+            
+            if(records.length===0 && !searchQuery && sortedKeys.length === 0) {
                 html='<div style="text-align:center;padding:20px;color:#888;">No records found for this month.</div>';
             } else {
-                const sortedAreas = Object.keys(filteredAreaMpoMap).sort();
-                
-                for(const area of sortedAreas) {
-                    const mposInArea = filteredAreaMpoMap[area];
-                    const totalMPO = mposInArea.length;
+                for(const key of sortedKeys) {
+                    const groupData = grouped[key];
+                    const totalUsers = groupData.total;
+                    const entryCount = groupData.records.length;
+                    const noEntryCount = totalUsers - entryCount;
                     
-                    const areaRecords = records.filter(r => r.data.info.area === area);
+                    if(searchQuery && groupData.records.length === 0) continue;
                     
-                    const enteredMPOs = new Set(areaRecords.map(r => r.data.info.empId || r.data.info.username));
-                    const entryCount = enteredMPOs.size;
-                    const noEntryCount = totalMPO - entryCount;
-                    
-                    if(searchQuery && areaRecords.length === 0) continue;
+                    let statsHtml = `<span class="badge" style="background:#d1ecf1;color:#0c5460;">Total MPO: ${groupData.mpo}</span>`;
+                    if(isRSMRole || currentUser.role === 'superadmin' || currentUser.role === 'sales_admin') {
+                        statsHtml += `<span class="badge" style="background:#cce5ff;color:#004085;margin-left:4px;">Total AM: ${groupData.am}</span>
+                                      <span class="badge" style="background:#e2e3e5;color:#383d41;margin-left:4px;">RSM/Sr.RSM: ${groupData.rsm}</span>`;
+                    }
+                    statsHtml += `<span class="badge" style="background:#d4edda;color:#155724;margin-left:4px;">Entry: ${entryCount}</span>
+                                  <span class="badge" style="background:#f8d7da;color:#721c24;margin-left:4px;">No Entry: ${noEntryCount}</span>`;
                     
                     html += `<div class="area-group-header">
-                        <div><i class="fas fa-map-marker-alt"></i> <strong>Area: ${area}</strong></div>
-                        <div class="area-stats">
-                            <span class="badge" style="background:#d1ecf1;color:#0c5460;">Total MPO: ${totalMPO}</span>
-                            <span class="badge" style="background:#d4edda;color:#155724;margin-left:4px;">Entry: ${entryCount}</span>
-                            <span class="badge" style="background:#f8d7da;color:#721c24;margin-left:4px;">No Entry: ${noEntryCount}</span>
-                        </div>
+                        <div><i class="fas fa-map-marker-alt"></i> <strong>${groupLabel}: ${key}</strong></div>
+                        <div class="area-stats">${statsHtml}</div>
                     </div>`;
                     
-                    if(areaRecords.length > 0) {
-                        areaRecords.forEach(r => { html += buildHistoryRow(r.data, r.key); });
+                    if(groupData.records.length > 0) {
+                        groupData.records.forEach(r => { html += buildHistoryRow(r.data, r.key); });
                     } else {
-                        html += `<div style="padding:10px;color:#888;font-size:12px;text-align:center;">No entries submitted in this area yet.</div>`;
+                        html += `<div style="padding:10px;color:#888;font-size:12px;text-align:center;">No entries submitted in this ${groupLabel.toLowerCase()} yet.</div>`;
                     }
                 }
-                
-                if(html === "") {
-                    html = '<div style="text-align:center;padding:20px;color:#888;">No matching records found.</div>';
-                }
+                if(html === "") html = '<div style="text-align:center;padding:20px;color:#888;">No matching records found.</div>';
             }
             container.innerHTML=html;
         };
@@ -1534,13 +1348,11 @@
             
             if(isRSMRole||isSuperadmin||isSalesAdmin)btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
             
-            // Edit Restrictions: Only SuperAdmin can always edit. Owner can edit if Draft. Others cannot edit submitted plans.
             let canEdit=false;
             if(isSuperadmin) canEdit=true;
             else if(!isSalesAdmin && isOwner && isDraft) canEdit=true;
             if(canEdit)btns+=`<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')"><i class="fas fa-edit"></i> Edit</button>`;
             
-            // Delete Restrictions
             if(!isSalesAdmin) {
                 if((isOwner && !isApp) || isSuperadmin) {
                     btns+=`<button class="btn btn-sm btn-danger" onclick="deleteTourPlan('${key}')"><i class="fas fa-trash"></i></button>`;
@@ -1563,8 +1375,9 @@
 
             document.getElementById('approveRemarks').value = '';
             
-            getPlanData(key).then(d => {
-                if(!d) return;
+            get(ref(db, 'tourPlans/' + key)).then(snap => {
+                if(!snap.exists()) return;
+                const d = snap.val();
                 
                 document.getElementById('approveEmpInfo').innerHTML = `
                     <div><b>Employee:</b> ${d.info.name}</div>
@@ -1639,8 +1452,9 @@
             }
 
             const key = currentApproveKeyId;
-            getPlanData(key).then(d => {
-                if (!d) return;
+            get(ref(db, 'tourPlans/' + key)).then(snap => {
+                if (!snap.exists()) return;
+                const d = snap.val();
                 
                 let newPlanData = [];
                 document.querySelectorAll('#approveTableBody tr').forEach(tr => {
@@ -1670,29 +1484,14 @@
                 const remarks = document.getElementById('approveRemarks').value.trim();
                 if(remarks) upd['info/remarks'] = remarks;
                 
-                const mergedData = { 
-                    ...d, 
-                    info: { ...d.info, status: upd['info/status'], signatures: upd['info/signatures'], remarks: remarks || d.info.remarks }, 
-                    plan: newPlanData 
-                };
-                idbPut('tourPlans', { id: key, payload: mergedData });
+                upd['plan'] = newPlanData;
                 
-                const fbUpdates = { ...upd, 'plan': newPlanData };
-                
-                if (isOnline) {
-                    update(ref(db, 'tourPlans/' + key), fbUpdates).then(() => {
-                        alert("Approved Successfully!");
-                        closeApproveModal();
-                        loadDashboardStats();
-                        loadTourHistory();
-                    });
-                } else {
-                    addToSyncQueue('updateStatus', { key, updates: fbUpdates });
-                    alert("Approved locally!");
+                update(ref(db, 'tourPlans/' + key), upd).then(() => {
+                    alert("Approved Successfully!");
                     closeApproveModal();
                     loadDashboardStats();
                     loadTourHistory();
-                }
+                });
             });
         };
 
@@ -1702,29 +1501,25 @@
                 return;
             }
             if(confirm("Reject this plan?")){
-                getPlanData(key).then(d=>{if(!d) return;const upd = {'info/status':'Rejected'};const mergedData = { ...d, info: { ...d.info, status: 'Rejected' } };idbPut('tourPlans', { id: key, payload: mergedData });
-                if(isOnline) { update(ref(db,'tourPlans/'+key),upd).then(()=>{alert("Rejected!");loadDashboardStats();loadTourHistory();}); }
-                else { addToSyncQueue('updateStatus', { key, updates: upd }); alert("Rejected locally!");loadDashboardStats();loadTourHistory(); }});
+                update(ref(db,'tourPlans/'+key),{'info/status':'Rejected'}).then(()=>{
+                    alert("Rejected!");
+                    loadDashboardStats();
+                    loadTourHistory();
+                });
             }
         };
 
         window.deleteTourPlan=function(key){
-            if(confirm("Delete this plan permanently?")){idbDelete('tourPlans', key);
-            if(isOnline) { remove(ref(db,'tourPlans/'+key)).then(()=>loadTourHistory()); }
-            else { addToSyncQueue('deleteTourPlan', { key }); loadTourHistory(); }}
+            if(confirm("Delete this plan permanently?")){
+                remove(ref(db,'tourPlans/'+key)).then(()=>loadTourHistory());
+            }
         };
-
-        async function getPlanData(key) {
-            let local = await idbGet('tourPlans', key);
-            if (local) return local.payload;
-            if (isOnline) { const snap = await get(ref(db, 'tourPlans/' + key)); if (snap.exists()) return snap.val(); }
-            return null;
-        }
 
         // ===================== VIEW TOUR PLAN =====================
         window.viewTourPlan=function(key){
-            getPlanData(key).then(d=>{
-                if(!d)return;
+            get(ref(db, 'tourPlans/' + key)).then(snap => {
+                if(!snap.exists())return;
+                const d = snap.val();
                 const html=buildViewTable(d.info,d.plan);
                 const modal=document.createElement('div');
                 modal.className='modal-bg';
@@ -1778,9 +1573,13 @@
         }
 
         // ===================== EDIT TOUR PLAN =====================
-        window.editTourPlan=async function(key){
-            const d = await getPlanData(key);
-            if(!d) return;
+        window.editTourPlan=async function(key, preloadedData = null){
+            let d = preloadedData;
+            if(!d) {
+                const snap = await get(ref(db, 'tourPlans/' + key));
+                if(!snap.exists()) return;
+                d = snap.val();
+            }
             
             isEditingExistingPlan = true;
             currentEditingKeyId = key; 
@@ -1855,8 +1654,9 @@
 
         // ===================== PRINT RECORD =====================
         window.printHistoryRecord=function(key){
-            getPlanData(key).then(d=>{
-                if(!d) return;
+            get(ref(db, 'tourPlans/' + key)).then(snap => {
+                if(!snap.exists()) return;
+                const d = snap.val();
                 const sigs=d.info.signatures||{};
                 let rows="";
                 d.plan.forEach(p=>{
@@ -1900,9 +1700,10 @@
                 
                 const c=`
                 <div class="header-print">
+                    <img src="https://monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" class="logo-print" alt="Logo">
                     <h2 style="margin:0;color:#0056b3;">MONICO PHARMA LTD</h2>
                     <p style="margin:3px 0 0;">7, Gausnagar, New Eskaton, Ramna, Dhaka 1205</p>
-                    <h3 style="margin:8px 0;">MONTHLY TOUR PLAN</h3>
+                    <h3 style="margin:8px 0 0;">MONTHLY TOUR PLAN</h3>
                 </div>
                 <table class="info-table-print">
                     <tr>
@@ -1939,8 +1740,11 @@
                 const pc=document.getElementById('history-print-container');
                 pc.innerHTML=c;
                 pc.style.display='block';
-                window.print();
-                setTimeout(()=>{pc.style.display='none';},100);
+                
+                setTimeout(() => {
+                    window.print();
+                    setTimeout(()=>{pc.style.display='none';}, 100);
+                }, 500);
             });
         };
 
@@ -1997,24 +1801,20 @@
         function loadAllRSMs(selectedRsmId = "") {
             const s = document.getElementById('m_parent_rsm');
             s.innerHTML = "<option value=''>Select RSM</option>";
-            if (isOnline) {
-                get(ref(db, 'Users')).then(snap => {
-                    if (snap.exists()) {
-                        snap.forEach(c => {
-                            const u = c.val();
-                            if (u.role === 'admin' || u.role === 'sr_rsm') {
-                                let sel = (u.username === selectedRsmId) ? 'selected' : '';
-                                s.innerHTML += `<option value="${u.username}" ${sel}>${u.name} (${getRoleName(u.role)})</option>`;
-                            }
-                        });
-                    }
-                    if (selectedRsmId) {
-                        handleParentRSMChange(selectedRsmId);
-                    }
-                }).catch(e => { s.innerHTML = "<option value=''>Error loading RSMs</option>"; });
-            } else {
-                s.innerHTML = "<option value=''>Offline Mode</option>";
-            }
+            get(ref(db, 'Users')).then(snap => {
+                if (snap.exists()) {
+                    snap.forEach(c => {
+                        const u = c.val();
+                        if (u.role === 'admin' || u.role === 'sr_rsm') {
+                            let sel = (u.username === selectedRsmId) ? 'selected' : '';
+                            s.innerHTML += `<option value="${u.username}" ${sel}>${u.name} (${getRoleName(u.role)})</option>`;
+                        }
+                    });
+                }
+                if (selectedRsmId) {
+                    handleParentRSMChange(selectedRsmId);
+                }
+            }).catch(e => { s.innerHTML = "<option value=''>Error loading RSMs</option>"; });
         }
 
         window.handleParentRSMChange = function(rid = "", selectedAmId = "") {
@@ -2023,22 +1823,20 @@
             as.innerHTML = "<option value=''>Select AM</option>";
             if(!rid) return;
             
-            if (isOnline) {
-                get(ref(db, 'Users')).then(snap => {
-                    let found = false;
-                    if (snap.exists()) {
-                        snap.forEach(c => {
-                            const u = c.val();
-                            if (u.role === 'user' && u.rsmId === rid) {
-                                let sel = (u.username === selectedAmId) ? 'selected' : '';
-                                as.innerHTML += `<option value="${u.username}" ${sel}>${u.name}</option>`;
-                                found = true;
-                            }
-                        });
-                    }
-                    if (!found) as.innerHTML = "<option value=''>No AM Found for this RSM</option>";
-                }).catch(e => { as.innerHTML = "<option value=''>Error loading AMs</option>"; });
-            }
+            get(ref(db, 'Users')).then(snap => {
+                let found = false;
+                if (snap.exists()) {
+                    snap.forEach(c => {
+                        const u = c.val();
+                        if (u.role === 'user' && u.rsmId === rid) {
+                            let sel = (u.username === selectedAmId) ? 'selected' : '';
+                            as.innerHTML += `<option value="${u.username}" ${sel}>${u.name}</option>`;
+                            found = true;
+                        }
+                    });
+                }
+                if (!found) as.innerHTML = "<option value=''>No AM Found for this RSM</option>";
+            }).catch(e => { as.innerHTML = "<option value=''>Error loading AMs</option>"; });
         };
 
         window.previewUserSig = function(event) {
@@ -2108,32 +1906,25 @@
             if(d.role === 'mpo' && !d.amId) {document.getElementById('m_status').innerHTML="<span class='error'>Please assign to an AM</span>";return;}
             
             const safeKey = d.username.replace(/[.#$\[\]]/g,'_');
-            idbPut('cachedUsers', d);
-            if(isOnline) { set(ref(db,'Users/'+safeKey),d).then(()=>{document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved & Synced!</span>";document.getElementById('userForm').reset();prepareUserForm();loadUsers();}); }
-            else { addToSyncQueue('saveUser', { safeKey, payload: d }); document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved Locally!</span>"; document.getElementById('userForm').reset();prepareUserForm();loadUsers(); }
+            set(ref(db,'Users/'+safeKey),d).then(()=>{
+                document.getElementById('m_status').innerHTML="<span class='success'>✅ Saved & Synced!</span>";
+                document.getElementById('userForm').reset();prepareUserForm();loadUsers();
+            }).catch(err => {
+                document.getElementById('m_status').innerHTML="<span class='error'>Failed to save.</span>";
+            });
         };
 
         async function loadUsers(){
-            const tb=document.getElementById('userTableBody');tb.innerHTML='<tr><td colspan="6" style="padding:15px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            const tb=document.getElementById('userTableBody');
+            tb.innerHTML='<tr><td colspan="6" style="padding:15px;color:#888;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
             let usersData = {};
-            if(isOnline) { 
-                try { 
-                    const snap = await get(ref(db,'Users')); 
-                    if(snap.exists()){ 
-                        await clearIDBStore('cachedUsers'); 
-                        snap.forEach(c=>{ 
-                            usersData[c.key] = c.val(); 
-                            idbPut('cachedUsers', c.val()); 
-                        }); 
-                    } else {
-                        await clearIDBStore('cachedUsers'); 
-                    }
-                } catch(e) {} 
-            }
-            if (!isOnline) {
-                const localUsers = await idbGetAll('cachedUsers');
-                localUsers.forEach(u => { const k = u.username.replace(/[.#$\[\]]/g,'_'); if(!usersData[k]) usersData[k] = u; });
-            }
+            
+            try {
+                const snap = await get(ref(db,'Users')); 
+                if(snap.exists()){ 
+                    snap.forEach(c=>{ usersData[c.key] = c.val(); }); 
+                }
+            } catch(e) {}
             
             const grouped = {};
             for(let k in usersData) {
@@ -2218,11 +2009,15 @@
             window.scrollTo(0, 0);
         };
         
-        window.deleteUser=function(k){if(confirm("Delete this user permanently?")){idbDelete('cachedUsers', k);if(isOnline) { remove(ref(db,'Users/'+k)); } else { addToSyncQueue('deleteUser', { key: k }); } loadUsers();}}
+        window.deleteUser=function(k){
+            if(confirm("Delete this user permanently?")){
+                remove(ref(db,'Users/'+k)).then(()=>loadUsers());
+            }
+        }
 
         // ===================== INITIALIZATION =====================
-        await openIDB();
-        updateNetworkUI();
+        populateMonthDropdowns();
+        generateTourPlanTable();
         
         // Auto Login Check
         const savedSession = localStorage.getItem('monico_session');
