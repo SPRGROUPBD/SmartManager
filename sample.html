@@ -3220,6 +3220,14 @@
         }
         if(type === 'mpo') {
             container.innerHTML = `${depotSelect()}<div class="form-group"><label>MPO ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Territory</label><input name="territory"></div><div class="form-group"><label>Area</label><input name="area"></div><div class="form-group"><label>Region</label><input name="region"></div><div style="display:flex; gap:10px;"><div class="form-group" style="flex:1"><label style="color:var(--accent)">Category (Prod)</label>${getCategorySelectHTML('A', 'categoryProd')}</div><div class="form-group" style="flex:1"><label style="color:var(--purple)">Category (Gift)</label>${getCategorySelectHTML('A', 'categoryGift')}</div></div><div class="form-group"><label>TP Sales</label><input type="number" name="sales"></div><div class="form-group"><label>Status</label><select name="isActive"><option value="true">Active</option><option value="false">Inactive</option></select></div><div class="form-group"><label>Assign DA</label><select name="daId" id="modal-da-select"><option value="">None</option></select></div>`;
+            
+            // ✅ Fix: Pre-populate DA list based on depot
+            if(currentUser.role !== 'admin' && currentUser.depotId) {
+                window.updateModalDAOptions(currentUser.depotId);
+            } else if (currentUser.role === 'admin') {
+                const daSelect = document.getElementById('modal-da-select');
+                if(daSelect) daSelect.innerHTML = '<option value="" disabled selected>Select Depot First</option>';
+            }
         } else if (type === 'da') {
             container.innerHTML = `${depotSelect()}<div class="form-group"><label>DA ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Phone</label><input name="phone"></div><div class="form-group"><label>Vehicle No.</label><input name="vehicle"></div>`;
         } else if (type === 'prod' || type === 'gift') {
@@ -3230,9 +3238,12 @@
     };
 
     window.updateModalDAOptions = function(selectedDepotId) {
-        const daSelect = document.getElementById('modal-da-select'); if (!daSelect) return;
+        const daSelect = document.getElementById('modal-da-select'); 
+        if (!daSelect) return;
         daSelect.innerHTML = '<option value="">None</option>';
-        if (selectedDepotId && data.das) { data.das.filter(d => d.depotId === selectedDepotId).forEach(d => daSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`); }
+        if (selectedDepotId && data.das) { 
+            data.das.filter(d => d.depotId === selectedDepotId).forEach(d => daSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`); 
+        }
     };
 
     window.editItem = function(type, id) {
