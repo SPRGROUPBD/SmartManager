@@ -1,0 +1,2080 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bill Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body{background:#e8eaed;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px}
+        body:not(.role-admin):not(.role-superadmin) .admin-only,
+        body:not(.role-admin):not(.role-superadmin) .admin-superadmin-only{display:none!important}
+        body.role-user .admin-only,
+        body.role-user .admin-superadmin-only{display:none!important}
+        body.role-admin .user-only,
+        body.role-superadmin .user-only{display:none!important}
+        .w98-desktop{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#008080;padding:15px;position:relative;overflow:hidden}
+        .w98-desktop::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px);pointer-events:none}
+        .w98-window{width:460px;max-width:100%;background:#c0c0c0;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080,1px 1px 0 #000;font-family:'MS Sans Serif','Tahoma','Segoe UI',sans-serif;font-size:12px;position:relative;z-index:1}
+        .w98-titlebar{background:linear-gradient(90deg,#000080 0%,#1084d0 3%,#1084d0 97%,#000080 100%);color:#fff;padding:3px 4px;display:flex;align-items:center;font-weight:700;font-size:12px;user-select:none;gap:4px}
+        .w98-titlebar .w98-icon{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+        .w98-titlebar .w98-text{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:2px}
+        .w98-titlebar .w98-btns{display:flex;gap:2px}
+        .w98-titlebar .w98-btns button{width:18px;height:16px;background:#c0c0c0;border:1px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;font-size:10px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;padding:0;cursor:default;font-family:'Marlett',sans-serif;color:#000}
+        .w98-titlebar .w98-btns button:active{border-color:#808080 #dfdfdf #dfdfdf #808080;box-shadow:inset 1px 1px 0 #808080}
+        .w98-menubar{background:#c0c0c0;padding:2px 0;border-bottom:1px solid #808080;display:flex;gap:0}
+        .w98-menubar span{padding:1px 8px;cursor:default;font-size:12px}
+        .w98-menubar span:hover{background:#000080;color:#fff}
+        .w98-body{padding:12px 14px 8px}
+        .w98-group{border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:12px 10px 10px;margin-bottom:10px;position:relative;background:#c0c0c0}
+        .w98-group-label{position:absolute;top:-9px;left:10px;background:#c0c0c0;padding:0 4px;font-size:11px;font-weight:700}
+        .w98-login-row{display:flex;gap:14px;align-items:flex-start}
+        .w98-avatar-box{width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+        .w98-avatar-frame{width:72px;height:80px;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #dfdfdf}
+        .w98-avatar-frame img{width:100%;height:100%;object-fit:cover}
+        .w98-avatar-frame i{font-size:40px;color:#808080}
+        .w98-avatar-label{font-size:10px;color:#404040;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+        .w98-form-area{flex:1;min-width:0}
+        .w98-field{margin-bottom:6px}
+        .w98-field label{display:block;font-size:12px;margin-bottom:2px;font-weight:700;color:#000}
+        .w98-field input{width:100%;box-sizing:border-box;background:#fff;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:3px 5px;font-size:12px;font-family:inherit;outline:none}
+        .w98-field input:focus{outline:1px dotted #000;outline-offset:-4px}
+        .w98-field input::placeholder{color:#808080}
+        .w98-user-card{background:#fff;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:6px 8px;margin-bottom:8px;display:none;box-shadow:inset 1px 1px 0 #dfdfdf,inset -1px -1px 0 #808080}
+        .w98-user-card.show{display:block}
+        .w98-user-card .w98-uc-row{display:flex;justify-content:space-between;align-items:center;padding:1px 0;font-size:12px}
+        .w98-user-card .w98-uc-label{font-weight:700;color:#404040}
+        .w98-user-card .w98-uc-val{font-weight:600}
+        .w98-role-tag{display:inline-block;padding:0 6px;font-size:10px;font-weight:700;border:1px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;line-height:18px}
+        .w98-role-superadmin{background:linear-gradient(90deg,#000080,#0000c0);color:#fff;border-color:#0000c0 #000060 #000060 #0000c0}
+        .w98-role-admin{background:linear-gradient(90deg,#008000,#00a000);color:#fff;border-color:#00a000 #006000 #006000 #00a000}
+        .w98-role-user{background:linear-gradient(90deg,#c0c0c0,#e0e0e0);color:#000;border-color:#e0e0e0 #a0a0a0 #a0a0a0 #e0e0e0}
+        .w98-login-btn{background:#c0c0c0;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;padding:4px 20px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;color:#000}
+        .w98-login-btn:active{border-color:#808080 #dfdfdf #dfdfdf #808080;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;padding:5px 19px 3px 21px}
+        .w98-login-btn:disabled{color:#808080;cursor:not-allowed}
+        .w98-statusbar{background:#c0c0c0;border-top:1px solid #808080;padding:2px 4px;font-size:11px;display:flex;gap:6px;align-items:center}
+        .w98-statusbar .w98-sb-section{border:1px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:1px 6px;flex:1;background:#c0c0c0;box-shadow:inset 1px 1px 0 #dfdfdf,inset -1px -1px 0 #808080}
+        .w98-status-text{color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .w98-status-text.err{color:#c00}
+        .w98-status-text.ok{color:#008000}
+        .w98-status-text.searching{color:#000080}
+        .w98-hint{text-align:center;font-size:10px;color:#404040;margin-top:6px}
+        .w98-spinner{display:inline-block;width:12px;height:12px;border:2px solid #808080;border-top-color:#000080;border-radius:50%;animation:w98spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+        @keyframes w98spin{to{transform:rotate(360deg)}}
+        @keyframes w98shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+        @media(max-width:500px){.w98-window{width:100%}.w98-login-row{flex-direction:column;align-items:center}.w98-avatar-box{width:100%}}
+        .hidden{display:none}
+        .card{background:#fff;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);border-radius:10px}
+        .card-header{border-radius:10px 10px 0 0 !important;font-weight:600}
+        .form-control,.form-select{border-radius:6px;border:1.5px solid #dee2e6;font-size:13px}
+        .form-control:focus,.form-select:focus{box-shadow:0 0 0 2px rgba(13,110,253,.12);border-color:#0d6efd}
+        .btn{border-radius:6px;font-size:13px}
+        .status-red{background:#fff5f5;border-left:4px solid #ef5350}
+        .status-green{background:#f0fff4;border-left:4px solid #66bb6a}
+        .status-orange{background:#fff8e1;border-left:4px solid #ffa726}
+        .status-draft{background:#f5f5f5;border-left:4px solid #90a4ae}
+        .dash-card{border-radius:12px;border:none;box-shadow:0 4px 15px rgba(0,0,0,.08);transition:transform .2s,box-shadow .2s;overflow:hidden}
+        .dash-card:hover{transform:translateY(-4px);box-shadow:0 8px 25px rgba(0,0,0,.12)}
+        .dash-card .dc-body{padding:14px 16px;display:flex;align-items:center;justify-content:space-between}
+        .dash-card .dc-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;opacity:.85}
+        .dash-card .dc-val{font-size:26px;font-weight:700;line-height:1.1}
+        .dash-card .dc-label{font-size:12px;font-weight:500;color:rgba(255,255,255,.8);margin-bottom:2px}
+        .bg-dc-iou{background:linear-gradient(135deg,#00bcd4,#0097a7)}
+        .bg-dc-bills{background:linear-gradient(135deg,#7c4dff,#651fff)}
+        .bg-dc-check{background:linear-gradient(135deg,#ff9800,#f57c00)}
+        .bg-dc-approve{background:linear-gradient(135deg,#f44336,#d32f2f)}
+        .bg-dc-approved{background:linear-gradient(135deg,#4caf50,#388e3c)}
+        .online-dot{width:8px;height:8px;background:#28a745;border-radius:50%;display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+        .scroll-box-sm{max-height:200px;overflow-y:auto}
+        .scroll-box-md{max-height:260px;overflow-y:auto}
+        .scroll-box-lg{max-height:400px;overflow-y:auto}
+        .profile-img-thumb{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid #dee2e6}
+        .profile-img-lg{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #0d6efd}
+        .clickable-row{cursor:pointer}.clickable-row:hover{background:#e3f2fd}
+        .cut-amount{color:red;text-decoration:line-through;margin-right:6px;font-weight:700}
+        .payable-amount{color:green;font-weight:700}
+        .quick-entry-card{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:10px}
+        .quick-entry-card label{font-size:13px;font-weight:600;color:#0d47a1}
+        .global-month-bar{background:linear-gradient(135deg,#0d6efd,#0b5ed7);color:#fff;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(13,110,253,.3)}
+        .global-month-bar .form-control{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;max-width:170px;border-radius:6px}
+        .global-month-bar .form-control::-webkit-calendar-picker-indicator{filter:invert(1)}
+        .global-month-bar .btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px}
+        .global-month-bar .btn:hover{background:rgba(255,255,255,.35)}
+        .global-month-bar .btn.active-month{background:#fff;color:#0d6efd;font-weight:700}
+        .month-badge{background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;font-size:11px}
+        input:disabled,select:disabled{background:#f0f0f0;cursor:not-allowed;opacity:.7}
+        .summary-table th{background:#e9ecef;font-size:13px;text-align:center}
+        .summary-table td{font-size:13px;text-align:center;font-weight:600}
+        tfoot td{font-weight:700;background:#e9ecef}
+        .modal-table{table-layout:auto;width:100%}
+        .modal-table th,.modal-table td{white-space:normal;word-wrap:break-word;vertical-align:middle;padding:6px 4px;font-size:12px}
+        .modal-table input{width:100%;min-width:45px;padding:3px;font-size:12px}
+        .row-total{font-weight:700;min-width:55px;display:inline-block}
+        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none;position:relative}
+        @media print{
+            body *{visibility:hidden}
+            .no-print{display:none!important}
+            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none!important;visibility:hidden}
+            .active-print{display:block!important;position:absolute;left:0;top:0;width:100%;visibility:visible!important}
+            .active-print *{visibility:visible!important}
+            #pageFooter,#pageFooterSummary,#pageFooterIOU,#pageFooterTopSheet,#pageFooterTopSheetFinal{position:fixed;bottom:10px;left:0;width:100%;text-align:center;font-size:13px}
+            #pageFooter:after,#pageFooterSummary:after,#pageFooterIOU:after,#pageFooterTopSheet:after,#pageFooterTopSheetFinal:after{content:"PAGE : " counter(page)}
+            thead{display:table-header-group}tfoot{display:table-footer-group}
+            table,th,td{border:1px solid #000!important;border-collapse:collapse}
+            th,td{padding:2px 4px;font-size:13px;line-height:1.2}
+            .sign-row td{height:80px;vertical-align:bottom}
+            .cut-text{text-decoration:line-through;color:red}
+        }
+        @media(max-width:768px){
+            .modal-dialog{margin:0;width:100vw;height:100vh;max-width:100vw}
+            .modal-content{height:100%;border:none;border-radius:0;display:flex;flex-direction:column}
+            .modal-header{padding:10px;flex-shrink:0}
+            .modal-body{flex-grow:1;overflow-y:auto;padding:5px}
+            .modal-footer{padding:10px;flex-shrink:0;background:#fff;border-top:1px solid #dee2e6}
+            .modal-table th,.modal-table td{font-size:11px;padding:3px 2px}
+            .modal-table input{font-size:11px;padding:2px}
+            #entryTab table{min-width:620px;width:100%;font-size:13px;table-layout:fixed}
+            #entryTab th:nth-child(1),#entryTab td:nth-child(1){width:14%}
+            #entryTab th:nth-child(2),#entryTab td:nth-child(2){width:18%}
+            #entryTab th:nth-child(3),#entryTab td:nth-child(3){width:18%}
+            #entryTab th:nth-child(4),#entryTab td:nth-child(4){width:16%}
+            #entryTab th:nth-child(5),#entryTab td:nth-child(5){width:11%}
+            #entryTab th:nth-child(6),#entryTab td:nth-child(6){width:11%}
+            #entryTab th:nth-child(7),#entryTab td:nth-child(7){width:10%}
+            #entryTab th:nth-child(8),#entryTab td:nth-child(8){width:2%}
+            #entryTab input,#entryTab select{width:100%!important;padding:2px 3px!important;font-size:13px!important;min-width:30px;border:1px solid #ced4da}
+            #entryTab th,#entryTab td{padding:3px 2px!important}
+            .global-month-bar{flex-wrap:wrap}
+            .global-month-bar .form-control{max-width:140px}
+            .user-welcome-banner .d-flex{flex-direction:column;text-align:center}
+            .user-welcome-banner img{margin:0 auto 10px}
+            .user-welcome-banner .ms-auto{display:none!important}
+        }
+        .user-welcome-banner{border-radius:16px;overflow:hidden;border:none;box-shadow:0 6px 24px rgba(13,110,253,.25)}
+        .user-welcome-banner .card-body{padding:20px 24px}
+        .user-stat-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .25s,box-shadow .25s;overflow:hidden;position:relative}
+        .user-stat-card:hover{transform:translateY(-5px);box-shadow:0 8px 28px rgba(0,0,0,.12)}
+        .user-stat-card .stat-icon-wrap{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin:0 auto 8px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+        .user-stat-card .stat-value{font-size:28px;font-weight:800;line-height:1;margin-bottom:2px}
+        .user-stat-card .stat-label{font-size:11px;font-weight:600;color:#6c757d;text-transform:uppercase;letter-spacing:.5px}
+        .user-iou-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+        .user-iou-card .card-header{border-radius:14px 14px 0 0!important;padding:10px 16px}
+        .user-iou-card .card-body{padding:0}
+        .user-iou-card .table{margin-bottom:0}
+        .user-iou-card .table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;background:#f8f9fa}
+        .user-iou-card .table td{font-size:13px;padding:8px 10px;vertical-align:middle}
+        .user-online-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+        .user-online-card .online-user-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f0f0f0;transition:background .15s}
+        .user-online-card .online-user-item:hover{background:#f0f7ff}
+        .user-online-card .online-user-item:last-child{border-bottom:none}
+        .user-online-card .online-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:10px;flex-shrink:0}
+        @keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .animate-in{animation:fadeSlideUp .4s ease both}
+        .animate-in-d1{animation-delay:.05s}
+        .animate-in-d2{animation-delay:.1s}
+        .animate-in-d3{animation-delay:.15s}
+        .animate-in-d4{animation-delay:.2s}
+        .animate-in-d5{animation-delay:.25s}
+        .animate-in-d6{animation-delay:.3s}
+        .top-sheet-input{border: 2px solid #000; font-weight: bold; padding: 4px; width: 150px; text-align: right;}
+        .top-sheet-result{font-weight: bold; font-size: 1.2em;}
+    </style>
+</head>
+<body>
+
+<div id="login_section" class="w98-desktop">
+    <div class="w98-window">
+        <div class="w98-titlebar">
+            <div class="w98-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <span class="w98-text">Bill Management System — Log On</span>
+            <div class="w98-btns"></div>
+        </div>
+        <div class="w98-menubar"></div>
+        <div class="w98-body">
+            <div class="w98-group">
+                <div class="w98-group-label">Enter Network Password</div>
+                <div class="w98-login-row">
+                    <div class="w98-avatar-box">
+                        <div class="w98-avatar-frame" id="w98_avatar_frame"><i class="bi bi-person-fill" id="w98_avatar_icon"></i></div>
+                        <div class="w98-avatar-label" id="w98_avatar_name">&nbsp;</div>
+                    </div>
+                    <div class="w98-form-area">
+                        <div class="w98-field"><label for="login_user_id">User ID:</label><input type="text" id="login_user_id" placeholder="Type your User ID..." autocomplete="off" spellcheck="false"></div>
+                        <div class="w98-user-card" id="w98_user_card">
+                            <div class="w98-uc-row"><span class="w98-uc-label">Name:</span><span class="w98-uc-val" id="w98_show_name">—</span></div>
+                            <div class="w98-uc-row"><span class="w98-uc-label">Role:</span><span class="w98-role-tag w98-role-user" id="w98_show_role">—</span></div>
+                            <div class="w98-uc-row"><span class="w98-uc-label">Depot:</span><span class="w98-uc-val" id="w98_show_depot">—</span></div>
+                        </div>
+                        <div class="w98-field"><label for="login_password">Password:</label><input type="password" id="login_password" placeholder="Enter password..." disabled></div>
+                        <button class="w98-login-btn" id="w98_login_btn" disabled onclick="handleUnifiedLogin()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+                    </div>
+                </div>
+            </div>
+            <div class="w98-hint"><i class="bi bi-info-circle"></i> Enter your User ID (e.g. DA-001) — name &amp; role will appear automatically.</div>
+        </div>
+        <div class="w98-statusbar"><div class="w98-sb-section"><span class="w98-status-text" id="w98_status">Ready</span></div></div>
+    </div>
+</div>
+
+<div id="dashboard_section" class="container-fluid mt-2 hidden">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 p-2 bg-white shadow-sm rounded no-print gap-2">
+        <h5 class="mb-0" id="welcome_msg">Welcome</h5>
+        <div class="global-month-bar" id="global_month_bar">
+            <i class="bi bi-calendar3"></i>
+            <span class="month-badge">FILTER</span>
+            <input type="month" id="global_month_filter" class="form-control" onchange="setGlobalMonth(this.value)">
+            <button class="btn active-month" id="btn_month_current" onclick="setGlobalMonth(getCurrentMonth())">This Month</button>
+            <button class="btn" id="btn_month_all" onclick="setGlobalMonth('')">All</button>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-light border dropdown-toggle d-flex align-items-center" type="button" id="accountDropdownBtn" data-bs-toggle="dropdown">
+                <img id="header_profile_pic" src="https://via.placeholder.com/30" class="profile-img-thumb me-2">
+                <span id="header_user_name">User</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">My Account</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="openProfileModal()"><i class="bi bi-person-circle me-2"></i>Edit Profile</a></li>
+                <li><a class="dropdown-item" href="#" onclick="openChangePassModal()"><i class="bi bi-key me-2"></i>Change Password</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs no-print" id="myTab" role="tablist">
+        <li class="nav-item"><button class="nav-link" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashTab" type="button">Dashboard</button></li>
+        <li class="nav-item user-only"><button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill Entry</button></li>
+        <li class="nav-item" id="history_tab_li"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#billTab" type="button">History</button></li>
+        <li class="nav-item admin-superadmin-only"><button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summaryTab" type="button">Bill Summary</button></li>
+        <li class="nav-item admin-superadmin-only"><button class="nav-link" id="top_sheet-tab" data-bs-toggle="tab" data-bs-target="#topSheetTab" type="button">Top Sheet</button></li>
+        <li class="nav-item admin-superadmin-only"><button class="nav-link" id="approved-history-tab" data-bs-toggle="tab" data-bs-target="#approvedHistoryTab" type="button">Approved History</button></li>
+        <li class="nav-item admin-only"><button class="nav-link" id="iou-entry-tab" data-bs-toggle="tab" data-bs-target="#iouEntryTab" type="button">IOU Entry</button></li>
+        <li class="nav-item admin-only"><button class="nav-link" id="new-user-tab" data-bs-toggle="tab" data-bs-target="#newUserTab" type="button">New User Record</button></li>
+    </ul>
+
+    <div class="tab-content pt-2">
+        <!-- DASHBOARD TAB -->
+        <div class="tab-pane fade" id="dashTab" role="tabpanel">
+            <div class="user-only">
+                <div class="card user-welcome-banner mb-3 animate-in no-print" style="background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%)">
+                    <div class="card-body text-white d-flex align-items-center">
+                        <img id="user_dash_profile" src="https://via.placeholder.com/70/0d6efd/ffffff?text=U" style="width:70px;height:70px;border-radius:50%;border:3px solid rgba(255,255,255,.35);object-fit:cover;box-shadow:0 4px 15px rgba(0,0,0,.2)" class="me-3">
+                        <div>
+                            <h4 class="mb-1 fw-bold" id="user_dash_name">Welcome!</h4>
+                            <p class="mb-0" style="opacity:.8;font-size:13px"><i class="bi bi-geo-alt-fill me-1"></i><span id="user_dash_depot">Kushtia</span> Depot &nbsp;•&nbsp; <i class="bi bi-person-fill me-1"></i>Delivery Assistant</p>
+                        </div>
+                        <div class="ms-auto text-end d-none d-md-block">
+                            <div style="font-size:14px;opacity:.75" id="user_dash_date"></div>
+                            <div style="font-size:11px;opacity:.5">MONICO PHARMA LTD</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row g-2 mb-3 no-print">
+                    <div class="col-6 col-md">
+                        <div class="card user-stat-card animate-in animate-in-d1">
+                            <div class="card-body text-center py-3">
+                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f6d365,#fda085)"><i class="bi bi-cash-stack"></i></div>
+                                <div class="stat-value" style="color:#fd7e14" id="user_stat_total_iou">0</div>
+                                <div class="stat-label">Total IOUs</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="card user-stat-card animate-in animate-in-d2">
+                            <div class="card-body text-center py-3">
+                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="bi bi-file-earmark-text"></i></div>
+                                <div class="stat-value" style="color:#667eea" id="user_stat_total">0</div>
+                                <div class="stat-label">Total Bills</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="card user-stat-card animate-in animate-in-d3">
+                            <div class="card-body text-center py-3">
+                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><i class="bi bi-hourglass-split"></i></div>
+                                <div class="stat-value" style="color:#f5576c" id="user_stat_pending">0</div>
+                                <div class="stat-label">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="card user-stat-card animate-in animate-in-d4">
+                            <div class="card-body text-center py-3">
+                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="bi bi-pencil-square"></i></div>
+                                <div class="stat-value" style="color:#0ea5e9" id="user_stat_checked">0</div>
+                                <div class="stat-label">Checked</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md">
+                        <div class="card user-stat-card animate-in animate-in-d5">
+                            <div class="card-body text-center py-3">
+                                <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="bi bi-check-circle"></i></div>
+                                <div class="stat-value" style="color:#10b981" id="user_stat_verified">0</div>
+                                <div class="stat-label">Verified</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-3 no-print">
+                    <div class="col-12">
+                        <div class="card user-iou-card animate-in animate-in-d5">
+                            <div class="card-header text-white" style="background:linear-gradient(135deg,#0d6efd,#0b5ed7)">
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>My Active IOU <small style="opacity:.7" id="user_active_iou_month_label"></small></span><span class="badge bg-light text-primary" id="user_active_iou_count">0</span></div>
+                            </div>
+                            <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th></th></tr></thead><tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Active IOU</td></tr></tbody></table></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-2 mb-3 no-print">
+                    <div class="col-md-7">
+                        <div class="card user-iou-card animate-in animate-in-d5">
+                            <div class="card-header text-white" style="background:linear-gradient(135deg,#6c757d,#495057)">
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-archive me-2"></i>Used IOU <small style="opacity:.7" id="user_used_iou_month_label"></small></span><span class="badge bg-light text-secondary" id="user_used_iou_count">0</span></div>
+                            </div>
+                            <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th>Status</th></tr></thead><tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Used IOU</td></tr></tbody></table></div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card user-online-card animate-in animate-in-d6" style="height:100%">
+                            <div class="card-header border-0 py-2" style="background:linear-gradient(135deg,#10b981,#059669)">
+                                <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online</span><span class="badge bg-light text-success" id="user_online_count_badge">0</span></div>
+                            </div>
+                            <div class="scroll-box-sm" id="user_online_list_view" style="max-height:200px"><div class="text-center text-muted p-3">Checking...</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ADMIN DASHBOARD -->
+            <div class="admin-only">
+                <div class="row g-2 mb-3">
+                    <div class="col-6 col-md"><div class="dash-card bg-dc-iou text-white"><div class="dc-body"><div><div class="dc-label">Total IOUs (Bill Req)</div><div class="dc-val" id="dash_iou_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-receipt"></i></div></div></div></div>
+                    <div class="col-6 col-md"><div class="dash-card bg-dc-bills text-white"><div class="dc-body"><div><div class="dc-label">Total Bills</div><div class="dc-val" id="dash_bills_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-file-earmark-text"></i></div></div></div></div>
+                    <div class="col-6 col-md"><div class="dash-card bg-dc-check text-white"><div class="dc-body"><div><div class="dc-label">Checking Pending</div><div class="dc-val" id="dash_check_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-pencil-square"></i></div></div></div></div>
+                    <div class="col-6 col-md"><div class="dash-card bg-dc-approve text-white"><div class="dc-body"><div><div class="dc-label">Approval Pending</div><div class="dc-val" id="dash_approve_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-hourglass-split"></i></div></div></div></div>
+                    <div class="col-6 col-md"><div class="dash-card bg-dc-approved text-white"><div class="dc-body"><div><div class="dc-label">Approved</div><div class="dc-val" id="dash_approved_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-check-circle"></i></div></div></div></div>
+                </div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 mb-3 mb-md-0"><div class="card-header bg-white py-2"><h6 class="mb-0"><i class="bi bi-people"></i> DA Wise Status <small class="text-muted" id="dash_da_month_label"></small></h6></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive h-100"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>DA Name</th><th class="text-center">IOU</th><th class="text-center">Bills</th><th class="text-center text-warning">Checking</th><th class="text-center text-danger">Approval</th><th class="text-center text-success">Approved</th></tr></thead><tbody id="dash_da_table_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
+                    </div>
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 mb-3 mb-md-0"><div class="card-header bg-info text-white py-2"><h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU <small id="approved_vs_iou_month_label"></small></h6></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive h-100"><table class="table table-bordered table-sm mb-0"><thead class="table-secondary"><tr><th>DA Name</th><th class="text-end">IOU</th><th class="text-end">Appr.Bill</th><th class="text-end">Balance</th><th class="text-center">Bund Qty</th><th class="text-center">Status</th></tr></thead><tbody id="approved_summary_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody><tfoot class="table-dark fw-bold"><tr><td>GRAND TOTAL</td><td class="text-end" id="approved_tot_iou">0.00</td><td class="text-end" id="approved_tot_bill">0.00</td><td class="text-end" id="approved_tot_bal">0.00</td><td class="text-center" id="approved_tot_bund">0</td><td></td></tr></tfoot></table></div></div></div>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 border border-danger"><div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-exclamation-octagon-fill me-1"></i> Unbilled IOU <small id="iou_pending_month_label"></small></h6><span class="badge bg-light text-danger" id="unbilled_iou_count">0</span></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive" style="max-height: 230px; overflow-y: auto;"><table class="table table-sm table-hover mb-0"><thead class="table-light" style="position: sticky; top: 0; z-index: 1;"><tr><th>Date</th><th>DA</th><th>Type</th><th>Route</th><th class="text-end">Amount</th></tr></thead><tbody id="unbilled_iou_list"><tr><td colspan="5" class="text-center text-muted p-2">Loading...</td></tr></tbody></table></div></div></div>
+                    </div>
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100"><div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6><span class="badge bg-light text-success" id="online_count_badge">0</span></div><div class="card-body p-2 flex-grow-1" id="online_users_list"><div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">Checking...</div></div></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- BILL ENTRY TAB -->
+        <div class="tab-pane fade" id="entryTab" role="tabpanel">
+            <div class="bill-form-container no-print">
+                <div class="text-center mb-2"><h3>MONICO PHARMA LTD</h3><h5>Delivery Expense Bill</h5></div>
+                <input type="hidden" id="form_iou_amount" value="0">
+                <input type="hidden" id="edit_bill_year"><input type="hidden" id="edit_bill_month"><input type="hidden" id="edit_bill_daName">
+                <div class="row mb-2"><div class="col-4"><label class="fw-bold">Name Of DA:</label><input type="text" id="form_da_name" class="form-control form-control-sm" readonly></div><div class="col-4"><label class="fw-bold">Designation:</label><input type="text" value="Delivery Assistant" class="form-control form-control-sm" readonly></div><div class="col-4"><label class="fw-bold">Depot:</label><input type="text" id="form_depot" class="form-control form-control-sm" readonly></div></div>
+                <div class="row mb-2"><div class="col-4"><label class="fw-bold">Departure:</label><input type="date" id="form_dep_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label class="fw-bold">Return:</label><input type="date" id="form_ret_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label class="fw-bold">Bill Date:</label><input type="date" id="form_submit_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-12"><label class="fw-bold">Route:</label><input type="text" id="form_route" class="form-control form-control-sm" placeholder="Route Name" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-6"><label class="fw-bold">MPO:</label><input type="text" id="form_mpo" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-6"><label class="fw-bold">Summary No:</label><input type="text" id="form_summary" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-4"><label>Invoice Value:</label><input type="number" id="form_invoice_val" class="form-control form-control-sm" oninput="calculateSoldValue();triggerAutoSave()"></div><div class="col-4"><label>Return Value:</label><input type="number" id="form_return_val" class="form-control form-control-sm" value="0" oninput="calculateSoldValue();triggerAutoSave()"></div><div class="col-4"><label>Sold Value:</label><input type="number" id="form_sold_val" class="form-control form-control-sm" readonly></div></div>
+                <div class="row mb-2"><div class="col-4"><label>Invoice Qty:</label><input type="number" id="form_invoice_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label>Bundle Qty:</label><input type="number" id="form_bundle_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Notes..." oninput="triggerAutoSave()"></div></div>
+                <div class="quick-entry-card no-print">
+                    <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="text-primary mb-0"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6><div class="input-group input-group-sm" style="max-width:220px"><input type="file" id="user_exp_excel_input" class="form-control form-control-sm" accept=".xlsx,.xls" style="font-size:10px"><button class="btn btn-info text-white" onclick="importExpensesToTable()">Excel</button></div></div>
+                    <div class="row g-1"><div class="col-4"><label>From</label><input type="text" id="q_from" class="form-control form-control-sm" placeholder="From"></div><div class="col-4"><label>To</label><input type="text" id="q_to" class="form-control form-control-sm" placeholder="To"></div><div class="col-4"><label>Mode</label><select id="q_mode" class="form-select form-control-sm"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></div><div class="col-4"><label>Amount</label><input type="number" id="q_amount" class="form-control form-control-sm" placeholder="0"></div><div class="col-4"><label>DA Exp</label><input type="number" id="q_da_expense" class="form-control form-control-sm" placeholder="0"></div><div class="col-4 d-flex align-items-end"><button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button></div></div>
+                    <small class="text-muted d-block mt-1">Excel: Date, From, To, Mode, Amount, DA</small>
+                </div>
+                <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Total</th><th>X</th></tr></thead><tbody id="expense_table_body"></tbody><tfoot><tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td colspan="3"><input type="text" id="grand_total" class="form-control form-control-sm fw-bold text-center" value="0" readonly></td></tr><tr class="table-info"><td colspan="4" class="text-end fw-bold">Cost (%):</td><td colspan="3"><span id="form_cost_percent" class="fw-bold">0%</span></td></tr></tfoot></table></div>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2"><span id="auto_save_status" class="text-muted align-self-center me-auto"></span><button onclick="addExpenseRow()" class="btn btn-secondary btn-sm">+ Row</button><button onclick="clearBillForm()" class="btn btn-danger btn-sm">Clear</button><button id="draft_btn" onclick="submitOrUpdateBill('draft')" class="btn btn-secondary btn-sm">Save Draft</button><button id="main_submit_btn" onclick="submitOrUpdateBill('red')" class="btn btn-success btn-sm">Submit Bill</button><button id="cancel_edit_btn" onclick="cancelEdit()" class="btn btn-warning btn-sm hidden">Cancel</button></div>
+            </div>
+        </div>
+
+        <!-- BILL HISTORY TAB -->
+        <div class="tab-pane fade" id="billTab" role="tabpanel">
+            <div class="card dash-card no-print mb-2 admin-only"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_history_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_history_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetHistoryFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
+            <div class="card dash-card no-print"><div class="card-body p-1"><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead id="bill_table_head" class="table-dark"></thead><tbody id="bill_table_body"><tr><td colspan="12" class="text-center">Loading...</td></tr></tbody><tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+        </div>
+
+        <!-- BILL SUMMARY TAB -->
+        <div class="tab-pane fade" id="summaryTab" role="tabpanel">
+            <div class="card dash-card no-print"><div class="card-header bg-primary text-white py-2"><h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Travels Allowance Bill Summary</h6></div><div class="card-body"><div class="row g-2 align-items-end mb-3"><div class="col-md-3"><label class="fw-bold text-muted">Month</label><input type="month" id="summary_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-4"><label class="fw-bold text-muted">Select DA</label><select id="summary_da" class="form-select form-select-sm" onchange="generateSummary()"><option value="">-- Select DA --</option></select></div><div class="col-md-3"><label class="fw-bold text-muted">Depot</label><input type="text" id="summary_depot" class="form-control form-control-sm" readonly value="Kushtia"></div><div class="col-md-2"><button onclick="printBillSummary()" class="btn btn-success btn-sm w-100"><i class="bi bi-printer"></i> Print</button></div></div><div class="table-responsive border"><table class="table table-bordered table-sm table-hover mb-0"><thead class="table-light"><tr><th>Sl</th><th>Date</th><th>Territory</th><th>Type</th><th class="text-end">Net Sales</th><th class="text-end">Taka</th><th class="text-end">DA</th><th class="text-end">Net Amount</th><th class="text-end">Cost %</th></tr></thead><tbody id="summary_table_body"><tr><td colspan="9" class="text-center text-muted">Select a DA.</td></tr></tbody><tfoot class="table-secondary fw-bold" id="summary_table_foot"><tr><td colspan="4" class="text-end">Grand Total:</td><td class="text-end" id="sum_foot_sales">0</td><td class="text-end" id="sum_foot_taka">0</td><td class="text-end" id="sum_foot_da">0</td><td class="text-end" id="sum_foot_net">0</td><td class="text-end" id="sum_foot_cost">0%</td></tr></tfoot></table></div></div></div>
+        </div>
+
+        <!-- ★★★ TOP SHEET TAB (UPDATED) ★★★ -->
+        <div class="tab-pane fade admin-superadmin-only" id="topSheetTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Top Sheet Generator</h6>
+                </div>
+                <div class="card-body">
+                    <div class="bg-light p-3 rounded mb-3 border">
+                        <h6 class="fw-bold text-primary mb-3"><i class="bi bi-eye"></i> Live Data Preview</h6>
+                        <div class="row g-2 align-items-center mb-3">
+                            <div class="col-md-4">
+                                <label class="fw-bold text-muted mb-1">Select Month</label>
+                                <input type="month" id="topsheet_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="fw-bold text-primary mb-1">Total TP+Vat Sales (Input)</label>
+                                <input type="number" id="topsheet_total_sales" class="form-control form-control-sm fw-bold border-primary" placeholder="0.00" oninput="calculateTopSheetCost()">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="fw-bold text-success mb-1">Delivery Cost %</label>
+                                <div class="form-control form-control-sm bg-white fw-bold text-success" id="topsheet_cost_percent">0.00%</div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="fw-bold mb-1">&nbsp;</label>
+                                <button onclick="generateAndSaveTopSheet()" class="btn btn-success btn-sm w-100 fw-bold"><i class="bi bi-save"></i> Generate Report</button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive border bg-white">
+                            <table class="table table-bordered table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%;">Sl</th>
+                                        <th style="width: 15%;">Month</th>
+                                        <th style="width: 25%;">DA Name</th>
+                                        <th class="text-end" style="width: 20%;">Total Bill Amount</th>
+                                        <th class="text-end" style="width: 20%;">Net Amount</th>
+                                        <th class="text-end" style="width: 15%;">Cost % (vs Sales)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topsheet_table_body">
+                                    <tr><td colspan="6" class="text-center text-muted py-3">Select a month to see preview.</td></tr>
+                                </tbody>
+                                <tfoot class="table-secondary fw-bold">
+                                    <tr>
+                                        <td colspan="3" class="text-end">TOTAL:</td>
+                                        <td class="text-end" id="topsheet_foot_total">0.00</td>
+                                        <td class="text-end" id="topsheet_foot_net">0.00</td>
+                                        <td class="text-end" id="topsheet_foot_cost">0.00%</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <small class="text-muted mt-1 d-block text-end">
+                            * Based on Approved (Green) Bills only.
+                        </small>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-text"></i> Generated Reports History (All Months)</h6>
+                        <div class="table-responsive border">
+                            <table class="table table-bordered table-sm table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:20%">Report ID</th>
+                                        <th style="width:15%">Month</th>
+                                        <th style="width:20%">Grand Total (Net)</th>
+                                        <th style="width:20%">Generated On</th>
+                                        <th style="width:20%" class="text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topsheet_history_body">
+                                    <tr><td colspan="6" class="text-center text-muted py-3">No reports generated yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- APPROVED HISTORY TAB -->
+        <div class="tab-pane fade" id="approvedHistoryTab" role="tabpanel">
+            <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
+            <div class="card dash-card no-print"><div class="card-body p-1"><h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+        </div>
+
+        <!-- IOU ENTRY TAB (Form + List) -->
+        <div class="tab-pane fade admin-only" id="iouEntryTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-pencil-square"></i> IOU Entry Form</h6>
+                    <button onclick="clearIOUForm()" class="btn btn-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 col-md-3"><label class="fw-bold">Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4 col-md-2"><label>Invoice Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Bundle Qty</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div>
+                        <div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm flex-grow-1"><i class="bi bi-save"></i> Save IOU Entry</button>
+                        <button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm hidden"><i class="bi bi-x-circle"></i> Cancel Edit</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dash-card no-print">
+                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul"></i> IOU List & Management</span>
+                    <button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end">
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div>
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">From</label><input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()"></div>
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">To</label><input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()"></div>
+                        <div class="col-12 col-md-3"><label class="fw-bold text-muted">DA</label><select id="filter_iou_da" class="form-select form-control-sm" onchange="loadAdminIOU()"><option value="">All DA</option></select></div>
+                        <div class="col-12 col-md-2"><button onclick="resetIOUFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-secondary">
+                                <tr><th>#</th><th>Date</th><th>DA</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Invoice Qty</th><th>Bund Qty</th><th>Taka</th><th>%</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="iou_admin_table_body"></tbody>
+                            <tfoot>
+                                <tr class="fw-bold table-warning"><td colspan="7">Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NEW USER RECORD TAB (Form + User List) -->
+        <div class="tab-pane fade admin-only" id="newUserTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-person-plus-fill"></i> New User Record</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div>
+                        <div class="col-12"><hr class="my-1"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Username</label><input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Password</label><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Role</label><select id="new_user_role" class="form-select form-control-sm"><option value="user">User</option><option value="admin">Admin (DIC)</option><option value="superadmin">Super Admin (RSM)</option></select></div>
+                        <div class="col-12 d-flex gap-2 mt-2">
+                            <button id="saveUserBtn" onclick="saveNewUser()" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-save"></i> Save Record</button>
+                            <button id="cancelEditUserBtn" onclick="clearUserForm()" class="btn btn-secondary btn-sm hidden"><i class="bi bi-x-circle"></i> Cancel Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dash-card no-print">
+                <div class="card-header bg-dark text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-people"></i> User List</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Depot</th>
+                                    <th>Role</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user_list_body">
+                                <tr><td colspan="6" class="text-center text-muted p-2">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
+<div class="modal fade no-print" id="changePassModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning py-2"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="fw-bold">Current</label><input type="password" id="cp_current" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">New</label><input type="password" id="cp_new" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Confirm</label><input type="password" id="cp_confirm" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update</button></div></div></div></div>
+<div class="modal fade no-print" id="cutBillModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content"><div class="modal-header bg-warning py-1"><h5 class="modal-title">Bill Checking & Deduction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-2"><input type="hidden" id="edit_bill_id"><input type="hidden" id="m_year"><input type="hidden" id="m_month"><input type="hidden" id="m_daName"><div class="table-responsive"><table class="table table-sm modal-table table-bordered"><thead class="table-secondary text-center"><tr><th style="min-width:75px">Date</th><th style="min-width:90px">From</th><th style="min-width:90px">To</th><th style="min-width:75px">Mode</th><th style="min-width:65px">Amount</th><th style="min-width:65px">DA</th><th style="min-width:65px">Deduction</th><th style="min-width:75px">Total</th></tr></thead><tbody id="modal_expense_body"></tbody><tfoot><tr class="table-light fw-bold"><td colspan="7" class="text-end">Total Payable:</td><td class="text-center text-success" id="modal_grand_total">0</td></tr></tfoot></table></div><div class="mt-3 p-2 border rounded bg-light"><h6 class="text-center mb-2">Summary</h6><div class="table-responsive"><table class="table table-sm table-bordered summary-table"><thead><tr><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Final</th></tr></thead><tbody><tr><td id="sum_iou">0</td><td id="sum_sales">0</td><td id="sum_user_bill">0</td><td id="sum_user_per">0%</td><td id="sum_payable">0</td><td id="sum_payable_per">0%</td><td id="sum_final" class="text-success">0</td></tr></tbody></table></div><div class="mt-2"><label class="fw-bold">Remarks:</label><input type="text" id="modal_remarks" class="form-control form-control-sm" placeholder="Checking remarks..."></div></div></div><div class="modal-footer py-1"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button><button onclick="saveDeduction()" type="button" class="btn btn-success btn-sm">Save</button></div></div></div></div>
+
+<!-- ★★★ NEW VIEW TOP SHEET MODAL ★★★ -->
+<div class="modal fade no-print" id="viewTopSheetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title">Top Sheet Report View</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 bg-light">
+                <div id="view_topsheet_content" style="background:white; padding:20px; border:1px solid #ddd; min-height:400px;">
+                    <!-- Content will be injected here -->
+                </div>
+            </div>
+            <div class="modal-footer py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button id="btn_print_from_modal" onclick="" class="btn btn-primary btn-sm"><i class="bi bi-printer-fill"></i> Print This Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PRINT CONTAINERS -->
+<div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
+
+<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:100px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
+
+<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
+
+<!-- ★★★ GENERATED TOP SHEET PRINT CONTAINER ★★★ -->
+<div class="print-topsheet-final-container" id="print_topsheet_final_area">
+    <div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">
+        <h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2>
+        <h4 style="margin:0">Travels Allowance Bill Summary Month Wise Top Sheet</h4>
+        <h5 style="margin:0" id="print_final_depot">Kushtia Depot</h5>
+    </div>
+    
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold">
+        <div>Report ID: <span id="print_final_id"></span></div>
+        <div>Month: <span id="print_final_month"></span></div>
+        <div>Date: <span id="print_final_date"></span></div>
+    </div>
+    
+    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px">
+        <thead>
+            <tr style="background:#f0f0f0">
+                <th style="padding:4px;text-align:center;width:5%">Sl</th>
+                <th style="padding:4px;text-align:left;width:15%">Month</th>
+                <th style="padding:4px;text-align:left;width:25%">DA Name</th>
+                <th style="padding:4px;text-align:right;width:55%">Net Amount (Taka + DA)</th>
+            </tr>
+        </thead>
+        <tbody id="print_final_tbody"></tbody>
+        <tfoot style="font-weight:bold;background:#e9ecef">
+            <tr>
+                <td colspan="3" style="text-align:right;padding:4px">TOTAL:</td>
+                <td style="text-align:right;padding:4px" id="print_final_foot_net">0.00</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:30px;font-size:14px;border:1px solid #000;padding:10px">
+        <div style="width:50%">
+            <strong>Total TP+Vat Sales:</strong> <span id="print_final_sales">0.00</span>
+        </div>
+        <div style="width:40%;text-align:right">
+            <strong>Delivery Cost %:</strong> <span id="print_final_cost">0.00%</span>
+        </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-top:50px">
+        <tr style="height:100px;vertical-align:bottom">
+            <td style="width:33.33%;text-align:center;border-top:1px solid #000">Prepared By DIC</td>
+            <td style="width:33.33%;text-align:center;border-top:1px solid #000">Rechecked RSM/Sr.RSM</td>
+            <td style="width:33.33%;text-align:center;border-top:1px solid #000">Approved By Accounts</td>
+        </tr>
+    </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyD3l-b_9jRDPC-UxjqmA6ZMiupXdP5yakQ",
+  authDomain:"smartmanager-ed5f0.firebaseapp.com",
+  databaseURL:"https://smartmanager-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"smartmanager-ed5f0",
+  storageBucket:"smartmanager-ed5f0.firebasestorage.app",
+  messagingSenderId:"886142154237",
+  appId:"1:886142154237:web:f0f838a0dcc69e1cdd1594",
+  measurementId:"G-YZ520GP66H"
+};
+firebase.initializeApp(firebaseConfig);
+const database=firebase.database();
+
+let currentUser=null,editingBillId=null,editingBillYear=null,editingBillMonth=null,editingBillDaName=null;
+let editingIouId=null,editingIouYear=null,editingIouMonth=null,editingIouDaName=null;
+let editingUserId=null;
+let daListCache={},daNameToIdCache={},iouListGlobal={};
+let currentIouId=null,originalIouId=null,originalIouYear=null,originalIouMonth=null,originalIouDaName=null;
+let userPhotoBase64=null,profilePhotoBase64=null,currentSummaryData=[],iouPrintCache=[];
+let modalSales=0,modalUserBill=0,modalIou=0;
+let globalFilterMonth='',iouGlobalListenerRef=null;
+let lookedUpUser=null,lookupTimeout=null;
+let _iouLoaded=false;
+
+function sanitizeKey(s){return String(s||'').replace(/[.#$\[\]\/]/g,'_');}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getCurrentMonth(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
+function formatMonthLabel(m){if(!m)return'All Time';var p=m.split('-');var ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return ms[parseInt(p[1])-1]+'-'+p[0];}
+function formatDate(d){if(!d)return'';if(d.indexOf('-')===2)return d;if(d.indexOf('-')!==4)return d;var p=d.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+function isBillRequiredIOU(t){return t==='Delivery'||t==='Collection'||t==='Return';}
+function isNoBillIOU(t){return t==='General'||t==='Bill Payment';}
+
+function getDateParts(dateStr){
+    if(!dateStr)return{year:'',month:''};
+    if(dateStr.indexOf('-')===2){var p=dateStr.split('-');if(p.length===3)return{year:p[2],month:p[1]};return{year:'',month:''};}
+    if(dateStr.indexOf('-')===4){var p2=dateStr.split('-');if(p2.length===3)return{year:p2[0],month:p2[1]};}
+    var parts=dateStr.split(/[-\/\.]/);
+    if(parts.length===3){if(parts[0].length===4)return{year:parts[0],month:parts[1]};if(parts[2].length===4)return{year:parts[2],month:parts[1]};}
+    return{year:'',month:''};
+}
+
+function getBillDate(b){return b.submitDate||b.depDate||'';}
+
+function isDateInMonth(dateStr,monthVal){
+    if(!monthVal)return true;
+    if(!dateStr)return false;
+    var dp=getDateParts(dateStr);
+    if(!dp.year||!dp.month)return false;
+    var normalizedMonth=dp.month.length===1?'0'+dp.month:dp.month;
+    return dp.year+'-'+normalizedMonth===monthVal;
+}
+
+function collectIOUs(snap,pYear,pMonth){
+    var result={};
+    if(!snap.exists())return result;
+    snap.forEach(function(child){
+        var key=child.key;
+        if(/^\d{4}$/.test(key)&&!pYear){Object.assign(result,collectIOUs(child,key,null));}
+        else if(/^\d{2}$/.test(key)&&!pMonth){Object.assign(result,collectIOUs(child,pYear,key));}
+        else{child.forEach(function(iouSnap){result[iouSnap.key]={...iouSnap.val(),_year:pYear,_month:pMonth,_daName:key};});}
+    });
+    return result;
+}
+function collectBills(snap,pYear,pMonth){
+    var result=[];
+    if(!snap.exists())return result;
+    snap.forEach(function(child){
+        var key=child.key;
+        if(/^\d{4}$/.test(key)&&!pYear){result=result.concat(collectBills(child,key,null));}
+        else if(/^\d{2}$/.test(key)&&!pMonth){result=result.concat(collectBills(child,pYear,key));}
+        else{child.forEach(function(billSnap){result.push({id:billSnap.key,data:billSnap.val(),year:pYear,month:pMonth,daName:key});});}
+    });
+    return result;
+}
+
+// ========== LOGIN ==========
+function setStatus(text,cls){var el=document.getElementById('w98_status');el.innerText=text;el.className='w98-status-text'+(cls?' '+cls:'');}
+
+function resetLoginUI(){
+    lookedUpUser=null;
+    document.getElementById('w98_user_card').classList.remove('show');
+    document.getElementById('w98_show_name').innerText='—';
+    document.getElementById('w98_show_role').innerText='—';
+    document.getElementById('w98_show_role').className='w98-role-tag w98-role-user';
+    document.getElementById('w98_show_depot').innerText='—';
+    document.getElementById('login_password').value='';
+    document.getElementById('login_password').disabled=true;
+    document.getElementById('w98_login_btn').disabled=true;
+    var frame=document.getElementById('w98_avatar_frame');
+    frame.innerHTML='<i class="bi bi-person-fill" id="w98_avatar_icon"></i>';
+    document.getElementById('w98_avatar_name').innerHTML='&nbsp;';
+}
+
+function lookupUser(){
+    clearTimeout(lookupTimeout);
+    var val=document.getElementById('login_user_id').value.trim();
+    if(!val||val.length<1){resetLoginUI();setStatus('Ready');return;}
+    setStatus('<span class="w98-spinner"></span> Searching...','searching');
+    lookupTimeout=setTimeout(function(){
+        if(val==='KS'){
+            lookedUpUser={key:'admin_001',data:{name:'Md Sajjad Ahmed',role:'superadmin',depot:'Kushtia',photoUrl:null,password:'Monico@Ku007'}};
+            showLookedUpUser();return;
+        }
+        database.ref('Users').orderByChild('userId').equalTo(val).once('value',function(snap){
+            if(snap.exists()){snap.forEach(function(c){lookedUpUser={key:c.key,data:c.val()};showLookedUpUser();});}
+            else{
+                database.ref('Users').orderByChild('username').equalTo(val).once('value',function(snap2){
+                    if(snap2.exists()){snap2.forEach(function(c){lookedUpUser={key:c.key,data:c.val()};showLookedUpUser();});}
+                    else{resetLoginUI();setStatus('User "'+escHtml(val)+'" not found','err');}
+                });
+            }
+        },function(){resetLoginUI();setStatus('Connection error','err');});
+    },400);
+}
+
+function showLookedUpUser(){
+    if(!lookedUpUser)return;
+    var d=lookedUpUser.data;
+    document.getElementById('w98_show_name').innerText=d.name||'—';
+    var roleEl=document.getElementById('w98_show_role');
+    var roleMap={superadmin:'Super Admin (RSM)',admin:'Admin (DIC)',user:'User (DA)'};
+    roleEl.innerText=roleMap[d.role]||d.role||'User';
+    roleEl.className='w98-role-tag w98-role-'+(d.role||'user');
+    document.getElementById('w98_show_depot').innerText=d.depot||'—';
+    document.getElementById('w98_user_card').classList.add('show');
+    document.getElementById('login_password').disabled=false;
+    document.getElementById('w98_login_btn').disabled=false;
+    var frame=document.getElementById('w98_avatar_frame');
+    if(d.photoUrl){frame.innerHTML='<img id="w98_avatar_icon" src="'+d.photoUrl+'" alt="">';}
+    else{var iconCls=d.role==='superadmin'?'bi-shield-lock-fill':d.role==='admin'?'bi-person-gear':'bi-person-fill';frame.innerHTML='<i class="bi '+iconCls+'" id="w98_avatar_icon"></i>';}
+    document.getElementById('w98_avatar_name').innerText=d.name||'';
+    var roleLbl=d.role==='superadmin'?'RSM':d.role==='admin'?'DIC':'DA';
+    setStatus('Found: '+d.name+' ('+roleLbl+') — Enter password','ok');
+    document.getElementById('login_password').focus();
+}
+
+function handleUnifiedLogin(){
+    if(!lookedUpUser){setStatus('Enter a valid User ID first','err');return;}
+    var pwd=document.getElementById('login_password').value;
+    if(!pwd){setStatus('Enter password','err');document.getElementById('login_password').focus();return;}
+    if(lookedUpUser.data.password!==pwd){
+        setStatus('Wrong password! Try again.','err');
+        document.getElementById('login_password').value='';
+        document.getElementById('login_password').focus();
+        var pw=document.getElementById('login_password');pw.style.animation='none';pw.offsetHeight;pw.style.animation='w98shake .3s ease';
+        return;
+    }
+    var d=lookedUpUser.data;
+    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};
+    localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    showDashboard();
+}
+
+document.getElementById('login_user_id').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(!document.getElementById('login_password').disabled)document.getElementById('login_password').focus();}});
+document.getElementById('login_password').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleUnifiedLogin();}});
+document.getElementById('login_user_id').addEventListener('input',lookupUser);
+
+// ========== GLOBAL MONTH FILTER ==========
+function setGlobalMonth(monthVal){
+    globalFilterMonth=monthVal||'';
+    ['global_month_filter','filter_history_month','summary_month','topsheet_month','filter_approved_month','filter_iou_month'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=globalFilterMonth;});
+    var bc=document.getElementById('btn_month_current'),ba=document.getElementById('btn_month_all');
+    if(bc&&ba){
+        if(globalFilterMonth===getCurrentMonth()){bc.classList.add('active-month');ba.classList.remove('active-month');}
+        else if(globalFilterMonth===''){ba.classList.add('active-month');bc.classList.remove('active-month');}
+        else{bc.classList.remove('active-month');ba.classList.remove('active-month');}
+    }
+    var lbl=formatMonthLabel(globalFilterMonth);
+    ['dash_da_month_label','iou_pending_month_label','approved_vs_iou_month_label','user_active_iou_month_label','user_used_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
+    localStorage.setItem('globalFilterMonth',globalFilterMonth);
+    loadIOUListGlobal(function(){reloadAllData();});
+}
+
+function reloadAllData(){
+    if(!currentUser)return;
+    if(currentUser.role==='user')loadUserDashboardData();
+    else{loadAdminDashboardData();loadAdminIOU();}
+    loadBills();
+    if(document.getElementById('summaryTab').classList.contains('active'))generateSummary();
+    if(document.getElementById('topSheetTab').classList.contains('active'))loadTopSheetData();
+}
+
+function loadIOUListGlobal(callback){
+    if(iouGlobalListenerRef){iouGlobalListenerRef.off('value');iouGlobalListenerRef=null;}
+    var ref;
+    if(globalFilterMonth){var p=globalFilterMonth.split('-');ref=database.ref('IOU_List/'+p[0]+'/'+p[1]);}
+    else{ref=database.ref('IOU_List');}
+    ref.once('value',function(snap){
+        var collected;
+        if(globalFilterMonth){var p2=globalFilterMonth.split('-');collected=collectIOUs(snap,p2[0],p2[1]);}
+        else{collected=collectIOUs(snap,null,null);}
+        iouListGlobal=collected;_iouLoaded=true;
+        if(callback)callback();
+        iouGlobalListenerRef=ref;
+        ref.on('value',function(snap2){
+            var c2;
+            if(globalFilterMonth){var p3=globalFilterMonth.split('-');c2=collectIOUs(snap2,p3[0],p3[1]);}
+            else{c2=collectIOUs(snap2,null,null);}
+            iouListGlobal=c2;
+            clearTimeout(window._iouRealtimeTimer);
+            window._iouRealtimeTimer=setTimeout(function(){if(_iouLoaded)reloadAllData();},600);
+        });
+    });
+}
+
+// ========== INPUT TOGGLE ==========
+function toggleRowInputs(sel){
+    var row=sel.closest('tr'),mode=sel.value,isDA=(mode==='Daily Allowance');
+    row.querySelector('.exp-from').disabled=isDA;
+    row.querySelector('.exp-to').disabled=isDA;
+    row.querySelector('.exp-amount').disabled=isDA;
+    if(isDA){row.querySelector('.exp-from').value='';row.querySelector('.exp-to').value='';row.querySelector('.exp-amount').value='';}
+    row.querySelector('.exp-da').disabled=!isDA;
+    if(!isDA)row.querySelector('.exp-da').value='';
+    calculateRowTotal(row.querySelector('.exp-amount'));
+}
+document.getElementById('q_mode').addEventListener('change',function(){
+    var isDA=this.value==='Daily Allowance';
+    document.getElementById('q_from').disabled=isDA;
+    document.getElementById('q_to').disabled=isDA;
+    document.getElementById('q_amount').disabled=isDA;
+    document.getElementById('q_da_expense').disabled=!isDA;
+    if(isDA){document.getElementById('q_from').value='';document.getElementById('q_to').value='';document.getElementById('q_amount').value='';}
+    else document.getElementById('q_da_expense').value='';
+});
+
+// ========== AUTO SAVE ==========
+let autoSaveTimeout;var AUTO_SAVE_KEY='bill_draft_data';
+function triggerAutoSave(){if(editingBillId)return;clearTimeout(autoSaveTimeout);var s=document.getElementById('auto_save_status');s.innerText="Typing...";s.className='text-muted align-self-center me-auto';autoSaveTimeout=setTimeout(function(){saveLocalDraft();s.innerText="Draft Saved";s.className='text-success align-self-center me-auto';},800);}
+function saveLocalDraft(){var d={depDate:document.getElementById('form_dep_date').value,retDate:document.getElementById('form_ret_date').value,submitDate:document.getElementById('form_submit_date').value,route:document.getElementById('form_route').value,mpo:document.getElementById('form_mpo').value,summary:document.getElementById('form_summary').value,invoiceVal:document.getElementById('form_invoice_val').value,returnVal:document.getElementById('form_return_val').value,invoiceQty:document.getElementById('form_invoice_qty').value,bundleQty:document.getElementById('form_bundle_qty').value,iouId:currentIouId,iouAmount:document.getElementById('form_iou_amount').value,remarks:document.getElementById('form_remarks').value,expenses:[]};document.querySelectorAll('#expense_table_body tr').forEach(function(r){d.expenses.push({date:r.querySelector('.exp-date').value,from:r.querySelector('.exp-from').value,to:r.querySelector('.exp-to').value,mode:r.querySelector('.exp-mode').value,amount:r.querySelector('.exp-amount').value,da:r.querySelector('.exp-da').value});});localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(d));}
+function loadLocalDraft(){var sd=localStorage.getItem(AUTO_SAVE_KEY);if(!sd)return;try{var d=JSON.parse(sd);document.getElementById('form_dep_date').value=d.depDate||'';document.getElementById('form_ret_date').value=d.retDate||'';document.getElementById('form_submit_date').value=d.submitDate||'';document.getElementById('form_route').value=d.route||'';document.getElementById('form_mpo').value=d.mpo||'';document.getElementById('form_summary').value=d.summary||'';document.getElementById('form_invoice_val').value=d.invoiceVal||'';document.getElementById('form_return_val').value=d.returnVal||0;document.getElementById('form_invoice_qty').value=d.invoiceQty||'';document.getElementById('form_bundle_qty').value=d.bundleQty||'';document.getElementById('form_iou_amount').value=d.iouAmount||0;document.getElementById('form_remarks').value=d.remarks||'';currentIouId=d.iouId||null;calculateSoldValue();var tb=document.getElementById('expense_table_body');tb.innerHTML='';if(d.expenses&&d.expenses.length>0){d.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}calculateGrandTotal();document.getElementById('auto_save_status').innerText="Draft Restored";document.getElementById('auto_save_status').className='text-success align-self-center me-auto';}catch(e){console.error(e);}}
+function clearLocalDraft(){localStorage.removeItem(AUTO_SAVE_KEY);document.getElementById('auto_save_status').innerText='';document.getElementById('auto_save_status').className='text-muted align-self-center me-auto';}
+function addExpenseRowWithData(exp){var tb=document.getElementById('expense_table_body'),row=tb.insertRow();var modeOpts=['Rickshaw','Auto','Bus','CNG','Van','Motorcycle','Tempo','Pickup','Daily Allowance','Labour Bill'];var mHtml=modeOpts.map(function(m){return'<option '+(exp.mode===m?'selected':'')+'>'+m+'</option>';}).join('');row.innerHTML='<td><input type="date" class="form-control form-control-sm exp-date" value="'+escHtml(exp.date)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="'+escHtml(exp.from)+'" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="'+escHtml(exp.to)+'" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this);triggerAutoSave()">'+mHtml+'</select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="'+(exp.amount||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="'+(exp.da||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="'+((parseFloat(exp.amount)||0)+(parseFloat(exp.da)||0))+'" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';toggleRowInputs(row.querySelector('.exp-mode'));}
+function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;currentIouId=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_iou_amount').value=0;document.getElementById('form_remarks').value='';var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';calculateSoldValue();clearLocalDraft();if(currentUser&&currentUser.role==='user'){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;}}
+
+// ========== LOGOUT ==========
+function logout(){
+    if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();
+    localStorage.removeItem('auth_user');
+    currentUser=null;
+    document.body.className='';
+    location.reload();
+}
+function resetAllTabs(){document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});}
+
+// ========== PROFILE ==========
+function openProfileModal(){if(!currentUser||currentUser.id==='admin_001'){alert("Cannot edit.");return;}profilePhotoBase64=null;database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u){document.getElementById('prof_name').value=u.name||'';document.getElementById('prof_phone').value=u.phone||'';document.getElementById('prof_depot').value=u.depot||'Kushtia';document.getElementById('prof_username').value=u.username||'';document.getElementById('prof_prev_img').src=u.photoUrl||'https://via.placeholder.com/100';}new bootstrap.Modal(document.getElementById('profileModal')).show();});}
+function previewProfilePhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;profilePhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function saveProfile(){var n=document.getElementById('prof_name').value,ph=document.getElementById('prof_phone').value,dp=document.getElementById('prof_depot').value,un=document.getElementById('prof_username').value;if(!n||!un){alert("Name & Username required");return;}var up={name:n,phone:ph,depot:dp,username:un};if(profilePhotoBase64)up.photoUrl=profilePhotoBase64;database.ref('Users/'+currentUser.id).update(up).then(function(){alert("Updated!");currentUser.name=n;currentUser.depot=dp;if(profilePhotoBase64)currentUser.photoUrl=profilePhotoBase64;document.getElementById('header_user_name').innerText=n;if(currentUser.photoUrl)document.getElementById('header_profile_pic').src=currentUser.photoUrl;bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();}).catch(function(e){alert(e.message);});}
+function openChangePassModal(){if(!currentUser||currentUser.id==='admin_001'){alert("Cannot change.");return;}document.getElementById('cp_current').value='';document.getElementById('cp_new').value='';document.getElementById('cp_confirm').value='';new bootstrap.Modal(document.getElementById('changePassModal')).show();}
+function changePassword(){var c=document.getElementById('cp_current').value,n=document.getElementById('cp_new').value,cf=document.getElementById('cp_confirm').value;if(!c||!n||!cf){alert("Fill all");return;}if(n!==cf){alert("Mismatch");return;}database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u.password!==c){alert("Wrong current");return;}database.ref('Users/'+currentUser.id).update({password:n}).then(function(){alert("Changed!");bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();}).catch(function(e){alert(e.message);});});}
+function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');userPhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+
+// ========== PRESENCE ==========
+function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
+function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+
+// ========== DASHBOARD ==========
+function showDashboard(){
+    document.getElementById('login_section').classList.add('hidden');
+    document.getElementById('dashboard_section').classList.remove('hidden');
+    document.getElementById('header_user_name').innerText=currentUser.name;
+    var hp=document.getElementById('header_profile_pic');
+    if(currentUser.photoUrl)hp.src=currentUser.photoUrl;else hp.src="https://via.placeholder.com/30";
+    document.body.classList.remove('role-user','role-admin','role-superadmin');
+    document.body.classList.add('role-'+currentUser.role);
+    resetAllTabs();
+    document.getElementById('dash-tab').classList.add('active');
+    document.getElementById('dashTab').classList.add('show','active');
+    setupPresence();listenForOnlineUsers();
+    
+    // Force Current Month on every login
+    localStorage.removeItem('globalFilterMonth'); 
+    var targetMonth=getCurrentMonth(); 
+    
+    if(currentUser.role==='user'){
+        document.getElementById('user_dash_name').innerText='Welcome, '+currentUser.name+'!';
+        document.getElementById('user_dash_depot').innerText=currentUser.depot;
+        var now=new Date();var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+        document.getElementById('user_dash_date').innerText=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+        var dp=document.getElementById('user_dash_profile');
+        if(currentUser.photoUrl)dp.src=currentUser.photoUrl;
+        else{var ini=currentUser.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();dp.src='https://ui-avatars.com/api/?name='+encodeURIComponent(currentUser.name)+'&background=0d6efd&color=fff&size=140&bold=true';}
+        prepareBillEntryForm();setGlobalMonth(targetMonth);
+    }else{
+        loadDAListForFilters(function(){
+            setGlobalMonth(targetMonth);
+            loadTopSheetHistory(); 
+            loadUserList();
+        });
+    }
+}
+
+function loadUserDashboardData(){
+    var myName=currentUser.name;
+    var ab=document.getElementById('user_active_iou_list'),ub=document.getElementById('user_used_iou_list');
+    var abCount=0,ubCount=0;
+    ab.innerHTML='';ub.innerHTML='';
+    var totalIouCount=0,activeIouCount=0;
+    
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];
+        if(d.daName!==myName)return;
+        if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
+        
+        var type=d.type||'Delivery';
+        if(isNoBillIOU(type)) return; 
+        
+        totalIouCount++; 
+        
+        if(d.status==='used'){
+            ubCount++;
+            var usedIcon=d.status==='used'?'<i class="bi bi-check2-circle text-success"></i>':'<i class="bi bi-archive text-secondary"></i>';
+            ub.innerHTML+='<tr><td>'+formatDate(d.date)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-semibold">'+d.taka+'</td><td>'+usedIcon+'</td></tr>';
+        }else{
+            abCount++;activeIouCount++;
+            var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';}
+            ab.innerHTML+='<tr class="clickable-row" onclick="fillBillFromIOU(\''+id+'\')"><td>'+formatDate(d.date)+daysBadge+'</td><td><small class="badge bg-info text-dark">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td><td><i class="bi bi-arrow-right-circle text-primary"></i></td></tr>';
+        }
+    });
+    
+    document.getElementById('user_active_iou_count').innerText=abCount;
+    document.getElementById('user_used_iou_count').innerText=ubCount;
+    if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
+    if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
+    
+    var iouEl = document.getElementById('user_stat_total_iou');
+    if(iouEl) iouEl.innerText = totalIouCount;
+    
+    database.ref('Bills').once('value',function(snap){
+        var allBills=collectBills(snap,null,null);
+        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0;
+        allBills.forEach(function(item){
+            var b=item.data;
+            if(b.daName!==myName)return;
+            if(b.status==='draft')return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            totalCount++;
+            if(b.status==='red')pendingCount++;
+            else if(b.status==='orange')checkedCount++;
+            else if(b.status==='green')verifiedCount++;
+        });
+        
+        var elTotal = document.getElementById('user_stat_total');
+        var elPending = document.getElementById('user_stat_pending');
+        var elChecked = document.getElementById('user_stat_checked');
+        var elVerified = document.getElementById('user_stat_verified');
+        
+        if(elTotal) elTotal.innerText = totalCount;
+        if(elPending) elPending.innerText = pendingCount;
+        if(elChecked) elChecked.innerText = checkedCount;
+        if(elVerified) elVerified.innerText = verifiedCount;
+    });
+}
+
+function loadAdminDashboardData(){loadDashboardStats();loadApprovedBillSummary();loadUnbilledIOUList();}
+
+function loadUnbilledIOUList(){
+    var tbody=document.getElementById('unbilled_iou_list'),badge=document.getElementById('unbilled_iou_count');
+    tbody.innerHTML='';var count=0;
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];var type=d.type||'Delivery';
+        if(!isBillRequiredIOU(type))return;
+        if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
+        if(d.status==='used')return;count++;
+        var days='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));days='<span class="badge bg-light text-dark ms-1">'+diff+'d</span>';}
+        tbody.innerHTML+='<tr><td>'+formatDate(d.date)+' '+days+'</td><td>'+escHtml(d.daName)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td></tr>';
+    });
+    badge.innerText=count;
+    if(count===0)tbody.innerHTML='<tr><td colspan="5" class="text-center text-success p-2">All clear</td></tr>';
+}
+
+function loadDashboardStats(){
+    var iouPerDA={};
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];if(!isBillRequiredIOU(d.type))return;
+        if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
+        var dn=d.daName||'Unknown';iouPerDA[dn]=(iouPerDA[dn]||0)+1;
+    });
+    var totalIou=Object.values(iouPerDA).reduce(function(a,b){return a+b;},0);
+    database.ref('Bills').once('value',function(snap){
+        var allBills=collectBills(snap,null,null);
+        var totalBills=0,checkCount=0,approveCount=0,approvedCount=0;var daStats={};
+        allBills.forEach(function(item){
+            var b=item.data;if(b.status==='draft')return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            var dn=item.daName||'Unknown';
+            if(!daStats[dn])daStats[dn]={iou:iouPerDA[dn]||0,bills:0,check:0,approve:0,approved:0};
+            totalBills++;daStats[dn].bills++;
+            if(b.status==='red'){checkCount++;daStats[dn].check++;}
+            else if(b.status==='orange'){approveCount++;daStats[dn].approve++;}
+            else if(b.status==='green'){approvedCount++;daStats[dn].approved++;}
+        });
+        document.getElementById('dash_iou_count').innerText=totalIou;
+        document.getElementById('dash_bills_count').innerText=totalBills;
+        document.getElementById('dash_check_count').innerText=checkCount;
+        document.getElementById('dash_approve_count').innerText=approveCount;
+        document.getElementById('dash_approved_count').innerText=approvedCount;
+        var tbody=document.getElementById('dash_da_table_body');tbody.innerHTML='';
+        var allDAs=new Set([].concat(Object.keys(daStats),Object.keys(iouPerDA)));
+        if(allDAs.size===0){tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted">No data for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';return;}
+        allDAs.forEach(function(dn){
+            var s=daStats[dn]||{iou:iouPerDA[dn]||0,bills:0,check:0,approve:0,approved:0};
+            if(s.iou>0||s.bills>0)tbody.innerHTML+='<tr><td><i class="bi bi-person-badge me-1"></i>'+escHtml(dn)+'</td><td class="text-center"><span class="badge bg-info">'+s.iou+'</span></td><td class="text-center"><span class="badge" style="background:linear-gradient(135deg,#7c4dff,#651fff);color:#fff">'+s.bills+'</span></td><td class="text-center"><span class="badge bg-warning text-dark">'+s.check+'</span></td><td class="text-center"><span class="badge bg-danger">'+s.approve+'</span></td><td class="text-center"><span class="badge bg-success">'+s.approved+'</span></td></tr>';
+        });
+    });
+}
+
+function loadApprovedBillSummary(){
+    var iouPerDA={};
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];
+        if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
+        var dn=d.daName||'Unknown';iouPerDA[dn]=(iouPerDA[dn]||0)+(d.taka||0);
+    });
+    database.ref('Bills').once('value',function(snap){
+        var billPerDA={};var allBills=collectBills(snap,null,null);
+        allBills.forEach(function(item){
+            var b=item.data;if(b.status!=='green')return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            var dn=item.daName||'Unknown';
+            if(!billPerDA[dn])billPerDA[dn]={appr:0,bund:0};
+            billPerDA[dn].appr+=(b.totalAmount||0);billPerDA[dn].bund+=(b.bundleQty||0);
+        });
+        var tbody=document.getElementById('approved_summary_body');tbody.innerHTML='';
+        var allDAs=new Set([].concat(Object.keys(iouPerDA),Object.keys(billPerDA)));
+        var gIou=0,gBill=0,gBal=0,gBund=0;
+        if(allDAs.size===0){
+            tbody.innerHTML='<tr><td colspan="6" class="text-center">No Data</td></tr>';
+            document.getElementById('approved_tot_iou').innerText='0.00';
+            document.getElementById('approved_tot_bill').innerText='0.00';
+            document.getElementById('approved_tot_bal').innerText='0.00';
+            document.getElementById('approved_tot_bund').innerText='0';
+            return;
+        }
+        allDAs.forEach(function(dn){
+            var ti=iouPerDA[dn]||0,bi=billPerDA[dn]||{appr:0,bund:0};
+            var bal=bi.appr-ti;var bc=bal<0?'text-danger':'text-success';
+            var st=bal<0?'<span class="badge bg-danger">Due</span>':'<span class="badge bg-success">Clear</span>';
+            tbody.innerHTML+='<tr><td>'+escHtml(dn)+'</td><td class="text-end fw-bold">'+ti.toFixed(2)+'</td><td class="text-end fw-bold">'+bi.appr.toFixed(2)+'</td><td class="text-end fw-bold '+bc+'">'+bal.toFixed(2)+'</td><td class="text-center fw-bold">'+bi.bund+'</td><td class="text-center">'+st+'</td></tr>';
+            gIou+=ti;gBill+=bi.appr;gBal+=bal;gBund+=bi.bund;
+        });
+        var balColor=gBal<0?'text-danger':'text-success';
+        document.getElementById('approved_tot_iou').innerText=gIou.toFixed(2);
+        document.getElementById('approved_tot_bill').innerText=gBill.toFixed(2);
+        var balEl=document.getElementById('approved_tot_bal');
+        balEl.innerText=gBal.toFixed(2);
+        balEl.className='text-end '+balColor;
+        document.getElementById('approved_tot_bund').innerText=gBund;
+    });
+}
+
+function loadDAListForFilters(callback){
+    database.ref('Users').once('value',function(snap){
+        daListCache={};daNameToIdCache={};
+        var ids=['iou_da_name','filter_iou_da','filter_history_da','filter_approved_da','summary_da'];
+        var labels=['','All DAs','All DAs','All DAs','-- Select DA --'];
+        ids.forEach(function(id,i){
+            var el=document.getElementById(id);
+            if(el)el.innerHTML='<option value="">'+(labels[i]||'Select')+'</option>';
+        });
+        if(snap.exists()){
+            snap.forEach(function(c){
+                var u=c.val();
+                if(u.role!=='admin'&&u.role!=='superadmin'){
+                    daListCache[c.key]=u.name;
+                    daNameToIdCache[u.name]=c.key;
+                    var opt='<option value="'+c.key+'">'+escHtml(u.name)+'</option>';
+                    ids.forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML+=opt;});
+                }
+            });
+        }
+        if(callback)callback();
+    });
+}
+
+// Load User List in "New User Record" Tab
+function loadUserList() {
+    var tbody=document.getElementById('user_list_body');
+    if(!tbody) return;
+    tbody.innerHTML='<tr><td colspan="6" class="text-center p-2">Loading...</td></tr>';
+    database.ref('Users').once('value',function(snap){
+        tbody.innerHTML='';
+        if(!snap.exists()){tbody.innerHTML='<tr><td colspan="6" class="text-center p-2">No users found.</td></tr>';return;}
+        snap.forEach(function(c){
+            var u=c.val();
+            var key = c.key;
+            var roleMap={'superadmin':'Super Admin','admin':'Admin','user':'User'};
+            var tr=document.createElement('tr');
+            tr.innerHTML='<td>'+(u.userId||'-')+'</td><td>'+escHtml(u.name||'-')+'</td><td>'+(u.phone||'-')+'</td><td>'+(u.depot||'-')+'</td><td>'+(roleMap[u.role]||u.role||'-')+'</td><td class="text-center"><button class="btn btn-sm btn-warning" onclick="editUser(\''+key+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteUser(\''+key+'\')"><i class="bi bi-trash"></i></button></td>';
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+function clearUserForm(){
+    document.getElementById('new_user_id').value='';
+    document.getElementById('new_user_name').value='';
+    document.getElementById('new_user_phone').value='';
+    document.getElementById('new_user_username').value='';
+    document.getElementById('new_user_pass').value='';
+    document.getElementById('new_user_depot').value='Kushtia';
+    document.getElementById('new_user_role').value='user';
+    document.getElementById('new_user_photo').value='';
+    document.getElementById('photo_preview').src='';
+    document.getElementById('photo_preview').classList.add('hidden');
+    userPhotoBase64=null;
+    editingUserId=null;
+    document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-save"></i> Save Record';
+    document.getElementById('cancelEditUserBtn').classList.add('hidden');
+}
+
+function editUser(id){
+    database.ref('Users/'+id).once('value', function(snap){
+        var u = snap.val();
+        if(!u) return;
+        editingUserId = id;
+        document.getElementById('new_user_id').value = u.userId||'';
+        document.getElementById('new_user_name').value = u.name||'';
+        document.getElementById('new_user_phone').value = u.phone||'';
+        document.getElementById('new_user_username').value = u.username||'';
+        document.getElementById('new_user_pass').value = u.password||'';
+        document.getElementById('new_user_depot').value = u.depot||'Kushtia';
+        document.getElementById('new_user_role').value = u.role||'user';
+        
+        if(u.photoUrl){
+            document.getElementById('photo_preview').src = u.photoUrl;
+            document.getElementById('photo_preview').classList.remove('hidden');
+        } else {
+            document.getElementById('photo_preview').classList.add('hidden');
+        }
+        userPhotoBase64 = null; // Don't override unless new photo selected
+
+        document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-pencil-square"></i> Update Record';
+        document.getElementById('cancelEditUserBtn').classList.remove('hidden');
+        
+        var newUserTabEl = document.getElementById('new-user-tab');
+        if(newUserTabEl){ var tab = new bootstrap.Tab(newUserTabEl); tab.show(); }
+        window.scrollTo({top:0, behavior:'smooth'});
+    });
+}
+
+function deleteUser(id){
+    if(!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
+    database.ref('Users/'+id).remove().then(function(){
+        alert("User deleted successfully!");
+        if(editingUserId === id) clearUserForm();
+        loadUserList();
+        loadDAListForFilters();
+    }).catch(function(e){ alert("Error: "+e.message); });
+}
+
+// ========== IOU CRUD ==========
+function calcIouPercent(){var s=parseFloat(document.getElementById('iou_sales').value)||0,r=parseFloat(document.getElementById('iou_return').value)||0,sold=s-r,t=parseFloat(document.getElementById('iou_taka').value)||0;document.getElementById('iou_sold').value=sold;document.getElementById('iou_percent').value=sold>0?((t/sold)*100).toFixed(2):"0";}
+function saveIOU(){var daId=document.getElementById('iou_da_name').value;if(!daId){alert("Select DA");return;}var daName=daListCache[daId];var dateVal=document.getElementById('iou_date').value;if(!dateVal){alert("Select date");return;}var dp=getDateParts(dateVal);var iouType=document.getElementById('iou_type').value;var autoStatus=isNoBillIOU(iouType)?'used':'active';var salesV=parseFloat(document.getElementById('iou_sales').value)||0,retV=parseFloat(document.getElementById('iou_return').value)||0;var data={date:dateVal,daId:daId,daName:daName,territory:document.getElementById('iou_territory').value,mpo:document.getElementById('iou_mpo').value,summary:document.getElementById('iou_summary').value,sales:salesV,returnVal:retV,soldVal:salesV-retV,qty:parseInt(document.getElementById('iou_qty').value)||0,bundleQty:parseInt(document.getElementById('iou_bundle_qty').value)||0,taka:parseFloat(document.getElementById('iou_taka').value)||0,percent:document.getElementById('iou_percent').value,status:autoStatus,type:iouType};var safeName=sanitizeKey(daName);var op;if(editingIouId&&editingIouYear&&editingIouMonth&&editingIouDaName){op=database.ref('IOU_List/'+editingIouYear+'/'+editingIouMonth+'/'+sanitizeKey(editingIouDaName)+'/'+editingIouId).update(data);}else{op=database.ref('IOU_List/'+dp.year+'/'+dp.month+'/'+safeName).push(data);}op.then(function(){alert(editingIouId?"Updated!":"Saved!");clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
+function clearIOUForm(){document.getElementById('iou_date').value='';document.getElementById('iou_da_name').value='';document.getElementById('iou_territory').value='';document.getElementById('iou_mpo').value='';document.getElementById('iou_summary').value='';document.getElementById('iou_sales').value='';document.getElementById('iou_return').value='';document.getElementById('iou_sold').value='';document.getElementById('iou_qty').value='';document.getElementById('iou_bundle_qty').value='';document.getElementById('iou_taka').value='';document.getElementById('iou_percent').value='0';document.getElementById('iou_type').value='Delivery';editingIouId=null;editingIouYear=null;editingIouMonth=null;editingIouDaName=null;document.getElementById('iou_save_btn').innerText="Save IOU Entry";document.getElementById('iou_cancel_btn').classList.add('hidden');}
+function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cache");return;}editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;document.getElementById('iou_date').value=iou.date||'';document.getElementById('iou_da_name').value=iou.daId||'';document.getElementById('iou_territory').value=iou.territory||'';document.getElementById('iou_mpo').value=iou.mpo||'';document.getElementById('iou_summary').value=iou.summary||'';document.getElementById('iou_sales').value=iou.sales||0;document.getElementById('iou_return').value=iou.returnVal||0;document.getElementById('iou_sold').value=iou.soldVal||0;document.getElementById('iou_qty').value=iou.qty||0;document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;document.getElementById('iou_taka').value=iou.taka||0;document.getElementById('iou_percent').value=iou.percent||'0';document.getElementById('iou_type').value=iou.type||'Delivery';document.getElementById('iou_save_btn').innerText="Update";document.getElementById('iou_cancel_btn').classList.remove('hidden');var iouEntryTabEl=document.getElementById('iou-entry-tab');if(iouEntryTabEl){var tab=new bootstrap.Tab(iouEntryTabEl);tab.show();}window.scrollTo({top:0,behavior:'smooth'});}
+function deleteIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found");return;}if(!confirm("Delete?"))return;database.ref('IOU_List/'+iou._year+'/'+iou._month+'/'+sanitizeKey(iou._daName)+'/'+id).remove().then(function(){if(editingIouId===id)clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
+function cancelIOUEdit(){clearIOUForm();}
+function resetIOUFilter(){document.getElementById('filter_iou_month').value='';document.getElementById('iou_filter_start').value='';document.getElementById('iou_filter_end').value='';document.getElementById('filter_iou_da').value='';setGlobalMonth('');}
+
+function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
+
+function loadAdminIOU(){
+    var fDa=document.getElementById('filter_iou_da').value;
+    var fStart=document.getElementById('iou_filter_start').value;
+    var fEnd=document.getElementById('iou_filter_end').value;
+    var tbody=document.getElementById('iou_admin_table_body');tbody.innerHTML='';
+    var tS=0,tR=0,tSo=0,tQ=0,tB=0,tT=0,cnt=1;iouPrintCache=[];
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];var show=true;
+        if(fDa&&d.daId!==fDa)show=false;
+        if(fStart&&d.date<fStart)show=false;
+        if(fEnd&&d.date>fEnd)show=false;
+        if(!show)return;
+        var iS=d.soldVal||((d.sales||0)-(d.returnVal||0));
+        tS+=(d.sales||0);tR+=(d.returnVal||0);tSo+=iS;tQ+=(d.qty||0);tB+=(d.bundleQty||0);tT+=(d.taka||0);
+        var type=d.type||'Delivery';
+        var badge=(d.status==='used'||isNoBillIOU(type))?'<span class="badge bg-secondary">Used</span>':'<span class="badge bg-success">Active</span>';
+        var typeB=type?'<span class="badge bg-info">'+escHtml(type)+'</span>':'';
+        var rc=(d.status==='used'||isNoBillIOU(type))?'table-secondary':'';
+        tbody.innerHTML+='<tr class="'+rc+'"><td>'+cnt+'</td><td>'+formatDate(d.date)+'</td><td>'+escHtml(d.daName)+'</td><td>'+typeB+'</td><td>'+escHtml(d.territory)+'</td><td>'+escHtml(d.mpo)+'</td><td>'+escHtml(d.summary)+'</td><td>'+(d.sales||0)+'</td><td>'+(d.returnVal||0)+'</td><td>'+iS+'</td><td>'+(d.qty||0)+'</td><td>'+(d.bundleQty||0)+'</td><td>'+d.taka+'</td><td>'+(d.percent||0)+'%</td><td>'+badge+' <button class="btn btn-sm btn-warning" onclick="editIOU(\''+id+'\')">E</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\''+id+'\')">X</button></td></tr>';
+        iouPrintCache.push({date:formatDate(d.date),daName:d.daName,type:type,territory:d.territory,mpo:d.mpo,summary:d.summary,sales:d.sales||0,ret:d.returnVal||0,sold:iS,qty:d.qty||0,bundleQty:d.bundleQty||0,taka:d.taka||0,percent:d.percent||'0'});
+        cnt++;
+    });
+    document.getElementById('iou_tot_sales').innerText=tS;document.getElementById('iou_tot_ret').innerText=tR;
+    document.getElementById('iou_tot_sold').innerText=tSo;document.getElementById('iou_tot_qty').innerText=tQ;
+    document.getElementById('iou_tot_bqty').innerText=tB;document.getElementById('iou_tot_taka').innerText=tT;
+}
+
+// ========== BILL ENTRY ==========
+function calculateSoldValue(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,ret=parseFloat(document.getElementById('form_return_val').value)||0;document.getElementById('form_sold_val').value=inv-ret;updateEntryFormCostPercent();}
+function addQuickEntryRow(){var from=document.getElementById('q_from').value,to=document.getElementById('q_to').value,mode=document.getElementById('q_mode').value,amount=document.getElementById('q_amount').value,da=document.getElementById('q_da_expense').value,date=document.getElementById('form_dep_date').value;var modesNoRoute=['Daily Allowance','Labour Bill'];if(!modesNoRoute.includes(mode)){if(!from&&!to){alert("Enter From/To");return;}}addExpenseRowWithData({date:date,from:from,to:to,mode:mode,amount:amount,da:da});calculateGrandTotal();triggerAutoSave();document.getElementById('q_from').value='';document.getElementById('q_to').value='';document.getElementById('q_amount').value='';document.getElementById('q_da_expense').value='';document.getElementById('q_from').focus();}
+function addExpenseRow(){var today=document.getElementById('form_dep_date').value||new Date().toISOString().split('T')[0];addExpenseRowWithData({date:today,from:'',to:'',mode:'Rickshaw',amount:0,da:0});triggerAutoSave();}
+function removeRow(btn){var tb=document.getElementById('expense_table_body');if(tb.rows.length>1)btn.parentNode.parentNode.remove();else{var row=tb.rows[0];row.querySelectorAll('input').forEach(function(i){if(i.type!=='date')i.value='';else i.value=document.getElementById('form_dep_date').value;});var sel=row.querySelector('select');sel.selectedIndex=0;toggleRowInputs(sel);}calculateGrandTotal();triggerAutoSave();}
+function calculateRowTotal(input){var row=input.parentNode.parentNode;var amount=parseFloat(row.querySelector('.exp-amount').value)||0,da=parseFloat(row.querySelector('.exp-da').value)||0;row.querySelector('.exp-total').value=amount+da;calculateGrandTotal();}
+function calculateGrandTotal(){var total=0;document.querySelectorAll('.exp-total').forEach(function(t){total+=(parseFloat(t.value)||0);});document.getElementById('grand_total').value=total;updateEntryFormCostPercent();}
+function updateEntryFormCostPercent(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,total=parseFloat(document.getElementById('grand_total').value)||0;document.getElementById('form_cost_percent').innerText=inv>0?((total/inv)*100).toFixed(2)+"%":"0%";}
+function prepareBillEntryForm(){if(currentUser.role!=='user')return;document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';if(!editingBillId)loadLocalDraft();}
+
+function submitOrUpdateBill(statusType){
+    var targetDaName,targetDepot;
+    if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){targetDaName=editingBillDaName;targetDepot=document.getElementById('form_depot').value||'Kushtia';}
+    else{targetDaName=currentUser.name;targetDepot=currentUser.depot||'Kushtia';}
+    var grandTotal=parseFloat(document.getElementById('grand_total').value)||0;
+    var iouAmount=parseFloat(document.getElementById('form_iou_amount').value)||0;
+    var remarks=document.getElementById('form_remarks').value;
+    var billData={daName:targetDaName,depot:targetDepot,depDate:document.getElementById('form_dep_date').value,retDate:document.getElementById('form_ret_date').value,submitDate:document.getElementById('form_submit_date').value,route:document.getElementById('form_route').value,mpo:document.getElementById('form_mpo').value,summaryNo:document.getElementById('form_summary').value,invoiceVal:parseFloat(document.getElementById('form_invoice_val').value)||0,returnVal:parseFloat(document.getElementById('form_return_val').value)||0,soldVal:parseFloat(document.getElementById('form_sold_val').value)||0,invoiceQty:parseInt(document.getElementById('form_invoice_qty').value)||0,bundleQty:parseInt(document.getElementById('form_bundle_qty').value)||0,totalAmount:grandTotal,originalAmount:grandTotal,status:statusType,timestamp:Date.now(),iouId:currentIouId,iouAmount:iouAmount,remarks:remarks,deduction:0};
+    var expenses=[];document.querySelectorAll('#expense_table_body tr').forEach(function(r){expenses.push({date:r.querySelector('.exp-date').value,from:r.querySelector('.exp-from').value,to:r.querySelector('.exp-to').value,mode:r.querySelector('.exp-mode').value,amount:r.querySelector('.exp-amount').value,da:r.querySelector('.exp-da').value});});
+    billData.expenses=expenses;if(!billData.route){alert("Fill Route");return;}
+    var billDate=billData.submitDate||billData.depDate;var dp=getDateParts(billDate);var safeName=sanitizeKey(targetDaName);
+    var basePath='Bills/'+dp.year+'/'+dp.month+'/'+safeName;
+    var processIOU=function(){
+        if(editingBillId&&originalIouId&&originalIouYear&&originalIouMonth&&originalIouDaName&&originalIouId!==currentIouId){database.ref('IOU_List/'+originalIouYear+'/'+originalIouMonth+'/'+sanitizeKey(originalIouDaName)+'/'+originalIouId).update({status:'active'});}
+        if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});} }
+    };
+    var afterSave=function(){
+        clearLocalDraft();
+        alert(statusType==='draft'?"Draft Saved!":"Submitted!");
+        document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;
+        editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;
+        document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
+        prepareBillEntryForm();
+        document.getElementById('history-tab').click();
+        setTimeout(function(){loadBills();},400);
+        setTimeout(function(){loadBills();},1200);
+    };
+    if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){
+        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();setTimeout(function(){loadBills();},400);}});
+    }else{
+        var newBillRef=database.ref(basePath).push();
+        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();afterSave();}});
+    }
+}
+
+function editBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        if(currentUser.role==='user'&&(bill.status==='orange'||bill.status==='green')){alert("This bill is already checked/approved. Cannot edit.");return;}
+        clearLocalDraft();editingBillId=billId;editingBillYear=year;editingBillMonth=month;editingBillDaName=daName;
+        originalIouId=bill.iouId||null;currentIouId=bill.iouId||null;
+        if(currentIouId&&iouListGlobal[currentIouId]){var ciou=iouListGlobal[currentIouId];originalIouYear=ciou._year;originalIouMonth=ciou._month;originalIouDaName=ciou._daName;}
+        document.getElementById('form_da_name').value=bill.daName;document.getElementById('form_depot').value=bill.depot;
+        document.getElementById('form_dep_date').value=bill.depDate;document.getElementById('form_ret_date').value=bill.retDate;
+        document.getElementById('form_submit_date').value=bill.submitDate||bill.depDate;
+        document.getElementById('form_route').value=bill.route;document.getElementById('form_mpo').value=bill.mpo;
+        document.getElementById('form_summary').value=bill.summaryNo;document.getElementById('form_invoice_val').value=bill.invoiceVal;
+        document.getElementById('form_return_val').value=bill.returnVal;document.getElementById('form_invoice_qty').value=bill.invoiceQty;
+        document.getElementById('form_bundle_qty').value=bill.bundleQty||0;document.getElementById('form_iou_amount').value=bill.iouAmount||0;
+        document.getElementById('form_remarks').value=bill.remarks||'';
+        var tb=document.getElementById('expense_table_body');tb.innerHTML='';
+        if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}
+        calculateGrandTotal();calculateSoldValue();
+        document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';
+        document.getElementById('cancel_edit_btn').classList.remove('hidden');
+        document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});
+        document.getElementById('entryTab').classList.add('show','active');
+        document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
+        document.getElementById('entry-tab').classList.add('active');
+    });
+}
+function deleteBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var billData=snapshot.val();if(!billData)return;
+        if(currentUser.role==='user'&&(billData.status==='orange'||billData.status==='green')){alert("This bill is already checked/approved. Cannot delete.");return;}
+        if(!confirm("Delete?"))return;
+        database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).remove().then(function(){
+            alert("Deleted!");
+            if(billData&&billData.iouId){var ciou=iouListGlobal[billData.iouId];if(ciou&&ciou._year)database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+billData.iouId).update({status:'active'});}
+            loadBills();
+        }).catch(function(e){alert(e.message);});
+    });
+}
+function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
+
+// ========== BILL HISTORY ==========
+function resetHistoryFilter(){document.getElementById('filter_history_da').value='';setGlobalMonth(getCurrentMonth());loadBills();}
+function resetApprovedFilter(){document.getElementById('filter_approved_da').value='';setGlobalMonth(getCurrentMonth());loadBills();}
+
+function resolveDAFilterName(selectId){
+    var val=document.getElementById(selectId).value;
+    if(!val)return'';
+    return daListCache[val]||val;
+}
+
+function loadBills(){
+    var tableHead=document.getElementById('bill_table_head'),tableBody=document.getElementById('bill_table_body'),tableFoot=document.getElementById('bill_table_foot');
+    var appBody=document.getElementById('approved_bill_table_body'),appFoot=document.getElementById('approved_bill_table_foot');
+    var historyDAName=resolveDAFilterName('filter_history_da');
+    var approvedDAName=resolveDAFilterName('filter_approved_da');
+
+    tableBody.innerHTML='<tr><td colspan="12" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
+    appBody.innerHTML='<tr><td colspan="11" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
+
+    if(currentUser.role==='user'){
+        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">Amount</th><th>Status</th><th>Action</th></tr>';
+    }else if(currentUser.role==='admin'){
+        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th>Status</th><th>Action</th></tr>';
+    }else{
+        tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr>';
+    }
+
+    database.ref('Bills').once('value',function(snap){
+        tableBody.innerHTML='';appBody.innerHTML='';
+        var hTotals={iou:0,sales:0,userBill:0,payable:0};
+        var aTotals={iou:0,sales:0,userBill:0,payable:0};
+        var allBills=collectBills(snap,null,null);
+        var approvedArr=[];
+        var userBillCount=0;
+
+        if(allBills.length===0){
+            var cs=currentUser.role==='user'?'6':'9';
+            tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            tableFoot.innerHTML='';appFoot.innerHTML='';return;
+        }
+
+        allBills.forEach(function(item){
+            var b=item.data,billId=item.id,y=item.year,m=item.month,dn=item.daName;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            var sales=b.invoiceVal||0,iou=b.iouAmount||0;
+            if(!iou&&b.iouId&&iouListGlobal[b.iouId])iou=iouListGlobal[b.iouId].taka||0;
+            var deduction=b.deduction||0;
+            var originalAmount=b.originalAmount||(b.totalAmount+deduction);
+            var approvedAmount=b.totalAmount||0;
+            var userBillPer=sales>0?((originalAmount/sales)*100).toFixed(1):'0';
+            var payPer=sales>0?((approvedAmount/sales)*100).toFixed(1):'0';
+
+            if(currentUser.role==='user'){
+                if(b.daName!==currentUser.name)return;
+                if(b.status==='draft')return;
+                if(b.status==='green')return;
+
+                userBillCount++;
+                var tr=document.createElement('tr');
+
+                if(b.status==='red'){
+                    tr.classList.add('status-red');
+                    var statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> '+
+                        '<button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> '+
+                        '<button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+                }else if(b.status==='orange'){
+                    tr.classList.add('status-orange');
+                    var statusIcon='<span class="badge bg-info text-dark"><i class="bi bi-check2-square me-1"></i>Checked</span>';
+                    var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button>';
+                    tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+                }
+                tableBody.appendChild(tr);
+            }
+
+            else if(currentUser.role==='admin'){
+                if(historyDAName&&b.daName!==historyDAName)return;
+                if(b.status==='red'){
+                    hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=originalAmount;
+                    var trP=document.createElement('tr');trP.classList.add('status-red');
+                    var act='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-secondary btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check2-square"></i></button> <button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                    trP.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td><b class="text-warning">PENDING</b></td><td class="text-nowrap">'+act+'</td>';
+                    tableBody.appendChild(trP);
+                }
+                if(b.status==='orange'||b.status==='green'){
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                }
+            }
+
+            else{
+                if(historyDAName&&b.daName!==historyDAName)return;
+                if(b.status==='orange'){
+                    hTotals.iou+=iou;hTotals.sales+=sales;hTotals.userBill+=originalAmount;hTotals.payable+=approvedAmount;
+                    var trS=document.createElement('tr');trS.classList.add('status-orange');
+                    var sAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> <button class="btn btn-warning btn-sm" onclick="openCutModal(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-eye"></i></button> <button class="btn btn-success btn-sm" onclick="approveBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-check-lg"></i> Approve</button>';
+                    var sPay=deduction>0?'<span class="cut-amount">'+originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+approvedAmount.toFixed(2)+'</span>':approvedAmount.toFixed(2);
+                    trS.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td class="text-end fw-bold">'+sPay+'</td><td class="text-end">'+payPer+'%</td><td><b class="text-warning">CHECKED</b></td><td class="text-nowrap">'+sAct+'</td>';
+                    tableBody.appendChild(trS);
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                }
+                if(b.status==='green'){
+                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
+                }
+            }
+        });
+
+        if(currentUser.role==='user'&&userBillCount===0){
+            tableBody.innerHTML='<tr><td colspan="6" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br>No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+        }
+
+        approvedArr.sort(function(a,b){return new Date(getBillDate(a.b)||0)-new Date(getBillDate(b.b)||0);});
+        var approvedVisibleCount=0;
+        if(currentUser.role!=='user'){
+            approvedArr.forEach(function(item){
+                var b=item.b;
+                if(approvedDAName&&b.daName!==approvedDAName)return;
+                approvedVisibleCount++;
+                aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
+                var trA=document.createElement('tr');
+                if(item.b.status==='orange')trA.classList.add('status-orange');
+                else trA.classList.add('status-green');
+                var aSt=item.b.status==='orange'?'<span class="badge bg-warning text-dark">CHECKED</span>':'<span class="badge bg-success">APPROVED</span>';
+                var aPay=item.deduction>0?'<span class="cut-amount">'+item.originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+item.approvedAmount.toFixed(2)+'</span>':item.approvedAmount.toFixed(2);
+                var aAct='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+item.billId+'\',\''+item.y+'\',\''+item.m+'\',\''+item.dn+'\')"><i class="bi bi-printer"></i></button>';
+                trA.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+item.iou.toFixed(2)+'</td><td class="text-end">'+item.sales.toFixed(2)+'</td><td class="text-end">'+item.originalAmount.toFixed(2)+'</td><td class="text-end">'+item.userBillPer+'%</td><td class="text-end fw-bold">'+aPay+'</td><td class="text-end">'+item.payPer+'%</td><td>'+aSt+'</td><td>'+aAct+'</td>';
+                appBody.appendChild(trA);
+            });
+            if(approvedVisibleCount===0){
+                appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+            }
+        }
+
+        if(currentUser.role==='user'){
+            var uTotal=0;
+            document.querySelectorAll('#bill_table_body tr').forEach(function(r){
+                var td4=r.querySelector('td:nth-child(4)');
+                if(td4)uTotal+=parseFloat(td4.innerText.replace(/,/g,''))||0;
+            });
+            tableFoot.innerHTML=uTotal>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td colspan="2"></td></tr>':'';
+        }else if(currentUser.role==='admin'){
+            tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
+        }else{
+            tableFoot.innerHTML=hTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+hTotals.iou.toFixed(2)+'</td><td class="text-end">'+hTotals.sales.toFixed(2)+'</td><td class="text-end">'+hTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+hTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
+        }
+        if(currentUser.role==='admin'||currentUser.role==='superadmin'){
+            appFoot.innerHTML=aTotals.userBill>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+aTotals.iou.toFixed(2)+'</td><td class="text-end">'+aTotals.sales.toFixed(2)+'</td><td class="text-end">'+aTotals.userBill.toFixed(2)+'</td><td></td><td class="text-end">'+aTotals.payable.toFixed(2)+'</td><td colspan="3"></td></tr>':'';
+        }
+    });
+}
+
+// ========== BILL SUMMARY ==========
+function generateSummary(){
+    var daId=document.getElementById('summary_da').value;var tbody=document.getElementById('summary_table_body');
+    tbody.innerHTML='';currentSummaryData=[];if(!daId){tbody.innerHTML='<tr><td colspan="9" class="text-center text-muted">Select DA.</td></tr>';return;}
+    var tS=0,tTk=0,tDA=0,tN=0;
+    database.ref('Bills').once('value',function(snap){
+        tbody.innerHTML='';currentSummaryData=[];var allBills=collectBills(snap,null,null);var daBills=[];
+        allBills.forEach(function(item){if(item.daName!==daListCache[daId])return;var b=item.data;if(b.status==='green')daBills.push(item);});
+        if(daBills.length===0){tbody.innerHTML='<tr><td colspan="9" class="text-center text-warning">No Approved bills.</td></tr>';return;}
+        daBills.sort(function(a,b){return(getBillDate(a.data)||'').localeCompare(getBillDate(b.data)||'');});var sl=1;
+        daBills.forEach(function(item){
+            var b=item.data;if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            var netSales=b.soldVal||(b.invoiceVal-b.returnVal);var netAmount=b.totalAmount||0;var sumDA=0;
+            if(b.expenses&&Array.isArray(b.expenses)){b.expenses.forEach(function(exp){sumDA+=(parseFloat(exp.da)||0);});}
+            var takaVal=netAmount-sumDA;var costPct=netSales>0?((netAmount/netSales)*100).toFixed(2):"0.00";
+            tS+=netSales;tTk+=takaVal;tDA+=sumDA;tN+=netAmount;
+            currentSummaryData.push({sl:sl,date:formatDate(getBillDate(b)),territory:b.route||'N/A',type:'Delivery',sales:netSales,taka:takaVal,da:sumDA,net:netAmount,cost:costPct});sl++;
+            var tr=document.createElement('tr');
+            tr.innerHTML='<td>'+(sl-1)+'</td><td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.route||'')+'</td><td>Delivery</td><td class="text-end">'+netSales.toFixed(2)+'</td><td class="text-end">'+takaVal.toFixed(2)+'</td><td class="text-end">'+sumDA.toFixed(2)+'</td><td class="text-end fw-bold">'+netAmount.toFixed(2)+'</td><td class="text-end">'+costPct+'%</td>';
+            tbody.appendChild(tr);
+        });
+        document.getElementById('sum_foot_sales').innerText=tS.toFixed(2);document.getElementById('sum_foot_taka').innerText=tTk.toFixed(2);
+        document.getElementById('sum_foot_da').innerText=tDA.toFixed(2);document.getElementById('sum_foot_net').innerText=tN.toFixed(2);
+                document.getElementById('sum_foot_cost').innerText=(tS>0?((tN/tS)*100).toFixed(2):"0.00")+"%";
+        if(currentSummaryData.length===0)tbody.innerHTML='<tr><td colspan="9" class="text-center">No bills for '+formatMonthLabel(globalFilterMonth)+'.</td></tr>';
+    });
+}
+
+// ========== ★★★ TOP SHEET LOGIC (UPDATED & FIXED) ★========== 
+function loadTopSheetData(){
+    var tbody=document.getElementById('topsheet_table_body');
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center p-3"><div class="spinner-border spinner-border-sm text-primary"></div> Loading Preview...</td></tr>';
+    
+    if(!globalFilterMonth){
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger p-3">Please select a Month.</td></tr>';
+        document.getElementById('topsheet_foot_total').innerText = "0.00";
+        document.getElementById('topsheet_foot_net').innerText = "0.00";
+        document.getElementById('topsheet_foot_cost').innerText = "0.00%";
+        return;
+    }
+
+    database.ref('Bills').once('value',function(snap){
+        tbody.innerHTML = '';
+        var allBills=collectBills(snap,null,null);
+        var daAggregation = {}; 
+
+        allBills.forEach(function(item){
+            var b=item.data;
+            if(b.status!=='green') return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+
+            var daName = b.daName;
+            var totalBill = parseFloat(b.totalAmount) || 0; 
+
+            if(!daAggregation[daName]){
+                daAggregation[daName] = { totalBill: 0 };
+            }
+            daAggregation[daName].totalBill += totalBill;
+        });
+
+        var grandTotalBill = 0;
+        var sl=1;
+
+        var sortedDAs = Object.keys(daAggregation).sort();
+
+        if(sortedDAs.length === 0){
+             tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted p-3">No Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+             document.getElementById('topsheet_foot_total').innerText = "0.00";
+             document.getElementById('topsheet_foot_net').innerText = "0.00";
+             document.getElementById('topsheet_foot_cost').innerText = "0.00%";
+        } else {
+            sortedDAs.forEach(function(daName){
+                var data = daAggregation[daName];
+                grandTotalBill += data.totalBill;
+
+                var tr=document.createElement('tr');
+                tr.innerHTML='<td class="text-center">'+sl+'</td>'+
+                             '<td>'+formatMonthLabel(globalFilterMonth)+'</td>'+
+                             '<td>'+escHtml(daName)+'</td>'+
+                             '<td class="text-end">'+data.totalBill.toFixed(2)+'</td>'+
+                             '<td class="text-end fw-bold">'+data.totalBill.toFixed(2)+'</td>'+
+                             '<td class="text-end">-</td>';
+                tbody.appendChild(tr);
+                sl++;
+            });
+        }
+
+        document.getElementById('topsheet_foot_total').innerText = grandTotalBill.toFixed(2);
+        document.getElementById('topsheet_foot_net').innerText = grandTotalBill.toFixed(2);
+        
+        calculateTopSheetCost();
+    });
+}
+
+function calculateTopSheetCost(){
+    var totalNet = parseFloat(document.getElementById('topsheet_foot_net').innerText) || 0;
+    var salesInput = parseFloat(document.getElementById('topsheet_total_sales').value) || 0;
+    
+    var costPercent = 0;
+    if(salesInput > 0){
+        costPercent = (totalNet / salesInput) * 100;
+    }
+
+    var formattedPercent = costPercent.toFixed(2) + "%";
+    document.getElementById('topsheet_cost_percent').innerText = formattedPercent;
+    document.getElementById('topsheet_foot_cost').innerText = formattedPercent;
+}
+
+function generateAndSaveTopSheet(){
+    if(!globalFilterMonth){ alert("Select a month first."); return; }
+    var btn = document.querySelector('button[onclick="generateAndSaveTopSheet()"]');
+    var originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+    btn.disabled = true;
+
+    database.ref('Bills').once('value',function(snap){
+        var allBills=collectBills(snap,null,null);
+        var daAggregation = {}; 
+
+        allBills.forEach(function(item){
+            var b=item.data;
+            if(b.status!=='green') return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            var daName = b.daName;
+            var totalBill = parseFloat(b.totalAmount) || 0; 
+            if(!daAggregation[daName]) daAggregation[daName] = 0;
+            daAggregation[daName] += totalBill;
+        });
+
+        if(Object.keys(daAggregation).length === 0){
+            alert("No approved bills found for this month to generate a report.");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        var p = globalFilterMonth.split('-'); 
+        var yearPart = p[0]; 
+        var monthPart = p[1];
+
+        database.ref('TopSheets/'+yearPart+'/'+monthPart).once('value', function(snapshot){
+            var count = snapshot.numChildren() || 0;
+            var nextIndex = count + 1;
+            var indexStr = String(nextIndex).padStart(2, '0');
+            var reportId = "KSDB" + yearPart + monthPart + indexStr;
+
+            var salesInput = parseFloat(document.getElementById('topsheet_total_sales').value) || 0;
+            var costPercentVal = parseFloat(document.getElementById('topsheet_cost_percent').innerText) || 0;
+
+            var reportData = {
+                reportId: reportId,
+                month: globalFilterMonth,
+                monthLabel: formatMonthLabel(globalFilterMonth),
+                generatedAt: firebase.database.ServerValue.TIMESTAMP,
+                generatedBy: currentUser.name,
+                sales: salesInput,
+                costPercent: costPercentVal,
+                details: daAggregation, 
+                grandTotal: parseFloat(document.getElementById('topsheet_foot_net').innerText)
+            };
+
+            database.ref('TopSheets/'+yearPart+'/'+monthPart+'/'+reportId).set(reportData)
+            .then(function(){
+                alert("Report Generated Successfully!\nID: " + reportId);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                loadTopSheetHistory(); 
+                loadTopSheetData(); 
+            })
+            .catch(function(error){
+                console.error(error);
+                alert("Error saving report: " + error.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+    });
+}
+
+function loadTopSheetHistory(){
+    var tbody = document.getElementById('topsheet_history_body');
+    
+    database.ref('TopSheets').on('value', function(snapshot){
+        tbody.innerHTML = '';
+        var reports = [];
+        
+        if(snapshot.exists()){
+            snapshot.forEach(function(yearSnap){
+                yearSnap.forEach(function(monthSnap){
+                    monthSnap.forEach(function(reportSnap){
+                        var r = reportSnap.val();
+                        if(r && r.reportId){
+                            reports.push(r);
+                        }
+                    });
+                });
+            });
+        }
+
+        reports.sort(function(a,b){ return (b.generatedAt||0) - (a.generatedAt||0); });
+
+        if(reports.length === 0){
+             tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted py-3">No reports generated yet.</td></tr>';
+        } else {
+            reports.forEach(function(r, index){
+                var dateObj = r.generatedAt ? new Date(r.generatedAt) : new Date();
+                var dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td class="text-center">'+ (index+1) + '</td>' +
+                              '<td><span class="badge bg-primary text-white">' + escHtml(r.reportId) + '</span></td>' +
+                              '<td>' + escHtml(r.monthLabel || r.month) + '</td>' +
+                              '<td class="text-end fw-bold">' + (r.grandTotal || 0).toFixed(2)+'</td>' +
+                              '<td class="text-end text-muted" style="font-size:11px">' + dateStr + '</td>' +
+                              '<td class="text-center">' +
+                                '<button class="btn btn-sm btn-info text-white" onclick="viewGeneratedTopSheet(\''+escHtml(r.reportId)+'\',\''+escHtml(r.month)+'\')"><i class="bi bi-eye"></i></button> ' +
+                                '<button class="btn btn-sm btn-dark" onclick="printGeneratedTopSheet(\''+escHtml(r.reportId)+'\',\''+escHtml(r.month)+'\')"><i class="bi bi-printer"></i></button>' +
+                              '</td>';
+                tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+function viewGeneratedTopSheet(reportId, reportMonth){
+    var monthToUse = reportMonth || globalFilterMonth;
+    if(!monthToUse) { alert("Cannot determine report month."); return; }
+    
+    var p = monthToUse.split('-');
+    database.ref('TopSheets/'+p[0]+'/'+p[1]+'/'+reportId).once('value',function(snap){
+        var r = snap.val();
+        if(!r){ alert("Report not found."); return; }
+
+        var contentDiv = document.getElementById('view_topsheet_content');
+        
+        var rowsHtml = '';
+        var grandTotal = 0;
+        var sl = 1;
+        Object.keys(r.details).sort().forEach(function(daName){
+            var amt = r.details[daName];
+            grandTotal += amt;
+            rowsHtml += '<tr><td class="text-center">'+sl+'</td>'+
+                        '<td>'+escHtml(r.monthLabel)+'</td>'+
+                        '<td>'+escHtml(daName)+'</td>'+
+                        '<td class="text-end">'+amt.toFixed(2)+'</td></tr>';
+            sl++;
+        });
+
+        var html = '<div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">'+
+            '<h4 style="margin:0">MONICO PHARMA LTD</h4>'+
+            '<h5 style="margin:0">Top Sheet Report</h5>'+
+            '</div>'+
+            '<div style="margin-bottom:10px;font-weight:bold">ID: '+escHtml(r.reportId)+' | Month: '+escHtml(r.monthLabel)+'</div>'+
+            '<table style="width:100%;border-collapse:collapse;border:1px solid #000">'+
+            '<thead style="background:#eee"><tr><th style="padding:5px">Sl</th><th style="padding:5px">Month</th><th style="padding:5px">DA Name</th><th style="padding:5px;text-align:right">Net Amount</th></tr></thead>'+
+            '<tbody>'+rowsHtml+'</tbody>'+
+            '<tfoot style="font-weight:bold;border-top:1px solid #000"><tr><td colspan="3" style="text-align:right;padding:5px">TOTAL:</td><td style="text-align:right;padding:5px">'+grandTotal.toFixed(2)+'</td></tr></tfoot>'+
+            '</table>'+
+            '<div style="margin-top:20px;font-weight:bold">'+
+            'Total Sales: '+r.sales.toFixed(2)+' | Cost %: '+r.costPercent.toFixed(2)+'%'+
+            '</div>';
+
+        contentDiv.innerHTML = html;
+
+        document.getElementById('btn_print_from_modal').onclick = function(){ printGeneratedTopSheet(reportId, reportMonth); };
+
+        new bootstrap.Modal(document.getElementById('viewTopSheetModal')).show();
+    });
+}
+
+function printGeneratedTopSheet(reportId, reportMonth){
+    var monthToUse = reportMonth || globalFilterMonth;
+    if(!monthToUse) { alert("Cannot determine report month."); return; }
+    
+    var p = monthToUse.split('-');
+    database.ref('TopSheets/'+p[0]+'/'+p[1]+'/'+reportId).once('value',function(snap){
+        var r = snap.val();
+        if(!r){ alert("Report not found."); return; }
+
+        document.getElementById('print_final_id').innerText = r.reportId;
+        document.getElementById('print_final_month').innerText = r.monthLabel;
+        document.getElementById('print_final_depot').innerText = "Kushtia Depot";
+        
+        var dateObj = new Date(r.generatedAt);
+        document.getElementById('print_final_date').innerText = dateObj.toLocaleDateString();
+
+        document.getElementById('print_final_sales').innerText = r.sales.toFixed(2);
+        document.getElementById('print_final_cost').innerText = r.costPercent.toFixed(2) + "%";
+
+        var tbody = document.getElementById('print_final_tbody');
+        tbody.innerHTML = '';
+        var grandTotal = 0;
+        var sl = 1;
+        Object.keys(r.details).sort().forEach(function(daName){
+            var amt = r.details[daName];
+            grandTotal += amt;
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td class="text-center" style="padding:4px">'+sl+'</td>'+
+                          '<td style="padding:4px">'+escHtml(r.monthLabel)+'</td>'+
+                          '<td style="padding:4px">'+escHtml(daName)+'</td>'+
+                          '<td class="text-end" style="padding:4px">'+amt.toFixed(2)+'</td>';
+            tbody.appendChild(tr);
+            sl++;
+        });
+
+        document.getElementById('print_final_foot_net').innerText = grandTotal.toFixed(2);
+
+        document.getElementById('print_area').classList.remove('active-print');
+        document.getElementById('print_summary_area').classList.remove('active-print');
+        document.getElementById('print_iou_area').classList.remove('active-print');
+        
+        document.getElementById('print_topsheet_final_area').classList.add('active-print');
+        
+        window.print();
+
+        setTimeout(function(){
+            document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+        }, 1000);
+    });
+}
+
+// ========== ADMIN DEDUCTION & APPROVAL ==========
+function openCutModal(billId,year,month,daName){
+    document.getElementById('edit_bill_id').value=billId;document.getElementById('m_year').value=year;document.getElementById('m_month').value=month;document.getElementById('m_daName').value=daName;
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        modalSales=bill.invoiceVal||0;modalUserBill=bill.originalAmount||bill.totalAmount||0;modalIou=bill.iouAmount||0;
+        var tbody=document.getElementById('modal_expense_body');tbody.innerHTML='';
+        if(bill.expenses){bill.expenses.forEach(function(exp){
+            var amt=parseFloat(exp.amount)||0,da=parseFloat(exp.da)||0;var origTotal=amt+da,curDed=parseFloat(exp.deduction)||0,curTot=origTotal-curDed;
+            var row=tbody.insertRow();
+            row.innerHTML='<td><input type="text" class="form-control form-control-sm" value="'+formatDate(exp.date)+'" disabled></td><td><input type="text" class="form-control form-control-sm" value="'+escHtml(exp.from)+'" disabled></td><td><input type="text" class="form-control form-control-sm" value="'+escHtml(exp.to)+'" disabled></td><td><input type="text" class="form-control form-control-sm" value="'+escHtml(exp.mode)+'" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-amt" value="'+amt+'" disabled></td><td><input type="number" class="form-control form-control-sm text-end row-da" value="'+da+'" disabled></td><td><input type="number" class="form-control form-control-sm text-danger row-deduction" value="'+curDed+'" placeholder="0" oninput="calculateModalTotals()"></td><td><span class="fw-bold row-total">'+curTot+'</span></td>';
+        });}
+        document.getElementById('modal_remarks').value=bill.remarks||'';calculateModalTotals();
+    });new bootstrap.Modal(document.getElementById('cutBillModal')).show();
+}
+function calculateModalTotals(){
+    var gt=0;document.querySelectorAll('#modal_expense_body tr').forEach(function(row){
+        var amt=parseFloat(row.querySelector('.row-amt').value)||0;var da=parseFloat(row.querySelector('.row-da').value)||0;var ded=parseFloat(row.querySelector('.row-deduction').value)||0;var ot=amt+da,rt=ot-ded;var ts=row.querySelector('.row-total');
+        if(ded>0)ts.innerHTML='<span style="text-decoration:line-through;color:red">'+ot+'</span> <span style="color:green">'+rt+'</span>';else ts.innerText=rt;gt+=rt;
+    });
+    document.getElementById('modal_grand_total').innerText=gt.toFixed(2);document.getElementById('sum_iou').innerText=modalIou.toFixed(2);
+    document.getElementById('sum_sales').innerText=modalSales.toFixed(2);document.getElementById('sum_user_bill').innerText=modalUserBill.toFixed(2);
+    document.getElementById('sum_user_per').innerText=(modalSales>0?((modalUserBill/modalSales)*100).toFixed(1):0)+'%';
+    document.getElementById('sum_payable').innerText=gt.toFixed(2);document.getElementById('sum_payable_per').innerText=(modalSales>0?((gt/modalSales)*100).toFixed(1):0)+'%';
+    document.getElementById('sum_final').innerText=gt.toFixed(2);
+}
+function saveDeduction(){
+    var billId=document.getElementById('edit_bill_id').value;var y=document.getElementById('m_year').value,m=document.getElementById('m_month').value,dn=document.getElementById('m_daName').value;
+    var newExpenses=[],newTotalAmount=0,totalDeduction=0,originalAmt=0;var remarks=document.getElementById('modal_remarks').value;
+    document.querySelectorAll('#modal_expense_body tr').forEach(function(row){
+        var amt=parseFloat(row.querySelector('.row-amt').value)||0;var da=parseFloat(row.querySelector('.row-da').value)||0;var ded=parseFloat(row.querySelector('.row-deduction').value)||0;
+        originalAmt+=(amt+da);newExpenses.push({date:row.cells[0].querySelector('input').value,from:row.cells[1].querySelector('input').value,to:row.cells[2].querySelector('input').value,mode:row.cells[3].querySelector('input').value,amount:amt,da:da,deduction:ded});
+        newTotalAmount+=(amt+da-ded);totalDeduction+=ded;
+    });
+    var updateData={expenses:newExpenses,totalAmount:newTotalAmount,deduction:totalDeduction,originalAmount:originalAmt,status:'orange',remarks:remarks};
+    if(currentUser.role==='superadmin')updateData.recheckedBy=currentUser.name;else updateData.checkedBy=currentUser.name;
+    database.ref('Bills/'+y+'/'+m+'/'+sanitizeKey(dn)+'/'+billId).update(updateData,function(error){
+        if(error)alert("Failed");else{alert("Saved!");bootstrap.Modal.getInstance(document.getElementById('cutBillModal')).hide();reloadAllData();}
+    });
+}
+function approveBill(billId,year,month,daName){
+    if(!confirm("Approve this bill?"))return;
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).update({status:'green',approvedBy:currentUser.name},function(error){
+        if(error)alert("Error");else{alert("Approved!");reloadAllData();}
+    });
+}
+
+// ========== PRINT ==========
+function printBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        var costPct="0%";if(bill.invoiceVal>0)costPct=((bill.totalAmount/bill.invoiceVal)*100).toFixed(2)+"%";
+        document.getElementById('p_da_name').innerText=bill.daName;document.getElementById('p_depot').innerText=bill.depot;
+        document.getElementById('p_dep_date').innerText=formatDate(bill.depDate);document.getElementById('p_ret_date').innerText=formatDate(bill.retDate);
+        document.getElementById('p_submit_date').innerText=formatDate(bill.submitDate);document.getElementById('p_route').innerText=bill.route;
+        document.getElementById('p_mpo').innerText=bill.mpo;document.getElementById('p_summary').innerText=bill.summaryNo;
+        document.getElementById('p_inv_val').innerText=bill.invoiceVal;document.getElementById('p_ret_val').innerText=bill.returnVal;
+        document.getElementById('p_sold_val').innerText=bill.soldVal;document.getElementById('p_inv_qty').innerText=bill.invoiceQty;
+        document.getElementById('p_bundle_qty').innerText=bill.bundleQty||0;
+        document.getElementById('p_total_words').innerText=numberToEnglish(bill.totalAmount)+" Taka Only";
+        document.getElementById('p_cost_percent').innerText=costPct;document.getElementById('p_prepared_by').innerText=bill.daName;
+        document.getElementById('p_remarks').innerText=bill.remarks||'';document.getElementById('p_checked_by').innerText=bill.checkedBy||'';
+        document.getElementById('p_rechecked_by').innerText=bill.recheckedBy||bill.approvedBy||'';
+        var tbody=document.getElementById('p_expense_body');tbody.innerHTML='';
+        var tAmt=0,tDa=0,tDed=0,tNet=0,tTot=0;
+        if(bill.expenses){bill.expenses.forEach(function(exp){
+            if(!exp.date)return;var amt=parseFloat(exp.amount)||0,da=parseFloat(exp.da)||0,ded=parseFloat(exp.deduction)||0;
+            var total=amt+da,net=total-ded;tAmt+=amt;tDa+=da;tTot+=total;tDed+=ded;tNet+=net;
+            var tDisp=total;if(ded>0)tDisp='<span class="cut-text">'+total+'</span>';
+            tbody.innerHTML+='<tr><td style="padding:2px;text-align:left">'+formatDate(exp.date)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.from)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.to)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.mode)+'</td><td style="padding:2px;text-align:right">'+amt+'</td><td style="padding:2px;text-align:right">'+da+'</td><td style="padding:2px;text-align:right">'+tDisp+'</td><td style="padding:2px;text-align:right;color:red">'+(ded>0?ded:'')+'</td><td style="padding:2px;text-align:right;font-weight:bold">'+net+'</td></tr>';
+        });}
+        document.getElementById('p_foot_amt').innerText=tAmt;document.getElementById('p_foot_da').innerText=tDa;
+        document.getElementById('p_foot_total').innerText=tTot;document.getElementById('p_foot_ded').innerText=tDed;document.getElementById('p_total_amount').innerText=tNet;
+        document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+        document.getElementById('print_summary_area').classList.remove('active-print');
+        document.getElementById('print_iou_area').classList.remove('active-print');
+        document.getElementById('print_area').classList.add('active-print');window.print();
+    });
+}
+function printBillSummary(){
+    if(currentSummaryData.length===0){alert("No data.");return;}
+    var daName=document.getElementById('summary_da').selectedOptions[0].text;
+    document.getElementById('print_sum_da_name').innerText=daName;document.getElementById('print_sum_depot').innerText="Kushtia Depot";
+    document.getElementById('print_sum_month').innerText=formatMonthLabel(globalFilterMonth);
+    var tbody=document.getElementById('print_sum_tbody');tbody.innerHTML='';var tS=0,tTk=0,tDA=0,tN=0;
+    currentSummaryData.forEach(function(row){
+        tS+=row.sales;tTk+=row.taka;tDA+=row.da;tN+=row.net;var tr=document.createElement('tr');
+        tr.innerHTML='<td style="padding:2px;text-align:center">'+row.sl+'</td><td style="padding:2px;text-align:left">'+row.date+'</td><td style="padding:2px;text-align:left">'+escHtml(row.territory)+'</td><td style="padding:2px;text-align:left">'+row.type+'</td><td style="padding:2px;text-align:right">'+row.sales.toFixed(2)+'</td><td style="padding:2px;text-align:right">'+row.taka.toFixed(2)+'</td><td style="padding:2px;text-align:right">'+row.da.toFixed(2)+'</td><td style="padding:2px;text-align:right">'+row.net.toFixed(2)+'</td><td style="padding:2px;text-align:right">'+row.cost+'%</td>';
+        tbody.appendChild(tr);
+    });
+    document.getElementById('print_sum_foot_sales').innerText=tS.toFixed(2);document.getElementById('print_sum_foot_taka').innerText=tTk.toFixed(2);
+    document.getElementById('print_sum_foot_da').innerText=tDA.toFixed(2);document.getElementById('print_sum_foot_net').innerText=tN.toFixed(2);
+    var tcp=tS>0?((tN/tS)*100).toFixed(2):"0.00";document.getElementById('print_sum_foot_cost').innerText=tcp+"%";
+    document.getElementById('print_sum_cost_pct').innerText=tcp+"%";document.getElementById('print_sum_words').innerText=numberToEnglish(tN)+" Taka Only";
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+    document.getElementById('print_area').classList.remove('active-print');
+    document.getElementById('print_iou_area').classList.remove('active-print');
+    document.getElementById('print_summary_area').classList.add('active-print');window.print();
+}
+function printIOUList(){
+    if(iouPrintCache.length===0){alert("No data.");return;}
+    var fStart=document.getElementById('iou_filter_start').value,fEnd=document.getElementById('iou_filter_end').value;
+    var periodText=formatMonthLabel(globalFilterMonth);if(fStart||fEnd)periodText=formatDate(fStart)+' to '+formatDate(fEnd);
+    document.getElementById('print_iou_period').innerText=periodText;
+    var fDa=document.getElementById('filter_iou_da').value;document.getElementById('print_iou_filter_info').innerText=fDa?(daListCache[fDa]||'Unknown'):'All DA';
+    var tbody=document.getElementById('print_iou_tbody');tbody.innerHTML='';var tS=0,tR=0,tSo=0,tQ=0,tB=0,tT=0;
+    iouPrintCache.forEach(function(item,i){
+        tS+=item.sales;tR+=item.ret;tSo+=item.sold;tQ+=item.qty;tB+=item.bundleQty;tT+=item.taka;var tr=document.createElement('tr');
+        tr.innerHTML='<td style="padding:3px;text-align:center">'+(i+1)+'</td><td style="padding:3px;text-align:left">'+item.date+'</td><td style="padding:3px;text-align:left">'+escHtml(item.daName)+'</td><td style="padding:3px;text-align:center">'+item.type+'</td><td style="padding:3px;text-align:left">'+escHtml(item.territory)+'</td><td style="padding:3px;text-align:left">'+escHtml(item.mpo)+'</td><td style="padding:3px;text-align:center">'+escHtml(item.summary)+'</td><td style="padding:3px;text-align:right">'+item.sales.toFixed(2)+'</td><td style="padding:3px;text-align:right">'+item.ret.toFixed(2)+'</td><td style="padding:3px;text-align:right">'+item.sold.toFixed(2)+'</td><td style="padding:3px;text-align:center">'+item.qty+'</td><td style="padding:3px;text-align:center">'+item.bundleQty+'</td><td style="padding:3px;text-align:right">'+item.taka.toFixed(2)+'</td><td style="padding:3px;text-align:right">'+item.percent+'%</td>';
+        tbody.appendChild(tr);
+    });
+    document.getElementById('print_iou_foot_sales').innerText=tS.toFixed(2);document.getElementById('print_iou_foot_ret').innerText=tR.toFixed(2);
+    document.getElementById('print_iou_foot_sold').innerText=tSo.toFixed(2);document.getElementById('print_iou_foot_qty').innerText=tQ;
+    document.getElementById('print_iou_foot_bqty').innerText=tB;document.getElementById('print_iou_foot_taka').innerText=tT.toFixed(2);
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+    document.getElementById('print_area').classList.remove('active-print');
+    document.getElementById('print_summary_area').classList.remove('active-print');
+    document.getElementById('print_iou_area').classList.add('active-print');window.print();
+}
+
+// ========== NUMBER TO ENGLISH ==========
+function numberToEnglish(num){
+    if(num===0)return"Zero";var a=['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    var b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    if((num=num.toString()).length>9)return'Overflow';var n=('000000000'+num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if(!n)return'';var str='';
+    str+=(n[1]!=0)?(a[Number(n[1])]||b[n[1][0]]+' '+a[n[1][1]])+'Crore ':'';
+    str+=(n[2]!=0)?(a[Number(n[2])]||b[n[2][0]]+' '+a[n[2][1]])+'Lakh ':'';
+    str+=(n[3]!=0)?(a[Number(n[3])]||b[n[3][0]]+' '+a[n[3][1]])+'Thousand ':'';
+    str+=(n[4]!=0)?(a[Number(n[4])]||b[n[4][0]]+' '+a[n[4][1]])+'Hundred ':'';
+    str+=(n[5]!=0)?((str!='')?'and ':'')+(a[Number(n[5])]||b[n[5][0]]+' '+a[n[5][1]]):'';
+    return str;
+}
+
+// ========== EXCEL IMPORT / EXPORT (Kept functions if needed elsewhere) ==========
+function importExpensesToTable(){
+    if(typeof XLSX==='undefined'){alert("Excel lib not loaded.");return;}
+    var input=document.getElementById('user_exp_excel_input');if(!input.files||!input.files[0]){alert("Select file.");return;}
+    var file=input.files[0];var reader=new FileReader();
+    reader.onload=function(e){
+        try{var data=new Uint8Array(e.target.result);var wb=XLSX.read(data,{type:'array',cellDates:true});var ws=wb.Sheets[wb.SheetNames[0]];var jsonData=XLSX.utils.sheet_to_json(ws,{header:1});
+        if(jsonData.length<=1){alert("Empty.");return;}var depDate=document.getElementById('form_dep_date').value;var importCount=0,startIdx=0;
+        if(jsonData.length>0&&typeof jsonData[0][0]==='string'&&jsonData[0][0].toLowerCase().includes('date'))startIdx=1;
+        for(var i=startIdx;i<jsonData.length;i++){var row=jsonData[i];if(!row||row.length===0)continue;
+            var dateVal=depDate;if(row[0]){if(row[0] instanceof Date)dateVal=row[0].toISOString().split('T')[0];else if(typeof row[0]==='number'){var d=new Date((row[0]-(25567+2))*86400*1000);dateVal=d.toISOString().split('T')[0];}else{var d2=new Date(row[0]);if(!isNaN(d2.getTime()))dateVal=d2.toISOString().split('T')[0];else dateVal=String(row[0]);}}
+            var from=row[1]||'',to=row[2]||'',mode=row[3]||'Rickshaw',amount=parseFloat(row[4])||0,daExp=parseFloat(row[5])||0;
+            if(mode==='Daily Allowance'){if(amount>0&&daExp===0){daExp=amount;amount=0;}if(!from)from='-';if(!to)to='-';}
+            addExpenseRowWithData({date:dateVal,from:from,to:to,mode:mode,amount:amount,da:daExp});importCount++;
+        }
+        calculateGrandTotal();triggerAutoSave();alert('Imported '+importCount+' rows!');input.value='';
+        }catch(ex){console.error(ex);alert("Error reading file.\nColumns: Date, From, To, Mode, Amount, DA");}
+    };reader.readAsArrayBuffer(file);
+}
+
+// ========== NEW USER ==========
+function saveNewUser(){
+    var userIdManual=document.getElementById('new_user_id').value.trim();var name=document.getElementById('new_user_name').value.trim();
+    var phone=document.getElementById('new_user_phone').value.trim();var depot=document.getElementById('new_user_depot').value;
+    var username=document.getElementById('new_user_username').value.trim();var password=document.getElementById('new_user_pass').value.trim();
+    var role=document.getElementById('new_user_role').value;if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
+    var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
+    if(userPhotoBase64)userData.photoUrl=userPhotoBase64;
+    
+    if(editingUserId){
+        database.ref('Users/'+editingUserId).update(userData,function(error){
+            if(error)alert("Error updating user");
+            else{
+                alert("User Updated Successfully!");
+                clearUserForm();
+                loadUserList();
+                loadDAListForFilters();
+            }
+        });
+    } else {
+        var newUserRef=database.ref('Users').push();
+        newUserRef.set(userData,function(error){
+            if(error)alert("Error creating user");
+            else{
+                alert("User Created Successfully!");
+                clearUserForm();
+                loadUserList();
+                loadDAListForFilters();
+            }
+        });
+    }
+}
+
+// ========== Tab change listeners ==========
+document.addEventListener('DOMContentLoaded',function(){
+    
+    var savedUser = localStorage.getItem('auth_user');
+    if(savedUser){
+        try {
+            currentUser = JSON.parse(savedUser);
+            showDashboard();
+        } catch(e){
+            localStorage.removeItem('auth_user');
+        }
+    }
+
+    var summaryTabEl=document.getElementById('summaryTab');
+    var iouEntryTabEl=document.getElementById('iouEntryTab');
+    var newUserTabEl=document.getElementById('newUserTab');
+    var billTabEl=document.getElementById('billTab');
+    var approvedTabEl=document.getElementById('approvedHistoryTab');
+    var topSheetTabEl = document.getElementById('topSheetTab');
+
+    summaryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)generateSummary();});
+    iouEntryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser&&currentUser.role!=='user'){loadAdminIOU();var daSel=document.getElementById('iou_da_name');if(daSel&&daSel.options.length<=1)loadDAListForFilters();}});
+    newUserTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadUserList();});
+    billTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
+    approvedTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
+    
+    topSheetTabEl.addEventListener('shown.bs.tab',function(){
+        if(currentUser) {
+            loadTopSheetData();
+        }
+    });
+});
+
+// ========== AUTO IMPORT LISTENERS ==========
+var userExpInput=document.getElementById('user_exp_excel_input');
+if(userExpInput){userExpInput.addEventListener('change',function(){if(this.files&&this.files[0])importExpensesToTable();});}
+</script>
+</body>
+</html>
