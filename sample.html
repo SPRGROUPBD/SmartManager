@@ -558,7 +558,16 @@
 <main id="main-container">
     
     <section id="dashboard" class="section active">
-        <h2><i class="fa-solid fa-tachometer-alt"></i> Dashboard Overview</h2>
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin:0;"><i class="fa-solid fa-tachometer-alt"></i> Dashboard Overview</h2>
+            <div style="display:flex; align-items:center; gap:10px; background: white; padding: 10px 15px; border-radius: 8px; box-shadow: var(--shadow);">
+                <label style="margin:0; font-size:0.9rem; color:#7f8c8d;"><i class="fa-solid fa-calendar-days"></i> Filter Month:</label>
+                <select id="dashboard-month-filter" onchange="window.updateUI()" style="padding: 5px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem;">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+        </div>
+
         <div class="dashboard-grid">
             <div class="card">
                 <h3 id="d-total-mpo">0</h3>
@@ -815,6 +824,11 @@
                     <h3>All Items (Prod & Gift) - Closing Stock</h3>
                     <div style="font-size:0.85rem; color:#666;">Enter Qty to hand over.</div>
                 </div>
+                <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+                    <i class="fa-solid fa-magnifying-glass" style="color:#999; margin-left:5px;"></i>
+                    <input type="text" id="ho-search-input" class="search-input" placeholder="Search by Item Name or ID..." oninput="window.filterHandOverItems()" style="flex:1; padding: 8px 15px; border: 1px solid var(--border); border-radius: 20px; font-size: 0.95rem; outline: none;">
+                    <button class="btn btn-sm btn-secondary" onclick="window.clearHandOverSearch()"><i class="fa-solid fa-times"></i> Clear</button>
+                </div>
                 <div id="ho-product-list-container" style="max-height: 600px; overflow-y: auto; border: 1px solid var(--light); border-radius: 4px;"></div>
             </div>
         </div>
@@ -832,6 +846,12 @@
                         <select id="view-mode" style="width: 110px; font-size: 0.9rem;" onchange="window.renderChallans()">
                             <option value="list">Flat List</option>
                             <option value="month" selected>Month Wise</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">Month:</label>
+                        <select id="filter-month" style="width: 130px; font-size: 0.9rem;" onchange="window.renderChallans()">
+                            <option value="">All Months</option>
                         </select>
                     </div>
                     <div style="display:flex; align-items:center; gap:5px;">
@@ -870,9 +890,13 @@
                     </div>
                     <div style="display:flex; align-items:center; gap:5px;">
                         <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">MPO:</label>
-                        <select id="filter-mpo" style="width: 200px; font-size: 0.9rem;" onchange="window.renderChallans()">
+                        <select id="filter-mpo" style="width: 150px; font-size: 0.9rem;" onchange="window.renderChallans()">
                             <option value="">All MPOs</option>
                         </select>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">MPO Search:</label>
+                        <input type="text" id="filter-mpo-search" style="width: 140px; padding: 5px; font-size: 0.9rem; border: 1px solid var(--border); border-radius: 4px;" placeholder="Name / ID" oninput="window.renderChallans()">
                     </div>
                     <div style="display:flex; align-items:center; gap:5px;">
                         <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">No:</label>
@@ -1646,25 +1670,52 @@
         const fChallans = data.challans; 
         const fUsers = currentUser.role === 'admin' ? data.users : [];
 
+        // Populate Dashboard Month Filter
+        const dashMonthSel = document.getElementById('dashboard-month-filter');
+        if (dashMonthSel) {
+            let months = new Set();
+            const nowMonth = new Date().toISOString().slice(0, 7);
+            months.add(nowMonth);
+            fChallans.forEach(c => {
+                if (c.timestamp) months.add(new Date(c.timestamp).toISOString().slice(0, 7));
+            });
+            const sortedMonths = Array.from(months).sort((a, b) => b.localeCompare(a));
+            const currentDashMonth = dashMonthSel.value || nowMonth;
+            dashMonthSel.innerHTML = '';
+            sortedMonths.forEach(m => {
+                const dateObj = new Date(m + "-01T00:00:00");
+                const label = dateObj.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+                dashMonthSel.innerHTML += `<option value="${m}">${label}</option>`;
+            });
+            dashMonthSel.value = currentDashMonth;
+        }
+
+        const dashMonth = document.getElementById('dashboard-month-filter')?.value || new Date().toISOString().slice(0, 7);
+        const monthChallans = fChallans.filter(c => new Date(c.timestamp).toISOString().slice(0, 7) === dashMonth);
+
         const activeMpos = fMpos.filter(m => m.isActive !== false);
         document.getElementById('d-total-mpo').innerText = activeMpos.length;
         document.getElementById('d-total-prod').innerText = fProds.length;
         document.getElementById('d-total-gifts').innerText = fGifts.length;
         document.getElementById('d-total-da').innerText = fDas.length;
         
-        const prodChallans = fChallans.filter(c => c.type === 'Product').length;
-        const giftChallans = fChallans.filter(c => c.type === 'Gift').length;
+        const prodChallans = monthChallans.filter(c => c.type === 'Product').length;
+        const giftChallans = monthChallans.filter(c => c.type === 'Gift').length;
         document.getElementById('d-total-prod-challan').innerText = prodChallans;
         document.getElementById('d-total-gift-challan').innerText = giftChallans;
 
         let catStats = {};
         ALL_CATEGORIES.forEach(c => { catStats[c] = { sales: 0, count: 0 }; });
-
-        activeMpos.forEach(m => {
-            const cat = m.categoryProd || m.category || 'A'; 
-            if(catStats[cat]) {
-                catStats[cat].sales += Number(m.sales || 0);
-                catStats[cat].count++;
+        const mposInMonth = {};
+        monthChallans.forEach(c => {
+            if (!mposInMonth[c.mpoId]) {
+                mposInMonth[c.mpoId] = { sales: Number(c.mpoSales || 0), cat: c.mpoCat || 'A' };
+            }
+        });
+        Object.values(mposInMonth).forEach(m => {
+            if(catStats[m.cat]) {
+                catStats[m.cat].sales += m.sales;
+                catStats[m.cat].count++;
             }
         });
 
@@ -1972,28 +2023,67 @@
         return opening + received - used;
     }
 
+    let handOverAllItems = []; // Holds all items for filtering
+
     window.loadHandOverItems = function() {
         const container = document.getElementById('ho-product-list-container');
-        container.innerHTML = '';
         handOverSelections = {}; 
         updateCount('handover');
 
-        const allItems = [...data.prods, ...data.gifts].filter(p => p.isActive !== false);
+        // Store all active items (preserve object references so data.prods.includes still works)
+        handOverAllItems = [...data.prods, ...data.gifts].filter(p => p.isActive !== false);
 
-        allItems.forEach(p => {
+        // Clear search input
+        const searchInput = document.getElementById('ho-search-input');
+        if (searchInput) searchInput.value = '';
+
+        window.filterHandOverItems();
+    };
+
+    window.filterHandOverItems = function() {
+        const container = document.getElementById('ho-product-list-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const searchQuery = (document.getElementById('ho-search-input')?.value || '').toLowerCase().trim();
+
+        const filteredItems = handOverAllItems.filter(p => {
+            if (!searchQuery) return true;
+            const nameMatch = (p.name || '').toLowerCase().includes(searchQuery);
+            const idMatch   = (p.id || '').toLowerCase().includes(searchQuery);
+            return nameMatch || idMatch;
+        });
+
+        if (filteredItems.length === 0) {
+            container.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">No items found matching your search.</div>';
+            return;
+        }
+
+        filteredItems.forEach(p => {
             const closing = getItemClosingStock(p);
+            const isProd  = data.prods.includes(p);
+            const itemType = isProd ? 'prod' : 'gift';
+            // Preserve entered qty when re-rendering after search
+            const savedQty = handOverSelections[p.id] ? handOverSelections[p.id].qty : '';
+
             const div = document.createElement('div');
             div.className = 'product-list-item';
             div.innerHTML = `
                 <div class="product-list-info">
                     <strong>${p.name} (${p.id})</strong>
-                    <span>Pack: ${p.pack} | Type: ${data.prods.includes(p) ? 'Product' : 'Gift'}</span>
+                    <span>Pack: ${p.pack} | Type: ${isProd ? 'Product' : 'Gift'}</span>
                 </div>
                 <div style="font-weight:bold; color:var(--teal); margin-right:10px;">Closing: ${closing}</div>
-                <input type="number" min="0" class="manual-qty-input" placeholder="0" max="${closing}" onchange="window.updateHandOverSelection('${p.id}', this.value, '${data.prods.includes(p) ? 'prod' : 'gift'}')">
+                <input type="number" min="0" class="manual-qty-input" placeholder="0" max="${closing}" value="${savedQty}" onchange="window.updateHandOverSelection('${p.id}', this.value, '${itemType}')">
             `;
             container.appendChild(div);
         });
+    };
+
+    window.clearHandOverSearch = function() {
+        const searchInput = document.getElementById('ho-search-input');
+        if (searchInput) searchInput.value = '';
+        window.filterHandOverItems();
     };
 
     window.updateHandOverSelection = function(id, qty, type) {
@@ -2530,6 +2620,8 @@
         document.getElementById('filter-type').value = ""; 
         document.getElementById('filter-category').value = "";
         document.getElementById('filter-mpo').value = "";
+        document.getElementById('filter-month').value = "";
+        document.getElementById('filter-mpo-search').value = "";
         document.getElementById('filter-challan-no').value = "";
         window.renderChallans();
     }
@@ -2577,6 +2669,17 @@
     };
 
     window.printChallan = function(key, type) {
+        // ✅ Route Hand Over records to the Hand Over print function
+        if (type === 'Hand Over') {
+            const hoRecord = data.handovers.find(x => x.key === key);
+            if (hoRecord) {
+                window.printHandOverChallan(hoRecord);
+            } else {
+                showToast("Hand Over record not found.");
+            }
+            return;
+        }
+
         const c = data.challans.find(x => x.key === key);
         if(!c) return;
         
@@ -2675,6 +2778,21 @@
         });
         areaSel.value = currentAreaVal;
 
+        // --- Populate Month filter ---
+        const monthSel = document.getElementById('filter-month');
+        const currentMonthVal = monthSel.value;
+        const uniqueMonths = new Set();
+        [...fChallans, ...data.handovers].forEach(c => {
+            if (c.timestamp) uniqueMonths.add(new Date(c.timestamp).toISOString().slice(0, 7));
+        });
+        monthSel.innerHTML = '<option value="">All Months</option>';
+        Array.from(uniqueMonths).sort((a, b) => b.localeCompare(a)).forEach(m => {
+            const dateObj = new Date(m + "-01T00:00:00");
+            const label = dateObj.toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+            monthSel.innerHTML += `<option value="${m}">${label}</option>`;
+        });
+        monthSel.value = currentMonthVal;
+
         // --- Read all filter values ---
         const areaFilter = document.getElementById('filter-area').value;
         const mpoFilter = document.getElementById('filter-mpo').value;
@@ -2683,6 +2801,8 @@
         const categoryFilter = document.getElementById('filter-category').value;
         const viewMode = document.getElementById('view-mode').value;
         const typeFilter = document.getElementById('filter-type').value;
+        const monthFilter = document.getElementById('filter-month').value;
+        const mpoSearchVal = document.getElementById('filter-mpo-search').value.toLowerCase().trim();
 
         let allRecords = [...fChallans, ...data.handovers];
 
@@ -2709,7 +2829,21 @@
                 else matchesType = !c.isManual && c.type === typeFilter;
             }
 
-            return matchesArea && matchesMPO && matchesDepot && matchesChallan && matchesCategory && matchesType;
+            let matchesMonth = true;
+            if (monthFilter) {
+                const cMonth = new Date(c.timestamp).toISOString().slice(0, 7);
+                matchesMonth = (cMonth === monthFilter);
+            }
+
+            let matchesMpoSearch = true;
+            if (mpoSearchVal) {
+                const mpoName = (c.mpoName || '').toLowerCase();
+                const mpoId = (c.mpoId || '').toLowerCase();
+                const hoTo = (c.to || '').toLowerCase(); // For Hand Over search
+                matchesMpoSearch = mpoName.includes(mpoSearchVal) || mpoId.includes(mpoSearchVal) || hoTo.includes(mpoSearchVal);
+            }
+
+            return matchesArea && matchesMPO && matchesDepot && matchesChallan && matchesCategory && matchesType && matchesMonth && matchesMpoSearch;
         }).sort((a, b) => {
             const areaA = (a.mpoArea || a.to || '').toLowerCase();
             const areaB = (b.mpoArea || b.to || '').toLowerCase();
