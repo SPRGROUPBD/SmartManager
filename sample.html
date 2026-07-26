@@ -647,24 +647,14 @@
 
         <div class="panel">
             <div class="panel-header">
-                <h3>Challan Stats (By Category) PROD</h3>
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">Month:</label>
-                    <select id="stats-filter-prod" onchange="window.renderDashboardChallanStats()" style="padding: 2px 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
-                    </select>
-                </div>
+                <h3>Challan Stats (By Category) - PROD</h3>
             </div>
             <div class="dashboard-grid" id="dashboard-prod-stats"></div>
         </div>
 
         <div class="panel">
             <div class="panel-header">
-                <h3>Challan Stats (By Category) GIFT</h3>
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <label style="margin:0; font-size:0.85rem; color:#7f8c8d;">Month:</label>
-                    <select id="stats-filter-gift" onchange="window.renderDashboardChallanStats()" style="padding: 2px 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem;">
-                    </select>
-                </div>
+                <h3>Challan Stats (By Category) - GIFT</h3>
             </div>
             <div class="dashboard-grid" id="dashboard-gift-stats"></div>
         </div>
@@ -934,6 +924,7 @@
                             <option value="">All Areas</option>
                         </select>
                     </div>
+                    <button class="btn btn-success" onclick="window.bulkUpdateMpoSales()"><i class="fa-solid fa-upload"></i> Update TP Sales</button>
                     <button class="btn btn-secondary" onclick="window.openUploadModal('mpo')"><i class="fa-solid fa-file-excel" style="color:green;"></i> Upload Excel</button>
                     <button class="btn btn-primary" onclick="window.openModal('mpo')"><i class="fa-solid fa-plus"></i> Add MPO</button>
                 </div>
@@ -1726,8 +1717,7 @@
             if (mpoEl) mpoEl.innerText = catStats[cat].count;
         });
 
-        window.populateStatsFilters();
-        window.renderDashboardChallanStats(fChallans);
+        window.renderDashboardChallanStats(monthChallans);
 
         window.populateSelects(activeMpos, fDas);
         window.renderMgmtTables(fMpos, fProds, fGifts, fDas, fUsers);
@@ -1776,37 +1766,14 @@
         }
     }
 
-    window.populateStatsFilters = function() {
-        const selects = ['stats-filter-prod', 'stats-filter-gift'];
-        selects.forEach(id => {
-            const sel = document.getElementById(id);
-            if (!sel) return;
-            if (sel.options.length > 0) return;
-            for (let i = 0; i < 12; i++) {
-                const d = new Date();
-                d.setMonth(d.getMonth() - i);
-                const val = d.toISOString().slice(0, 7);
-                const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
-                sel.innerHTML += `<option value="${val}">${label}</option>`;
-            }
-        });
-    };
-
-    window.renderDashboardChallanStats = function(fChallans) {
+    window.renderDashboardChallanStats = function(monthChallans) {
         const prodContainer = document.getElementById('dashboard-prod-stats');
         const giftContainer = document.getElementById('dashboard-gift-stats');
         
-        const prodFilterVal = document.getElementById('stats-filter-prod')?.value;
-        const giftFilterVal = document.getElementById('stats-filter-gift')?.value;
-
-        const generateCards = (type, filterVal) => {
+        const generateCards = (type) => {
             let html = '';
             ALL_CATEGORIES.forEach(cat => {
-                const challansInCat = fChallans.filter(c => {
-                    const cDate = new Date(c.timestamp);
-                    const cDateStr = cDate.toISOString().slice(0, 7);
-                    return c.type === type && c.mpoCat === cat && cDateStr === filterVal;
-                });
+                const challansInCat = monthChallans.filter(c => c.type === type && c.mpoCat === cat);
                 const count = challansInCat.length;
                 const totalQty = challansInCat.reduce((sum, c) => {
                     return sum + c.items.reduce((iSum, i) => iSum + (Number(i.issueQty) || 0), 0);
@@ -1827,8 +1794,8 @@
             return html;
         };
 
-        if (prodFilterVal) prodContainer.innerHTML = generateCards('Product', prodFilterVal);
-        if (giftFilterVal) giftContainer.innerHTML = generateCards('Gift', giftFilterVal);
+        prodContainer.innerHTML = generateCards('Product');
+        giftContainer.innerHTML = generateCards('Gift');
     };
 
     window.nav = function(id) {
@@ -2023,17 +1990,15 @@
         return opening + received - used;
     }
 
-    let handOverAllItems = []; // Holds all items for filtering
+    let handOverAllItems = []; 
 
     window.loadHandOverItems = function() {
         const container = document.getElementById('ho-product-list-container');
         handOverSelections = {}; 
         updateCount('handover');
 
-        // Store all active items (preserve object references so data.prods.includes still works)
         handOverAllItems = [...data.prods, ...data.gifts].filter(p => p.isActive !== false);
 
-        // Clear search input
         const searchInput = document.getElementById('ho-search-input');
         if (searchInput) searchInput.value = '';
 
@@ -2063,7 +2028,6 @@
             const closing = getItemClosingStock(p);
             const isProd  = data.prods.includes(p);
             const itemType = isProd ? 'prod' : 'gift';
-            // Preserve entered qty when re-rendering after search
             const savedQty = handOverSelections[p.id] ? handOverSelections[p.id].qty : '';
 
             const div = document.createElement('div');
@@ -2669,7 +2633,6 @@
     };
 
     window.printChallan = function(key, type) {
-        // ✅ Route Hand Over records to the Hand Over print function
         if (type === 'Hand Over') {
             const hoRecord = data.handovers.find(x => x.key === key);
             if (hoRecord) {
@@ -2728,12 +2691,10 @@
         window.print();
     };
 
-    // ===== CHALLAN HISTORY WITH AREA FILTER =====
     window.renderChallans = function(fChallans, fMpos) {
         if (!fChallans) fChallans = data.challans;
         if (!fMpos) fMpos = getFilteredData(data.mpos);
 
-        // --- Populate Depot filter ---
         const depotSel = document.getElementById('filter-depot');
         const currentDepotVal = depotSel.value;
         depotSel.innerHTML = '<option value="">All Depots</option>';
@@ -2749,7 +2710,6 @@
         Array.from(depotsInView).sort().forEach(depot => depotSel.innerHTML += `<option value="${depot}">${depot}</option>`);
         depotSel.value = currentDepotVal;
 
-        // --- Populate MPO filter ---
         const mpoSel = document.getElementById('filter-mpo');
         const currentMpoVal = mpoSel.value;
         mpoSel.innerHTML = '<option value="">All MPOs</option>';
@@ -2758,16 +2718,13 @@
         }
         mpoSel.value = currentMpoVal;
 
-        // --- Populate Area filter ---
         const areaSel = document.getElementById('filter-area');
         const currentAreaVal = areaSel.value;
         const uniqueChallanAreas = new Set();
         
-        // Collect areas from challans
         fChallans.forEach(c => {
             if (c.mpoArea && c.mpoArea.trim() !== '') uniqueChallanAreas.add(c.mpoArea.trim());
         });
-        // Collect areas from handovers (to field)
         data.handovers.forEach(c => {
             if (c.to && c.to.trim() !== '') uniqueChallanAreas.add(c.to.trim());
         });
@@ -2778,7 +2735,6 @@
         });
         areaSel.value = currentAreaVal;
 
-        // --- Populate Month filter ---
         const monthSel = document.getElementById('filter-month');
         const currentMonthVal = monthSel.value;
         const uniqueMonths = new Set();
@@ -2793,7 +2749,6 @@
         });
         monthSel.value = currentMonthVal;
 
-        // --- Read all filter values ---
         const areaFilter = document.getElementById('filter-area').value;
         const mpoFilter = document.getElementById('filter-mpo').value;
         const depotFilter = document.getElementById('filter-depot').value;
@@ -2807,7 +2762,6 @@
         let allRecords = [...fChallans, ...data.handovers];
 
         const list = allRecords.filter(c => {
-            // Area filter: check mpoArea for regular challans, 'to' for handovers
             let matchesArea = true;
             if (areaFilter) {
                 if (c.type === 'Hand Over') {
@@ -2839,7 +2793,7 @@
             if (mpoSearchVal) {
                 const mpoName = (c.mpoName || '').toLowerCase();
                 const mpoId = (c.mpoId || '').toLowerCase();
-                const hoTo = (c.to || '').toLowerCase(); // For Hand Over search
+                const hoTo = (c.to || '').toLowerCase(); 
                 matchesMpoSearch = mpoName.includes(mpoSearchVal) || mpoId.includes(mpoSearchVal) || hoTo.includes(mpoSearchVal);
             }
 
@@ -3036,7 +2990,7 @@
         filteredMpos.sort((a, b) => (a.area || '').toLowerCase().localeCompare((b.area || '').toLowerCase()));
 
         const mpoT = document.getElementById('table-mpo');
-        mpoT.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>Territory</th><th>Area</th><th>TP Sales</th><th>Cat(Prod)</th><th>Cat(Gift)</th><th>Status</th><th>Depot</th><th>Actions</th></tr></thead>`;
+        mpoT.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>Territory</th><th>Area</th><th>TP Sales</th><th>Cat(Prod)</th><th>Cat(Gift)</th><th>Status</th><th>Depot</th><th style="width:120px;">New Sales</th><th>Actions</th></tr></thead>`;
         filteredMpos.forEach(m => {
             const isMpoActive = (m.isActive !== false);
             const statusBadge = isMpoActive ? '<span style="color:var(--success); font-weight:bold;">Active</span>' : '<span style="color:var(--danger); font-weight:bold;">Inactive</span>';
@@ -3046,6 +3000,7 @@
                     <td>${m.id}</td><td>${m.name}</td><td>${m.territory}</td><td>${m.area || '-'}</td>
                     <td>${m.sales || 0}</td><td>${m.categoryProd || m.category || '-'}</td><td>${m.categoryGift || '-'}</td>
                     <td>${statusBadge}</td><td>${m.depotId || '<span style="color:red">Missing</span>'}</td>
+                    <td><input type="number" class="mpo-sales-input" data-mpo-id="${m.id}" placeholder="${m.sales || 0}" style="width: 80px; padding: 5px; border: 1px solid var(--border); border-radius: 4px;"></td>
                     <td>
                         <button class="btn btn-sm btn-secondary" onclick="window.editItem('mpo','${m.id}')"><i class="fa-solid fa-pen"></i></button> 
                         <button class="btn btn-sm btn-danger" onclick="window.deleteItem('mpo','${m.id}')"><i class="fa-solid fa-trash"></i></button>
@@ -3160,6 +3115,30 @@
         update(ref(db, `depots/${gift.depotId}/gifts/${id}`), { isActive: newStatus }).then(() => showToast("Gift status updated")).catch(err => showToast("Error"));
     }
 
+    window.bulkUpdateMpoSales = function() {
+        const inputs = document.querySelectorAll('.mpo-sales-input');
+        const updates = [];
+        inputs.forEach(inp => {
+            const mpoId = inp.dataset.mpoId;
+            const newSales = inp.value;
+            if (newSales !== '') {
+                updates.push({ id: mpoId, sales: Number(newSales) });
+            }
+        });
+
+        if (updates.length === 0) {
+            return showToast("Please enter at least one sales value to update.");
+        }
+
+        if(!confirm(`Update TP Sales for ${updates.length} MPO(s)?`)) return;
+
+        const promises = updates.map(u => update(ref(db, `mpos/${u.id}`), { sales: u.sales }));
+        Promise.all(promises).then(() => {
+            showToast(`${updates.length} MPO(s) TP Sales updated successfully!`);
+            inputs.forEach(inp => inp.value = '');
+        }).catch(err => showToast("Error updating sales: " + err.message));
+    };
+
     window.openAddStockModal = function(type, id) {
         let item;
         if (type === 'prod') item = data.prods.find(p => p.id === id);
@@ -3221,7 +3200,6 @@
         if(type === 'mpo') {
             container.innerHTML = `${depotSelect()}<div class="form-group"><label>MPO ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Territory</label><input name="territory"></div><div class="form-group"><label>Area</label><input name="area"></div><div class="form-group"><label>Region</label><input name="region"></div><div style="display:flex; gap:10px;"><div class="form-group" style="flex:1"><label style="color:var(--accent)">Category (Prod)</label>${getCategorySelectHTML('A', 'categoryProd')}</div><div class="form-group" style="flex:1"><label style="color:var(--purple)">Category (Gift)</label>${getCategorySelectHTML('A', 'categoryGift')}</div></div><div class="form-group"><label>TP Sales</label><input type="number" name="sales"></div><div class="form-group"><label>Status</label><select name="isActive"><option value="true">Active</option><option value="false">Inactive</option></select></div><div class="form-group"><label>Assign DA</label><select name="daId" id="modal-da-select"><option value="">None</option></select></div>`;
             
-            // ✅ Fix: Pre-populate DA list based on depot
             if(currentUser.role !== 'admin' && currentUser.depotId) {
                 window.updateModalDAOptions(currentUser.depotId);
             } else if (currentUser.role === 'admin') {
@@ -3299,7 +3277,6 @@
 
     window.closeModal = function() { document.getElementById('modal').style.display = 'none'; };
 
-    // EXCEL UPLOAD
     let uploadType = null; let parsedExcelData = [];
     window.openUploadModal = function(type) {
         uploadType = type; document.getElementById('upload-modal').style.display = 'flex';
@@ -3342,7 +3319,6 @@
         }; processUpload();
     };
 
-    // --- STOCK LOGIC ---
     window.renderStockReport = function(fProds, fGifts, fChallans) {
         const table = document.getElementById('stock-report-table'); table.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>Pack</th><th>Unit</th><th>Opening</th><th>Received</th><th>Used</th><th>Closing</th></tr></thead>`;
         const allItems = [...fProds, ...fGifts]; const currentMonth = new Date().toISOString().slice(0, 7); let monthlyUsage = {};
