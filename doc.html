@@ -148,6 +148,7 @@
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openAreaSettings();return false"><i class="fas fa-map-location-dot w-5 text-center text-blue-400"></i> Area Management</a>
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openSlabSettings();return false"><i class="fas fa-sliders w-5 text-center text-blue-400"></i> Slab Settings</a>
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openSignatureSettings();return false"><i class="fas fa-file-signature w-5 text-center text-blue-400"></i> Signature Settings</a>
+            <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openQualifiedSalesSettings();return false"><i class="fas fa-bullseye w-5 text-center text-blue-400"></i> Qualified Sales Settings</a>
         </nav>
         <div class="px-5 py-4 border-t border-white/10 text-[11px] text-slate-500 flex-shrink-0"><div class="flex items-center gap-2" id="sidebarStatus"><span class="w-2 h-2 rounded-full bg-amber-400 pulse-dot"></span> Connecting...</div></div>
     </aside>
@@ -188,13 +189,14 @@
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="docTerritory" list="territoryList" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"><datalist id="territoryList"></datalist></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Amount *</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="docAmount" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none"></div></div>
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1">MPO (Search)</label>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">MPO (Search & Transfer)</label>
                             <div class="doctor-search-wrapper relative" id="mpoSearchWrapper">
                                 <input type="text" id="docAssignedMpoSearch" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none pr-9" placeholder="Search MPO name..." autocomplete="off">
                                 <input type="hidden" id="docAssignedMpo" value="">
                                 <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
                                 <div id="mpoSearchDropdown" class="doctor-search-dropdown hidden"></div>
                             </div>
+                            <p class="text-[10px] text-slate-400 mt-1">MPO পরিবর্তন করলে ডাক্তার ট্রান্সফার হিসেবে গণ্য হবে। আগের মাসের রিপোর্ট আগের MPO এর অধীনেই দেখাবে।</p>
                         </div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Active</label><div class="flex items-center gap-3 mt-1"><div id="docActiveToggle" class="toggle-track on" onclick="toggleDocActive()"><div class="toggle-thumb"></div></div><span id="docActiveLabel" class="text-sm font-semibold text-emerald-600">Active</span></div></div>
                     </div>
@@ -230,7 +232,7 @@
                             <a href="#" onclick="showPage('add-mpo');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i> Add</a>
                         </div>
                     </div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-5 py-3">#</th><th class="text-left px-5 py-3">Name</th><th class="text-left px-5 py-3">EMP Code</th><th class="text-left px-5 py-3">Area</th><th class="text-left px-5 py-3">Territory</th><th class="text-left px-5 py-3">Mobile</th><th class="text-center px-5 py-3">Actions</th></tr></thead><tbody id="mpoListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="mpoEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No MPOs</div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-5 py-3">#</th><th class="text-left px-5 py-3">Name</th><th class="text-left px-5 py-3">EMP Code</th><th class="text-left px-5 py-3">Area</th><th class="text-left px-5 py-3">Territory</th><th class="text-left px-5 py-3">Mobile</th><th class="text-center px-5 py-3">Active</th><th class="text-center px-5 py-3">Actions</th></tr></thead><tbody id="mpoListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="mpoEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No MPOs</div>
                 </div>
             </div>
 
@@ -298,7 +300,8 @@
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden mt-6">
                     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
                         <h3 class="font-bold text-slate-700">Pay Order Entries</h3>
-                        <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <input type="text" id="poListSearch" oninput="loadPOEntriesList()" placeholder="Search Doctor/ID/PO No..." class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-52">
                             <label class="text-xs text-slate-500 font-semibold">Filter by Month:</label>
                             <select id="poListMonth" onchange="loadPOEntriesList()" class="input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none bg-white"></select>
                         </div>
@@ -388,6 +391,47 @@
     <!-- SIGNATURE SETTINGS MODAL (Firebase Auto Save Enabled) -->
     <div id="modalSignatureSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSignatureSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-file-signature text-blue-600 mr-2"></i>Signature Settings</h3><button onclick="closeModal('modalSignatureSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><p class="text-xs text-slate-500 mb-4">Upload transparent PNG signatures for the best print result. (Max 100KB). Signatures are saved directly to the cloud.</p><div class="grid grid-cols-2 gap-4" id="sigUploadContainer"></div><div class="flex gap-3 mt-6"><button onclick="closeModal('modalSignatureSettings')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Close</button></div></div></div>
 
+    <!-- QUALIFIED SALES SETTINGS MODAL -->
+    <div id="modalQualifiedSalesSettings" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/50" onclick="closeModal('modalQualifiedSalesSettings')"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-lg font-bold"><i class="fas fa-bullseye text-blue-600 mr-2"></i>Qualified Sales Settings</h3>
+                <button onclick="closeModal('modalQualifiedSalesSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button>
+            </div>
+            <p class="text-xs text-slate-500 mb-4">MPO এর TP2 Sales এই amount বা তার বেশি হলে Qualified ধরা হবে। Pay Order Entry এবং Print Sheet-এ শুধু Qualified MPO-দের Doctor দেখানো হবে।</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Current Month Qualified Amount (৳)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span>
+                        <input type="number" id="qualCurrentMonth" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none" placeholder="70000">
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">বর্তমান মাসের জন্য qualifying threshold</p>
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Next Month & Onwards Qualified Amount (৳)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span>
+                        <input type="number" id="qualNextMonth" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none" placeholder="80000">
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">আগামী মাস থেকে qualifying threshold (যেমন: 80000)</p>
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mt-4">
+                <p class="text-xs text-blue-700"><i class="fas fa-info-circle mr-1"></i> <strong>Rule:</strong> আগামী মাস বা তার পরের মাস সিলেক্ট করলে Next Month Amount কাজে লাগবে। বর্তমান বা আগের মাসের জন্য Current Month Amount কাজে লাগবে।</p>
+            </div>
+            
+            <div class="flex gap-3 mt-6">
+                <button onclick="saveQualifiedSalesSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Settings</button>
+                <button onclick="closeModal('modalQualifiedSalesSettings')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="modalConfirmDelete" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalConfirmDelete')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center"><div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><i class="fas fa-trash-alt text-red-500 text-xl"></i></div><h3 class="text-lg font-bold mb-2">Delete?</h3><p class="text-sm text-slate-500 mb-6" id="deleteConfirmText"></p><input type="hidden" id="deleteTargetId"><input type="hidden" id="deleteTargetType"><div class="flex gap-3 justify-center"><button onclick="confirmDelete()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-trash mr-1"></i> Delete</button><button onclick="closeModal('modalConfirmDelete')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
     <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 no-print"></div>
 
@@ -414,6 +458,7 @@
         let signaturesCache = {}; // Holds signatures fetched from Firebase
 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
+        let qualifiedSalesCache = { currentMonth: 70000, nextMonth: 80000 };
         let settingsCache = { commissionSlabs: [
             { type: 'IBBL', amount: 1000, commission: 58, vat: 8.7 },
             { type: 'IBBL', amount: 2000, commission: 58, vat: 8.7 },
@@ -423,10 +468,10 @@
         let docActiveTemp = true;
 
         function getQualifiedSalesAmount(appMonth) {
-            if (!appMonth) return 70000;
+            if (!appMonth) return qualifiedSalesCache.currentMonth || 70000;
             const ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const parts = appMonth.split('-');
-            if (parts.length < 2) return 70000;
+            if (parts.length < 2) return qualifiedSalesCache.currentMonth || 70000;
             const monthIdx = ms.indexOf(parts[0]);
             const year = parseInt('20' + parts[1]);
             
@@ -442,9 +487,9 @@
             const nextDate = new Date(nextYear, nextMonthIdx, 1);
 
             if (targetDate >= nextDate) {
-                return 80000;
+                return qualifiedSalesCache.nextMonth || 80000;
             }
-            return 70000;
+            return qualifiedSalesCache.currentMonth || 70000;
         }
 
         function printAs(orientation) {
@@ -514,6 +559,31 @@
         function getMPOArea(mpoId){return mposCache[mpoId]?mposCache[mpoId].area:'';}
         function flashField(id){const el=document.getElementById(id);if(el){el.classList.add('auto-fill-flash');setTimeout(()=>el.classList.remove('auto-fill-flash'),600);}}
         
+        // Get Historical MPO for a Doctor in a specific month
+        function getDoctorMPOForMonth(docId, monthStr) {
+            const doc = doctorsCache[docId];
+            if (!doc) return null;
+            let currentMpo = doc.assignedMpoId;
+            if (!doc.mpoHistory || doc.mpoHistory.length === 0) return currentMpo;
+            
+            const targetDate = getMonthEndDate(monthStr);
+            // Sort history descending by date to process from latest to oldest
+            const sortedHistory = [...doc.mpoHistory].sort((a, b) => b.date - a.date);
+            
+            for (let record of sortedHistory) {
+                if (record.date > targetDate) {
+                    // This transfer happened AFTER the target month
+                    // So during the target month, the doctor was with prevMpoId
+                    currentMpo = record.prevMpoId;
+                } else {
+                    // This transfer happened BEFORE or DURING the target month
+                    // So the newMpoId is valid for this month
+                    break; 
+                }
+            }
+            return currentMpo;
+        }
+
         function populateAreaDropdowns(){
             const sortedAreas = [...areasCache].sort((a,b) => a.localeCompare(b));
             const areaOpts = sortedAreas.map(a=>`<option value="${a}">${a}</option>`).join('');
@@ -577,8 +647,12 @@
             return tp2 >= getQualifiedSalesAmount(month);
         }
 
-        function getDoctorsForMPO(mpoId){
-            return Object.entries(doctorsCache).filter(([id,d])=>d.assignedMpoId===mpoId&&d.active!==false);
+        function getDoctorsForMPO(mpoId, month){
+            return Object.entries(doctorsCache).filter(([id,d]) => {
+                if (d.active === false) return false;
+                if (!month) return d.assignedMpoId === mpoId;
+                return getDoctorMPOForMonth(id, month) === mpoId;
+            });
         }
 
         onValue(ref(db,'.info/connected'),(snap)=>{const ok=snap.val()===true,b=document.getElementById('connBanner'),s=document.getElementById('sidebarStatus');if(ok){b.className='conn-ok text-white text-center py-2 px-4 text-sm font-medium no-print';b.innerHTML='<i class="fas fa-check-circle mr-1"></i> Firebase Connected';setTimeout(()=>{b.style.display='none';},3000);s.innerHTML='<span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span> Connected';}else{b.className='conn-err text-white text-center py-2 px-4 text-sm font-medium no-print';b.innerHTML='<i class="fas fa-exclamation-triangle mr-1"></i> Disconnected';b.style.display='';s.innerHTML='<span class="w-2 h-2 rounded-full bg-red-400 pulse-dot"></span> Disconnected';}});
@@ -604,6 +678,19 @@
                 settingsCache.commissionSlabs = val && val.commissionSlabs ? Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0})) : settingsCache.commissionSlabs;
             }
             populatePOTypeDropdown();
+            refreshCurrentPage();
+        });
+        
+        // Qualified Sales Settings Listener
+        onValue(ref(db,'settings/qualifiedSales'),snap=>{
+            const val = snap.val();
+            if(val) {
+                qualifiedSalesCache.currentMonth = val.currentMonth !== undefined ? val.currentMonth : 70000;
+                qualifiedSalesCache.nextMonth = val.nextMonth !== undefined ? val.nextMonth : 80000;
+            } else {
+                qualifiedSalesCache.currentMonth = 70000;
+                qualifiedSalesCache.nextMonth = 80000;
+            }
             refreshCurrentPage();
         });
 
@@ -715,8 +802,21 @@
             amount=parseFloat(document.getElementById('docAmount').value)||0,
             assignedMpoId=document.getElementById('docAssignedMpo').value;
             if(!name||!degree||!specialty||!chamber||!mobile||!territory){showToast('সব ফিল্ড পূরণ করুন','error');return;}
+            
             const data={doctorId,name,degree,specialty,chamber,mobile,territory,amount,assignedMpoId,active:docActiveTemp};
+            
             if(editId){
+                const oldDoc = doctorsCache[editId] || {};
+                const oldMpoId = oldDoc.assignedMpoId || '';
+                
+                // Check if MPO is changed (Transfer)
+                if (assignedMpoId !== oldMpoId) {
+                    const history = oldDoc.mpoHistory ? [...oldDoc.mpoHistory] : [];
+                    history.push({ date: Date.now(), prevMpoId: oldMpoId, newMpoId: assignedMpoId });
+                    data.mpoHistory = history;
+                    showToast('Doctor MPO Transferred successfully!', 'info');
+                }
+                
                 update(ref(db,'doctors/'+editId),data).then(()=>{
                     showToast('আপডেট হয়েছে');exitEditMode();resetDoctorForm();showPage('doctor-list');
                 }).catch(err=>showToast('সমস্যা: '+err.message,'error'));
@@ -837,10 +937,36 @@
         }
         window.printDoctorList = printDoctorList;
         
-        function saveMPO(){const n=document.getElementById('mpoName').value.trim(),e=document.getElementById('mpoEmpId').value.trim(),a=document.getElementById('mpoArea').value,t=document.getElementById('mpoTerritory').value.trim(),m=document.getElementById('mpoMobile').value.trim(),j=document.getElementById('mpoJoinDate').value;if(!n||!e||!t||!m||!j){showToast('সব ফিল্ড পূরণ করুন','error');return;}if(!a){showToast('Area সিলেক্ট করুন','error');return;}push(ref(db,'mpos'),{name:n,employeeId:e,area:a,territory:t,mobile:m,joiningDate:j,createdAt:Date.now()}).then(()=>{showToast('MPO সেভ হয়েছে');resetMPOForm();}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
+        function saveMPO(){const n=document.getElementById('mpoName').value.trim(),e=document.getElementById('mpoEmpId').value.trim(),a=document.getElementById('mpoArea').value,t=document.getElementById('mpoTerritory').value.trim(),m=document.getElementById('mpoMobile').value.trim(),j=document.getElementById('mpoJoinDate').value;if(!n||!e||!t||!m||!j){showToast('সব ফিল্ড পূরণ করুন','error');return;}if(!a){showToast('Area সিলেক্ট করুন','error');return;}push(ref(db,'mpos'),{name:n,employeeId:e,area:a,territory:t,mobile:m,joiningDate:j,createdAt:Date.now(),active:true}).then(()=>{showToast('MPO সেভ হয়েছে');resetMPOForm();}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
         window.saveMPO=saveMPO;
         function resetMPOForm(){['mpoName','mpoEmpId','mpoTerritory','mpoMobile','mpoJoinDate'].forEach(id=>document.getElementById(id).value='');document.getElementById('mpoArea').value='';}
         window.resetMPOForm=resetMPOForm;
+        
+        function toggleMPOActive(id) {
+            const m = mposCache[id];
+            if(!m) return;
+            const newActive = m.active === false ? true : false;
+            
+            // Update MPO
+            update(ref(db, 'mpos/'+id), {active: newActive}).then(() => {
+                showToast(newActive ? 'MPO Activated' : 'MPO Deactivated & Doctors Cascaded', newActive ? 'success' : 'info');
+                
+                // If deactivating, cascade to doctors
+                if (!newActive) {
+                    const updates = {};
+                    Object.entries(doctorsCache).forEach(([docId, d]) => {
+                        if (d.assignedMpoId === id) {
+                            updates['doctors/'+docId+'/active'] = false;
+                        }
+                    });
+                    if(Object.keys(updates).length > 0) {
+                        update(ref(db), updates).catch(err => showToast('Doctor cascade failed: ' + err.message, 'error'));
+                    }
+                }
+            }).catch(err => showToast('Error: ' + err.message, 'error'));
+        }
+        window.toggleMPOActive = toggleMPOActive;
+        
         function loadMPOs(){
             const b=document.getElementById('mpoListBody'),e=document.getElementById('mpoEmpty'),en=Object.entries(mposCache);
             if(!en.length){b.innerHTML='';e.classList.remove('hidden');return;}
@@ -860,8 +986,21 @@
             e.textContent='No MPOs';
             
             filtered.sort((a,b)=>{const areaA=a[1].area||'',areaB=b[1].area||'';if(areaA!==areaB)return areaA.localeCompare(areaB);return a[1].name.localeCompare(b[1].name);});
-            b.innerHTML=filtered.map(([id,m],i)=>`<tr class="table-row"><td class="px-5 py-3 text-slate-400 text-xs">${i+1}</td><td class="px-5 py-3 font-semibold">${m.name}</td><td class="px-5 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td><td class="px-5 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full">${m.area}</span>`:'<span class="mpo-badge-none">None</span>'}</td><td class="px-5 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2.5 py-1 rounded-full">${m.territory}</span></td><td class="px-5 py-3">${m.mobile}</td><td class="px-5 py-3 text-center"><button onclick="openEditMPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="requestDelete('${id}','mpo')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+            b.innerHTML=filtered.map(([id,m],i)=>{
+                const isActive = m.active !== false;
+                return `<tr class="table-row ${isActive?'':'doc-inactive'}">
+                    <td class="px-5 py-3 text-slate-400 text-xs">${i+1}</td>
+                    <td class="px-5 py-3 font-semibold">${m.name}</td>
+                    <td class="px-5 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td>
+                    <td class="px-5 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2.5 py-1 rounded-full">${m.area}</span>`:'<span class="mpo-badge-none">None</span>'}</td>
+                    <td class="px-5 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2.5 py-1 rounded-full">${m.territory}</span></td>
+                    <td class="px-5 py-3">${m.mobile}</td>
+                    <td class="px-5 py-3 text-center"><div class="toggle-track ${isActive?'on':''}" onclick="toggleMPOActive('${id}')" style="margin:0 auto"><div class="toggle-thumb"></div></div></td>
+                    <td class="px-5 py-3 text-center"><button onclick="openEditMPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="requestDelete('${id}','mpo')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button></td>
+                </tr>`;
+            }).join('');
         }
+        
         function openEditMPO(id){const m=mposCache[id];if(!m)return;document.getElementById('editMpoId').value=id;document.getElementById('editMpoName').value=m.name||'';document.getElementById('editMpoEmpId').value=m.employeeId||'';document.getElementById('editMpoArea').value=m.area||'';document.getElementById('editMpoTerritory').value=m.territory||'';document.getElementById('editMpoMobile').value=m.mobile||'';document.getElementById('editMpoJoinDate').value=m.joiningDate||'';openModal('modalEditMPO');}
         window.openEditMPO=openEditMPO;
         function updateMPO(){const id=document.getElementById('editMpoId').value,d={name:document.getElementById('editMpoName').value.trim(),employeeId:document.getElementById('editMpoEmpId').value.trim(),area:document.getElementById('editMpoArea').value,territory:document.getElementById('editMpoTerritory').value.trim(),mobile:document.getElementById('editMpoMobile').value.trim(),joiningDate:document.getElementById('editMpoJoinDate').value};if(!d.name||!d.employeeId){showToast('ফিল্ড পূরণ করুন','error');return;}if(!d.area){showToast('Area সিলেক্ট করুন','error');return;}update(ref(db,'mpos/'+id),d).then(()=>{showToast('আপডেট হয়েছে');closeModal('modalEditMPO');}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
@@ -1069,13 +1208,48 @@
         }
         window.saveSlabSettings = saveSlabSettings;
 
+        // =====================================================================
+        // QUALIFIED SALES SETTINGS
+        // =====================================================================
+        function openQualifiedSalesSettings() {
+            document.getElementById('qualCurrentMonth').value = qualifiedSalesCache.currentMonth || 70000;
+            document.getElementById('qualNextMonth').value = qualifiedSalesCache.nextMonth || 80000;
+            openModal('modalQualifiedSalesSettings');
+        }
+        window.openQualifiedSalesSettings = openQualifiedSalesSettings;
+
+        function saveQualifiedSalesSettings() {
+            const currentMonth = parseFloat(document.getElementById('qualCurrentMonth').value) || 0;
+            const nextMonth = parseFloat(document.getElementById('qualNextMonth').value) || 0;
+            
+            if (currentMonth < 0 || nextMonth < 0) {
+                showToast('Amount 0 বা তার বেশি হতে হবে', 'error');
+                return;
+            }
+            
+            if (nextMonth < currentMonth) {
+                showToast('Next Month Amount সাধারণত Current Month এর চেয়ে বেশি হয়। তবে সেভ করা হলো।', 'info');
+            }
+            
+            update(ref(db, 'settings/qualifiedSales'), {
+                currentMonth: currentMonth,
+                nextMonth: nextMonth
+            }).then(() => {
+                showToast('Qualified Sales Settings সেভ হয়েছে');
+                closeModal('modalQualifiedSalesSettings');
+            }).catch(err => showToast('Error: ' + err.message, 'error'));
+        }
+        window.saveQualifiedSalesSettings = saveQualifiedSalesSettings;
+        // =====================================================================
+
         function loadMPOSalesTable(){
             const month=document.getElementById('salesMonth').value;
             const filterArea=document.getElementById('salesArea').value;
             const prevMonth = getPrevMonthStr(month);
             const tpP=getTPPeriods(month);
+            const qualAmount = getQualifiedSalesAmount(month);
             document.getElementById('salesTP1Header').textContent=tpP.tp1Full + ' (Auto)';
-            document.getElementById('salesTP2Header').textContent=tpP.tp2Full + ' (New Entry)';
+            document.getElementById('salesTP2Header').textContent=tpP.tp2Full + ' (Target: ' + qualAmount.toLocaleString() + ')';
             const b=document.getElementById('mpoSalesBody');
             const e=document.getElementById('mpoSalesEmpty');
             let mpoEntries=Object.entries(mposCache);
@@ -1097,8 +1271,8 @@
                 if (!tp1Val && prevMonthSales[id] && prevMonthSales[id].tp2) {
                     tp1Val = prevMonthSales[id].tp2;
                 }
-                const docCount=getDoctorsForMPO(id).length;
-                const isQualified = parseAmount(tp2Val) >= getQualifiedSalesAmount(month);
+                const docCount=getDoctorsForMPO(id, month).length;
+                const isQualified = parseAmount(tp2Val) >= qualAmount;
                 return`<tr class="table-row"><td class="px-4 py-3 text-slate-400 text-xs">${i+1}</td><td class="px-4 py-3 font-semibold">${m.name}</td><td class="px-4 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td><td class="px-4 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.area}</span>`:'-'}</td><td class="px-4 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.territory}</span></td><td class="px-4 py-3"><input type="text" class="sales-tp1 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 bg-slate-50" value="${tp1Val}" data-mpoid="${id}" title="Auto carried from last month"></td><td class="px-4 py-3"><input type="text" class="sales-tp2 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 ${isQualified?'bg-emerald-50 font-bold text-emerald-700':''}" value="${tp2Val}" data-mpoid="${id}" placeholder="0"></td><td class="px-4 py-3 text-center"><span class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">${docCount} Doctors</span></td></tr>`;
             }).join('');
         }
@@ -1124,7 +1298,8 @@
             if(docId&&doctorsCache[docId]){
                 const doc=doctorsCache[docId];
                 const month=document.getElementById('poEntryMonth').value;
-                if(doc.active===false||!doc.assignedMpoId||!isMPOQualified(month,doc.assignedMpoId)){
+                const historicalMpoId = getDoctorMPOForMonth(docId, month);
+                if(doc.active===false||!historicalMpoId||!isMPOQualified(month,historicalMpoId)){
                     document.getElementById('poDoctor').value='';
                     document.getElementById('poDoctorSearch').value='';
                 }
@@ -1183,8 +1358,9 @@
             
             const activeDocs = Object.entries(doctorsCache).filter(([id, d]) => {
                 if (d.active === false) return false;
-                if (!d.assignedMpoId) return false;
-                if (!isMPOQualified(month, d.assignedMpoId)) return false;
+                const historicalMpoId = getDoctorMPOForMonth(id, month);
+                if (!historicalMpoId) return false;
+                if (!isMPOQualified(month, historicalMpoId)) return false;
                 
                 // Duplicate Check: Has entry for this month?
                 const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month);
@@ -1314,11 +1490,14 @@
             if(!docId||!doctorsCache[docId])return;
             const doc=doctorsCache[docId];
             let filled=0;
-            if(doc.assignedMpoId&&mposCache[doc.assignedMpoId]){
-                document.getElementById('poEntryMPO').value=doc.assignedMpoId;
+            
+            const month=document.getElementById('poEntryMonth').value;
+            const historicalMpoId = getDoctorMPOForMonth(docId, month);
+            
+            if(historicalMpoId && mposCache[historicalMpoId]){
+                document.getElementById('poEntryMPO').value=historicalMpoId;
                 flashField('poEntryMPO');filled++;
-                const month=document.getElementById('poEntryMonth').value;
-                const sales=getMPOSalesForMonth(month,doc.assignedMpoId);
+                const sales=getMPOSalesForMonth(month,historicalMpoId);
                 if(sales.tp1){document.getElementById('poEntryTp1').value=sales.tp1;flashField('poEntryTp1');filled++;}
                 if(sales.tp2){document.getElementById('poEntryTp2').value=sales.tp2;flashField('poEntryTp2');filled++;}
             }
@@ -1367,8 +1546,9 @@
             const docId=document.getElementById('poDoctor').value;
             if(docId&&doctorsCache[docId]){
                 const doc=doctorsCache[docId];
-                if(doc.assignedMpoId&&isMPOQualified(this.value,doc.assignedMpoId)){
-                    const sales=getMPOSalesForMonth(this.value,doc.assignedMpoId);
+                const historicalMpoId = getDoctorMPOForMonth(docId, this.value);
+                if(historicalMpoId && isMPOQualified(this.value,historicalMpoId)){
+                    const sales=getMPOSalesForMonth(this.value,historicalMpoId);
                     document.getElementById('poEntryTp1').value=sales.tp1||'';
                     document.getElementById('poEntryTp2').value=sales.tp2||'';
                 } else {
@@ -1475,7 +1655,18 @@
         
         function loadPOEntriesList(){
             const month=document.getElementById('poListMonth').value;
+            const term = (document.getElementById('poListSearch')?.value || '').toLowerCase();
             let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month);
+            
+            if(term) {
+                entries = entries.filter(([id, h]) => {
+                    const doc = doctorsCache[h.doctorId] || {};
+                    return (doc.name && doc.name.toLowerCase().includes(term)) || 
+                           (doc.doctorId && doc.doctorId.toLowerCase().includes(term)) ||
+                           (h.payOrderNo && h.payOrderNo.toLowerCase().includes(term));
+                });
+            }
+            
             entries.sort((a,b)=>(b[1].date||0)-(a[1].date||0));
             const b=document.getElementById('poEntryListBody'),e=document.getElementById('poEntryEmpty');
             if(!entries.length){b.innerHTML='';e.classList.remove('hidden');return;}
@@ -1605,7 +1796,9 @@
             if(filterArea) qualifiedMpoIds = qualifiedMpoIds.filter(id => mposCache[id].area === filterArea);
             
             let allDocs=Object.entries(doctorsCache).filter(([id,d]) => {
-                if(!d.assignedMpoId || !qualifiedMpoIds.includes(d.assignedMpoId)) return false;
+                if(d.active === false && !showAll) return false;
+                const historicalMpoId = getDoctorMPOForMonth(id, month);
+                if(!historicalMpoId || !qualifiedMpoIds.includes(historicalMpoId)) return false;
                 if(d.createdAt && d.createdAt > monthEndDate) return false;
                 return true;
             });
@@ -1615,7 +1808,7 @@
             let flatRows=[];const mpoGroups={};
             
             allDocs.forEach(([docId,doc])=>{
-                const mpoId=doc.assignedMpoId||'_none';
+                const mpoId = getDoctorMPOForMonth(docId, month) || '_none';
                 if(!mpoGroups[mpoId])mpoGroups[mpoId]={mpo:mposCache[mpoId]||{name:'No MPO',employeeId:'-',territory:doc.territory,area:'-'},doctors:[]};
                 const entry=monthEntries.find(([,h])=>h.doctorId===docId);
                 if(entry||showAll){mpoGroups[mpoId].doctors.push({docId,doc,entry:entry?entry[1]:null});}
@@ -1735,7 +1928,9 @@
             if(filterArea) qualifiedMpoIds = qualifiedMpoIds.filter(id => mposCache[id].area === filterArea);
             
             let allDocs = Object.entries(doctorsCache).filter(([id,d]) => {
-                if(!d.assignedMpoId || !qualifiedMpoIds.includes(d.assignedMpoId)) return false;
+                if(d.active === false) return false;
+                const historicalMpoId = getDoctorMPOForMonth(id, month);
+                if(!historicalMpoId || !qualifiedMpoIds.includes(historicalMpoId)) return false;
                 if(d.createdAt && d.createdAt > monthEndDate) return false;
                 return true;
             });
@@ -1748,7 +1943,7 @@
             
             const mpoGroups = {};
             allDocs.forEach(([docId, doc]) => {
-                const mpoId = doc.assignedMpoId || '_none';
+                const mpoId = getDoctorMPOForMonth(docId, month) || '_none';
                 if(!mpoGroups[mpoId]) mpoGroups[mpoId] = {mpo: mposCache[mpoId]||{name:'No MPO',employeeId:'-',territory:doc.territory,area:'-'}, doctors:[]};
                 const entry = monthEntries.find(([,h])=>h.doctorId===docId);
                 if(entry || showAll) mpoGroups[mpoId].doctors.push({docId, doc, entry: entry?entry[1]:null});
