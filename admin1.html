@@ -1262,7 +1262,14 @@ function clearIOUForm(){document.getElementById('iou_date').value='';document.ge
 function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cache");return;}editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;document.getElementById('iou_date').value=iou.date||'';document.getElementById('iou_da_name').value=iou.daId||'';document.getElementById('iou_territory').value=iou.territory||'';document.getElementById('iou_mpo').value=iou.mpo||'';document.getElementById('iou_summary').value=iou.summary||'';document.getElementById('iou_sales').value=iou.sales||0;document.getElementById('iou_return').value=iou.returnVal||0;document.getElementById('iou_sold').value=iou.soldVal||0;document.getElementById('iou_qty').value=iou.qty||0;document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;document.getElementById('iou_taka').value=iou.taka||0;document.getElementById('iou_percent').value=iou.percent||'0';document.getElementById('iou_type').value=iou.type||'Delivery';document.getElementById('iou_save_btn').innerText="Update";document.getElementById('iou_cancel_btn').classList.remove('hidden');var iouEntryTabEl=document.getElementById('iou-entry-tab');if(iouEntryTabEl){var tab=new bootstrap.Tab(iouEntryTabEl);tab.show();}window.scrollTo({top:0,behavior:'smooth'});}
 function deleteIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found");return;}if(!confirm("Delete?"))return;database.ref('IOU_List/'+iou._year+'/'+iou._month+'/'+sanitizeKey(iou._daName)+'/'+id).remove().then(function(){if(editingIouId===id)clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function cancelIOUEdit(){clearIOUForm();}
-function resetIOUFilter(){document.getElementById('filter_iou_month').value='';document.getElementById('iou_filter_start').value='';document.getElementById('iou_filter_end').value='';document.getElementById('filter_iou_da').value='';setGlobalMonth('');}
+
+// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
+function resetIOUFilter(){
+    document.getElementById('iou_filter_start').value='';
+    document.getElementById('iou_filter_end').value='';
+    document.getElementById('filter_iou_da').value='';
+    loadAdminIOU();
+}
 
 function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
 
@@ -1379,9 +1386,16 @@ function deleteBill(billId,year,month,daName){
 }
 function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
 
-// ========== BILL HISTORY ==========
-function resetHistoryFilter(){document.getElementById('filter_history_da').value='';setGlobalMonth(getCurrentMonth());loadBills();}
-function resetApprovedFilter(){document.getElementById('filter_approved_da').value='';setGlobalMonth(getCurrentMonth());loadBills();}
+// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
+function resetHistoryFilter(){
+    document.getElementById('filter_history_da').value='';
+    loadBills();
+}
+// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
+function resetApprovedFilter(){
+    document.getElementById('filter_approved_da').value='';
+    loadBills();
+}
 
 function resolveDAFilterName(selectId){
     var val=document.getElementById(selectId).value;
@@ -1743,7 +1757,7 @@ function loadTopSheetHistory(){
                 tr.innerHTML = '<td class="text-center">'+ (index+1) + '</td>' +
                               '<td><span class="badge bg-primary text-white">' + escHtml(r.reportId) + '</span></td>' +
                               '<td>' + escHtml(r.monthLabel || r.month) + '</td>' +
-                              '<td class="text-end fw-bold">' + (r.grandTotal || 0).toFixed(2)+'</td>' +
+                              '<td class="text-end fw-bold">' + (r.grandTotal || 0).toFixed(2) + '</td>' +
                               '<td class="text-end text-muted" style="font-size:11px">' + dateStr + '</td>' +
                               '<td class="text-center">' +
                                 '<button class="btn btn-sm btn-info text-white" onclick="viewGeneratedTopSheet(\''+escHtml(r.reportId)+'\',\''+escHtml(r.month)+'\')"><i class="bi bi-eye"></i></button> ' +
