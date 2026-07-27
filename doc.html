@@ -71,10 +71,11 @@
         .po-print-table td{border:1px solid #999;padding:5px 6px;white-space:normal;word-break:break-word;}
         .po-print-table tfoot td{border:1px solid #333}
         
+        /* Print Sheet Table - Row height 40px, Black Border, No Extra Header Space */
         .ps-print-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'Inter',sans-serif;table-layout:auto;}
-        .ps-print-table th{background:#d1fae5;border:1px solid #333;padding:5px 4px;text-align:left;font-weight:700;font-size:11px;white-space:normal;word-break:break-word;}
-        .ps-print-table td{border:1px solid #999;padding:3px 4px;font-size:11px;white-space:normal;word-break:break-word;}
-        .ps-print-table tfoot td{border:1px solid #333}
+        .ps-print-table th{background:#d1fae5;border:1px solid #000;height:40px;padding:0 4px;text-align:left;font-weight:700;font-size:11px;white-space:normal;word-break:break-word;}
+        .ps-print-table td{border:1px solid #000;height:40px;padding:0 4px;font-size:11px;white-space:normal;word-break:break-word;}
+        .ps-print-table tfoot td{border:1px solid #000}
         
         .doc-row-inactive td { color: #999 !important; text-decoration: line-through; background:#f8fafc; }
         
@@ -101,12 +102,17 @@
             .po-print-table td,.po-print-table th,.ps-print-table td,.ps-print-table th{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important}
             .paid-bg td, .pending-bg td, .doc-row-inactive td {-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;color-adjust:exact!important;}
             .po-print-table{font-size:14px!important;line-height:36px!important}
-            .ps-print-table{font-size:10px!important;line-height:14px!important}
-            .ps-print-table td{padding:1px 3px!important}
-            .ps-print-table th{padding:2px 3px!important}
+            .po-print-table td{padding:5px 6px!important}
+            .po-print-table th{padding:7px 5px!important}
+            
+            /* Print Media Query specific for PS Table */
+            .ps-print-table{font-size:11px!important;line-height:20px!important}
+            .ps-print-table td{padding:0 4px!important; height:20px!important;}
+            .ps-print-table th{padding:0 4px!important; height:20px!important;}
+            
             .po-print-table tr, .ps-print-table tr { page-break-inside: avoid; }
             .doc-row-inactive { display: none !important; }
-            .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; }
+            .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; height: 100% !important; line-height: 20px !important;}
             body.force-print .main-content > .top-bar,
             body.force-print .main-content > .print-area { display: none !important; }
             body.force-print #hiddenPrintArea { display: block !important; padding: 20px; }
@@ -475,9 +481,11 @@
             const monthIdx = ms.indexOf(parts[0]);
             const year = parseInt('20' + parts[1]);
             
-            const now = new Date();
-            const currentMonthIdx = now.getMonth();
-            const currentYear = now.getFullYear();
+            // Use system current month instead of real world current month
+            const currentSystemMonthStr = getCurrentMonth();
+            const currentParts = currentSystemMonthStr.split('-');
+            const currentMonthIdx = ms.indexOf(currentParts[0]);
+            const currentYear = parseInt('20' + currentParts[1]);
             
             let nextMonthIdx = (currentMonthIdx + 1) % 12;
             let nextYear = currentYear;
@@ -510,12 +518,19 @@
 
         function formatBDT(n){return'\u09F3 '+Number(n||0).toLocaleString('en-BD');}
         function parseAmount(val) { if (!val) return 0; return parseFloat(String(val).replace(/,/g, '')) || 0; }
+        
+        // Force month options to start from 2026
         function getMonthOptions(){
-            const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],o=[],n=new Date();
-            for(let y=n.getFullYear()-2;y<=n.getFullYear()+3;y++)ms.forEach(m=>o.push(m+'-'+String(y).slice(-2)));
+            const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],o=[];
+            for(let y=2026;y<=2031;y++)ms.forEach(m=>o.push(m+'-'+String(y).slice(-2)));
             return o;
         }
-        function getCurrentMonth(){const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],n=new Date();return ms[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);}
+        // Force default current month to Jan-26 if real year is < 2026
+        function getCurrentMonth(){
+            const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],n=new Date();
+            if (n.getFullYear() < 2026) return 'Jan-26';
+            return ms[n.getMonth()]+'-'+String(n.getFullYear()).slice(-2);
+        }
         
         function getMonthEndDate(monthStr) {
             const ms = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -602,8 +617,23 @@
             });
         }
         
-        function populateMPODropdowns(){const opts=Object.entries(mposCache).sort((a,b)=>{const areaA=a[1].area||'',areaB=b[1].area||'';if(areaA!==areaB)return areaA.localeCompare(areaB);return a[1].name.localeCompare(b[1].name);}).map(([id,m])=>`<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');['poEntryMPO'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">-- Optional --</option>'+opts;sel.value=v;});}
-        function updateTerritoryDatalist(){const ts=new Set();Object.values(doctorsCache).forEach(d=>{if(d.territory)ts.add(d.territory);});Object.values(mposCache).forEach(m=>{if(m.territory)ts.add(m.territory);});const dl=document.getElementById('territoryList');if(dl)dl.innerHTML=[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">`).join('');['printTerritory','poRptTerritory'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const cv=sel.value;sel.innerHTML='<option value="">All</option>'+[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">${t}</option>`).join('');sel.value=cv;});}
+        function populateMPODropdowns(){const opts=Object.entries(mposCache).filter(([id,m]) => m.active !== false).sort((a,b)=>{const areaA=a[1].area||'',areaB=b[1].area||'';if(areaA!==areaB)return areaA.localeCompare(areaB);return a[1].name.localeCompare(b[1].name);}).map(([id,m])=>`<option value="${id}">${m.name} (${m.employeeId})</option>`).join('');['poEntryMPO'].forEach(sid=>{const sel=document.getElementById(sid);if(!sel)return;const v=sel.value;sel.innerHTML='<option value="">-- Optional --</option>'+opts;sel.value=v;});}
+        
+        function updateTerritoryDatalist(){
+            const ts=new Set();
+            Object.values(doctorsCache).forEach(d=>{if(d.territory)ts.add(d.territory);});
+            Object.values(mposCache).forEach(m=>{if(m.territory)ts.add(m.territory);});
+            const dl=document.getElementById('territoryList');
+            if(dl)dl.innerHTML=[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">`).join('');
+            ['printTerritory','poRptTerritory'].forEach(sid=>{
+                const sel=document.getElementById(sid);
+                if(!sel)return;
+                const cv=sel.value;
+                sel.innerHTML='<option value="">All</option>'+[...ts].sort((a,b)=>a.localeCompare(b)).map(t=>`<option value="${t}">${t}</option>`).join('');
+                sel.value=cv;
+            });
+        }
+        
         function formatDateDMY(d){if(!d)return'';const dt=new Date(d);return String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getMonth()+1).padStart(2,'0')+'/'+dt.getFullYear();}
         function getTodayISO(){return new Date().toISOString().split('T')[0];}
         
@@ -1252,7 +1282,8 @@
             document.getElementById('salesTP2Header').textContent=tpP.tp2Full + ' (Target: ' + qualAmount.toLocaleString() + ')';
             const b=document.getElementById('mpoSalesBody');
             const e=document.getElementById('mpoSalesEmpty');
-            let mpoEntries=Object.entries(mposCache);
+            // Filter out inactive MPOs
+            let mpoEntries=Object.entries(mposCache).filter(([id,m]) => m.active !== false);
             if(filterArea) mpoEntries = mpoEntries.filter(([id,m]) => m.area === filterArea);
             mpoEntries.sort((a,b) => {
                 const areaA = a[1].area || '', areaB = b[1].area || '';
@@ -1307,7 +1338,8 @@
             const ms=document.getElementById('poEntryMPO');
             const mv=ms.value;
             const month=document.getElementById('poEntryMonth').value;
-            const qualifiedMpos = Object.entries(mposCache).filter(([id,m]) => isMPOQualified(month, id));
+            // Only Active and Qualified MPOs
+            const qualifiedMpos = Object.entries(mposCache).filter(([id,m]) => m.active !== false && isMPOQualified(month, id));
             qualifiedMpos.sort((a,b) => {
                 const areaA = a[1].area || '', areaB = b[1].area || '';
                 if(areaA !== areaB) return areaA.localeCompare(areaB);
@@ -1362,8 +1394,8 @@
                 if (!historicalMpoId) return false;
                 if (!isMPOQualified(month, historicalMpoId)) return false;
                 
-                // Duplicate Check: Has entry for this month?
-                const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month);
+                // Duplicate Check: Has ACTIVE entry for this month?
+                const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month && !h.isCancelled);
                 
                 if (hasEntry) {
                     // Allow if we are editing the specific entry for this doctor
@@ -1443,7 +1475,8 @@
 
         function showMPOOptions(searchTerm) {
             const dropdown = document.getElementById('mpoSearchDropdown');
-            const mpoEntries = Object.entries(mposCache);
+            // Filter only Active MPOs for new assignment
+            const mpoEntries = Object.entries(mposCache).filter(([id,m]) => m.active !== false);
             mpoEntries.sort((a,b) => {
                 const areaA = a[1].area || '', areaB = b[1].area || '';
                 if(areaA !== areaB) return areaA.localeCompare(areaB);
@@ -1615,6 +1648,15 @@
         function deletePOEntry(id){remove(ref(db,'honorarium/'+id)).then(()=>showToast('ডিলিট হয়েছে')).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
         window.deletePOEntry=deletePOEntry;
         
+        function cancelPOEntry(id) {
+            if (confirm('Are you sure you want to cancel this Pay Order? It will be marked as cancelled and excluded from reports.')) {
+                update(ref(db, 'honorarium/' + id), { isCancelled: true })
+                    .then(() => showToast('Pay Order Cancelled', 'info'))
+                    .catch(err => showToast('Error: ' + err.message, 'error'));
+            }
+        }
+        window.cancelPOEntry = cancelPOEntry;
+        
         function savePayOrderEntry(){
             const editId=document.getElementById('editPOId').value,
             docId=document.getElementById('poDoctor').value,
@@ -1673,11 +1715,25 @@
             e.classList.add('hidden');
             b.innerHTML=entries.map(([id,h],i)=>{
                 const doc=doctorsCache[h.doctorId]||{},mpo=mposCache[h.mpoId]||{};
-                const hasPO = h.payOrderNo && h.payOrderNo.trim() !== '';
-                const actionsHtml = hasPO ? 
-                    `<span class="text-xs text-red-500 font-semibold">🔒 PO Issued</span>` : 
-                    `<button onclick="enterEditPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="deletePOEntry('${id}')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button>`;
-                return`<tr class="table-row">
+                const isCancelled = h.isCancelled === true;
+                const rowClass = isCancelled ? 'table-row doc-inactive' : 'table-row';
+                
+                let actionsHtml = '';
+                if (isCancelled) {
+                    actionsHtml = `
+                        <span class="text-xs text-red-600 font-bold bg-red-100 px-2 py-1 rounded mr-2">Cancelled</span>
+                        <button onclick="deletePOEntry('${id}')" class="text-slate-400 hover:text-slate-600 text-sm" title="Delete Permanently"><i class="fas fa-trash"></i></button>
+                    `;
+                } else {
+                    const hasPO = h.payOrderNo && h.payOrderNo.trim() !== '';
+                    actionsHtml = `
+                        ${hasPO ? `<span class="text-xs text-red-500 font-semibold mr-2">🔒 PO Issued</span>` : `<button onclick="enterEditPO('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button>`}
+                        <button onclick="cancelPOEntry('${id}')" class="text-red-500 hover:text-red-700 mr-2" title="Cancel Pay Order"><i class="fas fa-ban"></i></button>
+                        <button onclick="deletePOEntry('${id}')" class="text-slate-400 hover:text-slate-600 text-sm" title="Delete"><i class="fas fa-trash"></i></button>
+                    `;
+                }
+                
+                return`<tr class="${rowClass}">
                     <td class="px-4 py-3 text-xs">${i+1}</td>
                     <td class="px-4 py-3"><code class="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-0.5 rounded">${doc.doctorId||'-'}</code></td>
                     <td class="px-4 py-3 font-semibold">${doc.name||'-'}</td>
@@ -1689,7 +1745,7 @@
                     <td class="px-4 py-3 text-xs text-orange-700 font-semibold">${formatBDT(h.vat||0)}</td>
                     <td class="px-4 py-3 text-xs">${formatDateDMY(h.poDate)||'-'}</td>
                     <td class="px-4 py-3"><span class="bg-slate-100 text-xs font-semibold px-2 py-0.5 rounded-full">${h.month}</span></td>
-                    <td class="px-4 py-3 text-center">${actionsHtml}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap">${actionsHtml}</td>
                 </tr>`;
             }).join('');
         }
@@ -1700,7 +1756,7 @@
             filterDate=document.getElementById('poRptDate').value,
             territory=document.getElementById('poRptTerritory').value,
             filterArea=document.getElementById('poRptArea').value;
-            let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month);
+            let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             if(filterDate)entries=entries.filter(([,h])=>h.poDate===filterDate);
             if(territory)entries=entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
             if(filterArea)entries=entries.filter(([,h])=>getMPOArea(h.mpoId)===filterArea);
@@ -1755,7 +1811,7 @@
         
         function loadMonthlyReport(){
             const m=document.getElementById('rptMonthlyMonth').value,filterArea=document.getElementById('rptMonthlyArea').value;
-            let e=Object.entries(honorariumCache).filter(([,h])=>h.month===m);
+            let e=Object.entries(honorariumCache).filter(([,h])=>h.month===m && !h.isCancelled);
             if(filterArea)e=e.filter(([,h])=>getMPOArea(h.mpoId)===filterArea);
             e.sort((a,b)=>{
                 const areaA = getMPOArea(a[1].mpoId) || '';
@@ -1804,7 +1860,7 @@
             });
             if(territory) allDocs = allDocs.filter(([id,d]) => d.territory===territory);
 
-            const monthEntries=Object.entries(honorariumCache).filter(([,h])=>h.month===month);
+            const monthEntries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             let flatRows=[];const mpoGroups={};
             
             allDocs.forEach(([docId,doc])=>{
@@ -1891,15 +1947,15 @@
                     
                     html+=`</tbody><tfoot>`;
                     if(pages.length>1&&!isLastPage){
-                        html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #333;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #333;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     if(isLastPage){
                         if(pages.length>1){
                             const previousPagesTotal=pages.slice(0,pageIndex).reduce((s,pg)=>s+pg.filter(r=>r.active).reduce((ss,r)=>ss+r.amount,0),0);
-                            html+=`<tr style="background:#eff6ff;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
-                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #999;">Previous Pages Total</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #999;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #999;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#eff6ff;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                         }
-                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #333;">Grand Total (${totalActiveItems} Active Doctor)</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #333;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #333;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">Grand Total (${totalActiveItems} Active Doctor)</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     html+=`</tfoot></table>`;
                     if(isLastPage){
@@ -1936,7 +1992,7 @@
             });
             if(territory) allDocs = allDocs.filter(([id,d]) => d.territory===territory);
 
-            const monthEntries = Object.entries(honorariumCache).filter(([,h])=>h.month===month);
+            const monthEntries = Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             const remarkInputs = document.querySelectorAll('.ps-remark-input');
             const remarksMap = {};
             remarkInputs.forEach(inp => { remarksMap[inp.dataset.docid] = inp.value.trim(); });
@@ -2041,7 +2097,7 @@
                 const amount = parseFloat(inp.dataset.amount) || 0;
                 const remarks = inp.value.trim();
 
-                const existingEntry = Object.entries(honorariumCache).find(([id, h]) => h.doctorId === docId && h.month === month);
+                const existingEntry = Object.entries(honorariumCache).find(([id, h]) => h.doctorId === docId && h.month === month && !h.isCancelled);
 
                 if (existingEntry) {
                     if (existingEntry[1].remarks !== remarks) {
@@ -2079,7 +2135,23 @@
         }
         window.savePrintSheetRemarks = savePrintSheetRemarks;
 
-        function loadDashboard(){const activeDocs=Object.values(doctorsCache).filter(d=>d.active!==false);const dc=activeDocs.length,mc=Object.keys(mposCache).length,he=Object.values(honorariumCache),ta=he.reduce((s,h)=>s+(h.amount||0),0),cm=getCurrentMonth(),ma=he.filter(h=>h.month===cm).reduce((s,h)=>s+(h.amount||0),0);document.getElementById('statDoctors').textContent=dc;document.getElementById('statMPOs').textContent=mc;document.getElementById('statTotal').textContent=formatBDT(ta);document.getElementById('statMonth').textContent=formatBDT(ma);document.getElementById('statMonthLabel').textContent=cm;const recent=[...he].sort((a,b)=>(b.date||b.createdAt||0)-(a.date||a.createdAt||0)).slice(0,5),rb=document.getElementById('recentEntriesBody'),re=document.getElementById('recentEmpty');if(!recent.length){rb.innerHTML='';re.classList.remove('hidden');}else{re.classList.add('hidden');rb.innerHTML=recent.map(h=>`<tr class="table-row"><td class="px-5 py-3 font-semibold">${getDoctorName(h.doctorId)}</td><td class="px-5 py-3">${getMPOName(h.mpoId)}</td><td class="px-5 py-3 font-semibold text-brand-700">${formatBDT(h.amount)}</td><td class="px-5 py-3"><span class="bg-slate-100 text-xs font-semibold px-2.5 py-1 rounded-full">${h.month}</span></td></tr>`).join('');}}
+        function loadDashboard(){
+            const activeDocs=Object.values(doctorsCache).filter(d=>d.active!==false);
+            const dc=activeDocs.length,mc=Object.keys(mposCache).filter(id => mposCache[id].active !== false).length;
+            const he=Object.values(honorariumCache).filter(h => !h.isCancelled);
+            const ta=he.reduce((s,h)=>s+(h.amount||0),0),
+            cm=getCurrentMonth(),
+            ma=he.filter(h=>h.month===cm).reduce((s,h)=>s+(h.amount||0),0);
+            document.getElementById('statDoctors').textContent=dc;
+            document.getElementById('statMPOs').textContent=mc;
+            document.getElementById('statTotal').textContent=formatBDT(ta);
+            document.getElementById('statMonth').textContent=formatBDT(ma);
+            document.getElementById('statMonthLabel').textContent=cm;
+            const recent=[...he].sort((a,b)=>(b.date||b.createdAt||0)-(a.date||a.createdAt||0)).slice(0,5),
+            rb=document.getElementById('recentEntriesBody'),
+            re=document.getElementById('recentEmpty');
+            if(!recent.length){rb.innerHTML='';re.classList.remove('hidden');}else{re.classList.add('hidden');rb.innerHTML=recent.map(h=>`<tr class="table-row"><td class="px-5 py-3 font-semibold">${getDoctorName(h.doctorId)}</td><td class="px-5 py-3">${getMPOName(h.mpoId)}</td><td class="px-5 py-3 font-semibold text-brand-700">${formatBDT(h.amount)}</td><td class="px-5 py-3"><span class="bg-slate-100 text-xs font-semibold px-2.5 py-1 rounded-full">${h.month}</span></td></tr>`).join('');}
+        }
 
         function updateClock(){const n=new Date();document.getElementById('currentDateTime').textContent=n.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+' '+n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}
         setInterval(updateClock,1000);updateClock();
