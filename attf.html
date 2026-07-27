@@ -244,6 +244,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 <div class="flex items-center gap-3"><i class="fa-solid fa-clipboard-check" style="color:var(--accent);font-size:20px"></i><span class="logo-text">Attendance System</span></div>
 <div class="flex items-center gap-4">
   <span id="userDisplayInfo" style="font-size:13px;color:var(--text2)"></span>
+  <img id="userProfileImg" src="" alt="Profile" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid var(--border);display:none">
   <button class="btn btn-sm btn-secondary" onclick="showUserProfileModal()" title="Profile Settings"><i class="fa-solid fa-user-gear"></i></button>
   <button class="btn btn-sm btn-secondary" onclick="handleLogout()"><i class="fa-solid fa-sign-out"></i> Logout</button>
 </div>
@@ -483,6 +484,14 @@ async function handleLogin(){
     currentUser=foundUser;
     await loadConfig();await loadHolidays();await loadSignatures();
     document.getElementById('userDisplayInfo').textContent=foundUser.id+' | '+(foundUser.designation||'');
+    
+    // Top Right Profile Image Show
+    var userImgEl=document.getElementById('userProfileImg');
+    if(userImgEl){
+      if(foundUser.profileImage){userImgEl.src=foundUser.profileImage;userImgEl.style.display='block';}
+      else{userImgEl.style.display='none';}
+    }
+    
     switchView('userView');
     
     if(currentUser.forcePasswordChange === true) {
@@ -530,6 +539,11 @@ async function uploadProfileImage() {
     await db.ref('users/'+currentUser.id+'/profileImage').set(imgData);
     currentUser.profileImage = imgData;
     allUsers[currentUser.id].profileImage = imgData;
+    
+    // Update Top Right Image Instantly
+    var userImgEl=document.getElementById('userProfileImg');
+    if(userImgEl){userImgEl.src=imgData;userImgEl.style.display='block';}
+    
     showToast('Profile image updated','success');
     closeModal();
     renderUserDashboard();
@@ -546,7 +560,13 @@ async function changeUserPassword() {
     closeModal();
 }
 
-function handleLogout(){currentUser=null;allUsers={};allHolidays={};allSignatures={};tourImageData=null;imgCache={};stopCheckoutTimer();document.getElementById('loginId').value='';document.getElementById('loginPass').value='';switchView('loginView');showToast('Logged out','info')}
+function handleLogout(){
+  currentUser=null;allUsers={};allHolidays={};allSignatures={};tourImageData=null;imgCache={};stopCheckoutTimer();
+  document.getElementById('loginId').value='';document.getElementById('loginPass').value='';
+  var userImgEl=document.getElementById('userProfileImg');
+  if(userImgEl){userImgEl.style.display='none';userImgEl.src='';}
+  switchView('loginView');showToast('Logged out','info');
+}
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.getElementById('loginView').classList.contains('active'))handleLogin()});
 document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.login-input').forEach(function(el){el.addEventListener('focus',function(){this.classList.remove('input-error')})})});
 
