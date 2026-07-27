@@ -168,8 +168,8 @@
                 <!-- Category Switcher / Tabs for Grid Menus -->
                 <div class="flex space-x-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl text-xs font-bold">
                     <button onclick="switchMenuTab('grid1')" id="tabBtnGrid1" class="flex-1 py-2 rounded-xl bg-white dark:bg-slate-700 text-primary shadow-xs transition">Daily Work</button>
-                    <button onclick="switchMenuTab('grid2')" id="tabBtnGrid2" class="flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition">Company Info</button>
-                    <button onclick="switchMenuTab('grid3')" id="tabBtnGrid3" class="flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition">Head Office</button>
+                    <button onclick="switchMenuTab('grid2')" id="tabBtnGrid2" class="flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition">Flat Bonus</button>
+                    <button onclick="switchMenuTab('grid3')" id="tabBtnGrid3" class="flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition">Circular</button>
                 </div>
 
                 <!-- Month & Date Filter Bar (Only for Grid 2 & Grid 3) -->
@@ -294,8 +294,8 @@
                     
                     <select id="menuGroupInput" onchange="onAdminGroupChange(this.value)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none">
                         <option value="grid1">GRID MENU-1 (Daily Work)</option>
-                        <option value="grid2">GRID MENU-2 (Company Info)</option>
-                        <option value="grid3">GRID MENU-3 (Head Office)</option>
+                        <option value="grid2">GRID MENU-2 (Flat Bonus)</option>
+                        <option value="grid3">GRID MENU-3 (Circular)</option>
                     </select>
                     
                     <input type="text" id="menuTitleInput" placeholder="ফাইলের নাম (যেমন: Order Entry বা Report)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
@@ -457,22 +457,49 @@
         let sliderTimer = null;
         let currentSlideIndex = 0;
         let activeTab = 'grid1';
-        let currentPopupTimestamp = 0; // Used to track real-time notifications
+
+        const monthFullMap = {"January":0, "February":1, "March":2, "April":3, "May":4, "June":5, "July":6, "August":7, "September":8, "October":9, "November":10, "December":11};
+        const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
         function getCurrentMonthName() {
-            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            return months[new Date().getMonth()];
+            return Object.keys(monthFullMap)[new Date().getMonth()];
         }
 
-        // Format Date from "2026-12-26" to "Dec-26"
-        function formatCustomDate(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-'); // YYYY-MM-DD
-            if (parts.length < 2) return dateStr;
-            const year = parts[0].substring(2);
-            const monthIndex = parseInt(parts[1], 10) - 1;
-            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            return `${monthNames[monthIndex]}-${year}`;
+        // Robust date parser for string formats like "YYYY-MM-DD" or "DD-MM-YY"
+        function parseDateSafe(dateStr) {
+            if (!dateStr) return new Date(0);
+            let d = new Date(dateStr);
+            if (!isNaN(d.getTime())) return d;
+            
+            const parts = dateStr.split(/[-/]/);
+            if (parts.length === 3) {
+                let year, month, day;
+                if (parts[0].length === 4) {
+                    year = parseInt(parts[0]); month = parseInt(parts[1])-1; day = parseInt(parts[2]);
+                } else {
+                    day = parseInt(parts[0]); month = parseInt(parts[1])-1; year = parseInt(parts[2]);
+                    if (year < 100) year += 2000;
+                }
+                d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) return d;
+            }
+            return new Date(0);
+        }
+
+        // Format Date to "Mon-YY" strictly based on the Month Dropdown selection
+        function formatCustomDate(monthStr, dateStr) {
+            let year = '26';
+            if (dateStr) {
+                const parts = dateStr.split(/[-/]/);
+                if (parts.length === 3) {
+                    let y = parts[0].length === 4 ? parts[0] : parts[2]; 
+                    year = y.length === 4 ? y.substring(2) : y;
+                }
+            }
+            if (monthStr && monthFullMap[monthStr] !== undefined) {
+                return `${monthShort[monthFullMap[monthStr]]}-${year}`;
+            }
+            return dateStr || '';
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -484,10 +511,7 @@
             if (dateInput) dateInput.value = todayStr;
 
             const filterMonthSelect = document.getElementById('filterMonthSelect');
-            if (filterMonthSelect) {
-                // Set to 'ALL' by default to show all months
-                filterMonthSelect.value = 'ALL'; 
-            }
+            if (filterMonthSelect) filterMonthSelect.value = 'ALL'; 
 
             const savedUser = localStorage.getItem('fieldpro_current_user');
             if (savedUser) {
@@ -524,8 +548,7 @@
                     db.ref('popupNotice').set({
                         title: "বিশেষ নির্দেশনা",
                         body: "FieldPro অ্যাপে সফলভাবে লগইন সম্পন্ন হয়েছে। নির্ধারিত রোল অনুযায়ী আপনার মেনু শো করছে।",
-                        status: "active",
-                        timestamp: Date.now() // Initial timestamp
+                        status: "active"
                     });
                 }
             });
@@ -575,16 +598,13 @@
             const userRole = (user.role || '').trim().toUpperCase();
             const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN';
             const adminBtn = document.getElementById('adminPanelBtn');
-            if (isSuperAdmin) {
-                adminBtn.classList.remove('hidden');
-            } else {
-                adminBtn.classList.add('hidden');
-            }
+            if (isSuperAdmin) adminBtn.classList.remove('hidden');
+            else adminBtn.classList.add('hidden');
 
             loadSliders();
             loadNotices();
             loadMenus();
-            checkPopupNotice();
+            checkPopupNotice(); // Called on login, will show if active
         }
 
         // Real-time Popup Notification Listener
@@ -592,27 +612,19 @@
             db.ref('popupNotice').on('value', (snapshot) => {
                 const popup = snapshot.val();
                 if (popup && popup.status === 'active') {
-                    const popupTs = popup.timestamp || 0;
-                    const lastSeenTs = parseInt(localStorage.getItem('fieldpro_last_popup_ts') || '0', 10);
-                    
-                    // Show only if it's a new notification (timestamp is greater than the last seen one)
-                    if (popupTs > lastSeenTs) {
-                        document.getElementById('popupTitleText').innerText = popup.title || "জরুরি নোটিশ";
-                        document.getElementById('popupBodyText').innerText = popup.body || "";
-                        document.getElementById('userPopupModal').classList.remove('hidden');
-                        currentPopupTimestamp = popupTs; // Store to save when user clicks OK
-                    }
+                    // Show popup immediately if status is active
+                    document.getElementById('popupTitleText').innerText = popup.title || "জরুরি নোটিশ";
+                    document.getElementById('popupBodyText').innerText = popup.body || "";
+                    document.getElementById('userPopupModal').classList.remove('hidden');
                 } else {
+                    // Hide popup if admin sets status to hidden
                     document.getElementById('userPopupModal').classList.add('hidden');
                 }
             });
         }
 
         window.closeUserPopupModal = function() {
-            // Save the timestamp to localStorage so it doesn't show again for this user
-            if (currentPopupTimestamp > 0) {
-                localStorage.setItem('fieldpro_last_popup_ts', currentPopupTimestamp);
-            }
+            // Just hide the modal visually. It will show again on next login if still active.
             document.getElementById('userPopupModal').classList.add('hidden');
         }
 
@@ -626,12 +638,7 @@
                 dots.innerHTML = '';
 
                 if (sliders.length === 0) {
-                    wrapper.innerHTML = `
-                        <div class="min-w-full h-full flex flex-col items-center justify-center p-4 text-center text-slate-400 bg-slate-100 dark:bg-slate-800">
-                            <i class="fa-regular fa-images text-2xl mb-1"></i>
-                            <p class="text-[11px]">কোনো স্লাইডার নেই।</p>
-                        </div>
-                    `;
+                    wrapper.innerHTML = `<div class="min-w-full h-full flex flex-col items-center justify-center p-4 text-center text-slate-400 bg-slate-100 dark:bg-slate-800"><i class="fa-regular fa-images text-2xl mb-1"></i><p class="text-[11px]">কোনো স্লাইডার নেই।</p></div>`;
                     return;
                 }
 
@@ -674,18 +681,11 @@
             activeTab = tab;
             ['grid1', 'grid2', 'grid3'].forEach(t => {
                 const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
-                if (t === tab) {
-                    btn.className = "flex-1 py-2 rounded-xl bg-white dark:bg-slate-700 text-primary shadow-xs transition";
-                } else {
-                    btn.className = "flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition";
-                }
+                if (t === tab) btn.className = "flex-1 py-2 rounded-xl bg-white dark:bg-slate-700 text-primary shadow-xs transition";
+                else btn.className = "flex-1 py-2 rounded-xl text-slate-600 dark:text-slate-400 transition";
             });
 
-            const titleMap = {
-                'grid1': 'Primary Menus (Daily Work)',
-                'grid2': 'Company Information',
-                'grid3': 'Head Office Circular'
-            };
+            const titleMap = { 'grid1': 'Primary Menus (Daily Work)', 'grid2': 'Flat Bonus', 'grid3': 'Circular' };
             document.getElementById('categoryTitle').innerText = titleMap[tab];
 
             const dateFilterContainer = document.getElementById('dateFilterContainer');
@@ -723,24 +723,23 @@
 
                     const allowed = m.allowedRole ? m.allowedRole.trim().toUpperCase() : 'ALL';
                     let matchRole = false;
-                    
-                    if (allowed === 'ALL') {
-                        matchRole = true;
-                    } else if (isSuperAdmin) {
-                        matchRole = true;
-                    } else if (allowed === userRole) {
-                        matchRole = true;
-                    }
+                    if (allowed === 'ALL') matchRole = true;
+                    else if (isSuperAdmin) matchRole = true;
+                    else if (allowed === userRole) matchRole = true;
 
                     return matchGroup && matchSearch && matchMonth && matchRole;
                 });
 
-                // Strict Sorting Descending by Date String (YYYY-MM-DD format allows string comparison)
+                // Advanced Sorting: Primary by Month Dropdown, Secondary by Date
                 if (activeTab === 'grid2' || activeTab === 'grid3') {
                     filtered.sort((a, b) => {
-                        const dateA = a.date || '0000-00-00';
-                        const dateB = b.date || '0000-00-00';
-                        return dateB.localeCompare(dateA); // Descending (Newest first)
+                        const monthA = a.month ? (monthFullMap[a.month] !== undefined ? monthFullMap[a.month] : -1) : -1;
+                        const monthB = b.month ? (monthFullMap[b.month] !== undefined ? monthFullMap[b.month] : -1) : -1;
+                        
+                        if (monthB !== monthA) {
+                            return monthB - monthA; // Descending by Month
+                        }
+                        return parseDateSafe(b.date) - parseDateSafe(a.date); // Descending by Date
                     });
                 }
 
@@ -771,8 +770,8 @@
                 `handleMenuClick('${m.url || 'go:HOME'}', '${m.title}')`;
 
             let dateBadge = '';
-            if ((m.group === 'grid2' || m.group === 'grid3') && m.date) {
-                dateBadge = `<span class="text-[9px] text-slate-400 block -mt-0.5">${formatCustomDate(m.date)}</span>`;
+            if (m.group === 'grid2' || m.group === 'grid3') {
+                dateBadge = `<span class="text-[9px] text-slate-400 block -mt-0.5">${formatCustomDate(m.month, m.date)}</span>`;
             }
 
             return `
@@ -801,7 +800,6 @@
             document.getElementById('imageViewModal').classList.add('hidden');
         }
 
-        // Native handler for AppCreator24 redirect links
         window.handleMenuClick = function(url, menuName) {
             if (url.startsWith('go:')) {
                 const pageName = url.substring(3);
@@ -935,7 +933,6 @@
         window.onAdminGroupChange = function(group) {
             const grid1Fields = document.getElementById('grid1SpecificFields');
             const grid23Fields = document.getElementById('grid23SpecificFields');
-
             if (group === 'grid1') {
                 grid1Fields.classList.remove('hidden');
                 grid23Fields.classList.add('hidden');
@@ -979,7 +976,6 @@
             if (group === 'grid1') {
                 const icon = document.getElementById('menuIconInput').value.trim() || 'fa-folder';
                 const url = document.getElementById('menuUrlInput').value.trim() || 'go:HOME';
-
                 const menuData = { group, title, icon, url, allowedRole, month: '', date: '', color: "from-blue-600 to-indigo-700" };
                 saveMenuToFirebase(editKey, menuData);
             } else {
@@ -989,16 +985,7 @@
 
                 const proceedGrid23Save = (imgUrl) => {
                     const finalUrl = imgUrl || 'https://i.postimg.cc/CL7V53XM/BONGOBD.png';
-                    const menuData = { 
-                        group, 
-                        title, 
-                        icon: finalUrl, 
-                        url: finalUrl, 
-                        allowedRole, 
-                        month, 
-                        date, 
-                        color: "from-emerald-500 to-teal-600" 
-                    };
+                    const menuData = { group, title, icon: finalUrl, url: finalUrl, allowedRole, month, date, color: "from-emerald-500 to-teal-600" };
                     saveMenuToFirebase(editKey, menuData);
                 };
 
@@ -1173,9 +1160,10 @@
             const body = document.getElementById('popupBodyInput').value.trim();
             const status = document.getElementById('popupStatusSelect').value;
 
-            // Include a new timestamp so the notification is pushed to all users in real-time
-            db.ref('popupNotice').set({ title, body, status, timestamp: Date.now() }).then(() => {
-                showToast('পপআপ নোটিশ সম্প্রচারিত হয়েছে! সকল ইউজার দেখতে পাবে।');
+            // Saves the data. If status is active, it will trigger the listener and show on all active user screens immediately.
+            // It will also show on every fresh login until the admin sets status to 'hidden'.
+            db.ref('popupNotice').set({ title, body, status }).then(() => {
+                showToast('পপআপ নোটিশ আপডেট হয়েছে! স্ট্যাটাস অনুযায়ী ইউজার দেখতে পাবে।');
             });
         }
 
@@ -1207,17 +1195,11 @@
             const password = document.getElementById('userPassInput').value.trim();
             const role = document.getElementById('userRoleInput').value;
 
-            if (!empId || !fullName || !password) {
-                showToast('সকল ফিল্ড পূরণ করুন');
-                return;
-            }
+            if (!empId || !fullName || !password) { showToast('সকল ফিল্ড পূরণ করুন'); return; }
 
             const userData = { employeeId: empId, fullName, password, role, status: "active" };
-
             db.ref('users/' + empId).set(userData).then(() => {
-                if (editKey && editKey !== empId) {
-                    db.ref('users/' + editKey).remove();
-                }
+                if (editKey && editKey !== empId) db.ref('users/' + editKey).remove();
                 resetUserForm();
                 renderAdminUsers();
                 showToast('ইউজার সফলভাবে সংরক্ষিত হয়েছে!');
@@ -1231,11 +1213,7 @@
                     document.getElementById('editUserKey').value = key;
                     const empInput = document.getElementById('userEmpIdInput');
                     empInput.value = u.employeeId || '';
-                    if (key === 'KS') {
-                        empInput.disabled = true;
-                    } else {
-                        empInput.disabled = false;
-                    }
+                    empInput.disabled = (key === 'KS');
                     document.getElementById('userFullNameInput').value = u.fullName || '';
                     document.getElementById('userPassInput').value = u.password || '';
                     document.getElementById('userRoleInput').value = u.role || 'MPO';
@@ -1286,12 +1264,7 @@
         // ==================== 2-FINGER PINCH ZOOM LOGIC ====================
         function setupPinchZoom() {
             const img = document.getElementById('zoomableImage');
-            let startX = 0, startY = 0;
-            let currentX = 0, currentY = 0;
-            let scale = 1;
-            let initialDistance = 0;
-            let initialScale = 1;
-            let isDragging = false;
+            let startX = 0, startY = 0, currentX = 0, currentY = 0, scale = 1, initialDistance = 0, initialScale = 1, isDragging = false;
 
             img.addEventListener('touchstart', (e) => {
                 if (e.touches.length === 2) {
@@ -1299,13 +1272,11 @@
                     initialDistance = getDistance(e.touches[0], e.touches[1]);
                     initialScale = scale;
                     isDragging = false;
-                } else if (e.touches.length === 1) {
-                    if (scale > 1) {
-                        e.preventDefault();
-                        startX = e.touches[0].clientX - currentX;
-                        startY = e.touches[0].clientY - currentY;
-                        isDragging = true;
-                    }
+                } else if (e.touches.length === 1 && scale > 1) {
+                    e.preventDefault();
+                    startX = e.touches[0].clientX - currentX;
+                    startY = e.touches[0].clientY - currentY;
+                    isDragging = true;
                 }
             }, { passive: false });
 
@@ -1327,16 +1298,10 @@
             }, { passive: false });
 
             img.addEventListener('touchend', (e) => {
-                if (e.touches.length < 2) {
-                    initialDistance = 0;
-                }
+                if (e.touches.length < 2) initialDistance = 0;
                 if (e.touches.length === 0) {
                     isDragging = false;
-                    if (scale <= 1) {
-                        currentX = 0;
-                        currentY = 0;
-                        applyTransform();
-                    }
+                    if (scale <= 1) { currentX = 0; currentY = 0; applyTransform(); }
                 }
             });
 
