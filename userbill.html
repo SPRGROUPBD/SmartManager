@@ -107,6 +107,33 @@
         .animate-in-d4{animation-delay:.2s}
         .animate-in-d5{animation-delay:.25s}
         .animate-in-d6{animation-delay:.3s}
+        
+        /* Bill History Table Fix */
+        #billTab .table { font-size: 13px; margin-bottom: 0; }
+        #billTab .table th, #billTab .table td {
+            white-space: normal;
+            word-break: break-word;
+            vertical-align: middle;
+            padding: 8px 10px;
+        }
+        #billTab .table th { white-space: nowrap; }
+        #billTab .table td:nth-child(6) { white-space: nowrap; } /* Action buttons stay in one line */
+
+        /* ====== FIX: Bill Entry Expense Table Inputs ====== */
+        #expense_table_body input, #expense_table_body select {
+            width: 100%;
+            min-width: 100px;
+            font-size: 13px;
+        }
+        #expense_table_body .exp-from, #expense_table_body .exp-to {
+            min-width: 120px;
+        }
+        #expense_table_body .exp-mode {
+            min-width: 145px; /* To fit 'Daily Allowance' properly */
+        }
+        #expense_table_body .exp-date {
+            min-width: 150px;
+        }
     </style>
 </head>
 <body>
@@ -171,7 +198,7 @@
 
     <ul class="nav nav-tabs no-print" id="myTab" role="tablist">
         <li class="nav-item"><button class="nav-link active" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashTab" type="button">Dashboard</button></li>
-        <li class="nav-item"><button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill Entry</button></li>
+        <li class="nav-item"><button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill entry</button></li>
         <li class="nav-item"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#billTab" type="button">History</button></li>
     </ul>
 
@@ -295,7 +322,19 @@
 
         <!-- BILL HISTORY TAB -->
         <div class="tab-pane fade" id="billTab" role="tabpanel">
-            <div class="card dash-card no-print"><div class="card-body p-1"><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead id="bill_table_head" class="table-dark"></thead><tbody id="bill_table_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody><tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+            <div class="card dash-card no-print">
+                <div class="card-body p-2">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead id="bill_table_head" class="table-dark"></thead>
+                            <tbody id="bill_table_body">
+                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                            <tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -504,7 +543,10 @@ function triggerAutoSave(){if(editingBillId)return;clearTimeout(autoSaveTimeout)
 function saveLocalDraft(){var d={depDate:document.getElementById('form_dep_date').value,retDate:document.getElementById('form_ret_date').value,submitDate:document.getElementById('form_submit_date').value,route:document.getElementById('form_route').value,mpo:document.getElementById('form_mpo').value,summary:document.getElementById('form_summary').value,invoiceVal:document.getElementById('form_invoice_val').value,returnVal:document.getElementById('form_return_val').value,invoiceQty:document.getElementById('form_invoice_qty').value,bundleQty:document.getElementById('form_bundle_qty').value,iouId:currentIouId,iouAmount:document.getElementById('form_iou_amount').value,remarks:document.getElementById('form_remarks').value,expenses:[]};document.querySelectorAll('#expense_table_body tr').forEach(function(r){d.expenses.push({date:r.querySelector('.exp-date').value,from:r.querySelector('.exp-from').value,to:r.querySelector('.exp-to').value,mode:r.querySelector('.exp-mode').value,amount:r.querySelector('.exp-amount').value,da:r.querySelector('.exp-da').value});});localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(d));}
 function loadLocalDraft(){var sd=localStorage.getItem(AUTO_SAVE_KEY);if(!sd)return;try{var d=JSON.parse(sd);document.getElementById('form_dep_date').value=d.depDate||'';document.getElementById('form_ret_date').value=d.retDate||'';document.getElementById('form_submit_date').value=d.submitDate||'';document.getElementById('form_route').value=d.route||'';document.getElementById('form_mpo').value=d.mpo||'';document.getElementById('form_summary').value=d.summary||'';document.getElementById('form_invoice_val').value=d.invoiceVal||'';document.getElementById('form_return_val').value=d.returnVal||0;document.getElementById('form_invoice_qty').value=d.invoiceQty||'';document.getElementById('form_bundle_qty').value=d.bundleQty||'';document.getElementById('form_iou_amount').value=d.iouAmount||0;document.getElementById('form_remarks').value=d.remarks||'';currentIouId=d.iouId||null;calculateSoldValue();var tb=document.getElementById('expense_table_body');tb.innerHTML='';if(d.expenses&&d.expenses.length>0){d.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}calculateGrandTotal();document.getElementById('auto_save_status').innerText="Draft Restored";document.getElementById('auto_save_status').className='text-success align-self-center me-auto';}catch(e){console.error(e);}}
 function clearLocalDraft(){localStorage.removeItem(AUTO_SAVE_KEY);document.getElementById('auto_save_status').innerText='';document.getElementById('auto_save_status').className='text-muted align-self-center me-auto';}
-function addExpenseRowWithData(exp){var tb=document.getElementById('expense_table_body'),row=tb.insertRow();var modeOpts=['Rickshaw','Auto','Bus','CNG','Van','Motorcycle','Tempo','Pickup','Daily Allowance','Labour Bill'];var mHtml=modeOpts.map(function(m){return'<option '+(exp.mode===m?'selected':'')+'>'+m+'</option>';}).join('');row.innerHTML='<td><input type="date" class="form-control form-control-sm exp-date" value="'+escHtml(exp.date)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-from" value="'+escHtml(exp.from)+'" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-to" value="'+escHtml(exp.to)+'" oninput="triggerAutoSave()"></td><td><select class="form-select form-select-sm exp-mode" onchange="toggleRowInputs(this);triggerAutoSave()">'+mHtml+'</select></td><td><input type="number" class="form-control form-control-sm exp-amount" value="'+(exp.amount||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="number" class="form-control form-control-sm exp-da" value="'+(exp.da||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control form-control-sm exp-total" value="'+((parseFloat(exp.amount)||0)+(parseFloat(exp.da)||0))+'" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';toggleRowInputs(row.querySelector('.exp-mode'));}
+
+/* ====== FIX: Removed '-sm' classes so inputs are standard size and fully readable ====== */
+function addExpenseRowWithData(exp){var tb=document.getElementById('expense_table_body'),row=tb.insertRow();var modeOpts=['Rickshaw','Auto','Bus','CNG','Van','Motorcycle','Tempo','Pickup','Daily Allowance','Labour Bill'];var mHtml=modeOpts.map(function(m){return'<option '+(exp.mode===m?'selected':'')+'>'+m+'</option>';}).join('');row.innerHTML='<td><input type="date" class="form-control exp-date" value="'+escHtml(exp.date)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control exp-from" value="'+escHtml(exp.from)+'" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control exp-to" value="'+escHtml(exp.to)+'" oninput="triggerAutoSave()"></td><td><select class="form-select exp-mode" onchange="toggleRowInputs(this);triggerAutoSave()">'+mHtml+'</select></td><td><input type="number" class="form-control exp-amount" value="'+(exp.amount||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="number" class="form-control exp-da" value="'+(exp.da||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control exp-total" value="'+((parseFloat(exp.amount)||0)+(parseFloat(exp.da)||0))+'" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';toggleRowInputs(row.querySelector('.exp-mode'));}
+
 function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;currentIouId=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_iou_amount').value=0;document.getElementById('form_remarks').value='';var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';calculateSoldValue();clearLocalDraft();if(currentUser&&currentUser.role==='user'){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;}}
 
 // ========== LOGOUT ==========
