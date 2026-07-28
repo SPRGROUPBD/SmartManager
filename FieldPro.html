@@ -131,8 +131,10 @@
                     <button onclick="toggleDarkMode()" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="ডার্ক মোড">
                         <i class="fa-solid fa-moon text-sm"></i>
                     </button>
-                    <button onclick="confirmLogout()" class="p-2 text-danger rounded-full hover:bg-danger/10 transition" title="লগআউট">
-                        <i class="fa-solid fa-arrow-right-from-bracket text-sm"></i>
+                    
+                    <!-- Profile Image Button (Replaces Logout) -->
+                    <button onclick="openProfileMenu()" class="w-9 h-9 rounded-full overflow-hidden border-2 border-primary hover:border-secondary transition shadow-xs ml-1" title="প্রোফাইল">
+                        <img id="headerProfilePic" src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785157656" class="w-full h-full object-cover" alt="Profile">
                     </button>
                 </div>
             </header>
@@ -228,7 +230,7 @@
         </div>
     </div>
 
-    <!-- ==================== IMAGE ZOOM VIEWER MODAL (2-FINGER PINCH & DRAG) ==================== -->
+    <!-- ==================== IMAGE ZOOM VIEWER MODAL ==================== -->
     <div id="imageViewModal" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex flex-col items-center justify-center p-2">
         <div class="absolute top-4 right-4 z-50 flex space-x-2">
             <button onclick="closeImageViewer()" class="w-10 h-10 rounded-full bg-slate-800/80 text-white flex items-center justify-center shadow-lg hover:bg-danger transition">
@@ -240,6 +242,97 @@
         </div>
         <div class="w-full h-full flex items-center justify-center overflow-hidden p-2">
             <img id="zoomableImage" src="" class="max-h-[85vh] max-w-full object-contain rounded-lg shadow-2xl touch-none select-none" alt="Auto Fit Document" draggable="false">
+        </div>
+    </div>
+
+    <!-- ==================== USER PROFILE MENU MODAL ==================== -->
+    <div id="profileMenuModal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-700 relative animate-in fade-in zoom-in duration-300">
+            <button onclick="closeProfileMenu()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            
+            <div class="flex flex-col items-center space-y-2 pb-3 border-b border-slate-100 dark:border-slate-700">
+                <img id="profileMenuPic" src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785157656" class="w-20 h-20 rounded-full object-cover border-2 border-primary shadow-md" alt="Profile">
+                <h3 id="profileMenuName" class="font-bold text-sm text-slate-900 dark:text-white">User Name</h3>
+                <span id="profileMenuRole" class="text-[10px] bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full uppercase">MPO</span>
+            </div>
+
+            <div class="space-y-2">
+                <button onclick="openEditProfileModal()" class="w-full py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-user-pen text-primary"></i>
+                    <span>প্রোফাইল এডিট করুন</span>
+                </button>
+                
+                <button onclick="openChangePassModal()" class="w-full py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl text-xs font-bold flex items-center justify-center space-x-2 hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                    <i class="fa-solid fa-key text-warning"></i>
+                    <span>পাসওয়ার্ড পরিবর্তন করুন</span>
+                </button>
+
+                <button onclick="confirmLogout()" class="w-full py-2.5 bg-danger/10 text-danger rounded-xl text-xs font-bold flex items-center justify-center space-x-2 hover:bg-danger/20 transition">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span>লগআউট করুন</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== EDIT PROFILE MODAL ==================== -->
+    <div id="editProfileModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-700 relative animate-in fade-in zoom-in duration-300">
+            <button onclick="closeEditProfileModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            
+            <div class="text-center">
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">প্রোফাইল এডিট করুন</h3>
+            </div>
+
+            <div class="flex flex-col items-center space-y-2">
+                <img id="editProfilePreview" src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785157656" class="w-24 h-24 rounded-full object-cover border-2 border-primary shadow-md" alt="Preview">
+                <label class="text-[10px] font-bold text-primary cursor-pointer hover:underline">
+                    <span>ছবি পরিবর্তন করুন</span>
+                    <input type="file" id="editProfilePicInput" accept="image/*" class="hidden" onchange="previewProfilePic(this)">
+                </label>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">পূর্ণ নাম</label>
+                <input type="text" id="editProfileNameInput" placeholder="আপনার নাম" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+            </div>
+
+            <button onclick="saveProfileChanges()" class="w-full py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-md shadow-primary/30 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-floppy-disk text-[10px]"></i>
+                <span>সেভ করুন</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== CHANGE PASSWORD MODAL ==================== -->
+    <div id="changePassModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-700 relative animate-in fade-in zoom-in duration-300">
+            <button onclick="closeChangePassModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+            
+            <div class="text-center">
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white">পাসওয়ার্ড পরিবর্তন করুন</h3>
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">বর্তমান পাসওয়ার্ড</label>
+                <input type="password" id="currentPassInput" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+            </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">নতুন পাসওয়ার্ড</label>
+                <input type="password" id="newPassInput" placeholder="••••••••" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+            </div>
+
+            <button onclick="saveNewPassword()" class="w-full py-2.5 bg-warning text-slate-950 font-bold rounded-xl text-xs shadow-md shadow-warning/30 flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-key text-[10px]"></i>
+                <span>পাসওয়ার্ড আপডেট করুন</span>
+            </button>
         </div>
     </div>
 
@@ -417,11 +510,20 @@
                 <div class="border-t border-slate-100 dark:border-slate-700 pt-2.5 space-y-2">
                     <h5 id="userFormTitle" class="text-[11px] font-bold text-success">নতুন ইউজার তৈরি করুন</h5>
                     <input type="hidden" id="editUserKey" value="">
+                    
+                    <!-- User Profile Image Upload -->
+                    <div class="flex flex-col items-center space-y-1 mb-2">
+                        <img id="userProfilePreview" src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785157656" class="w-16 h-16 rounded-full object-cover border-2 border-success shadow-xs" alt="Preview">
+                        <label class="text-[10px] font-bold text-success cursor-pointer hover:underline">
+                            <span>প্রোফাইল ছবি আপলোড করুন</span>
+                            <input type="file" id="userProfilePicInput" accept="image/*" class="hidden" onchange="previewUserPic(this)">
+                        </label>
+                    </div>
+
                     <input type="text" id="userEmpIdInput" autocomplete="off" oninput="this.value = this.value.toUpperCase()" placeholder="এমপ্লয়ি আইডি" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs uppercase outline-none">
                     <input type="text" id="userFullNameInput" placeholder="পূর্ণ নাম" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
                     <input type="password" id="userPassInput" placeholder="পাসওয়ার্ড" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
                     
-                    <!-- User Role Select -->
                     <select id="userRoleInput" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none">
                         <optgroup label="Combined Access">
                             <option value="PALL+SALL">PALL+SALL</option>
@@ -477,21 +579,18 @@
 
         firebase.initializeApp(firebaseConfig);
         
-        // All data will now be stored under the root node "FieldPro"
         const db = firebase.database().ref('FieldPro');
-        
-        // Changed: Default fallback logo is now the App's FieldPro Logo
         const APP_LOGO_URL = 'https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785157656';
 
         let currentUserData = null;
         let sliderTimer = null;
         let currentSlideIndex = 0;
         let activeTab = 'grid1';
+        let tempUserProfilePic = null; // For admin user creation
+        let tempMyProfilePic = null;   // For user editing own profile
 
         const monthFullMap = {"January":0, "February":1, "March":2, "April":3, "May":4, "June":5, "July":6, "August":7, "September":8, "October":9, "November":10, "December":11};
         const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-        // Define roles array for logic matching
         const primaryRolesList = ['MPO', 'AM', 'RSM', 'SUPER_ADMIN'];
         const specialRolesList = ['DIC', 'ADIC', 'DA', 'SUPER_ADMIN'];
 
@@ -499,7 +598,6 @@
             return Object.keys(monthFullMap)[new Date().getMonth()];
         }
 
-        // Robust date parser for string formats like "YYYY-MM-DD" or "DD-MM-YY"
         function parseDateSafe(dateStr) {
             if (!dateStr) return new Date(0);
             let d = new Date(dateStr);
@@ -520,7 +618,6 @@
             return new Date(0);
         }
 
-        // Format Date to "Mon-YY" strictly based on the Month Dropdown selection
         function formatCustomDate(monthStr, dateStr) {
             let year = '26';
             if (dateStr) {
@@ -589,7 +686,7 @@
             db.child('users/KS').once('value', (snapshot) => {
                 if (!snapshot.exists()) {
                     db.child('users/KS').set({
-                        employeeId: "KS", fullName: "KS Super Admin", password: "Monico@Ku007", role: "SUPER_ADMIN", status: "active"
+                        employeeId: "KS", fullName: "KS Super Admin", password: "Monico@Ku007", role: "SUPER_ADMIN", status: "active", profilePic: APP_LOGO_URL
                     });
                 }
             });
@@ -610,7 +707,7 @@
                 if ((empId === 'KS' && (pass === 'Monico@Ku007' || pass.toLowerCase() === 'monico@ku007')) || 
                     (user && (user.password === pass || user.password.toLowerCase() === pass.toLowerCase()))) {
                     
-                    const activeUser = user || { employeeId: empId, fullName: empId, role: "MPO", status: "active" };
+                    const activeUser = user || { employeeId: empId, fullName: empId, role: "MPO", status: "active", profilePic: APP_LOGO_URL };
                     currentUserData = activeUser;
                     localStorage.setItem('fieldpro_current_user', JSON.stringify(activeUser));
                     showToast('লগইন সফল হয়েছে!');
@@ -629,6 +726,9 @@
             document.getElementById('headerUserMeta').innerText = user.role;
             document.getElementById('activeRoleBadge').innerText = `Role: ${user.role}`;
 
+            // Update Header Profile Pic
+            document.getElementById('headerProfilePic').src = user.profilePic || APP_LOGO_URL;
+
             const userRole = (user.role || '').trim().toUpperCase();
             const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN';
             const adminBtn = document.getElementById('adminPanelBtn');
@@ -641,7 +741,84 @@
             checkPopupNotice(); 
         }
 
-        // Real-time Popup Notification Listener
+        // ==================== PROFILE MENU & SETTINGS ====================
+        window.openProfileMenu = function() {
+            document.getElementById('profileMenuPic').src = currentUserData.profilePic || APP_LOGO_URL;
+            document.getElementById('profileMenuName').innerText = currentUserData.fullName || currentUserData.employeeId;
+            document.getElementById('profileMenuRole').innerText = currentUserData.role;
+            document.getElementById('profileMenuModal').classList.remove('hidden');
+        }
+        window.closeProfileMenu = function() { document.getElementById('profileMenuModal').classList.add('hidden'); }
+
+        window.openEditProfileModal = function() {
+            closeProfileMenu();
+            tempMyProfilePic = null; // Reset temp pic
+            document.getElementById('editProfilePreview').src = currentUserData.profilePic || APP_LOGO_URL;
+            document.getElementById('editProfileNameInput').value = currentUserData.fullName || '';
+            document.getElementById('editProfileModal').classList.remove('hidden');
+        }
+        window.closeEditProfileModal = function() { document.getElementById('editProfileModal').classList.add('hidden'); }
+
+        window.previewProfilePic = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('editProfilePreview').src = e.target.result;
+                    tempMyProfilePic = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        window.saveProfileChanges = function() {
+            const newName = document.getElementById('editProfileNameInput').value.trim();
+            if (!newName) { showToast('নাম খালি রাখা যাবে না'); return; }
+
+            const updates = { fullName: newName };
+            if (tempMyProfilePic) {
+                updates.profilePic = tempMyProfilePic;
+            }
+
+            db.child('users/' + currentUserData.employeeId).update(updates).then(() => {
+                // Update Local Storage & UI
+                currentUserData.fullName = newName;
+                if (tempMyProfilePic) currentUserData.profilePic = tempMyProfilePic;
+                localStorage.setItem('fieldpro_current_user', JSON.stringify(currentUserData));
+
+                document.getElementById('headerUserName').innerText = currentUserData.fullName;
+                document.getElementById('headerProfilePic').src = currentUserData.profilePic || APP_LOGO_URL;
+
+                closeEditProfileModal();
+                showToast('প্রোফাইল সফলভাবে আপডেট হয়েছে!');
+            });
+        }
+
+        window.openChangePassModal = function() {
+            closeProfileMenu();
+            document.getElementById('currentPassInput').value = '';
+            document.getElementById('newPassInput').value = '';
+            document.getElementById('changePassModal').classList.remove('hidden');
+        }
+        window.closeChangePassModal = function() { document.getElementById('changePassModal').classList.add('hidden'); }
+
+        window.saveNewPassword = function() {
+            const currentPass = document.getElementById('currentPassInput').value.trim();
+            const newPass = document.getElementById('newPassInput').value.trim();
+
+            if (!currentPass || !newPass) { showToast('সকল ফিল্ড পূরণ করুন'); return; }
+            if (currentPass !== currentUserData.password) { showToast('বর্তমান পাসওয়ার্ড ভুল!'); return; }
+            if (newPass.length < 4) { showToast('নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে'); return; }
+
+            db.child('users/' + currentUserData.employeeId).update({ password: newPass }).then(() => {
+                currentUserData.password = newPass;
+                localStorage.setItem('fieldpro_current_user', JSON.stringify(currentUserData));
+                closeChangePassModal();
+                showToast('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!');
+            });
+        }
+
+
+        // ==================== POPUP NOTICE ====================
         function checkPopupNotice() {
             db.child('popupNotice').on('value', (snapshot) => {
                 const popup = snapshot.val();
@@ -753,12 +930,11 @@
                         matchMonth = m.month === selectedMonth;
                     }
 
-                    // Updated Role Matching Logic
                     const allowed = m.allowedRole ? m.allowedRole.trim().toUpperCase() : 'PALL';
                     let matchRole = false;
                     
                     if (isSuperAdmin) {
-                        matchRole = true; // Super admin sees everything
+                        matchRole = true; 
                     } else if (isCombinedAll) {
                         matchRole = ['PALL', 'SALL', 'PALL+SALL', 'ALL'].includes(allowed);
                     } else if (allowed === 'PALL+SALL') {
@@ -768,24 +944,23 @@
                     } else if (allowed === 'SALL') {
                         matchRole = specialRolesList.includes(userRole);
                     } else if (allowed === 'ALL') {
-                        matchRole = true; // Legacy support
+                        matchRole = true;
                     } else if (allowed === userRole) {
-                        matchRole = true; // Specific role match
+                        matchRole = true; 
                     }
 
                     return matchGroup && matchSearch && matchMonth && matchRole;
                 });
 
-                // Advanced Sorting: Primary by Month Dropdown, Secondary by Date
                 if (activeTab === 'grid2' || activeTab === 'grid3') {
                     filtered.sort((a, b) => {
                         const monthA = a.month ? (monthFullMap[a.month] !== undefined ? monthFullMap[a.month] : -1) : -1;
                         const monthB = b.month ? (monthFullMap[b.month] !== undefined ? monthFullMap[b.month] : -1) : -1;
                         
                         if (monthB !== monthA) {
-                            return monthB - monthA; // Descending by Month
+                            return monthB - monthA;
                         }
-                        return parseDateSafe(b.date) - parseDateSafe(a.date); // Descending by Date
+                        return parseDateSafe(b.date) - parseDateSafe(a.date);
                     });
                 }
 
@@ -806,7 +981,6 @@
         function renderMenuCard(m) {
             let iconMarkup = '';
             if (m.icon && (m.icon.startsWith('http://') || m.icon.startsWith('https://') || m.icon.startsWith('data:image'))) {
-                // Updated onerror fallback to App Logo
                 iconMarkup = `<img src="${m.icon}" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';">`;
             } else {
                 iconMarkup = `<i class="fa-solid ${m.icon || 'fa-folder'} text-lg"></i>`;
@@ -915,7 +1089,6 @@
             if (!title) { showToast('স্লাইডার শিরোনাম দিন'); return; }
 
             const proceedSave = (imgUrl) => {
-                // Updated fallback to App Logo
                 const sliderData = { title, image: imgUrl || APP_LOGO_URL };
                 if (editKey) {
                     db.child('sliders/' + editKey).update(sliderData).then(() => {
@@ -1032,7 +1205,6 @@
                 const date = document.getElementById('menuDateInput').value || new Date().toISOString().split('T')[0];
 
                 const proceedGrid23Save = (imgUrl) => {
-                    // Updated fallback to App Logo
                     const finalUrl = imgUrl || APP_LOGO_URL;
                     const menuData = { group, title, icon: finalUrl, url: finalUrl, allowedRole, month, date, color: "from-emerald-500 to-teal-600" };
                     saveMenuToFirebase(editKey, menuData);
@@ -1215,6 +1387,17 @@
         }
 
         // ==================== 5. USER ADMIN FUNCTIONS ====================
+        window.previewUserPic = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('userProfilePreview').src = e.target.result;
+                    tempUserProfilePic = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
         function renderAdminUsers() {
             db.child('users').once('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -1245,6 +1428,11 @@
             if (!empId || !fullName || !password) { showToast('সকল ফিল্ড পূরণ করুন'); return; }
 
             const userData = { employeeId: empId, fullName, password, role, status: "active" };
+            
+            if (tempUserProfilePic) {
+                userData.profilePic = tempUserProfilePic;
+            }
+
             db.child('users/' + empId).set(userData).then(() => {
                 if (editKey && editKey !== empId) db.child('users/' + editKey).remove();
                 resetUserForm();
@@ -1257,6 +1445,7 @@
             db.child('users/' + key).once('value', (snapshot) => {
                 const u = snapshot.val();
                 if (u) {
+                    tempUserProfilePic = null; // Reset temp pic
                     document.getElementById('editUserKey').value = key;
                     const empInput = document.getElementById('userEmpIdInput');
                     empInput.value = u.employeeId || '';
@@ -1264,6 +1453,9 @@
                     document.getElementById('userFullNameInput').value = u.fullName || '';
                     document.getElementById('userPassInput').value = u.password || '';
                     document.getElementById('userRoleInput').value = u.role || 'MPO';
+                    document.getElementById('userProfilePreview').src = u.profilePic || APP_LOGO_URL;
+                    document.getElementById('userProfilePicInput').value = '';
+                    
                     document.getElementById('userFormTitle').innerText = 'ইউজার এডিট করুন';
                     document.getElementById('userSaveBtnText').innerText = 'আপডেট করুন';
                     document.getElementById('userCancelBtn').classList.remove('hidden');
@@ -1272,6 +1464,7 @@
         }
 
         window.resetUserForm = function() {
+            tempUserProfilePic = null; // Clear temp variable
             document.getElementById('editUserKey').value = '';
             const empInput = document.getElementById('userEmpIdInput');
             empInput.value = '';
@@ -1279,6 +1472,8 @@
             document.getElementById('userFullNameInput').value = '';
             document.getElementById('userPassInput').value = '';
             document.getElementById('userRoleInput').value = 'MPO';
+            document.getElementById('userProfilePicInput').value = '';
+            document.getElementById('userProfilePreview').src = APP_LOGO_URL;
             document.getElementById('userFormTitle').innerText = 'নতুন ইউজার তৈরি করুন';
             document.getElementById('userSaveBtnText').innerText = 'ইউজার সেভ করুন';
             document.getElementById('userCancelBtn').classList.add('hidden');
@@ -1294,7 +1489,10 @@
             }
         }
 
-        window.confirmLogout = function() { document.getElementById('logoutModal').classList.remove('hidden'); }
+        window.confirmLogout = function() { 
+            closeProfileMenu();
+            document.getElementById('logoutModal').classList.remove('hidden'); 
+        }
         window.closeLogoutModal = function() { document.getElementById('logoutModal').classList.add('hidden'); }
         window.executeLogout = function() { localStorage.removeItem('fieldpro_current_user'); location.reload(); }
         window.toggleDarkMode = function() { document.documentElement.classList.toggle('dark'); }
