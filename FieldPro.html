@@ -63,6 +63,18 @@
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+        /* Scroll Hide Animation for Notice Bar */
+        .notice-hidden {
+            max-height: 0 !important;
+            opacity: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            border-width: 0 !important;
+            transform: translateY(-10px);
+        }
     </style>
 </head>
 <body class="selection:bg-primary selection:text-white">
@@ -166,8 +178,8 @@
                     <div id="sliderDots" class="absolute bottom-2.5 left-0 right-0 flex justify-center space-x-1.5 z-10"></div>
                 </div>
 
-                <!-- Dynamic Notice Bar -->
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-2.5 flex items-center space-x-3 shadow-xs shrink-0 max-w-4xl mx-auto w-full">
+                <!-- Dynamic Notice Bar (Hides on Scroll Down) -->
+                <div id="noticeBar" class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-2.5 flex items-center space-x-3 shadow-xs shrink-0 max-w-4xl mx-auto w-full transition-all duration-300 ease-in-out overflow-hidden">
                     <div class="flex items-center space-x-1 text-primary shrink-0 bg-primary/10 px-2.5 py-1 rounded-lg text-xs font-bold">
                         <i class="fa-solid fa-bullhorn animate-bounce"></i>
                         <span>নোটিশ</span>
@@ -718,7 +730,30 @@
             checkAndSeedInitialData();
             setupPinchZoom(); 
             updateOnlineStatus(); 
+            setupScrollHideNotice();
         });
+
+        // ==================== SCROLL HIDE NOTICE LOGIC ====================
+        function setupScrollHideNotice() {
+            const mainContent = document.querySelector('#dashboardContent main');
+            let lastScrollTop = 0;
+            if (mainContent) {
+                mainContent.addEventListener('scroll', () => {
+                    const st = mainContent.scrollTop;
+                    const noticeBar = document.getElementById('noticeBar');
+                    if (!noticeBar) return;
+                    
+                    if (st > lastScrollTop && st > 50) {
+                        // Scrolling Down - Hide Notice
+                        noticeBar.classList.add('notice-hidden');
+                    } else {
+                        // Scrolling Up - Show Notice
+                        noticeBar.classList.remove('notice-hidden');
+                    }
+                    lastScrollTop = st <= 0 ? 0 : st;
+                }, { passive: true });
+            }
+        }
 
         function updateOnlineStatus() {
             const offlineNotice = document.getElementById('offlineNotice');
