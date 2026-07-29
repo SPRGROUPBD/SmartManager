@@ -835,16 +835,44 @@
         }
 
         function renderMenuCard(m, isPinned = false) {
-            let iconMarkup = ''; const imgArray = m.images || [m.url || APP_LOGO_URL]; 
-            if (m.icon && (m.icon.startsWith('http://') || m.icon.startsWith('https://') || m.icon.startsWith('data:image'))) { iconMarkup = `<img src="${m.icon}" class="w-full h-full object-cover rounded-xl" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';">`; } else { iconMarkup = `<i class="fa-solid ${m.icon || 'fa-folder'} text-lg"></i>`; }
+            let iconMarkup = '';
+            const imgArray = m.images || [m.url || APP_LOGO_URL];
             const isImageGroup = (m.group === 'grid2' || m.group === 'grid4' || m.group === 'grid3' || m.group === 'grid5');
+            const isImageCard = isImageGroup || (m.icon && (m.icon.startsWith('http://') || m.icon.startsWith('https://') || m.icon.startsWith('data:image')));
+            
             const clickAction = isImageGroup ? `openImageViewerModal('${m.id}')` : `handleMenuClick('${m.url || 'go:HOME'}', '${m.title}', '${m.id}')`;
-            let dateBadge = ''; if (isImageGroup) { dateBadge = `<span class="text-[9px] text-slate-400 block -mt-0.5">${formatCustomDate(m.month, m.date)}</span>`; }
-            const pageCount = imgArray.length > 1 ? `<span class="absolute bottom-1 right-1 text-[8px] bg-slate-900/80 text-white px-1 py-0.5 rounded-md z-10">${imgArray.length} Pages</span>` : '';
+            let dateBadge = '';
+            if (isImageGroup) { dateBadge = `<span class="text-[9px] text-slate-300 block">${formatCustomDate(m.month, m.date)}</span>`; }
+            const pageCount = imgArray.length > 1 ? `<span class="absolute top-1.5 left-1.5 text-[8px] bg-slate-900/80 text-white px-1.5 py-0.5 rounded-md z-10">${imgArray.length} Pages</span>` : '';
             const hasSeen = m.seenBy && currentUserData && m.seenBy[currentUserData.employeeId];
-            const redDot = hasSeen ? '' : '<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white animate-pulse z-10"></span>';
-            const sizeClass = isPinned ? 'w-[100px] h-[100px] shrink-0' : 'h-[105px]';
-            return `<div onclick="${clickAction}" class="ripple group relative bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-primary/50 rounded-m3 p-2.5 flex flex-col items-center justify-center text-center space-y-1.5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer ${sizeClass}">${redDot}${pageCount}<div class="w-10 h-10 rounded-2xl bg-gradient-to-br ${m.color || 'from-primary to-secondary'} text-white flex items-center justify-center shadow-md shadow-primary/20 group-hover:scale-110 transition-transform duration-300 overflow-hidden p-1">${iconMarkup}</div><div class="w-full"><span class="font-bold text-[11px] text-slate-700 dark:text-slate-200 line-clamp-1">${m.title}</span>${dateBadge}</div></div>`;
+            const redDot = hasSeen ? '' : '<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white animate-pulse z-10"></span>';
+            
+            // User Requested Specific Size Limits
+            const sizeClass = isPinned ? 'w-[110px] h-[120px] shrink-0' : 'h-[120px]';
+
+            if (isImageCard) {
+                const imgSrc = m.icon && (m.icon.startsWith('http') || m.icon.startsWith('data:image')) ? m.icon : (imgArray[0] || APP_LOGO_URL);
+                return `<div onclick="${clickAction}" class="ripple group relative ${sizeClass} rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80">
+                    ${redDot}${pageCount}
+                    <img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${m.title}">
+                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white">
+                        <span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${m.title}</span>
+                        ${dateBadge}
+                    </div>
+                </div>`;
+            } else {
+                iconMarkup = `<i class="fa-solid ${m.icon || 'fa-folder'} text-lg"></i>`;
+                return `<div onclick="${clickAction}" class="ripple group relative bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-primary/50 rounded-m3 p-2.5 flex flex-col items-center justify-center text-center space-y-1.5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer ${sizeClass}">
+                    ${redDot}${pageCount}
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${m.color || 'from-primary to-secondary'} text-white flex items-center justify-center shadow-md shadow-primary/20 group-hover:scale-110 transition-transform duration-300 overflow-hidden">
+                        ${iconMarkup}
+                    </div>
+                    <div class="w-full">
+                        <span class="font-bold text-[11px] text-slate-700 dark:text-slate-200 line-clamp-1">${m.title}</span>
+                        ${dateBadge}
+                    </div>
+                </div>`;
+            }
         }
 
         window.openImageViewerModal = function(menuId) {
