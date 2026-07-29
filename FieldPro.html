@@ -42,6 +42,13 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 🚀 HD Quality Image Rendering for Zoom */
+        #zoomableImage {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+            image-rendering: high-quality;
+        }
     </style>
 </head>
 <body class="selection:bg-primary selection:text-white">
@@ -138,7 +145,7 @@
                 <!-- Product Notices with Pause on Hover/Touch -->
                 <div id="productNoticeSection" class="hidden max-w-4xl mx-auto w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-2.5 flex items-center space-x-3 shadow-xs overflow-hidden">
                     <div class="flex items-center space-x-1 text-success shrink-0 bg-success/10 px-2.5 py-1 rounded-lg text-xs font-bold">
-                        <i class="fa-solid fa-tags"></i><span>Short Products</span>
+                        <i class="fa-solid fa-tags"></i><span>Products</span>
                     </div>
                     <div class="overflow-hidden whitespace-nowrap relative flex-1">
                         <div id="productNoticeContainer" 
@@ -322,7 +329,7 @@
                                         <input type="date" id="menuDateInput" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none">
                                     </div>
                                 </div>
-                                <div class="flex items-center space-x-2 py-1 bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <div class="flex items-center space-x-2 py-1 bg-slate-50 dark:bg-slate-900 p3 rounded-xl border border-slate-200 dark:border-slate-700">
                                     <input type="checkbox" id="menuPinInput" class="w-4 h-4 text-primary rounded focus:ring-primary">
                                     <label for="menuPinInput" class="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5"><i class="fa-solid fa-thumbtack text-warning"></i> এই ফাইলটি পিন করুন (ইউজার লগইন করলেই উপরে দেখাবে)</label>
                                 </div>
@@ -343,7 +350,7 @@
                         </div>
                     </div>
                     
-                    <!-- 🚀 UPDATED: Grid-wise View for Menu List -->
+                    <!-- Grid-wise View for Menu List -->
                     <div class="pt-4">
                         <h3 class="text-sm font-bold text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-1.5"><i class="fa-solid fa-list-ul"></i> মেনু ফাইল লিস্ট</h3>
                         <div class="flex space-x-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl mb-3 text-[10px] sm:text-xs font-bold">
@@ -470,8 +477,6 @@
         let currentGalleryIndex = 0;
         let currentGalleryMenuId = null;
         let isHeaderSearchActive = false;
-        
-        // 🚀 NEW: Admin menu list state
         let adminGlobalMenus = {};
         let adminActiveGrid = 'grid1';
 
@@ -505,7 +510,7 @@
             return dateStr || '';
         }
 
-        // 🚀 Compression 800px and 100% Quality
+        // 🚀 Compression 1200px and 100% Quality for HD Zoom
         function processAndCompressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -513,14 +518,16 @@
                     const img = new Image();
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let maxWidth = 800; 
+                        let maxWidth = 1200; // Max width 1200px for HD Quality
                         let width = img.width;
                         let height = img.height;
                         if (width > maxWidth) { const ratio = maxWidth / width; width = maxWidth; height = height * ratio; }
                         canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, 0, 0, width, height);
-                        const base64 = canvas.toDataURL('image/jpeg', 1.0); 
+                        const base64 = canvas.toDataURL('image/jpeg', 1.0); // 100% Quality
                         resolve(base64);
                     };
                     img.onerror = reject; img.src = e.target.result;
@@ -888,12 +895,12 @@
         window.deleteSlider = function(key) { if (confirm('স্লাইডারটি ডিলিট করতে চান?')) { db.child('sliders/' + key).remove().then(() => { renderAdminSliders(); showToast('স্লাইডার মুছে ফেলা হয়েছে!'); }); } }
         window.onAdminGroupChange = function(group) { const grid1Fields = document.getElementById('grid1SpecificFields'); const grid23Fields = document.getElementById('grid23SpecificFields'); if (group === 'grid1') { grid1Fields.classList.remove('hidden'); grid23Fields.classList.add('hidden'); } else { grid1Fields.classList.add('hidden'); grid23Fields.classList.remove('hidden'); } }
 
-        // 🚀 NEW: Grid-wise Admin Menu List Logic
+        // Grid-wise Admin Menu List Logic
         function renderAdminMenus() {
             db.child('menus').once('value', (snapshot) => {
                 const data = snapshot.val() || {};
-                adminGlobalMenus = data; // Store fetched data locally
-                filterAdminMenus(adminActiveGrid); // Render the active grid list
+                adminGlobalMenus = data;
+                filterAdminMenus(adminActiveGrid);
             });
         }
         window.filterAdminMenus = function(grid) {
