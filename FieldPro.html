@@ -43,6 +43,10 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Mouse Drag & Scroll Support */
+        .h-scroll { cursor: grab; }
+        .h-scroll:active { cursor: grabbing; }
+
         /* 🚀 HD Quality Image Rendering for Zoom */
         #zoomableImage {
             image-rendering: -webkit-optimize-contrast;
@@ -139,7 +143,7 @@
                     <div class="flex items-center justify-between px-1">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-warning flex items-center gap-1.5"><i class="fa-solid fa-thumbtack"></i> Pinned Files (Fast Access)</h3>
                     </div>
-                    <div id="pinnedMenuContainer" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar"></div>
+                    <div id="pinnedMenuContainer" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll"></div>
                 </div>
 
                 <!-- Product Notices with Pause on Hover/Touch -->
@@ -175,7 +179,7 @@
                     <!-- Grid 1: Primary Menus -->
                     <div id="grid1Section" class="space-y-2">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 px-1">Primary Menus (Daily Work)</h3>
-                        <div id="menuGrid1Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar">
+                        <div id="menuGrid1Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll">
                             <div class="loader-box w-full justify-center"><div class="loader-spinner mb-2"></div><p class="text-[11px] text-slate-400">মেনু লোড হচ্ছে...</p></div>
                         </div>
                     </div>
@@ -183,25 +187,25 @@
                     <!-- Grid 2: Flat Bonus Sheet -->
                     <div id="grid2Section" class="space-y-2 hidden">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-warning px-1 flex items-center gap-1.5"><i class="fa-solid fa-gift"></i> Flat Bonus Sheet</h3>
-                        <div id="menuGrid2Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar"></div>
+                        <div id="menuGrid2Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll"></div>
                     </div>
 
                     <!-- Grid 3: Head Office Circular -->
                     <div id="grid3Section" class="space-y-2 hidden">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-primary px-1 flex items-center gap-1.5"><i class="fa-solid fa-bullhorn"></i> Head Office Circular</h3>
-                        <div id="menuGrid3Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar"></div>
+                        <div id="menuGrid3Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll"></div>
                     </div>
 
                     <!-- Grid 4: Salary TA Bill -->
                     <div id="grid4Section" class="space-y-2 hidden">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-purple-600 px-1 flex items-center gap-1.5"><i class="fa-solid fa-file-invoice-dollar"></i> Salary TA Bill</h3>
-                        <div id="menuGrid4Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar"></div>
+                        <div id="menuGrid4Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll"></div>
                     </div>
 
                     <!-- Grid 5: Sales Report -->
                     <div id="grid5Section" class="space-y-2 hidden">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-danger px-1 flex items-center gap-1.5"><i class="fa-solid fa-chart-line"></i> Sales Report</h3>
-                        <div id="menuGrid5Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar"></div>
+                        <div id="menuGrid5Container" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar h-scroll"></div>
                     </div>
                 </div>
             </main>
@@ -565,7 +569,56 @@
             checkAndSeedInitialData();
             setupPinchZoom(); 
             updateOnlineStatus(); 
+            setupHorizontalScrolls(); // Setup mouse drag and wheel scroll
         });
+
+        // Mouse drag and wheel scroll logic
+        function setupHorizontalScrolls() {
+            const containers = document.querySelectorAll('.h-scroll');
+            containers.forEach(container => {
+                // Prevent setting up multiple times
+                if (container.dataset.scrollSetup === 'true') return;
+                container.dataset.scrollSetup = 'true';
+
+                // Wheel event
+                container.addEventListener('wheel', function(e) {
+                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                        e.preventDefault();
+                        this.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+
+                // Mouse drag event
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                container.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    container.classList.add('active-drag');
+                    startX = e.pageX - container.offsetLeft;
+                    scrollLeft = container.scrollLeft;
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    container.classList.remove('active-drag');
+                });
+
+                container.addEventListener('mouseup', () => {
+                    isDown = false;
+                    container.classList.remove('active-drag');
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - container.offsetLeft;
+                    const walk = (x - startX) * 1.5; // Scroll speed
+                    container.scrollLeft = scrollLeft - walk;
+                });
+            });
+        }
 
         function updateOnlineStatus() {
             const offlineNotice = document.getElementById('offlineNotice');
