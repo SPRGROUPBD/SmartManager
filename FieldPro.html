@@ -232,8 +232,8 @@
 
     <!-- IMAGE ZOOM VIEWER MODAL -->
     <div id="imageViewModal" class="absolute inset-0 bg-slate-950/90 z-50 hidden flex flex-col items-center justify-center p-2">
-        <div class="absolute top-4 right-4 z-50 flex space-x-2">
-            <button onclick="downloadGalleryImage()" class="w-10 h-10 rounded-full bg-slate-800/80 text-white flex items-center justify-center shadow-lg hover:bg-primary transition" title="ডাউনলোড করুন"><i class="fa-solid fa-download text-lg"></i></button>
+        <!-- Download Button Removed Here -->
+        <div class="absolute top-4 right-4 z-50">
             <button onclick="closeImageViewer()" class="w-10 h-10 rounded-full bg-slate-800/80 text-white flex items-center justify-center shadow-lg hover:bg-danger transition" title="বন্ধ করুন"><i class="fa-solid fa-xmark text-lg"></i></button>
         </div>
         <div class="absolute top-4 left-4 z-50 bg-slate-800/80 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg"><span id="zoomImageTitle">ইমেজ ভিউয়ার</span></div>
@@ -992,28 +992,6 @@
         }
         window.navGallery = function(dir) { currentGalleryIndex += dir; if (currentGalleryIndex < 0) currentGalleryIndex = currentGalleryImages.length - 1; if (currentGalleryIndex >= currentGalleryImages.length) currentGalleryIndex = 0; showGalleryImage(); }
         window.closeImageViewer = function() { document.getElementById('imageViewModal').classList.add('hidden'); }
-        
-        // 🚀 Direct link download to prevent App Crash (WebView Out of Memory with Blob)
-        window.downloadGalleryImage = function() {
-            const currentFile = currentGalleryImages[currentGalleryIndex];
-            const menu = globalMenus.find(m => m.id === currentGalleryMenuId);
-            const baseTitle = menu ? menu.title.replace(/[^a-zA-Z0-9]/g, '_') : 'image';
-            
-            try {
-                const link = document.createElement('a');
-                link.href = currentFile; // Direct base64 data uri
-                link.download = `${baseTitle}_${currentGalleryIndex + 1}.jpg`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                showToast('ডাউনলোড শুরু হয়েছে! (না হলে ছবির উপর লং-প্রেস করে Save Image করুন)');
-            } catch (err) {
-                console.error('Download error:', err);
-                // Fallback to open in new tab if click fails
-                window.open(currentFile, '_blank');
-                showToast('নতুন ট্যাবে খুলে ছবিটি লং-প্রেস করে সেভ করুন।');
-            }
-        };
 
         window.handleMenuClick = function(url, menuName, menuId) {
             if (currentUserData && currentUserData.employeeId && menuId) { db.child('menus/' + menuId + '/seenBy/' + currentUserData.employeeId).set(true); }
