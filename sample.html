@@ -924,6 +924,7 @@
                             <option value="">All Areas</option>
                         </select>
                     </div>
+                    <button class="btn btn-cyan" onclick="window.openModal('catSettings')"><i class="fa-solid fa-sliders"></i> Category Settings</button>
                     <button class="btn btn-success" onclick="window.bulkUpdateMpoSales()"><i class="fa-solid fa-upload"></i> Update TP Sales</button>
                     <button class="btn btn-secondary" onclick="window.openUploadModal('mpo')"><i class="fa-solid fa-file-excel" style="color:green;"></i> Upload Excel</button>
                     <button class="btn btn-primary" onclick="window.openModal('mpo')"><i class="fa-solid fa-plus"></i> Add MPO</button>
@@ -1230,7 +1231,7 @@
     let handoverListeners = []; 
 
     let data = {
-        mpos: [], das: [], prods: [], gifts: [], challans: [], users: [], handovers: []
+        mpos: [], das: [], prods: [], gifts: [], challans: [], users: [], handovers: [], settings: {}
     };
     
     let currentMPO = null;
@@ -1396,6 +1397,7 @@
         listen('mpos', 'mpos');
         listen('das', 'das');
         listen('users', 'users');
+        listen('settings', 'settings');
 
         initProductListeners();
         initGiftListeners();
@@ -3183,6 +3185,26 @@
             } else return `<input type="hidden" name="depotId" value="${currentUser.depotId}">`;
         };
 
+        if (type === 'catSettings') {
+            document.getElementById('modal-title').innerText = 'Category Settings (TP Sales Wise)';
+            const s = data.settings || {};
+            container.innerHTML = `
+                <div style="background:#eaf2f8; padding:10px; border-radius:5px; margin-bottom:15px; font-size:0.85rem;">
+                    Set the minimum TP Sales required for each category. <br>
+                    <strong>Default Rule:</strong> ≥ 100,000 = A, ≥ 80,000 = B, < 80,000 = C. <br>
+                    (To disable A+, set its value higher than your max sales. To disable D & E, set their values to -1).
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
+                    <div class="form-group"><label style="color:var(--gold)">Min Sales for A+</label><input type="number" name="catAplus" value="${s.catAplus !== undefined ? s.catAplus : 9999999}" required></div>
+                    <div class="form-group"><label style="color:var(--accent)">Min Sales for A</label><input type="number" name="catA" value="${s.catA !== undefined ? s.catA : 100000}" required></div>
+                    <div class="form-group"><label style="color:var(--warning)">Min Sales for B</label><input type="number" name="catB" value="${s.catB !== undefined ? s.catB : 80000}" required></div>
+                    <div class="form-group"><label style="color:var(--teal)">Min Sales for C</label><input type="number" name="catC" value="${s.catC !== undefined ? s.catC : 0}" required></div>
+                    <div class="form-group"><label style="color:var(--orange)">Min Sales for D</label><input type="number" name="catD" value="${s.catD !== undefined ? s.catD : -1}" required></div>
+                    <div class="form-group"><label style="color:var(--pink)">Min Sales for E</label><input type="number" name="catE" value="${s.catE !== undefined ? s.catE : -1}" required></div>
+                </div>
+            `;
+            return; 
+        }
         if (type === 'editCategory') {
             const p = data.prods.find(x => x.id === id); if (!p) return;
             document.getElementById('modal-title').innerText = `Edit Categories - ${p.name}`;
@@ -3198,7 +3220,7 @@
             return; 
         }
         if(type === 'mpo') {
-            container.innerHTML = `${depotSelect()}<div class="form-group"><label>MPO ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Territory</label><input name="territory"></div><div class="form-group"><label>Area</label><input name="area"></div><div class="form-group"><label>Region</label><input name="region"></div><div style="display:flex; gap:10px;"><div class="form-group" style="flex:1"><label style="color:var(--accent)">Category (Prod)</label>${getCategorySelectHTML('A', 'categoryProd')}</div><div class="form-group" style="flex:1"><label style="color:var(--purple)">Category (Gift)</label>${getCategorySelectHTML('A', 'categoryGift')}</div></div><div class="form-group"><label>TP Sales</label><input type="number" name="sales"></div><div class="form-group"><label>Status</label><select name="isActive"><option value="true">Active</option><option value="false">Inactive</option></select></div><div class="form-group"><label>Assign DA</label><select name="daId" id="modal-da-select"><option value="">None</option></select></div>`;
+            container.innerHTML = `${depotSelect()}<div class="form-group"><label>MPO ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Territory</label><input name="territory"></div><div class="form-group"><label>Area</label><input name="area"></div><div class="form-group"><label>Region</label><input name="region"></div><div style="display:flex; gap:10px;"><div class="form-group" style="flex:1"><label style="color:var(--accent)">Category (Prod)</label>${getCategorySelectHTML('A', 'categoryProd')}</div><div class="form-group" style="flex:1"><label style="color:var(--purple)">Category (Gift)</label>${getCategorySelectHTML('A', 'categoryGift')}</div></div><div class="form-group"><label>TP Sales <small style="color:var(--accent)">(Auto-sets Categories)</small></label><input type="number" name="sales" oninput="window.autoSetMpoCategories(this.value)"></div><div class="form-group"><label>Status</label><select name="isActive"><option value="true">Active</option><option value="false">Inactive</option></select></div><div class="form-group"><label>Assign DA</label><select name="daId" id="modal-da-select"><option value="">None</option></select></div>`;
             
             if(currentUser.role !== 'admin' && currentUser.depotId) {
                 window.updateModalDAOptions(currentUser.depotId);
@@ -3213,6 +3235,33 @@
         } else if (type === 'user') {
             container.innerHTML = `<div class="form-group"><label>Username</label><input name="username" required></div><div class="form-group"><label>Password</label><input name="password" type="password" required></div><div class="form-group"><label>Depot ID</label><input name="depotId" placeholder="e.g. KUS" required></div>`;
         }
+    };
+
+    window.autoSetMpoCategories = function(salesVal) {
+        const sales = Number(salesVal) || 0;
+        const rules = data.settings || {};
+        
+        // Defaults if not set in DB: 100000=A, 80000=B, below 80000=C
+        const limitAplus = rules.catAplus !== undefined ? Number(rules.catAplus) : 9999999; 
+        const limitA = rules.catA !== undefined ? Number(rules.catA) : 100000;
+        const limitB = rules.catB !== undefined ? Number(rules.catB) : 80000;
+        const limitC = rules.catC !== undefined ? Number(rules.catC) : 0; 
+        const limitD = rules.catD !== undefined ? Number(rules.catD) : -1;
+        const limitE = rules.catE !== undefined ? Number(rules.catE) : -1;
+        
+        let cat = 'C'; // Fallback
+        
+        if (sales >= limitAplus) cat = 'A+';
+        else if (sales >= limitA) cat = 'A';
+        else if (sales >= limitB) cat = 'B';
+        else if (sales >= limitC) cat = 'C';
+        else if (sales >= limitD && limitD >= 0) cat = 'D';
+        else if (sales >= limitE && limitE >= 0) cat = 'E';
+        
+        const prodSel = document.querySelector('[name="categoryProd"]');
+        const giftSel = document.querySelector('[name="categoryGift"]');
+        if(prodSel) prodSel.value = cat;
+        if(giftSel) giftSel.value = cat;
     };
 
     window.updateModalDAOptions = function(selectedDepotId) {
@@ -3234,7 +3283,13 @@
         document.getElementById('modal-title').innerText = 'Edit ' + type.toUpperCase();
         const form = document.getElementById('modal-form');
         for(let key in item) if(form.elements[key]) form.elements[key].value = item[key];
-        if(type === 'mpo' && item.depotId) { window.updateModalDAOptions(item.depotId); form.elements['daId'].value = item.daId || ''; }
+        if(type === 'mpo' && item.depotId) { 
+            window.updateModalDAOptions(item.depotId); 
+            form.elements['daId'].value = item.daId || ''; 
+            if(form.elements['sales'].value) {
+                window.autoSetMpoCategories(form.elements['sales'].value);
+            }
+        }
         if((type === 'prod' || type === 'gift') && item.depotId) form.elements['depotId'].value = item.depotId;
     };
 
@@ -3250,6 +3305,13 @@
 
     window.saveModalData = function(e) {
         e.preventDefault(); const form = e.target; const formData = new FormData(form); const obj = {}; formData.forEach((value, key) => obj[key] = value);
+
+        if(editType === 'catSettings') {
+            const settingsObj = {};
+            formData.forEach((value, key) => settingsObj[key] = Number(value));
+            set(ref(db, 'settings'), settingsObj).then(() => { showToast("Category Settings Saved!"); closeModal(); }).catch(err => showToast("Error: " + err.message));
+            return; 
+        }
         if(editType === 'editCategory' || editType === 'editGiftCategory') {
             const depotId = obj.depotId; if(!depotId) return showToast("Depot ID missing");
             const updateObj = { qtyAplus: Number(form.qtyAplus.value || 0), qtyA: Number(form.qtyA.value || 0), qtyB: Number(form.qtyB.value || 0), qtyC: Number(form.qtyC.value || 0), qtyD: Number(form.qtyD.value || 0), qtyE: Number(form.qtyE.value || 0) };
