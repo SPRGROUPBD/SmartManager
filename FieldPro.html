@@ -215,6 +215,12 @@
                         <h3 class="font-bold text-xs uppercase tracking-wider text-danger px-1 flex items-center gap-1.5"><i class="fa-solid fa-chart-line"></i> Sales Report</h3>
                         <div id="menuGrid5Container" class="flex overflow-x-auto gap-3 pb-2 h-scroll"></div>
                     </div>
+
+                    <!-- 🚀 New Product Launched Section (Bottom) -->
+                    <div id="productLaunchSection" class="space-y-2 pt-4 hidden">
+                        <h3 class="font-bold text-xs uppercase tracking-wider text-success px-1 flex items-center gap-1.5"><i class="fa-solid fa-rocket"></i> New Product Launched</h3>
+                        <div id="productLaunchContainer" class="flex overflow-x-auto gap-3 pb-2 h-scroll"></div>
+                    </div>
                 </div>
             </main>
             <footer class="py-2 text-center text-[10px] text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 shrink-0">&copy; 2026 Monico One Mobile Edition.</footer>
@@ -300,11 +306,14 @@
                 <div class="flex items-center space-x-2"><i class="fa-solid fa-sliders text-primary text-base"></i><h3 class="font-bold text-base">Monico One অ্যাডমিন কনসোল</h3></div>
                 <button onclick="closeAdminPanel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div class="grid grid-cols-5 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl text-xs sm:text-sm font-semibold text-center mt-4 shrink-0">
+            
+            <!-- 🚀 Fixed Admin Tab Layout for Mobile -->
+            <div class="grid grid-cols-3 md:grid-cols-6 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl text-xs sm:text-sm font-semibold text-center mt-4 shrink-0">
                 <button onclick="switchAdminTab('slider')" id="tabBtnSlider" class="py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition">স্লাইডার</button>
                 <button onclick="switchAdminTab('menu')" id="tabBtnMenu" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">মেনু ফাইল</button>
                 <button onclick="switchAdminTab('notice')" id="tabBtnNotice" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">নোটিশ</button>
                 <button onclick="switchAdminTab('popup')" id="tabBtnPopup" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">পপআপ</button>
+                <button onclick="switchAdminTab('productCard')" id="tabBtnProductCard" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">প্রোডাক্ট কার্ড</button>
                 <button onclick="switchAdminTab('user')" id="tabBtnUser" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">ইউজার</button>
             </div>
 
@@ -455,6 +464,29 @@
                     </div>
                 </div>
 
+                <!-- PRODUCT CARD TAB (New Product Launched Image Cards) -->
+                <div id="tabContentProductCard" class="space-y-4 hidden pb-8">
+                    <div id="adminProductCardList" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
+                    <div class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+                        <h5 id="productCardFormTitle" class="text-sm font-bold text-success">নতুন প্রোডাক্ট কার্ড যুক্ত করুন</h5>
+                        <input type="hidden" id="editProductCardKey" value="">
+                        
+                        <input type="text" id="productCardTitleInput" placeholder="কার্ডের নাম / প্রোডাক্ট নাম" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none mb-2">
+                        <input type="text" id="productCardUrlInput" placeholder="লিংক (ঐচ্ছিক - যেমন: go:dcc বা https://...)" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none mb-2">
+                        
+                        <div class="mb-2">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">ছবি আপলোড করুন (Image):</label>
+                            <input type="file" id="productCardImageInput" accept="image/*" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-success file:text-white hover:file:bg-success/90" onchange="previewProductCardImage(this)">
+                            <img id="productCardImagePreview" src="" class="w-full h-32 object-cover rounded-xl mt-2 hidden" alt="Preview">
+                        </div>
+                        
+                        <div class="flex space-x-2">
+                            <button onclick="saveProductCardItem()" id="productCardSaveBtn" class="flex-1 py-2.5 bg-success text-white font-bold rounded-xl text-xs shadow-xs flex items-center justify-center space-x-1"><i class="fa-solid fa-plus text-[10px]"></i><span id="productCardSaveBtnText">কার্ড যোগ করুন</span></button>
+                            <button onclick="resetProductCardForm()" id="productCardCancelBtn" class="hidden px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl">বাতিল</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- USER TAB -->
                 <div id="tabContentUser" class="space-y-4 hidden pb-8">
                     <div id="adminUserList" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
@@ -519,10 +551,13 @@
         let tempUserProfilePic = null; 
         let tempMyProfilePic = null;   
         let tempPopupImage = null;
+        let tempProductCardImage = null;
         let activePopupsQueue = [];
         let currentPopupIndex = 0;
 
         let globalMenus = [];
+        let globalProductCards = [];
+        let isProductCardsLoaded = false;
         let currentSearchKeyword = '';
         let isMenusLoaded = false;
         let currentGalleryImages = [];
@@ -693,6 +728,7 @@
             
             checkPopupNotice(); 
             initMenuListener(); 
+            initProductCardListener(); 
             loadSliders(); 
             loadNotices();  
             loadProductNotices(); 
@@ -705,21 +741,29 @@
             showToast('সিঙ্ক হচ্ছে...');
             Promise.all([
                 db.child('menus').once('value'), 
+                db.child('productLaunchCards').once('value'), 
                 db.child('sliders').once('value'), 
                 db.child('notices').once('value'), 
                 db.child('productNotices').once('value')
-            ]).then(([menusSnap, slidersSnap, noticesSnap, productsSnap]) => {
+            ]).then(([menusSnap, prodCardsSnap, slidersSnap, noticesSnap, productsSnap]) => {
                 const menusData = menusSnap.val() || {};
                 globalMenus = Object.keys(menusData).map(key => ({ id: key, ...menusData[key] })); 
                 isMenusLoaded = true;
+                
+                const prodCardsData = prodCardsSnap.val() || {};
+                globalProductCards = Object.keys(prodCardsData).map(key => ({ id: key, ...prodCardsData[key] }));
+                isProductCardsLoaded = true;
+                
                 const slidersData = slidersSnap.val() || {};
                 const noticesData = noticesSnap.val() || {};
                 const productsData = productsSnap.val() || {};
                 renderMenus(); 
+                renderProductCards();
                 renderSlidersUI(slidersData);
                 const notices = Object.keys(noticesData).map(key => noticesData[key].text);
                 document.getElementById('marqueeText').innerText = notices.join("  ***  ") || "কোনো নোটিশ নেই।";
                 renderProductNotices(productsData); 
+
                 syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate');
                 showToast('সিঙ্ক সম্পন্ন হয়েছে!');
             }).catch(err => {
@@ -755,19 +799,14 @@
             db.child('users/' + currentUserData.employeeId).update({ password: newPass }).then(() => { currentUserData.password = newPass; localStorage.setItem('fieldpro_current_user', JSON.stringify(currentUserData)); closeChangePassModal(); showToast('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!'); });
         }
         
-        // Check Popup Notices (Iterates through all items in 'popupNotice' list)
         function checkPopupNotice() { 
             db.child('popupNotice').on('value', (snapshot) => { 
                 const popups = snapshot.val() || {};
                 activePopupsQueue = [];
-                
                 Object.keys(popups).forEach(key => {
                     const p = popups[key];
-                    if (p.status === 'active') { 
-                        activePopupsQueue.push(p); 
-                    }
+                    if (p.status === 'active') { activePopupsQueue.push(p); }
                 });
-                
                 currentPopupIndex = 0;
                 showNextPopup();
             }); 
@@ -788,7 +827,6 @@
             document.getElementById('popupBodyText').innerText = popup.body || "";
             const popupImg = document.getElementById('popupImage');
             const popupIcon = document.getElementById('popupIcon');
-            
             if (popup.image) {
                 popupImg.src = popup.image;
                 popupImg.classList.remove('hidden');
@@ -876,7 +914,7 @@
             document.getElementById('productNoticeInput').value = '';
             document.getElementById('productSaveBtnText').innerText = 'যোগ করুন';
             document.getElementById('productFormTitle').innerText = 'Short Product Notice';
-            document.getElementById('productCancelBtn').classList.remove('hidden');
+            document.getElementById('productCancelBtn').classList.add('hidden');
         };
         function renderAdminProducts(data) {
             const list = document.getElementById('adminProductList');
@@ -895,6 +933,49 @@
             }); 
         }
         
+        function initProductCardListener() { 
+            db.child('productLaunchCards').on('value', (snapshot) => { 
+                const data = snapshot.val() || {}; 
+                globalProductCards = Object.keys(data).map(key => ({ id: key, ...data[key] })); 
+                isProductCardsLoaded = true; renderProductCards(); 
+            }); 
+        }
+
+        function renderProductCards() {
+            if (!isProductCardsLoaded) return;
+            const container = document.getElementById('productLaunchContainer');
+            const section = document.getElementById('productLaunchSection');
+            container.innerHTML = '';
+            
+            if (globalProductCards.length === 0) {
+                section.classList.add('hidden');
+            } else {
+                section.classList.remove('hidden');
+                globalProductCards.forEach(card => {
+                    container.innerHTML += `<div onclick="openProductCardViewer('${card.id}')" class="ripple group relative w-[200px] h-[140px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80">
+                        <img src="${card.image}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}">
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white">
+                            <span class="font-bold text-xs line-clamp-1 block drop-shadow-md">${card.title}</span>
+                        </div>
+                    </div>`;
+                });
+            }
+        }
+
+        window.openProductCardViewer = function(cardId) {
+            const card = globalProductCards.find(c => c.id === cardId);
+            if (!card) return;
+            if (card.url && (card.url.startsWith('http') || card.url.startsWith('go:'))) {
+                handleMenuClick(card.url, card.title, cardId);
+            } else {
+                currentGalleryImages = [card.image]; 
+                currentGalleryMenuId = cardId; 
+                currentGalleryIndex = 0;
+                showGalleryImage(); 
+                document.getElementById('imageViewModal').classList.remove('hidden');
+            }
+        }
+        
         function renderMenus() {
             if (!isMenusLoaded) return;
             const allMenus = globalMenus;
@@ -905,7 +986,7 @@
             const selectedMonth = document.getElementById('filterMonthSelect').value;
             
             const hasRoleAccess = (m) => {
-                if (m.status === 'inactive') return false; // HIDE INACTIVE MENUS
+                if (m.status === 'inactive') return false; 
                 const allowedStr = m.allowedRole || 'PALL'; const allowedRoles = allowedStr.split(',').map(r => r.trim().toUpperCase());
                 if (isSuperAdmin) return true; 
                 if (isCombinedAll) { return allowedRoles.some(r => ['PALL', 'SALL', 'PALL+SALL', 'ALL'].includes(r)); }
@@ -1042,9 +1123,20 @@
             if (url.startsWith('go:')) { const pageName = url.substring(3); const link = document.createElement('a'); link.href = `go:${pageName}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } else { window.open(url, '_blank'); }
         }
         window.filterMenus = function(keyword) { currentSearchKeyword = keyword.toLowerCase(); renderMenus(); }
-        window.openAdminPanel = function() { const userRole = (currentUserData && currentUserData.role) ? currentUserData.role.trim().toLowerCase() : ''; if (userRole !== 'super_admin' && userRole !== 'super admin') { showToast('অনুমতি নেই!'); return; } document.getElementById('adminModal').classList.remove('hidden'); renderAdminSliders(); renderAdminMenus(); renderAdminNotices(); loadProductNotices(); renderAdminPopups(); renderAdminUsers(); }
+        window.openAdminPanel = function() { const userRole = (currentUserData && currentUserData.role) ? currentUserData.role.trim().toLowerCase() : ''; if (userRole !== 'super_admin' && userRole !== 'super admin') { showToast('অনুমতি নেই!'); return; } document.getElementById('adminModal').classList.remove('hidden'); renderAdminSliders(); renderAdminMenus(); renderAdminNotices(); loadProductNotices(); renderAdminPopups(); renderAdminProductCards(); renderAdminUsers(); }
         window.closeAdminPanel = function() { document.getElementById('adminModal').classList.add('hidden'); }
-        window.switchAdminTab = function(tabName) { ['slider', 'menu', 'notice', 'popup', 'user'].forEach(t => { document.getElementById(`tabContent${t.charAt(0).toUpperCase() + t.slice(1)}`).classList.add('hidden'); document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`).className = "py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition"; }); document.getElementById(`tabContent${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.remove('hidden'); document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).className = "py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition"; }
+        
+        // 🚀 Fixed switchAdminTab Function
+        window.switchAdminTab = function(tabName) { 
+            ['slider', 'menu', 'notice', 'popup', 'productCard', 'user'].forEach(t => { 
+                const capitalizedT = t.charAt(0).toUpperCase() + t.slice(1);
+                document.getElementById(`tabContent${capitalizedT}`).classList.add('hidden'); 
+                document.getElementById(`tabBtn${capitalizedT}`).className = "py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition"; 
+            }); 
+            const capitalizedTabName = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            document.getElementById(`tabContent${capitalizedTabName}`).classList.remove('hidden'); 
+            document.getElementById(`tabBtn${capitalizedTabName}`).className = "py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition"; 
+        }
 
         function renderAdminSliders() { db.child('sliders').once('value', (snapshot) => { const data = snapshot.val() || {}; const list = document.getElementById('adminSliderList'); list.innerHTML = ''; Object.keys(data).forEach(key => { const s = data[key]; list.innerHTML += `<div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"><span class="font-medium truncate max-w-[150px]">${s.title}</span><div class="flex items-center space-x-1.5"><button onclick="editSlider('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteSlider('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button></div></div>`; }); }); }
         window.saveSliderItem = function() { const editKey = document.getElementById('editSliderKey').value; const title = document.getElementById('sliderTitleInput').value.trim(); const fileInput = document.getElementById('sliderFileInput'); if (!title) { showToast('স্লাইডার শিরোনাম দিন'); return; } const proceedSave = (imgUrl) => { const sliderData = { title, image: imgUrl || APP_LOGO_URL }; if (editKey) { db.child('sliders/' + editKey).update(sliderData).then(() => { showToast('স্লাইডার আপডেট হয়েছে!'); resetSliderForm(); renderAdminSliders(); }); } else { db.child('sliders').push(sliderData).then(() => { showToast('স্লাইডার সফলভাবে আপলোড হয়েছে!'); resetSliderForm(); renderAdminSliders(); }); } }; if (fileInput.files && fileInput.files[0]) { const reader = new FileReader(); reader.onload = function(e) { proceedSave(e.target.result); }; reader.readAsDataURL(fileInput.files[0]); } else if (editKey) { db.child('sliders/' + editKey).once('value', (snap) => { const existing = snap.val() || {}; proceedSave(existing.image); }); } else { showToast('একটি ছবি সিলেক্ট করুন'); } }
@@ -1155,7 +1247,6 @@
         window.resetNoticeForm = function() { document.getElementById('editNoticeKey').value = ''; document.getElementById('noticeTextInput').value = ''; document.getElementById('noticeFormTitle').innerText = 'নতুন নোটিশ যুক্ত করুন'; document.getElementById('noticeSaveBtnText').innerText = 'নোটিশ যোগ করুন'; document.getElementById('noticeCancelBtn').classList.add('hidden'); }
         window.deleteNotice = function(key) { if (confirm('নোটিশটি ডিলিট করতে চান?')) { db.child('notices/' + key).remove().then(() => { renderAdminNotices(); showToast('নোটিশ মুছে ফেলা হয়েছে!'); }); } }
         
-        // Admin Popup List Render & Functions
         function renderAdminPopups() {
             db.child('popupNotice').once('value', (snapshot) => {
                 const data = snapshot.val() || {};
@@ -1215,7 +1306,6 @@
             }
             
             const btn = document.getElementById('popupSaveBtn');
-            const btnText = document.getElementById('popupSaveBtnText');
             btn.disabled = true;
             
             if (editKey) {
@@ -1281,6 +1371,119 @@
             document.getElementById('popupFormTitle').innerText = 'নতুন পপআপ যুক্ত করুন';
             document.getElementById('popupSaveBtnText').innerText = 'পপআপ যোগ করুন';
             document.getElementById('popupCancelBtn').classList.add('hidden');
+        };
+
+        function renderAdminProductCards() {
+            db.child('productLaunchCards').once('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                const list = document.getElementById('adminProductCardList');
+                list.innerHTML = '';
+                if (Object.keys(data).length === 0) {
+                    list.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">কোনো প্রোডাক্ট কার্ড নেই।</p>';
+                    return;
+                }
+                Object.keys(data).forEach(key => {
+                    const c = data[key];
+                    list.innerHTML += `
+                        <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                            <div class="flex items-center space-x-2 truncate max-w-[60%]">
+                                <img src="${c.image || APP_LOGO_URL}" class="w-8 h-8 rounded-md object-cover" alt="">
+                                <span class="font-bold truncate">${c.title}</span>
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <button onclick="editProductCardItem('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button>
+                                <button onclick="deleteProductCardItem('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+        }
+
+        window.previewProductCardImage = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('productCardImagePreview').src = e.target.result;
+                    document.getElementById('productCardImagePreview').classList.remove('hidden');
+                    tempProductCardImage = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        window.saveProductCardItem = function() {
+            const editKey = document.getElementById('editProductCardKey').value;
+            const title = document.getElementById('productCardTitleInput').value.trim();
+            const url = document.getElementById('productCardUrlInput').value.trim();
+            
+            if (!title) { showToast('কার্ডের নাম দিন'); return; }
+            if (!tempProductCardImage && !editKey) { showToast('একটি ছবি সিলেক্ট করুন'); return; }
+            
+            const cardData = { title, url };
+            if (tempProductCardImage) cardData.image = tempProductCardImage;
+            
+            const btn = document.getElementById('productCardSaveBtn');
+            btn.disabled = true;
+            
+            if (editKey) {
+                db.child('productLaunchCards/' + editKey).update(cardData).then(() => {
+                    showToast('কার্ড সফলভাবে আপডেট হয়েছে!');
+                    resetProductCardForm();
+                    renderAdminProductCards();
+                    btn.disabled = false;
+                }).catch(err => { showToast('Error!'); btn.disabled = false; });
+            } else {
+                db.child('productLaunchCards').push(cardData).then(() => {
+                    showToast('নতুন কার্ড যোগ হয়েছে!');
+                    resetProductCardForm();
+                    renderAdminProductCards();
+                    btn.disabled = false;
+                }).catch(err => { showToast('Error!'); btn.disabled = false; });
+            }
+        };
+
+        window.editProductCardItem = function(key) {
+            db.child('productLaunchCards/' + key).once('value', (snap) => {
+                const c = snap.val();
+                if (c) {
+                    document.getElementById('editProductCardKey').value = key;
+                    document.getElementById('productCardTitleInput').value = c.title || '';
+                    document.getElementById('productCardUrlInput').value = c.url || '';
+                    if (c.image) {
+                        document.getElementById('productCardImagePreview').src = c.image;
+                        document.getElementById('productCardImagePreview').classList.remove('hidden');
+                        tempProductCardImage = c.image;
+                    } else {
+                        document.getElementById('productCardImagePreview').classList.add('hidden');
+                        tempProductCardImage = null;
+                    }
+                    document.getElementById('productCardFormTitle').innerText = 'কার্ড এডিট করুন';
+                    document.getElementById('productCardSaveBtnText').innerText = 'আপডেট করুন';
+                    document.getElementById('productCardCancelBtn').classList.remove('hidden');
+                }
+            });
+        };
+
+        window.deleteProductCardItem = function(key) {
+            if (confirm('কার্ডটি ডিলিট করতে চান?')) {
+                db.child('productLaunchCards/' + key).remove().then(() => {
+                    renderAdminProductCards();
+                    showToast('কার্ড মুছে ফেলা হয়েছে!');
+                });
+            }
+        };
+
+        window.resetProductCardForm = function() {
+            document.getElementById('editProductCardKey').value = '';
+            document.getElementById('productCardTitleInput').value = '';
+            document.getElementById('productCardUrlInput').value = '';
+            document.getElementById('productCardImageInput').value = '';
+            document.getElementById('productCardImagePreview').classList.add('hidden');
+            tempProductCardImage = null;
+            document.getElementById('productCardFormTitle').innerText = 'নতুন প্রোডাক্ট কার্ড যুক্ত করুন';
+            document.getElementById('productCardSaveBtnText').innerText = 'যোগ করুন';
+            document.getElementById('productCardCancelBtn').classList.add('hidden');
         };
 
         window.previewUserPic = function(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = function(e) { document.getElementById('userProfilePreview').src = e.target.result; tempUserProfilePic = e.target.result; }; reader.readAsDataURL(input.files[0]); } }
