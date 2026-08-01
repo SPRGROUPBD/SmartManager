@@ -60,7 +60,6 @@
         * { scrollbar-width: auto; scrollbar-color: #94a3b8 #f1f5f9; }
         .dark * { scrollbar-color: #475569 #1e293b; }
 
-        /* Hide scrollbar only for very specific small areas if needed, but not globally */
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -234,7 +233,9 @@
     <!-- USER POPUP NOTICE -->
     <div id="userPopupModal" class="absolute inset-0 bg-slate-950/70 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-xs p-5 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-700 text-center relative animate-in fade-in zoom-in duration-300">
-            <div class="w-12 h-12 rounded-2xl bg-warning/10 text-warning flex items-center justify-center text-xl mx-auto"><i class="fa-solid fa-bell"></i></div>
+            <button onclick="closeUserPopupModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 z-10"><i class="fa-solid fa-xmark text-sm"></i></button>
+            <img id="popupImage" src="" class="w-full h-40 object-cover rounded-2xl hidden mb-3" alt="Popup Image">
+            <div class="w-12 h-12 rounded-2xl bg-warning/10 text-warning flex items-center justify-center text-xl mx-auto" id="popupIcon"><i class="fa-solid fa-bell"></i></div>
             <div class="space-y-1.5"><h3 id="popupTitleText" class="font-bold text-sm text-slate-900 dark:text-white">জরুরি ঘোষণা</h3><p id="popupBodyText" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed"></p></div>
             <button onclick="closeUserPopupModal()" class="w-full py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-md shadow-primary/30">বুঝেছি (OK)</button>
         </div>
@@ -423,17 +424,42 @@
                 </div>
 
                 <!-- POPUP TAB -->
-                <div id="tabContentPopup" class="space-y-4 hidden pb-8">
+                <div id="tabContentPopup" class="space-y-6 hidden pb-8">
+                    
+                    <!-- 1. General Popup Settings -->
                     <div class="space-y-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs">
-                        <h5 class="font-bold text-primary mb-2 text-sm">পপআপ নোটিশ সেটিংস (রিয়েল-টাইম ব্রডকাস্ট)</h5>
-                        <input type="text" id="popupTitleInput" placeholder="পপআপ শিরোনাম" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none mb-2">
-                        <textarea id="popupBodyInput" placeholder="পপআপ বিস্তারিত বার্তা..." rows="4" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none resize-none mb-2"></textarea>
+                        <h5 class="font-bold text-primary mb-2 text-sm flex items-center gap-1.5"><i class="fa-solid fa-bell"></i> পপআপ নোটিশ সেটিংস (General)</h5>
+                        <input type="text" id="generalPopupTitleInput" placeholder="পপআপ শিরোনাম (যেমন: জরুরি ঘোষণা)" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none mb-2">
+                        <textarea id="generalPopupBodyInput" placeholder="পপআপ বিস্তারিত বার্তা..." rows="3" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none resize-none mb-2"></textarea>
+                        <div class="mb-2">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">ছবি আপলোড করুন (General Image):</label>
+                            <input type="file" id="generalPopupImageInput" accept="image/*" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90" onchange="previewGeneralPopupImage(this)">
+                            <img id="generalPopupImagePreview" src="" class="w-full h-32 object-cover rounded-xl mt-2 hidden" alt="Preview">
+                        </div>
                         <div class="flex items-center justify-between py-1.5">
                             <span class="font-semibold text-slate-600 dark:text-slate-300">স্ট্যাটাস:</span>
-                            <select id="popupStatusSelect" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none"><option value="active">Active (সকল ইউজারকে পাঠান)</option><option value="hidden">Hidden (বন্ধ করুন)</option></select>
+                            <select id="generalPopupStatusSelect" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none"><option value="active">Active (সকল ইউজারকে পাঠান)</option><option value="hidden">Hidden (বন্ধ করুন)</option></select>
                         </div>
-                        <button onclick="savePopupNoticeSetting()" class="w-full py-3 bg-primary text-white font-bold rounded-xl shadow-xs mt-2 flex items-center justify-center space-x-1"><i class="fa-solid fa-paper-plane text-[10px]"></i><span>সকল ইউজারকে পাঠান / আপডেট করুন</span></button>
+                        <button onclick="saveGeneralPopup()" class="w-full py-3 bg-primary text-white font-bold rounded-xl shadow-xs mt-2 flex items-center justify-center space-x-1"><i class="fa-solid fa-paper-plane text-[10px]"></i><span>General পপআপ সেভ করুন</span></button>
                     </div>
+
+                    <!-- 2. New Product Launch Popup -->
+                    <div class="space-y-3 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs">
+                        <h5 class="font-bold text-success mb-2 text-sm flex items-center gap-1.5"><i class="fa-solid fa-rocket"></i> New Product Launch</h5>
+                        <input type="text" id="productPopupTitleInput" placeholder="প্রোডাক্ট শিরোনাম (যেমন: New Product Launched!)" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none mb-2">
+                        <textarea id="productPopupBodyInput" placeholder="প্রোডাক্ট বিস্তারিত বার্তা..." rows="3" class="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none resize-none mb-2"></textarea>
+                        <div class="mb-2">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">ছবি আপলোড করুন (Product Image):</label>
+                            <input type="file" id="productPopupImageInput" accept="image/*" class="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-success file:text-white hover:file:bg-success/90" onchange="previewProductPopupImage(this)">
+                            <img id="productPopupImagePreview" src="" class="w-full h-32 object-cover rounded-xl mt-2 hidden" alt="Preview">
+                        </div>
+                        <div class="flex items-center justify-between py-1.5">
+                            <span class="font-semibold text-slate-600 dark:text-slate-300">স্ট্যাটাস:</span>
+                            <select id="productPopupStatusSelect" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold outline-none"><option value="active">Active (সকল ইউজারকে পাঠান)</option><option value="hidden">Hidden (বন্ধ করুন)</option></select>
+                        </div>
+                        <button onclick="saveProductPopup()" class="w-full py-3 bg-success text-white font-bold rounded-xl shadow-xs mt-2 flex items-center justify-center space-x-1"><i class="fa-solid fa-rocket text-[10px]"></i><span>Product পপআপ সেভ করুন</span></button>
+                    </div>
+
                 </div>
 
                 <!-- USER TAB -->
@@ -499,6 +525,11 @@
         let currentSlideIndex = 0;
         let tempUserProfilePic = null; 
         let tempMyProfilePic = null;   
+        let tempGeneralPopupImage = null;
+        let tempProductPopupImage = null;
+        let activePopupsQueue = [];
+        let currentPopupIndex = 0;
+
         let globalMenus = [];
         let currentSearchKeyword = '';
         let isMenusLoaded = false;
@@ -539,13 +570,10 @@
             return dateStr || '';
         }
 
-        // 🚀 Direct Base64 Upload for 100% HD Quality (No Compression, No Resizing)
         function processAndCompressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    resolve(e.target.result);
-                };
+                reader.onload = (e) => { resolve(e.target.result); };
                 reader.onerror = reject; 
                 reader.readAsDataURL(file);
             });
@@ -567,47 +595,25 @@
             setupHorizontalScrolls();
         });
 
-        // Mouse drag and wheel scroll logic
         function setupHorizontalScrolls() {
             const containers = document.querySelectorAll('.h-scroll');
             containers.forEach(container => {
                 if (container.dataset.scrollSetup === 'true') return;
                 container.dataset.scrollSetup = 'true';
-
                 container.addEventListener('wheel', function(e) {
-                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                        e.preventDefault();
-                        this.scrollLeft += e.deltaY;
-                    }
+                    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); this.scrollLeft += e.deltaY; }
                 }, { passive: false });
-
-                let isDown = false;
-                let startX;
-                let scrollLeft;
-
+                let isDown = false; let startX; let scrollLeft;
                 container.addEventListener('mousedown', (e) => {
                     if (e.offsetX > container.clientWidth - 20) return;
-                    isDown = true;
-                    container.classList.add('active-drag');
-                    startX = e.pageX - container.offsetLeft;
-                    scrollLeft = container.scrollLeft;
+                    isDown = true; container.classList.add('active-drag');
+                    startX = e.pageX - container.offsetLeft; scrollLeft = container.scrollLeft;
                 });
-
-                container.addEventListener('mouseleave', () => {
-                    isDown = false;
-                    container.classList.remove('active-drag');
-                });
-
-                container.addEventListener('mouseup', () => {
-                    isDown = false;
-                    container.classList.remove('active-drag');
-                });
-
+                container.addEventListener('mouseleave', () => { isDown = false; container.classList.remove('active-drag'); });
+                container.addEventListener('mouseup', () => { isDown = false; container.classList.remove('active-drag'); });
                 container.addEventListener('mousemove', (e) => {
-                    if (!isDown) return;
-                    e.preventDefault();
-                    const x = e.pageX - container.offsetLeft;
-                    const walk = (x - startX) * 1.5;
+                    if (!isDown) return; e.preventDefault();
+                    const x = e.pageX - container.offsetLeft; const walk = (x - startX) * 1.5;
                     container.scrollLeft = scrollLeft - walk;
                 });
             });
@@ -636,8 +642,13 @@
                 }
                 const noticesSnap = await db.child('notices').once('value');
                 if (!noticesSnap.exists()) { await db.child('notices').set({ "notice_1": { text: "স্বাগতম Monico One-তে! সকল রোল ভিত্তিক মেনু আপডেট সক্রিয় রয়েছে।" } }); }
-                const popupSnap = await db.child('popupNotice').once('value');
-                if (!popupSnap.exists()) { await db.child('popupNotice').set({ title: "বিশেষ নির্দেশনা", body: "Monico One অ্যাপে সফলভাবে লগইন সম্পন্ন হয়েছে। নির্ধারিত রোল অনুযায়ী আপনার মেনু শো করছে।", status: "active" }); }
+                
+                // Seeding two separate popup nodes
+                const popupGeneralSnap = await db.child('popupNotice/general').once('value');
+                if (!popupGeneralSnap.exists()) { await db.child('popupNotice/general').set({ title: "বিশেষ নির্দেশনা", body: "Monico One অ্যাপে সফলভাবে লগইন সম্পন্ন হয়েছে। নির্ধারিত রোল অনুযায়ী আপনার মেনু শো করছে।", status: "active" }); }
+                const popupProductSnap = await db.child('popupNotice/productLaunch').once('value');
+                if (!popupProductSnap.exists()) { await db.child('popupNotice/productLaunch').set({ title: "New Product Launched!", body: "আমাদের নতুন প্রোডাক্ট লঞ্চ হয়েছে। বিস্তারিত জানতে সেলস রিপোর্ট দেখুন।", status: "hidden" }); }
+
                 const userKsSnap = await db.child('users/KS').once('value');
                 if (!userKsSnap.exists()) { await db.child('users/KS').set({ employeeId: "KS", fullName: "KS Super Admin", password: "Monico@Ku007", role: "SUPER_ADMIN", status: "active", profilePic: APP_LOGO_URL }); }
             } catch (e) { console.log("Seeding Error:", e); }
@@ -700,7 +711,6 @@
             if (syncIcon.classList.contains('fa-spinner')) return; 
             syncIcon.classList.remove('fa-rotate'); syncIcon.classList.add('fa-spinner', 'fa-spin');
             showToast('সিঙ্ক হচ্ছে...');
-            
             Promise.all([
                 db.child('menus').once('value'), 
                 db.child('sliders').once('value'), 
@@ -710,17 +720,14 @@
                 const menusData = menusSnap.val() || {};
                 globalMenus = Object.keys(menusData).map(key => ({ id: key, ...menusData[key] })); 
                 isMenusLoaded = true;
-                
                 const slidersData = slidersSnap.val() || {};
                 const noticesData = noticesSnap.val() || {};
                 const productsData = productsSnap.val() || {};
-
                 renderMenus(); 
                 renderSlidersUI(slidersData);
                 const notices = Object.keys(noticesData).map(key => noticesData[key].text);
                 document.getElementById('marqueeText').innerText = notices.join("  ***  ") || "কোনো নোটিশ নেই।";
                 renderProductNotices(productsData); 
-
                 syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate');
                 showToast('সিঙ্ক সম্পন্ন হয়েছে!');
             }).catch(err => {
@@ -755,8 +762,54 @@
             if (newPass.length < 4) { showToast('নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে'); return; }
             db.child('users/' + currentUserData.employeeId).update({ password: newPass }).then(() => { currentUserData.password = newPass; localStorage.setItem('fieldpro_current_user', JSON.stringify(currentUserData)); closeChangePassModal(); showToast('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!'); });
         }
-        function checkPopupNotice() { db.child('popupNotice').on('value', (snapshot) => { const popup = snapshot.val(); if (popup && popup.status === 'active') { document.getElementById('popupTitleText').innerText = popup.title || "জরুরি নোটিশ"; document.getElementById('popupBodyText').innerText = popup.body || ""; document.getElementById('userPopupModal').classList.remove('hidden'); } else { document.getElementById('userPopupModal').classList.add('hidden'); } }); }
-        window.closeUserPopupModal = function() { document.getElementById('userPopupModal').classList.add('hidden'); }
+        
+        // Check Popup Notices (General & Product Launch)
+        function checkPopupNotice() { 
+            db.child('popupNotice').on('value', (snapshot) => { 
+                const popups = snapshot.val() || {};
+                activePopupsQueue = [];
+                
+                const general = popups.general;
+                const productLaunch = popups.productLaunch;
+
+                if (general && general.status === 'active') { activePopupsQueue.push(general); }
+                if (productLaunch && productLaunch.status === 'active') { activePopupsQueue.push(productLaunch); }
+                
+                currentPopupIndex = 0;
+                showNextPopup();
+            }); 
+        }
+
+        function showNextPopup() {
+            if (currentPopupIndex < activePopupsQueue.length) {
+                const popup = activePopupsQueue[currentPopupIndex];
+                showUserPopup(popup);
+                currentPopupIndex++;
+            } else {
+                document.getElementById('userPopupModal').classList.add('hidden');
+            }
+        }
+
+        function showUserPopup(popup) {
+            document.getElementById('popupTitleText').innerText = popup.title || "জরুরি নোটিশ";
+            document.getElementById('popupBodyText').innerText = popup.body || "";
+            const popupImg = document.getElementById('popupImage');
+            const popupIcon = document.getElementById('popupIcon');
+            if (popup.image) {
+                popupImg.src = popup.image;
+                popupImg.classList.remove('hidden');
+                popupIcon.classList.add('hidden');
+            } else {
+                popupImg.classList.add('hidden');
+                popupIcon.classList.remove('hidden');
+            }
+            document.getElementById('userPopupModal').classList.remove('hidden');
+        }
+
+        window.closeUserPopupModal = function() {
+            document.getElementById('userPopupModal').classList.add('hidden');
+            setTimeout(() => { showNextPopup(); }, 300);
+        }
         
         function renderSlidersUI(data) {
             const sliders = Object.keys(data).map(key => ({ id: key, ...data[key] }));
@@ -1018,12 +1071,9 @@
                     }
                 }
             });
-
             const list = document.getElementById('adminMenuList');
             list.innerHTML = '';
-            
             if (!adminGlobalMenus) return;
-
             Object.keys(adminGlobalMenus).forEach(key => {
                 const m = adminGlobalMenus[key];
                 if (m.group === grid) {
@@ -1031,7 +1081,6 @@
                     const isPinned = m.isPinned ? '<i class="fa-solid fa-thumbtack text-warning ml-1"></i>' : '';
                     const imgCount = m.images && m.images.length > 1 ? `<span class="text-slate-500 font-normal">(${m.images.length} Pages)</span>` : '';
                     const displayRole = m.allowedRole || 'PALL';
-                    
                     list.innerHTML += `
                         <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                             <div class="truncate max-w-[60%]">
@@ -1047,7 +1096,6 @@
                     `;
                 }
             });
-
             if (list.innerHTML === '') {
                 list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">এই গ্রিডে কোনো ফাইল নেই।</p>';
             }
@@ -1085,8 +1133,87 @@
         window.editNotice = function(key) { db.child('notices/' + key).once('value', (snapshot) => { const n = snapshot.val(); if (n) { document.getElementById('editNoticeKey').value = key; document.getElementById('noticeTextInput').value = n.text || ''; document.getElementById('noticeFormTitle').innerText = 'নোটিশ এডিট করুন'; document.getElementById('noticeSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('noticeCancelBtn').classList.remove('hidden'); } }); }
         window.resetNoticeForm = function() { document.getElementById('editNoticeKey').value = ''; document.getElementById('noticeTextInput').value = ''; document.getElementById('noticeFormTitle').innerText = 'নতুন নোটিশ যুক্ত করুন'; document.getElementById('noticeSaveBtnText').innerText = 'নোটিশ যোগ করুন'; document.getElementById('noticeCancelBtn').classList.add('hidden'); }
         window.deleteNotice = function(key) { if (confirm('নোটিশটি ডিলিট করতে চান?')) { db.child('notices/' + key).remove().then(() => { renderAdminNotices(); showToast('নোটিশ মুছে ফেলা হয়েছে!'); }); } }
-        function loadAdminPopupData() { db.child('popupNotice').once('value', (snapshot) => { const popup = snapshot.val(); if (popup) { document.getElementById('popupTitleInput').value = popup.title || ''; document.getElementById('popupBodyInput').value = popup.body || ''; document.getElementById('popupStatusSelect').value = popup.status || 'active'; } }); }
-        window.savePopupNoticeSetting = function() { const title = document.getElementById('popupTitleInput').value.trim(); const body = document.getElementById('popupBodyInput').value.trim(); const status = document.getElementById('popupStatusSelect').value; db.child('popupNotice').set({ title, body, status }).then(() => { showToast('পপআপ নোটিশ আপডেট হয়েছে! স্ট্যাটাস অনুযায়ী ইউজার দেখতে পাবে।'); }); }
+        
+        // Admin Popup Preview & Save Functions
+        window.previewGeneralPopupImage = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('generalPopupImagePreview').src = e.target.result;
+                    document.getElementById('generalPopupImagePreview').classList.remove('hidden');
+                    tempGeneralPopupImage = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+        window.previewProductPopupImage = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('productPopupImagePreview').src = e.target.result;
+                    document.getElementById('productPopupImagePreview').classList.remove('hidden');
+                    tempProductPopupImage = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
+
+        function loadAdminPopupData() { 
+            db.child('popupNotice').once('value', (snapshot) => { 
+                const popups = snapshot.val() || {};
+                const general = popups.general || {};
+                const productLaunch = popups.productLaunch || {};
+                
+                document.getElementById('generalPopupTitleInput').value = general.title || ''; 
+                document.getElementById('generalPopupBodyInput').value = general.body || ''; 
+                document.getElementById('generalPopupStatusSelect').value = general.status || 'active'; 
+                if (general.image) {
+                    document.getElementById('generalPopupImagePreview').src = general.image;
+                    document.getElementById('generalPopupImagePreview').classList.remove('hidden');
+                } else {
+                    document.getElementById('generalPopupImagePreview').classList.add('hidden');
+                }
+
+                document.getElementById('productPopupTitleInput').value = productLaunch.title || ''; 
+                document.getElementById('productPopupBodyInput').value = productLaunch.body || ''; 
+                document.getElementById('productPopupStatusSelect').value = productLaunch.status || 'hidden'; 
+                if (productLaunch.image) {
+                    document.getElementById('productPopupImagePreview').src = productLaunch.image;
+                    document.getElementById('productPopupImagePreview').classList.remove('hidden');
+                } else {
+                    document.getElementById('productPopupImagePreview').classList.add('hidden');
+                }
+            }); 
+        }
+        window.saveGeneralPopup = function() { 
+            const title = document.getElementById('generalPopupTitleInput').value.trim(); 
+            const body = document.getElementById('generalPopupBodyInput').value.trim(); 
+            const status = document.getElementById('generalPopupStatusSelect').value; 
+            const popupData = { title, body, status };
+            if (tempGeneralPopupImage) {
+                popupData.image = tempGeneralPopupImage;
+            }
+            db.child('popupNotice/general').set(popupData).then(() => { 
+                showToast('General পপআপ সফলভাবে সেভ হয়েছে!'); 
+                tempGeneralPopupImage = null;
+                document.getElementById('generalPopupImageInput').value = '';
+            }); 
+        }
+        window.saveProductPopup = function() { 
+            const title = document.getElementById('productPopupTitleInput').value.trim(); 
+            const body = document.getElementById('productPopupBodyInput').value.trim(); 
+            const status = document.getElementById('productPopupStatusSelect').value; 
+            const popupData = { title, body, status };
+            if (tempProductPopupImage) {
+                popupData.image = tempProductPopupImage;
+            }
+            db.child('popupNotice/productLaunch').set(popupData).then(() => { 
+                showToast('New Product পপআপ সফলভাবে সেভ হয়েছে!'); 
+                tempProductPopupImage = null;
+                document.getElementById('productPopupImageInput').value = '';
+            }); 
+        }
+
         window.previewUserPic = function(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = function(e) { document.getElementById('userProfilePreview').src = e.target.result; tempUserProfilePic = e.target.result; }; reader.readAsDataURL(input.files[0]); } }
         function renderAdminUsers() { db.child('users').once('value', (snapshot) => { const data = snapshot.val() || {}; const list = document.getElementById('adminUserList'); list.innerHTML = ''; Object.keys(data).forEach(key => { const u = data[key]; list.innerHTML += `<div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"><span>${u.employeeId} (${u.role})</span><div class="flex items-center space-x-1.5"><button onclick="editUser('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button>${key !== 'KS' ? `<button onclick="deleteUser('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button>` : ''}</div></div>`; }); }); }
         window.saveUserItem = function() { const editKey = document.getElementById('editUserKey').value; const empId = document.getElementById('userEmpIdInput').value.trim().toUpperCase(); const fullName = document.getElementById('userFullNameInput').value.trim(); const password = document.getElementById('userPassInput').value.trim(); const role = document.getElementById('userRoleInput').value; if (!empId || !fullName || !password) { showToast('সকল ফিল্ড পূরণ করুন'); return; } const userData = { employeeId: empId, fullName, password, role, status: "active" }; if (tempUserProfilePic) { userData.profilePic = tempUserProfilePic; } db.child('users/' + empId).set(userData).then(() => { if (editKey && editKey !== empId) db.child('users/' + editKey).remove(); resetUserForm(); renderAdminUsers(); showToast('ইউজার সফলভাবে সংরক্ষিত হয়েছে!'); }); }
