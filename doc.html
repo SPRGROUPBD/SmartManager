@@ -1895,7 +1895,8 @@
                 });
             });
 
-            const ROWS_PER_PAGE = 40;
+            // ✅ Changed: 20 rows per page (was 40)
+            const ROWS_PER_PAGE = 25;
             let pages=[];
             if(flatRows.length>0){let offset=0;while(offset<flatRows.length){pages.push(flatRows.slice(offset,offset+ROWS_PER_PAGE));offset+=ROWS_PER_PAGE;}}
             
@@ -1909,12 +1910,16 @@
                 html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
+                let cumulativeTotal=0; // ✅ Running total across all pages
                 pages.forEach((pageRows,pageIndex)=>{
                     const isLastPage=(pageIndex===pages.length-1);
                     const pageTotal=pageRows.filter(r=>r.active).reduce((s,r)=>s+r.amount,0);
                     const activePageCount=pageRows.filter(r=>r.active).length;
+                    const previousPagesTotal=cumulativeTotal;
+                    cumulativeTotal += pageTotal;
                     
                     html+=`<div style="${!isLastPage?'page-break-after: always;':''}">`;
+                    // ✅ Header on EVERY page
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
                     html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
                     html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
@@ -1946,22 +1951,24 @@
                     });
                     
                     html+=`</tbody><tfoot>`;
-                    if(pages.length>1&&!isLastPage){
-                        html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
-                    }
+                    // ✅ Page Total on EVERY page (was only on middle pages before)
+                    html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                    
+                    // ✅ Grand Total on LAST page = Page 1 + Page 2 + ... + Last Page
                     if(isLastPage){
                         if(pages.length>1){
-                            const previousPagesTotal=pages.slice(0,pageIndex).reduce((s,pg)=>s+pg.filter(r=>r.active).reduce((ss,r)=>ss+r.amount,0),0);
-                            html+=`<tr style="background:#eff6ff;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Subtotal (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
-                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                         }
-                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">Grand Total (${totalActiveItems} Active Doctor)</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        const grandTotalLabel = pages.length>1 ? `Grand Total (Page 1+2+...+${pages.length} = ${totalActiveItems} Active Doctor)` : `Grand Total (${totalActiveItems} Active Doctor)`;
+                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">${grandTotalLabel}</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     html+=`</tfoot></table>`;
+                    
                     if(isLastPage){
                         html+=`<div style="margin-top:10px;font-size:10px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>`;
-                        html+=sigRowHTML(['Prepared by','Checked by','ReChecked by','Verified by','Approved By']);
                     }
+                    // ✅ Signature Area on EVERY page (was only on last page before)
+                    html+=sigRowHTML(['Prepared by','Checked by','ReChecked by','Verified by','Approved By']);
                     html+=`</div>`;
                 });
             }
