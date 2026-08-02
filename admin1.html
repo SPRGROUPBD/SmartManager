@@ -113,11 +113,11 @@
         .modal-table th,.modal-table td{white-space:normal;word-wrap:break-word;vertical-align:middle;padding:6px 4px;font-size:12px}
         .modal-table input{width:100%;min-width:45px;padding:3px;font-size:12px}
         .row-total{font-weight:700;min-width:55px;display:inline-block}
-        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none;position:relative}
+        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container,.print-approved-batch-container{display:none;position:relative}
         @media print{
             body *{visibility:hidden}
             .no-print{display:none!important}
-            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none!important;visibility:hidden}
+            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container,.print-approved-batch-container{display:none!important;visibility:hidden}
             .active-print{display:block!important;position:absolute;left:0;top:0;width:100%;visibility:visible!important}
             .active-print *{visibility:visible!important}
             #pageFooter,#pageFooterSummary,#pageFooterIOU,#pageFooterTopSheet,#pageFooterTopSheetFinal{position:fixed;bottom:10px;left:0;width:100%;text-align:center;font-size:13px}
@@ -125,8 +125,10 @@
             thead{display:table-header-group}tfoot{display:table-footer-group}
             table,th,td{border:1px solid #000!important;border-collapse:collapse}
             th,td{padding:2px 4px;font-size:13px;line-height:1.2}
-            .sign-row td{height:80px;vertical-align:bottom}
+            .sign-row td{height:120px;vertical-align:bottom}
             .cut-text{text-decoration:line-through;color:red}
+            .print-page-break { page-break-after: always; }
+            .print-page-break:last-child { page-break-after: none; }
         }
         @media(max-width:768px){
             .modal-dialog{margin:0;width:100vw;height:100vh;max-width:100vw}
@@ -501,7 +503,12 @@
         <!-- APPROVED HISTORY TAB -->
         <div class="tab-pane fade" id="approvedHistoryTab" role="tabpanel">
             <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
-            <div class="card dash-card no-print"><div class="card-body p-1"><h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+            <div class="card dash-card no-print"><div class="card-body p-1">
+                <div class="d-flex justify-content-between align-items-center p-1 mb-1">
+                    <h6 class="text-center text-muted mb-0">Checked & Approved Bills</h6>
+                    <button id="btnPrintApprovedBatch" onclick="printNextApprovedBatch()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Print Next 10</button>
+                </div>
+            <div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
         </div>
 
         <!-- IOU ENTRY TAB (Form + List) -->
@@ -645,11 +652,10 @@
 <!-- PRINT CONTAINERS -->
 <div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
 
-<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:100px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
+<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:130px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
 
-<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
+<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:120px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
 
-<!-- ★★★ GENERATED TOP SHEET PRINT CONTAINER ★★★ -->
 <div class="print-topsheet-final-container" id="print_topsheet_final_area">
     <div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">
         <h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2>
@@ -691,13 +697,16 @@
     </div>
 
     <table style="width:100%;border-collapse:collapse;margin-top:50px">
-        <tr style="height:100px;vertical-align:bottom">
+        <tr style="height:130px;vertical-align:bottom">
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Prepared By DIC</td>
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Rechecked RSM/Sr.RSM</td>
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Approved By Accounts</td>
         </tr>
     </table>
 </div>
+
+<!-- ★★★ APPROVED BATCH PRINT CONTAINER ★★★ -->
+<div class="print-approved-batch-container" id="print_approved_batch_area"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -726,6 +735,10 @@ let modalSales=0,modalUserBill=0,modalIou=0;
 let globalFilterMonth='',iouGlobalListenerRef=null;
 let lookedUpUser=null,lookupTimeout=null;
 let _iouLoaded=false;
+
+// Variables for batch printing Approved History
+let approvedPrintCache=[];
+let approvedPrintIndex=0;
 
 function sanitizeKey(s){return String(s||'').replace(/[.#$\[\]\/]/g,'_');}
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -974,7 +987,6 @@ function showDashboard(){
     document.getElementById('dashTab').classList.add('show','active');
     setupPresence();listenForOnlineUsers();
     
-    // Force Current Month on every login
     localStorage.removeItem('globalFilterMonth'); 
     var targetMonth=getCurrentMonth(); 
     
@@ -1179,7 +1191,6 @@ function loadDAListForFilters(callback){
     });
 }
 
-// Load User List in "New User Record" Tab
 function loadUserList() {
     var tbody=document.getElementById('user_list_body');
     if(!tbody) return;
@@ -1234,7 +1245,7 @@ function editUser(id){
         } else {
             document.getElementById('photo_preview').classList.add('hidden');
         }
-        userPhotoBase64 = null; // Don't override unless new photo selected
+        userPhotoBase64 = null;
 
         document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-pencil-square"></i> Update Record';
         document.getElementById('cancelEditUserBtn').classList.remove('hidden');
@@ -1263,7 +1274,6 @@ function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cach
 function deleteIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found");return;}if(!confirm("Delete?"))return;database.ref('IOU_List/'+iou._year+'/'+iou._month+'/'+sanitizeKey(iou._daName)+'/'+id).remove().then(function(){if(editingIouId===id)clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function cancelIOUEdit(){clearIOUForm();}
 
-// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
 function resetIOUFilter(){
     document.getElementById('iou_filter_start').value='';
     document.getElementById('iou_filter_end').value='';
@@ -1365,7 +1375,7 @@ function editBill(billId,year,month,daName){
         if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}
         calculateGrandTotal();calculateSoldValue();
         document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';
-        document.getElementById('cancel_edit_btn').classList.remove('hidden');
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
         document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});
         document.getElementById('entryTab').classList.add('show','active');
         document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1386,12 +1396,10 @@ function deleteBill(billId,year,month,daName){
 }
 function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
 
-// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
 function resetHistoryFilter(){
     document.getElementById('filter_history_da').value='';
     loadBills();
 }
-// এখানে পরিবর্তন করা হয়েছে: শুধু ভেতরের ফিল্টার ক্লিয়ার হবে, মাস থাকবে যেমন ছিল
 function resetApprovedFilter(){
     document.getElementById('filter_approved_da').value='';
     loadBills();
@@ -1426,12 +1434,19 @@ function loadBills(){
         var aTotals={iou:0,sales:0,userBill:0,payable:0};
         var allBills=collectBills(snap,null,null);
         var approvedArr=[];
+        
+        approvedPrintCache = [];
+        approvedPrintIndex = 0;
+        var btnPrint = document.getElementById('btnPrintApprovedBatch');
+        if(btnPrint) btnPrint.disabled = false;
+        
         var userBillCount=0;
 
         if(allBills.length===0){
             var cs=currentUser.role==='user'?'6':'9';
             tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            if(btnPrint) btnPrint.disabled = true;
             tableFoot.innerHTML='';appFoot.innerHTML='';return;
         }
 
@@ -1513,6 +1528,14 @@ function loadBills(){
                 if(approvedDAName&&b.daName!==approvedDAName)return;
                 approvedVisibleCount++;
                 aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
+                
+                approvedPrintCache.push({
+                    billData: b,
+                    year: item.y,
+                    month: item.m,
+                    daName: item.dn
+                });
+
                 var trA=document.createElement('tr');
                 if(item.b.status==='orange')trA.classList.add('status-orange');
                 else trA.classList.add('status-green');
@@ -1524,6 +1547,7 @@ function loadBills(){
             });
             if(approvedVisibleCount===0){
                 appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+                if(btnPrint) btnPrint.disabled = true;
             }
         }
 
@@ -1855,6 +1879,7 @@ function printGeneratedTopSheet(reportId, reportMonth){
         document.getElementById('print_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
         
         document.getElementById('print_topsheet_final_area').classList.add('active-print');
         
@@ -1942,6 +1967,7 @@ function printBill(billId,year,month,daName){
         document.getElementById('print_topsheet_final_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
         document.getElementById('print_area').classList.add('active-print');window.print();
     });
 }
@@ -1963,6 +1989,7 @@ function printBillSummary(){
     document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.remove('active-print');
+    document.getElementById('print_approved_batch_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.add('active-print');window.print();
 }
 function printIOUList(){
@@ -1983,7 +2010,87 @@ function printIOUList(){
     document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.remove('active-print');
+    document.getElementById('print_approved_batch_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.add('active-print');window.print();
+}
+
+// ========== PRINT APPROVED BATCH (10 at a time, each on a new page) ==========
+function generateSingleBillPrintHTML(bill) {
+    if(!bill) return '';
+    var costPct="0%"; if(bill.invoiceVal>0) costPct=((bill.totalAmount/bill.invoiceVal)*100).toFixed(2)+"%";
+    var expHtml=''; var tAmt=0,tDa=0,tDed=0,tNet=0,tTot=0;
+    if(bill.expenses){bill.expenses.forEach(function(exp){
+        if(!exp.date)return;var amt=parseFloat(exp.amount)||0,da=parseFloat(exp.da)||0,ded=parseFloat(exp.deduction)||0;
+        var total=amt+da,net=total-ded;tAmt+=amt;tDa+=da;tTot+=total;tDed+=ded;tNet+=net;
+        var tDisp=total;if(ded>0)tDisp='<span class="cut-text">'+total+'</span>';
+        expHtml+='<tr><td style="padding:2px;text-align:left">'+formatDate(exp.date)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.from)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.to)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.mode)+'</td><td style="padding:2px;text-align:right">'+amt+'</td><td style="padding:2px;text-align:right">'+da+'</td><td style="padding:2px;text-align:right">'+tDisp+'</td><td style="padding:2px;text-align:right;color:red">'+(ded>0?ded:'')+'</td><td style="padding:2px;text-align:right;font-weight:bold">'+net+'</td></tr>';
+    });}
+    
+    var html = '<div class="print-page-break" style="padding:20px;">';
+    html += '<div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">';
+    html += '<tr><td style="width:33%;padding:3px"><strong>DA:</strong> '+escHtml(bill.daName)+'</td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> '+escHtml(bill.depot)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Departure:</strong> '+formatDate(bill.depDate)+'</td><td style="text-align:center;padding:3px"><strong>Return:</strong> '+formatDate(bill.retDate)+'</td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> '+formatDate(bill.submitDate)+'</td></tr>';
+    html += '<tr><td colspan="3" style="padding:3px"><strong>Route:</strong> '+escHtml(bill.route)+'</td></tr>';
+    html += '<tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> '+escHtml(bill.mpo)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Summary:</strong> '+escHtml(bill.summaryNo)+'</td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> '+bill.invoiceVal+'</td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> '+(bill.bundleQty||0)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Return:</strong> '+bill.returnVal+'</td><td style="text-align:center;padding:3px"><strong>Sold:</strong> '+bill.soldVal+'</td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> '+bill.invoiceQty+'</td></tr>';
+    html += '</table>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead>';
+    html += '<tbody>'+expHtml+'</tbody>';
+    html += '<tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px">'+tAmt+'</td><td style="text-align:right;padding:2px">'+tDa+'</td><td style="text-align:right;padding:2px">'+tTot+'</td><td style="text-align:right;padding:2px">'+tDed+'</td><td style="text-align:right;padding:2px">'+tNet+'</td></tr></tfoot></table>';
+    
+    html += '<div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> '+numberToEnglish(bill.totalAmount)+' Taka Only</div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> '+costPct+'</div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> '+(bill.remarks||'')+'</div></div>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.daName)+'</td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.checkedBy||'')+'</td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.recheckedBy||bill.approvedBy||'')+'</td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table>';
+    
+    html += '</div>';
+    return html;
+}
+
+function printNextApprovedBatch() {
+    var btn = document.getElementById('btnPrintApprovedBatch');
+    
+    if(approvedPrintCache.length === 0) {
+        alert("No approved bills found to print.");
+        if(btn) btn.disabled = true;
+        return;
+    }
+
+    if(approvedPrintIndex >= approvedPrintCache.length) {
+        alert("All approved bills have been printed.");
+        if(btn) btn.disabled = true;
+        return;
+    }
+
+    var batch = approvedPrintCache.slice(approvedPrintIndex, approvedPrintIndex + 10);
+    approvedPrintIndex += 10;
+
+    var allHtml = '';
+    batch.forEach(function(item) {
+        allHtml += generateSingleBillPrintHTML(item.billData);
+    });
+
+    document.getElementById('print_approved_batch_area').innerHTML = allHtml;
+
+    document.getElementById('print_area').classList.remove('active-print');
+    document.getElementById('print_summary_area').classList.remove('active-print');
+    document.getElementById('print_iou_area').classList.remove('active-print');
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+
+    document.getElementById('print_approved_batch_area').classList.add('active-print');
+    window.print();
+
+    if(approvedPrintIndex >= approvedPrintCache.length) {
+        if(btn) btn.disabled = true;
+    }
+
+    setTimeout(function(){
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').innerHTML = ''; 
+    }, 1000);
 }
 
 // ========== NUMBER TO ENGLISH ==========
@@ -2000,7 +2107,7 @@ function numberToEnglish(num){
     return str;
 }
 
-// ========== EXCEL IMPORT / EXPORT (Kept functions if needed elsewhere) ==========
+// ========== EXCEL IMPORT / EXPORT ==========
 function importExpensesToTable(){
     if(typeof XLSX==='undefined'){alert("Excel lib not loaded.");return;}
     var input=document.getElementById('user_exp_excel_input');if(!input.files||!input.files[0]){alert("Select file.");return;}
