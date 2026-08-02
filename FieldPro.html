@@ -184,10 +184,10 @@
 
                 <!-- All Sections Rendered Sequentially with Horizontal Scroll -->
                 <div class="space-y-6 pb-8 pt-2 max-w-7xl mx-auto w-full">
-                    <!-- Grid 1: Primary Menus -->
+                    <!-- Grid 1: Primary Menus (Changed to Grid View for 2 Rows) -->
                     <div id="grid1Section" class="space-y-2">
                         <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 px-1">Primary Menus (Daily Work)</h3>
-                        <div id="menuGrid1Container" class="flex overflow-x-auto gap-3 pb-2 h-scroll">
+                        <div id="menuGrid1Container" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3 pb-2">
                             <div class="loader-box w-full justify-center"><div class="loader-spinner mb-2"></div><p class="text-[11px] text-slate-400">মেনু লোড হচ্ছে...</p></div>
                         </div>
                     </div>
@@ -307,7 +307,7 @@
                 <button onclick="closeAdminPanel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
-            <!-- 🚀 Fixed Admin Tab Layout for Mobile -->
+            <!-- Admin Tab Layout -->
             <div class="grid grid-cols-3 md:grid-cols-6 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl text-xs sm:text-sm font-semibold text-center mt-4 shrink-0">
                 <button onclick="switchAdminTab('slider')" id="tabBtnSlider" class="py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition">স্লাইডার</button>
                 <button onclick="switchAdminTab('menu')" id="tabBtnMenu" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">মেনু ফাইল</button>
@@ -464,7 +464,7 @@
                     </div>
                 </div>
 
-                <!-- PRODUCT CARD TAB (New Product Launched Image Cards) -->
+                <!-- PRODUCT CARD TAB -->
                 <div id="tabContentProductCard" class="space-y-4 hidden pb-8">
                     <div id="adminProductCardList" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
                     <div class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
@@ -542,7 +542,8 @@
         firebase.initializeApp(firebaseConfig);
         try { firebase.database().enablePersistence().catch(err => console.log("Persistence error:", err.code)); } catch(e) {}
 
-        const db = firebase.database().ref('FieldPro');
+        // 🚀 Database Root Reference Changed to 'MonicoOne'
+        const db = firebase.database().ref('MonicoOne');
         const APP_LOGO_URL = 'https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565';
 
         let currentUserData = null;
@@ -666,14 +667,6 @@
                         "m_5_1": { group: "grid5", title: "Sales Report July", icon: APP_LOGO_URL, url: APP_LOGO_URL, images: [APP_LOGO_URL], allowedRole: "MPO,AM", month: getCurrentMonthName(), date: "2026-07-07", color: "from-rose-500 to-red-600", isPinned: true },
                         "m_3_1": { group: "grid3", title: "Circular Images", icon: APP_LOGO_URL, url: APP_LOGO_URL, images: [APP_LOGO_URL], allowedRole: "SALL", month: getCurrentMonthName(), date: "2026-07-10", color: "from-blue-600 to-indigo-700", isPinned: false }
                     });
-                }
-                const noticesSnap = await db.child('notices').once('value');
-                if (!noticesSnap.exists()) { await db.child('notices').set({ "notice_1": { text: "স্বাগতম Monico One-তে! সকল রোল ভিত্তিক মেনু আপডেট সক্রিয় রয়েছে।" } }); }
-                
-                const popupSnap = await db.child('popupNotice').once('value');
-                if (!popupSnap.exists()) { 
-                    await db.child('popupNotice').push({ title: "বিশেষ নির্দেশনা", body: "Monico One অ্যাপে সফলভাবে লগইন সম্পন্ন হয়েছে। নির্ধারিত রোল অনুযায়ী আপনার মেনু শো করছে।", status: "active", type: "general" });
-                    await db.child('popupNotice').push({ title: "New Product Launched!", body: "আমাদের নতুন প্রোডাক্ট লঞ্চ হয়েছে। বিস্তারিত জানতে সেলস রিপোর্ট দেখুন।", status: "hidden", type: "product" });
                 }
 
                 const userKsSnap = await db.child('users/KS').once('value');
@@ -907,7 +900,12 @@
             });
         };
         window.deleteProductNotice = function(key) {
-            if (confirm('প্রোডাক্টটি ডিলিট করতে চান?')) { db.child('productNotices/' + key).remove().then(() => { showToast('প্রোডাক্ট মুছে ফেলা হয়েছে!'); }); }
+            if (confirm('প্রোডাক্টটি ডিলিট করতে চান?')) {
+                db.child('productNotices/' + key).remove().then(() => { 
+                    db.child('productNotices').once('value').then(snap => renderAdminProducts(snap.val()));
+                    showToast('প্রোডাক্ট মুছে ফেলা হয়েছে!'); 
+                });
+            }
         };
         window.resetProductForm = function() {
             document.getElementById('editProductKey').value = '';
@@ -1074,7 +1072,7 @@
             const hasSeen = m.seenBy && currentUserData && m.seenBy[currentUserData.employeeId];
             const redDot = hasSeen ? '' : '<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white animate-pulse z-10"></span>';
             
-            const sizeClass = isPinned ? 'w-[110px] h-[120px] shrink-0' : 'w-[140px] h-[120px] shrink-0';
+            const sizeClass = isPinned ? 'w-[110px] h-[120px] shrink-0' : 'w-full h-[120px]'; // Grid 1 uses w-full
 
             if (isImageCard) {
                 const imgSrc = m.icon && (m.icon.startsWith('http') || m.icon.startsWith('data:image')) ? m.icon : (imgArray[0] || APP_LOGO_URL);
@@ -1126,7 +1124,6 @@
         window.openAdminPanel = function() { const userRole = (currentUserData && currentUserData.role) ? currentUserData.role.trim().toLowerCase() : ''; if (userRole !== 'super_admin' && userRole !== 'super admin') { showToast('অনুমতি নেই!'); return; } document.getElementById('adminModal').classList.remove('hidden'); renderAdminSliders(); renderAdminMenus(); renderAdminNotices(); loadProductNotices(); renderAdminPopups(); renderAdminProductCards(); renderAdminUsers(); }
         window.closeAdminPanel = function() { document.getElementById('adminModal').classList.add('hidden'); }
         
-        // 🚀 Fixed switchAdminTab Function
         window.switchAdminTab = function(tabName) { 
             ['slider', 'menu', 'notice', 'popup', 'productCard', 'user'].forEach(t => { 
                 const capitalizedT = t.charAt(0).toUpperCase() + t.slice(1);
