@@ -82,7 +82,7 @@
                 </div>
                 <form onsubmit="handleLogin(event)" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-semibold mb=1.5 text-slate-700 dark:text-slate-300">এমপ্লয়ি আইডি</label>
+                        <label class="block text-xs font-semibold mb-1.5 text-slate-700 dark:text-slate-300">এমপ্লয়ি আইডি</label>
                         <div class="relative">
                             <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400"><i class="fa-solid fa-id-badge text-xs"></i></span>
                             <input type="text" id="employeeId" autocomplete="off" oninput="this.value = this.value.toUpperCase()" placeholder="যেমন: KS বা MPO-01" required class="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 text-xs uppercase focus:ring-2 focus:ring-primary outline-none transition">
@@ -373,9 +373,10 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-slate-500 mb-1">কোন রোল এই ফাইলটি দেখতে পাবে? (একাধিক নির্বাচন করতে Ctrl বা Cmd চেপে ধরে ক্লিক করুন)</label>
+                            <!-- 🚀 TM Role Added Here -->
                             <select id="menuAllowedRoleInput" multiple class="w-full h-32 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none">
                                 <optgroup label="Combined Access"><option value="PALL+SALL">PALL+SALL (All Primary & Special)</option><option value="ALL">ALL (Everyone)</option></optgroup>
-                                <optgroup label="Primary Roles"><option value="PALL">PALL (All Primary)</option><option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option></optgroup>
+                                <optgroup label="Primary Roles"><option value="PALL">PALL (All Primary)</option><option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option><option value="TM">TM</option></optgroup>
                                 <optgroup label="Special Roles"><option value="SALL">SALL (All Special)</option><option value="DIC">DIC</option><option value="ADIC">ADIC</option><option value="DA">DA</option></optgroup>
                                 <optgroup label="Admin Role"><option value="SUPER_ADMIN">SUPER_ADMIN</option></optgroup>
                             </select>
@@ -498,9 +499,10 @@
                             <input type="text" id="userEmpIdInput" autocomplete="off" oninput="this.value = this.value.toUpperCase()" placeholder="এমপ্লয়ি আইডি" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs uppercase outline-none">
                             <input type="text" id="userFullNameInput" placeholder="পূর্ণ নাম" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
                             <input type="password" id="userPassInput" placeholder="পাসওয়ার্ড" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+                            <!-- 🚀 TM Role Added Here -->
                             <select id="userRoleInput" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold uppercase outline-none">
                                 <optgroup label="Combined Access"><option value="PALL+SALL">PALL+SALL</option></optgroup>
-                                <optgroup label="Primary Roles"><option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option><option value="SUPER_ADMIN">SUPER_ADMIN</option></optgroup>
+                                <optgroup label="Primary Roles"><option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option><option value="TM">TM</option><option value="SUPER_ADMIN">SUPER_ADMIN</option></optgroup>
                                 <optgroup label="Special Roles"><option value="DIC">DIC</option><option value="ADIC">ADIC</option><option value="DA">DA</option></optgroup>
                             </select>
                         </div>
@@ -539,7 +541,6 @@
         firebase.initializeApp(firebaseConfig);
         try { firebase.database().enablePersistence().catch(err => console.log("Persistence error:", err.code)); } catch(e) {}
 
-        // 🚀 Database Root Reference is 'MonicoOne'
         const db = firebase.database().ref('MonicoOne');
         const APP_LOGO_URL = 'https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565';
 
@@ -567,7 +568,9 @@
 
         const monthFullMap = {"January":0, "February":1, "March":2, "April":3, "May":4, "June":5, "July":6, "August":7, "September":8, "October":9, "November":10, "December":11};
         const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const primaryRolesList = ['MPO', 'AM', 'RSM', 'SUPER_ADMIN'];
+        
+        // 🚀 TM Role Added to primaryRolesList Array
+        const primaryRolesList = ['MPO', 'AM', 'RSM', 'TM', 'SUPER_ADMIN'];
         const specialRolesList = ['DIC', 'ADIC', 'DA', 'SUPER_ADMIN'];
 
         function getCurrentMonthName() { return Object.keys(monthFullMap)[new Date().getMonth()]; }
@@ -615,9 +618,6 @@
             const savedUser = localStorage.getItem('fieldpro_current_user');
             if (savedUser) { try { currentUserData = JSON.parse(savedUser); activateDashboard(currentUserData); } catch (e) { executeLogout(); } }
             
-            // 🚀 Auto Seed Data Completely Removed.
-            // App will load entirely empty. Admin must add data via Admin Panel.
-            
             setupPinchZoom(); 
             updateOnlineStatus(); 
             setupHorizontalScrolls();
@@ -661,7 +661,6 @@
             const pass = document.getElementById('password').value.trim();
             db.child('users/' + empId).once('value', (snapshot) => {
                 const user = snapshot.val();
-                // 🚀 Hardcoded Super Admin Login (Works even if DB is empty)
                 if ((empId === 'KS' && pass === 'Monico@Ku007') || (user && (user.password === pass || (user.password && user.password.toLowerCase() === pass.toLowerCase())))) {
                     const activeUser = user || { employeeId: empId, fullName: 'Super Admin', role: "SUPER_ADMIN", status: "active", profilePic: APP_LOGO_URL };
                     currentUserData = activeUser;
@@ -1053,7 +1052,6 @@
             const hasSeen = m.seenBy && currentUserData && m.seenBy[currentUserData.employeeId];
             const redDot = hasSeen ? '' : '<span class="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-danger rounded-full border-2 border-white animate-pulse z-10"></span>';
             
-            // 🚀 Fixed Size Class: Grid 1 uses w-full, Grids 2-5 use fixed width & shrink-0 for horizontal scroll
             let sizeClass = '';
             if (isPinned) {
                 sizeClass = 'w-[110px] h-[120px] shrink-0';
