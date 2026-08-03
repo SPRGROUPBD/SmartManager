@@ -1144,11 +1144,31 @@
             
             if(!isAuto) {
                 if(currentUser.role==='mpo'){st="Pending_AM";af={amId:currentUser.amId,rsmId:currentUser.rsmId};}
-                else if(currentUser.role==='user'){st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};}
+                else if(currentUser.role==='user'){
+                    st="Pending_RSM";af={amId:currentUser.username,rsmId:currentUser.rsmId};
+                    // If AM edits an existing plan, add their signature as the checker
+                    if(isEditingExistingPlan) {
+                        currentEditSignatures.am = currentUser.name;
+                        currentEditSignatures.am_signature = currentUser.signature;
+                    }
+                }
                 else if(currentUser.role==='admin' || currentUser.role==='sr_rsm'){
-                    st="Approved"; 
-                    af={rsmId:currentUser.username}; // RSM submits own plan, auto-approved.
-                    // NO RSM Signature added here. It will only be in 'prepared' box.
+                    if(isEditingExistingPlan) {
+                        // RSM is editing an existing plan (e.g., MPO's or AM's plan)
+                        st = editingPlanOriginalStatus || "Approved";
+                        af = editingPlanOriginalApprovalFlow || {};
+                        
+                        // If it was pending RSM, and RSM edits and submits, it means RSM is approving it.
+                        if (st === "Pending_RSM") {
+                            st = "Approved";
+                            currentEditSignatures.rsm = currentUser.name;
+                            currentEditSignatures.rsm_signature = currentUser.signature;
+                        }
+                    } else {
+                        // RSM submitting their OWN new plan, auto-approved
+                        st="Approved"; 
+                        af={rsmId:currentUser.username}; 
+                    }
                 }
                 else if(currentUser.role==='superadmin'){
                     st = editingPlanOriginalStatus || "Approved";
@@ -1304,7 +1324,7 @@
                     let statsHtml = `<span class="badge" style="background:#d1ecf1;color:#0c5460;">Total MPO: ${groupData.mpo}</span>`;
                     if(isRSMRole || currentUser.role === 'superadmin' || currentUser.role === 'sales_admin') {
                         statsHtml += `<span class="badge" style="background:#cce5ff;color:#004085;margin-left:4px;">Total AM: ${groupData.am}</span>
-                                      <span class="badge" style="background:#e2e3e5;color:#383d41;margin-left:4px;">RSM/Sr.RSM: ${groupData.rsm}</span>`;
+                                      <span class="badge" style="background:#e2e3b5;color:#383d41;margin-left:4px;">RSM/Sr.RSM: ${groupData.rsm}</span>`;
                     }
                     statsHtml += `<span class="badge" style="background:#d4edda;color:#155724;margin-left:4px;">Entry: ${entryCount}</span>
                                   <span class="badge" style="background:#f8d7da;color:#721c24;margin-left:4px;">No Entry: ${noEntryCount}</span>`;
@@ -1348,9 +1368,15 @@
             
             if(isRSMRole||isSuperadmin||isSalesAdmin)btns+=`<button class="btn btn-sm btn-primary" onclick="printHistoryRecord('${key}')"><i class="fas fa-print"></i></button>`;
             
-            let canEdit=false;
-            if(isSuperadmin) canEdit=true;
-            else if(!isSalesAdmin && isOwner && isDraft) canEdit=true;
+            // --- EDIT PERMISSION LOGIC UPDATED HERE ---
+            let canEdit = false;
+            if (isSuperadmin || isRSMRole) {
+                canEdit = true; // Super Admin & RSM can edit anytime, even if approved
+            } else if (!isApp && !isSalesAdmin) {
+                // MPO & AM can edit if the plan is not approved
+                if (currentUser.role === 'user') canEdit = true; 
+                if (currentUser.role === 'mpo' && isOwner) canEdit = true; 
+            }
             if(canEdit)btns+=`<button class="btn btn-sm btn-warning" onclick="editTourPlan('${key}')"><i class="fas fa-edit"></i> Edit</button>`;
             
             if(!isSalesAdmin) {
