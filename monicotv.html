@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="bn" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Monico One - Live TV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#2563EB', secondary: '#3B82F6', success: '#16A34A', warning: '#F59E0B', danger: '#DC2626' },
+                    fontFamily: { sans: ['Poppins', 'Hind Siliguri', 'sans-serif'] },
+                    borderRadius: { 'm3': '20px' }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    
+    <!-- Video Player Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
+
+    <style>
+        body { font-family: 'Poppins', 'Hind Siliguri', sans-serif; background-color: #f1f5f9; display: flex; justify-content: center; align-items: stretch; min-height: 100vh; margin: 0; }
+        .dark body { background-color: #020617; }
+        .glass-header { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+        .dark .glass-header { background: rgba(15, 23, 42, 0.95); }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    </style>
+</head>
+<body class="selection:bg-primary selection:text-white">
+    <div class="w-full min-h-screen max-w-[1920px] mx-auto bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-2xl flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="glass-header sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 shrink-0">
+            <div class="px-4 py-3 flex items-center justify-between gap-2">
+                <div class="flex items-center space-x-3">
+                    <a href="javascript:history.back()" class="p-2 text-slate-600 dark:text-slate-300 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                        <i class="fa-solid fa-arrow-left text-base"></i>
+                    </a>
+                    <div class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1 shadow-xs">
+                        <img src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565" class="w-full h-full object-contain rounded-lg">
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-sm leading-tight text-slate-900 dark:text-white">Live TV</h1>
+                        <p class="text-[10px] text-slate-500 dark:text-slate-400">Monico One</p>
+                    </div>
+                </div>
+                <button onclick="toggleDarkMode()" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="ডার্ক মোড">
+                    <i id="darkModeIcon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col p-4 space-y-4">
+            
+            <!-- VIDEO PLAYER AREA -->
+            <div class="w-full max-w-5xl mx-auto bg-black rounded-m3 overflow-hidden shadow-xl border border-slate-200 dark:border-slate-700">
+                <div class="relative w-full" style="aspect-ratio: 16/9;">
+                    <video id="mainVideoPlayer" class="w-full h-full object-contain bg-black" controls autoplay playsinline></video>
+                    <div id="videoLoader" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-white hidden">
+                        <div class="w-10 h-10 border-4 border-slate-600 border-t-primary rounded-full animate-spin mb-3"></div>
+                        <p class="text-sm font-medium">চ্যানেল লোড হচ্ছে...</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-900 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-danger rounded-full animate-pulse"></span>
+                        <span id="currentChannelName" class="text-sm font-bold text-white">No Channel Selected</span>
+                    </div>
+                    <span class="text-[10px] bg-slate-700 text-white px-2 py-1 rounded-md font-bold uppercase">LIVE</span>
+                </div>
+            </div>
+
+            <!-- CHANNEL LIST -->
+            <div class="w-full max-w-5xl mx-auto flex-1">
+                <h3 class="font-bold text-xs uppercase tracking-wider text-slate-400 mb-3 px-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-tv"></i> চ্যানেল লিস্ট (Channel List)
+                </h3>
+                <div id="channelListContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-8">
+                    <!-- Loader -->
+                    <div class="col-span-full flex flex-col items-center justify-center py-10 text-slate-400">
+                        <div class="w-8 h-8 border-3 border-slate-300 border-t-primary rounded-full animate-spin mb-2"></div>
+                        <p class="text-xs">চ্যানেল লোড হচ্ছে...</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="py-3 text-center text-[10px] text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 shrink-0">
+            &copy; 2026 Monico One Mobile Edition. Design & Devolpe : Md Sajjad Ahmed Mob: 01756144900
+        </footer>
+    </div>
+
+    <script>
+        // Firebase Configuration (Same as your main app)
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPgdJMSiv1LaVBA1oGoNPyfsT-VV2wr1I",
+            authDomain: "kushtia-depot.firebaseapp.com",
+            databaseURL: "https://kushtia-depot-default-rtdb.firebaseio.com",
+            projectId: "kushtia-depot",
+            storageBucket: "kushtia-depot.firebasestorage.app",
+            messagingSenderId: "288838128044",
+            appId: "1:288838128044:web:c5bab4a0957f5f71846a09",
+            measurementId: "G-5D5S5N9DP3"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database().ref('MonicoOne');
+
+        let globalVideoChannels = [];
+        let currentVideoHls = null;
+        let currentVideoDash = null;
+        const videoElement = document.getElementById('mainVideoPlayer');
+        const videoLoader = document.getElementById('videoLoader');
+
+        // Load Channels from Firebase
+        db.child('videoChannels').on('value', (snapshot) => {
+            const data = snapshot.val() || {};
+            globalVideoChannels = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+            renderChannelList();
+            
+            // Play default or first channel on load
+            if (globalVideoChannels.length > 0) {
+                const defaultChannel = globalVideoChannels.find(ch => ch.isDefault) || globalVideoChannels[0];
+                playChannel(defaultChannel.id);
+            } else {
+                document.getElementById('currentChannelName').innerText = "কোনো চ্যানেল নেই";
+            }
+        });
+
+        function renderChannelList() {
+            const container = document.getElementById('channelListContainer');
+            container.innerHTML = '';
+
+            if (globalVideoChannels.length === 0) {
+                container.innerHTML = '<p class="col-span-full text-center text-slate-400 py-6 text-sm">অ্যাডমিন কর্তৃক কোনো চ্যানেল যোগ করা হয়নি।</p>';
+                return;
+            }
+
+            globalVideoChannels.forEach(ch => {
+                const isActive = ch.isDefault ? 'ring-2 ring-primary' : '';
+                const defaultBadge = ch.isDefault ? '<span class="absolute top-1.5 right-1.5 text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-full z-10">DEFAULT</span>' : '';
+                
+                container.innerHTML += `
+                    <div onclick="playChannel('${ch.id}')" class="channel-card relative cursor-pointer bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 hover:border-primary ${isActive} rounded-m3 p-3 flex flex-col items-center justify-center text-center transition-all duration-200 h-[100px]">
+                        ${defaultBadge}
+                        <i class="fa-solid fa-tv text-xl text-primary mb-2"></i>
+                        <span class="font-bold text-[11px] text-slate-800 dark:text-slate-100 line-clamp-2 leading-tight">${ch.name || 'Untitled'}</span>
+                    </div>
+                `;
+            });
+        }
+
+        window.playChannel = function(channelId) {
+            const channel = globalVideoChannels.find(ch => ch.id === channelId);
+            if (!channel) return;
+
+            // Update UI
+            document.getElementById('currentChannelName').innerText = channel.name || 'Live Channel';
+            
+            // Update active state in list
+            document.querySelectorAll('.channel-card').forEach(card => card.classList.remove('ring-2', 'ring-primary'));
+            event?.currentTarget?.classList.add('ring-2', 'ring-primary');
+
+            const source = channel.fileData || channel.url;
+            if (!source) {
+                showToast('এই চ্যানেলের কোনো ভিডিও সোর্স নেই!');
+                return;
+            }
+
+            // Show loader
+            videoLoader.classList.remove('hidden');
+
+            // Destroy existing instances
+            if (currentVideoHls) { currentVideoHls.destroy(); currentVideoHls = null; }
+            if (currentVideoDash) { currentVideoDash.reset(); currentVideoDash = null; }
+            videoElement.removeAttribute('src');
+            videoElement.load();
+
+            videoElement.muted = false; // Unmuted as requested
+
+            const isM3U8 = source.includes('.m3u8');
+            const isMPD = source.includes('.mpd');
+
+            if (isM3U8) {
+                if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                    videoElement.src = source;
+                    videoElement.play().catch(e => console.log("Autoplay blocked", e));
+                } else if (Hls.isSupported()) {
+                    currentVideoHls = new Hls();
+                    currentVideoHls.loadSource(source);
+                    currentVideoHls.attachMedia(videoElement);
+                    currentVideoHls.on(Hls.Events.MANIFEST_PARSED, function() {
+                        videoElement.play().catch(e => console.log("Autoplay blocked", e));
+                    });
+                    currentVideoHls.on(Hls.Events.ERROR, function(event, data) {
+                        if (data.fatal) { videoLoader.classList.remove('hidden'); }
+                    });
+                }
+            } else if (isMPD) {
+                if (typeof dashjs !== 'undefined') {
+                    currentVideoDash = dashjs.MediaPlayer().create();
+                    currentVideoDash.initialize(videoElement, source, true);
+                    videoElement.muted = false;
+                }
+            } else {
+                // MP4, MP3, etc.
+                videoElement.src = source;
+                videoElement.play().catch(e => console.log("Autoplay blocked", e));
+            }
+
+            // Hide loader when playing starts
+            videoElement.onplaying = () => {
+                videoLoader.classList.add('hidden');
+            };
+            
+            videoElement.onerror = () => {
+                videoLoader.classList.add('hidden');
+                showToast('ভিডিও প্লে করতে সমস্যা হচ্ছে! লিংক চেক করুন।');
+            };
+        }
+
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('darkModeIcon');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+        
+        // Simple Toast Notification
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 border border-slate-700 z-50";
+            toast.innerHTML = `<i class="fa-solid fa-circle-exclamation text-warning"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
