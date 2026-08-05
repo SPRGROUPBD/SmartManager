@@ -155,6 +155,17 @@
     const db = firebase.database();
     let quickEntryState = { code: '', name: '', pack: '', tp: 0, vat: 0, qty: 0, isFlat: false, bonusRule: 0 };
 
+    // --- CUSTOMER TYPE HELPER ---
+    function getCustomerTypeLabel(code) {
+        const map = {
+            'R': 'Retailer (R)',
+            'D': 'DCC (D)',
+            'H': 'Hospital (H)',
+            'C': 'Clinic (C)'
+        };
+        return map[code] || 'N/A';
+    }
+
     // --- NUMBER TO WORDS CONVERTER ---
     function numberToWords(num) {
         if (num === 0) return "Zero Only.";
@@ -352,7 +363,7 @@
                     const c = snapshot.val();
                     if(c.status === 'inactive') { alert('Customer is inactive!'); return; }
                     document.getElementById('inv-customer-name').innerText = c.name;
-                    document.getElementById('inv-customer-type').innerText = c.type || 'N/A';
+                    document.getElementById('inv-customer-type').innerText = getCustomerTypeLabel(c.type);
                     document.getElementById('inv-customer-address').innerText = c.address;
                     document.getElementById('inv-customer-phone').innerText = c.phone;
                     document.getElementById('inv-mpo-code').innerText = c.mpoCode || '';
@@ -660,7 +671,7 @@
                             <strong>${inv.mpoCode || ''}</strong><br>
                             ${inv.mpo}<br>
                             ${inv.route}<br>
-                            Type : ${inv.customerType || 'N/A'}
+                            Type : ${getCustomerTypeLabel(inv.customerType)}
                         </td>
                         <td style="width: 35%;">
                             <table class="meta-table">
@@ -862,6 +873,7 @@
         const name = document.getElementById('c-name').value;
         const address = document.getElementById('c-address').value;
         const phone = document.getElementById('c-phone').value;
+        const type = document.getElementById('c-type').value; // ADDED
         const mpoSelect = document.getElementById('c-mpo');
         const mpoCode = mpoSelect.value;
         const mpoName = mpoSelect.options[mpoSelect.selectedIndex].text.split(' (')[0];
@@ -869,7 +881,8 @@
         const da = mpoSelect.options[mpoSelect.selectedIndex].getAttribute('data-da') || '';
         const status = isEdit ? document.getElementById('c-status-hidden').value : 'active';
 
-        db.ref('INVOICE/customers/' + code).set({ code, name, address, phone, mpoCode, mpoName, route, da, status })
+        // ADDED 'type' TO OBJECT
+        db.ref('INVOICE/customers/' + code).set({ code, name, type, address, phone, mpoCode, mpoName, route, da, status })
         .then(() => {
             alert('Customer saved successfully!');
             resetCustomerForm();
@@ -891,7 +904,7 @@
                     
                     tbody.innerHTML += `
                         <tr>
-                            <td>${c.code}</td><td>${c.name}</td><td>${c.address}</td>
+                            <td>${c.code}</td><td>${c.name}</td><td>${getCustomerTypeLabel(c.type)}</td><td>${c.address}</td>
                             <td>${c.phone}</td><td>${c.mpoName || 'N/A'}</td><td>${c.da || 'N/A'}</td>
                             <td style="color: ${statusColor}; font-weight: bold;">${c.status ? c.status.toUpperCase() : 'ACTIVE'}</td>
                             <td class="text-center">
@@ -903,7 +916,7 @@
                     `;
                 });
             } else {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No customers found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center">No customers found</td></tr>';
             }
         });
     }
@@ -915,6 +928,7 @@
             document.getElementById('c-code').value = c.code;
             document.getElementById('c-code').readOnly = true;
             document.getElementById('c-name').value = c.name;
+            document.getElementById('c-type').value = c.type || ''; // ADDED
             document.getElementById('c-address').value = c.address;
             document.getElementById('c-phone').value = c.phone;
             document.getElementById('c-mpo').value = c.mpoCode;
