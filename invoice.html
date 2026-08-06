@@ -261,6 +261,20 @@
     function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
     function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
+    // --- CUSTOM ALERT ---
+    function showAlert(message, title = "Notice", callback = null) {
+        document.getElementById('alert-message').innerText = message;
+        document.getElementById('alert-title').innerText = title;
+        const okBtn = document.getElementById('alert-ok-btn');
+        okBtn.onclick = function() {
+            closeModal('modal-alert');
+            if (typeof callback === 'function') {
+                callback();
+            }
+        };
+        document.getElementById('modal-alert').style.display = 'flex';
+    }
+
     // --- HELPERS ---
     function getCustomerTypeLabel(code) {
         const map = { 'R': 'Retailer (R)', 'D': 'DCC (D)', 'H': 'Hospital (H)', 'C': 'Clinic (C)' };
@@ -322,7 +336,7 @@
     // ---------------- EXCEL IMPORT ----------------
     function importExcel() {
         const fileInput = document.getElementById('excel-file');
-        if (!fileInput.files.length) return alert('Please select an Excel file first.');
+        if (!fileInput.files.length) return showAlert('Please select an Excel file first.');
         const file = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -346,11 +360,11 @@
                     count++;
                 }
             });
-            if (count === 0) return alert('No valid products found in the Excel file.');
+            if (count === 0) return showAlert('No valid products found in the Excel file.');
             db.ref().update(updates).then(() => {
-                alert(count + ' products imported successfully!');
+                showAlert(count + ' products imported successfully!');
                 fileInput.value = '';
-            }).catch(err => alert('Import failed: ' + err.message));
+            }).catch(err => showAlert('Import failed: ' + err.message));
         };
         reader.readAsArrayBuffer(file);
     }
@@ -381,7 +395,7 @@
         let custCode = document.getElementById('inv-customer-code').value.trim();
         
         if(/^\d+$/.test(custCode)) { custCode = 'KS' + custCode.padStart(5, '0'); }
-        if(!custCode || document.getElementById('inv-customer-name').innerText === 'CUSTOMER NAME') { alert('Please enter a valid Customer Code!'); return; }
+        if(!custCode || document.getElementById('inv-customer-name').innerText === 'CUSTOMER NAME') { return showAlert('Please enter a valid Customer Code!'); }
 
         let items = [];
         document.querySelectorAll('#invoice-item-tbody tr').forEach(row => {
@@ -394,7 +408,7 @@
             });
         });
 
-        if(items.length === 0) { alert('Cannot save empty invoice. Please add products.'); return; }
+        if(items.length === 0) { return showAlert('Cannot save empty invoice. Please add products.'); }
 
         items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
         items.forEach((item, index) => { item.sn = index + 1; });
@@ -422,7 +436,7 @@
         };
         
         db.ref('INVOICE/invoices/' + invNo).set(invoiceData).then(() => {
-            alert('Invoice saved successfully!');
+            showAlert('Invoice saved successfully!');
             document.getElementById('invoice-item-tbody').innerHTML = '';
             document.getElementById('inv-customer-code').value = '';
             document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME';
@@ -437,7 +451,7 @@
             calculateTotals();
             generateInvoiceNo(); 
             loadInvoiceHistory();
-        }).catch(error => alert('Save failed: ' + error.message));
+        }).catch(error => showAlert('Save failed: ' + error.message));
     }
 
     function autofillCustomer() {
@@ -450,7 +464,7 @@
         db.ref('INVOICE/customers/' + code).once('value').then((snapshot) => {
             if (snapshot.exists()) {
                 const c = snapshot.val();
-                if(c.status === 'inactive') { alert('Customer is inactive!'); return; }
+                if(c.status === 'inactive') { return showAlert('Customer is inactive!'); }
                 activeCustomerType = c.type || null;
                 activeCustomerDccDisc = parseFloat(c.dccDisc) || 0;
                 document.getElementById('inv-customer-name').innerText = c.name;
@@ -464,8 +478,9 @@
                 document.getElementById('quick-code').focus(); 
                 recalculateAllRows();
             } else {
-                alert('Customer Not Found');
-                document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME';
+                showAlert('Customer Not Found', 'Error', function() {
+                    document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME';
+                });
             }
         });
     }
@@ -479,7 +494,7 @@
         db.ref('INVOICE/products/' + code).once('value').then((snap) => {
             if(snap.exists()) {
                 const p = snap.val();
-                if(p.status === 'inactive') { alert('Product is inactive!'); return; }
+                if(p.status === 'inactive') { return showAlert('Product is inactive!'); }
                 let isFlat = (p.flat === 'true' || p.flat === true);
                 let isDcc = (p.dcc === 'true' || p.dcc === true);
                 let bonusRule = parseInt(p.bonus) || 0;
@@ -487,9 +502,11 @@
                 nameInput.value = p.name + ' (' + p.pack + ')';
                 document.getElementById('quick-qty').focus(); 
             } else { 
-                alert('Product code not found!'); 
-                nameInput.value = ''; 
-                codeInput.focus();
+                // Using custom alert and focusing input on close
+                showAlert('Product code not found!', 'Error', function() {
+                    nameInput.value = ''; 
+                    codeInput.focus();
+                });
             }
         });
     }
@@ -555,7 +572,7 @@
         document.querySelectorAll('#invoice-item-tbody tr').forEach(row => {
             if (row.cells[1].innerText.trim() === item.code) isDuplicate = true;
         });
-        if (isDuplicate) { alert('This product is already added to the invoice.'); return; }
+        if (isDuplicate) { return showAlert('This product is already added to the invoice.'); }
 
         const sn = tbody.rows.length + 1;
         const totalTp = item.tp * item.qty;
@@ -627,11 +644,9 @@
                 let filteredInvoices = [];
                 
                 if (currentSummaryFilter) {
-                    // Show invoices matching the selected summary
                     if (headingEl) headingEl.innerText = `Invoices for Summary: ${currentSummaryFilter}`;
                     filteredInvoices = invoices.filter(inv => inv.summaryNo === currentSummaryFilter);
                 } else {
-                    // Show ONLY pending invoices (where summaryNo is missing/empty)
                     if (headingEl) headingEl.innerText = 'Pending Invoices for Summary';
                     filteredInvoices = invoices.filter(inv => !inv.summaryNo || inv.summaryNo === '');
                 }
@@ -686,14 +701,14 @@
         if (currentSummaryFilter) {
             printSummary(currentSummaryFilter);
         } else {
-            alert('Please select a summary to print.');
+            showAlert('Please select a summary to print.');
         }
     }
 
     function editInvoice(invNo) {
         db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
             const inv = snap.val();
-            if(!inv) return alert('Invoice not found');
+            if(!inv) return showAlert('Invoice not found');
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove("active"));
             document.getElementById('tab-invoice').classList.add('active');
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -733,7 +748,7 @@
     function printInvoiceDirectly(invNo) {
         db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
             const inv = snap.val();
-            if(!inv) return alert('Invoice not found');
+            if(!inv) return showAlert('Invoice not found');
             let printItems = [...(inv.items || [])];
             printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
             let itemsHtml = '';
@@ -780,7 +795,7 @@
     function generateSummary() {
         const delivDate = document.getElementById('rep-sum-date').value;
         const route = document.getElementById('rep-sum-route').value; 
-        if(!delivDate || !route) { alert('Please select Date and Route'); return; }
+        if(!delivDate || !route) { return showAlert('Please select Date and Route'); }
         const formattedDate = new Date(delivDate).toLocaleDateString();
         
         const now = new Date();
@@ -811,7 +826,7 @@
                     }
                 });
                 
-                if(matchingInvoices.length === 0) { alert('No invoices found for this Date and Route!'); return; }
+                if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route!'); }
                 
                 let totalAmount = 0;
                 const invNos = [];
@@ -835,12 +850,12 @@
                 };
                 
                 db.ref().update(updates).then(() => {
-                    alert(`Summary generated successfully! Summary No: ${summaryNo}`);
+                    showAlert(`Summary generated successfully!\nSummary No: ${summaryNo}`);
                     document.getElementById('rep-sum-date').value = '';
                     document.getElementById('rep-sum-route').value = '';
                     loadSummaries();
-                    loadInvoiceHistory(); // Reload to clear them from pending
-                }).catch(err => alert('Error generating summary: ' + err.message));
+                    loadInvoiceHistory(); 
+                }).catch(err => showAlert('Error generating summary: ' + err.message));
             });
         });
     }
@@ -876,7 +891,7 @@
     function printSummary(summaryId) {
         db.ref('INVOICE/summaries/' + summaryId).once('value').then(snap => {
             const sum = snap.val();
-            if(!sum) return alert('Summary not found');
+            if(!sum) return showAlert('Summary not found');
             const promises = sum.invoices.map(invNo => db.ref('INVOICE/invoices/' + invNo).once('value'));
             Promise.all(promises).then(snaps => {
                 let combinedHtml = '';
@@ -945,11 +960,11 @@
 
         db.ref('INVOICE/mpos/' + code).set({ code, name, route, da, password, status })
         .then(() => {
-            alert(isEdit ? 'MPO/User updated successfully!' : 'MPO/User saved successfully!');
+            showAlert(isEdit ? 'MPO/User updated successfully!' : 'MPO/User saved successfully!');
             closeModal('modal-mpo');
             resetMpoForm();
             loadRoutes(); 
-        }).catch((error) => alert('Error: ' + error.message));
+        }).catch((error) => showAlert('Error: ' + error.message));
     }
 
     function loadMpos() {
@@ -1047,11 +1062,11 @@
 
         db.ref('INVOICE/customers/' + code).set({ code, name, type, dccDisc, address, phone, mpoCode, mpoName, route, da, status })
         .then(() => {
-            alert('Customer saved successfully!');
+            showAlert('Customer saved successfully!');
             closeModal('modal-customer');
             resetCustomerForm();
             generateCustomerCode();
-        }).catch((error) => alert('Error: ' + error.message));
+        }).catch((error) => showAlert('Error: ' + error.message));
     }
 
     function loadCustomers() {
@@ -1140,10 +1155,10 @@
         const status = isEdit ? document.getElementById('p-status-hidden').value : 'active';
         const productData = { code, name, pack, tp, vat, bonus, flat, dcc, status };
         db.ref('INVOICE/products/' + code).set(productData).then(() => {
-            alert(isEdit ? 'Product updated successfully!' : 'Product saved successfully!');
+            showAlert(isEdit ? 'Product updated successfully!' : 'Product saved successfully!');
             closeModal('modal-product');
             resetProductForm();
-        }).catch((error) => alert('Error: ' + error.message));
+        }).catch((error) => showAlert('Error: ' + error.message));
     }
 
     function loadProducts() {
@@ -1212,7 +1227,7 @@
     }
     function deleteProduct(code) {
         if (confirm('Are you sure you want to delete this product?')) {
-            db.ref('INVOICE/products/' + code).remove().then(() => alert('Product deleted!'));
+            db.ref('INVOICE/products/' + code).remove().then(() => showAlert('Product deleted!'));
         }
     }
 </script>
@@ -1478,6 +1493,18 @@
 
 <!-- MODALS (Popups) -->
 
+<!-- Modal: Generic Alert Popup -->
+<div id="modal-alert" class="modal-overlay" style="z-index: 10001; align-items: center; padding-top: 0;">
+    <div class="modal-box" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+            <h3 id="alert-title">Notice</h3>
+        </div>
+        <p id="alert-message" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"></p>
+        <button id="alert-ok-btn" class="btn btn-primary" style="width: 100%;">OK</button>
+    </div>
+</div>
+
+<!-- Modal: Customer -->
 <div id="modal-customer" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -1525,6 +1552,7 @@
     </div>
 </div>
 
+<!-- Modal: Product -->
 <div id="modal-product" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
@@ -1577,6 +1605,7 @@
     </div>
 </div>
 
+<!-- Modal: MPO -->
 <div id="modal-mpo" class="modal-overlay">
     <div class="modal-box">
         <div class="modal-header">
