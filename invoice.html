@@ -267,7 +267,7 @@
         generateCustomerCode();
         generateInvoiceNo();
         loadRoutes(); 
-        loadDashboardData(); // Load dashboard stats
+        loadDashboardData(); 
         
         document.getElementById('c-type').addEventListener('change', function() {
             document.getElementById('c-dcc-disc-group').style.display = (this.value === 'D') ? 'block' : 'none';
@@ -373,7 +373,6 @@
             document.getElementById('kpi-invoices').innerText = totalInvoices;
             document.getElementById('kpi-pending').innerText = pendingInvoices;
 
-            // Sort by Invoice No descending for recent list
             recentInvoices.sort((a,b) => (b.invoiceNo || "").localeCompare(a.invoiceNo || ""));
             const top5 = recentInvoices.slice(0, 5);
             
@@ -412,7 +411,9 @@
             document.getElementById('kpi-mpos').innerText = snap.numChildren();
         });
 
-        db.ref('INVOICE/summaries').once('value').then(snap => {
+        let sumQuery = db.ref('INVOICE/summaries');
+        if (!isAdmin) { sumQuery = sumQuery.orderByChild('generatedBy').equalTo(currentUser); }
+        sumQuery.once('value').then(snap => {
             document.getElementById('kpi-summaries').innerText = snap.numChildren();
         });
     }
@@ -710,7 +711,9 @@
     // ---------------- INVOICE HISTORY & SUMMARY ----------------
     function loadInvoiceHistory() {
         let query = db.ref('INVOICE/invoices');
-        if (!isAdmin) { query = query.orderByChild('createdBy').equalTo(currentUser); }
+        if (!isAdmin) { 
+            query = query.orderByChild('createdBy').equalTo(currentUser); 
+        }
         
         query.on('value', (snapshot) => {
             const tbody = document.getElementById('history-table-body');
@@ -721,7 +724,9 @@
                 html = '<tr><td colspan="5" class="text-center">No invoices found</td></tr>';
             } else {
                 let invoices = [];
-                snapshot.forEach((child) => { invoices.push(child.val()); });
+                snapshot.forEach((child) => { 
+                    if(child.val()) invoices.push(child.val()); 
+                });
                 invoices.sort((a, b) => (a.invoiceNo || "").localeCompare(b.invoiceNo || ""));
                 
                 let filteredInvoices = [];
@@ -828,19 +833,19 @@
         });
     }
 
-    function printInvoiceDirectly(invNo) {
-        db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
-            const inv = snap.val();
-            if(!inv) return showAlert('Invoice not found');
-            let printItems = [...(inv.items || [])];
-            printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-            let itemsHtml = '';
+    // --- HELPER TO GENERATE HTML FOR PRINT ---
+    function getInvoiceHTMLString(inv, roleIsAdmin) {
+        let printItems = [...(inv.items || [])];
+        printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        let itemsHtml = '';
+
+        if (roleIsAdmin) {
+            // OLD PRINT FORMAT FOR ADMIN
             printItems.forEach((item, index) => {
                 itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`;
             });
             const inWordText = numberToWords(parseFloat(inv.netPayable));
-            
-            const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Invoice</title><style>
+            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Invoice</title><style>
                 body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}
                 .invoice-container{max-width:800px;margin:auto;}
                 .top-header{text-align:right;margin-bottom:10px;}
@@ -857,7 +862,184 @@
                 .totals-section td{padding:3px 2px;text-align:right;}
                 .net-payable-row{font-weight:bold;font-size:12px;}
                 .in-word{margin-top:15px;}
-            </style></head><body><div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width:35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width:35%;"><u>MPO</u><br><strong>${inv.mpoCode||''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${getCustomerTypeLabel(inv.customerType)}</td><td style="width:30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable||'0.00'}</td></tr><tr><td colspan="12" style="padding-top:10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales||'0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top:25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable||'0.00'}</td></tr></table><div class="in-word">In word : ${inWordText}</div>${inv.note?`<div style="margin-top:15px;text-align:left;font-size:11px;"><strong>Note:</strong> ${inv.note}</div>`:''}</div></body></html>`;
+            </style></head><body><div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width:35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width:35%;"><u>MPO</u><br><strong>${inv.mpoCode||''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width:30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable||'0.00'}</td></tr><tr><td colspan="12" style="padding-top:10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales||'0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top:25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable||'0.00'}</td></tr></table><div class="in-word">In word : ${inWordText}</div>${inv.note?`<div style="margin-top:15px;text-align:left;font-size:11px;"><strong>Note:</strong> ${inv.note}</div>`:''}</div></body></html>`;
+        } else {
+            // NEW PRINT FORMAT FOR REGULAR USER (MPO)
+            printItems.forEach((item, index) => {
+                itemsHtml += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${item.code || ''}</td>
+                    <td class="text-left">${item.name || ''}</td>
+                    <td>${item.pack || ''}</td>
+                    <td>${item.qty || ''}</td>
+                    <td>${item.bonus || ''}</td>
+                    <td>${item.tp || '0.00'}</td>
+                    <td>${item.vat || '0.00'}</td>
+                    <td>${item.totalTp || '0.00'}</td>
+                    <td>${item.totalVat || '0.00'}</td>
+                    <td>${item.discPct || ''}</td>
+                    <td>${item.disc || '0.00'}</td>
+                    <td>${item.net || '0.00'}</td>
+                </tr>`;
+            });
+
+            const inWordText = numberToWords(parseFloat(inv.netPayable));
+            const invDate = inv.date || new Date().toLocaleDateString();
+            const delivDate = invDate;
+
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sales Invoice - Monico Pharma LTD</title>
+<style>
+    @page { size: A4; margin: 10mm; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }
+    .invoice-box { width: 190mm; min-height: 277mm; margin: auto; padding: 5mm; box-sizing: border-box; background: #fff; position: relative; padding-bottom: 50mm; }
+    .header { text-align: center; margin-bottom: 15px; position: relative; min-height: 45px; }
+    .company-logo { position: absolute; left: 0; top: 0; }
+    .company-logo img { height: 40px; }
+    .company-details { text-align: center; }
+    .invoice-title { font-weight: bold; text-decoration: underline; margin-top: 5px; font-size: 13px; }
+    .info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    .info-table td { padding: 2px 4px; vertical-align: top; font-size: 11px; }
+    .items-table th, .items-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; }
+    .items-table th { background-color: #f2f2f2; }
+    .text-left { text-align: left !important; }
+    .text-right { text-align: right !important; }
+    .totals-box { float: right; width: 320px; }
+    .totals-box table { width: 100%; border-collapse: collapse; }
+    .totals-box td { border: 1px solid #000; padding: 4px; font-size: 11px; }
+    .clear { clear: both; }
+    .amount-in-words { border: 1px solid #000; padding: 5px; margin-top: 10px; font-size: 11px; }
+    .bottom-section { position: absolute; bottom: 15mm; left: 5mm; right: 5mm; }
+    .page-number { position: absolute; bottom: 2mm; right: 0; font-size: 24px; font-weight: bold; color: #ccc; text-align: right; }
+    .signatures { width: 100%; margin-top: 15px; }
+    .signatures td { text-align: center; width: 33%; vertical-align: bottom; padding-top: 40px; font-size: 11px; }
+    .sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="invoice-box">
+    <div class="header">
+        <div class="company-logo">
+            <img src="https://monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="Monico Pharma Logo" crossorigin="anonymous">
+        </div>
+        <div class="company-details">
+            <strong>Monico Pharma LTD</strong><br>
+            Kushtia Depot<br>
+            0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000<br>
+            <div class="invoice-title">Sales Invoice</div>
+        </div>
+    </div>
+    <div class="clear"></div>
+
+    <table class="info-table">
+        <tr>
+            <td style="width: 45%;">
+                <strong>Customer:</strong> ${inv.customerCode || ''}<br>
+                <strong>${inv.customerName || ''}</strong><br>
+                ${inv.address || ''}<br>
+                ${inv.phone || '0000000000'}<br>
+                <strong>Invoice Type:</strong> CASH
+            </td>
+            <td style="width: 25%;">
+                <strong>MPO:</strong> ${inv.mpoCode || ''}<br>
+                <strong>${inv.mpo || ''}</strong><br>
+                ${inv.route || ''}<br>
+                <strong>${inv.da || ''}</strong><br>
+                <strong>Type:</strong> ${inv.customerType || 'N/A'}<br>
+                <strong>Invoice Time :</strong> Anytime
+            </td>
+            <td style="width: 30%;">
+                <strong>Order No.:</strong><br>
+                <strong>Invoice No.:</strong> ${inv.invoiceNo || ''}<br>
+                <strong>Invoice Date.</strong> ${invDate}<br>
+                <strong>Deliv. Date</strong> ${delivDate}<br>
+                <strong>Route</strong> ${inv.route || ''}<br>
+                Summary No. ${inv.summaryNo || ''}
+            </td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>S.N.</th>
+                <th>Code</th>
+                <th class="text-left">Product</th>
+                <th>Pack Size</th>
+                <th>Qty</th>
+                <th>Bonus</th>
+                <th>Unit TP</th>
+                <th>Unit Vat</th>
+                <th>Total TP</th>
+                <th>Total Vat</th>
+                <th>Disc %</th>
+                <th>Disc</th>
+                <th>Net Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${itemsHtml}
+            <tr style="font-weight: bold;">
+                <td colspan="4" class="text-right"></td>
+                <td>${inv.totalQty || ''}</td>
+                <td>${inv.totalBonus || ''}</td>
+                <td></td>
+                <td></td>
+                <td>${inv.totalTp || '0.00'}</td>
+                <td>${inv.totalVat || '0.00'}</td>
+                <td></td>
+                <td>${inv.totalDisc || '0.00'}</td>
+                <td>${inv.netPayable || '0.00'}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="margin-top: 10px;">
+        <div class="totals-box">
+            <table>
+                <tr>
+                    <td><strong>Total TP Sales =</strong></td>
+                    <td class="text-right"><strong>${inv.totalTpSales || '0.00'}</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Net Payable Amount =</strong></td>
+                    <td class="text-right"><strong>${inv.netPayable || '0.00'}</strong></td>
+                </tr>
+            </table>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="amount-in-words">
+        <strong>In Word:</strong> ${inWordText}
+    </div>
+    ${inv.note ? `<div class="amount-in-words" style="margin-top:5px;"><strong>Note:</strong> ${inv.note}</div>` : ''}
+
+    <div class="bottom-section">
+        <div class="page-number">Page 1</div>
+        <table class="signatures">
+            <tr>
+                <td><div class="sig-line"></div><strong>Customer Sign</strong></td>
+                <td><div class="sig-line"></div><strong>MPO Sign</strong></td>
+                <td><div class="sig-line"></div><strong>DIC Sign</strong></td>
+            </tr>
+        </table>
+    </div>
+</div>
+</body>
+</html>`;
+        }
+    }
+
+    function printInvoiceDirectly(invNo) {
+        db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
+            const inv = snap.val();
+            if(!inv) return showAlert('Invoice not found');
+            
+            const html = getInvoiceHTMLString(inv, isAdmin);
             
             const iframe = document.createElement('iframe');
             iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
@@ -884,17 +1066,18 @@
         const now = new Date();
         const y = now.getFullYear();
         const m = String(now.getMonth() + 1).padStart(2, '0');
-        const prefix = `SN${y}${m}`;
+        const prefix = `SN${y}${m}`; // e.g., SN202608
         
         db.ref('INVOICE/summaries').once('value').then(snap => {
             let maxSeq = 0;
             snap.forEach(child => {
                 if(child.key && child.key.startsWith(prefix)) {
-                    const seq = parseInt(child.key.substring(prefix.length));
+                    const seq = parseInt(child.key.substring(prefix.length)); // Gets the last 2 digits
                     if(!isNaN(seq) && seq > maxSeq) maxSeq = seq;
                 }
             });
             const nextSeq = maxSeq + 1;
+            // Generates SN20260801, SN20260802, etc.
             const summaryNo = prefix + String(nextSeq).padStart(2, '0'); 
             
             let query = db.ref('INVOICE/invoices');
@@ -944,23 +1127,40 @@
     }
 
     function loadSummaries() {
-        db.ref('INVOICE/summaries').on('value', snap => {
+        let query = db.ref('INVOICE/summaries');
+        
+        // Admin sees ALL summaries, User sees only their own
+        if (!isAdmin) { 
+            query = query.orderByChild('generatedBy').equalTo(currentUser); 
+        }
+        
+        query.on('value', snap => {
             const tbody = document.getElementById('summary-list-body');
             let html = '';
-            if(!snap.exists()) {
+            
+            if (!snap.exists()) {
                 html = '<tr><td colspan="6" class="text-center">No summaries generated yet</td></tr>';
             } else {
                 const summaries = [];
-                snap.forEach(child => summaries.push(child.val()));
-                summaries.sort((a,b) => (b.summaryId || "").localeCompare(a.summaryId || ""));
+                
+                snap.forEach(child => {
+                    summaries.push({
+                        key: child.key,
+                        ...child.val()
+                    });
+                });
+                
+                // Sort descending by summaryId safely
+                summaries.sort((a, b) => (b.summaryId || "").localeCompare(a.summaryId || ""));
+                
                 summaries.forEach(s => {
                     html += `
                         <tr>
-                            <td>${s.summaryId}</td>
-                            <td>${s.date}</td>
-                            <td>${s.route}</td>
-                            <td class="text-center">${s.invoiceCount}</td>
-                            <td class="text-right">${s.totalAmount}</td>
+                            <td>${s.summaryId || ''}</td>
+                            <td>${s.date || ''}</td>
+                            <td>${s.route || ''}</td>
+                            <td class="text-center">${s.invoiceCount || 0}</td>
+                            <td class="text-right">${s.totalAmount || 0}</td>
                             <td class="text-center">
                                 <button class="action-btn btn-primary" onclick="filterInvoicesBySummary('${s.summaryId}')">View / Print</button>
                             </td>
@@ -968,6 +1168,12 @@
                 });
             }
             tbody.innerHTML = html;
+        }, error => {
+            console.error("Error loading summaries:", error);
+            const tbody = document.getElementById('summary-list-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load summaries. Check database rules/indexes.</td></tr>';
+            }
         });
     }
 
@@ -979,53 +1185,250 @@
             Promise.all(promises).then(snaps => {
                 let combinedHtml = '';
                 let grandTotal = 0;
-                snaps.forEach((s, idx) => {
-                    const inv = s.val();
-                    if(!inv) return;
-                    grandTotal += parseFloat(inv.netPayable) || 0;
-                    let itemsHtml = '';
-                    (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => {
-                        itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`;
+
+                if (isAdmin) {
+                    // OLD PRINT FORMAT FOR ADMIN
+                    snaps.forEach((s, idx) => {
+                        const inv = s.val();
+                        if(!inv) return;
+                        grandTotal += parseFloat(inv.netPayable) || 0;
+                        let itemsHtml = '';
+                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => {
+                            itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`;
+                        });
+                        if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                        combinedHtml += `<div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width: 35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width: 35%;"><u>MPO</u><br><strong>${inv.mpoCode || ''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width: 30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${sum.summaryId}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable || '0.00'}</td></tr><tr><td colspan="12" style="padding-top: 10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales || '0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top: 25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable || '0.00'}</td></tr></table><div class="in-word">In word : ${numberToWords(parseFloat(inv.netPayable))}</div>${inv.note ? `<div style="margin-top: 15px; text-align: left; font-size: 11px;"><strong>Note:</strong> ${inv.note}</div>` : ''}</div>`;
                     });
-                    if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
-                    combinedHtml += `<div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width: 35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width: 35%;"><u>MPO</u><br><strong>${inv.mpoCode || ''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${getCustomerTypeLabel(inv.customerType)}</td><td style="width: 30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${sum.summaryId}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable || '0.00'}</td></tr><tr><td colspan="12" style="padding-top: 10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales || '0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top: 25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable || '0.00'}</td></tr></table><div class="in-word">In word : ${numberToWords(parseFloat(inv.netPayable))}</div>${inv.note ? `<div style="margin-top: 15px; text-align: left; font-size: 11px;"><strong>Note:</strong> ${inv.note}</div>` : ''}</div>`;
-                });
-                combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: monospace; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
-                sum.invoices.forEach((invNo, i) => {
-                    const invData = snaps[i].val();
-                    if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`;
-                });
-                combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
-                
-                const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>
-                    body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}
-                    .invoice-container{max-width:800px;margin:auto;}
-                    .top-header{text-align:right;margin-bottom:10px;}
-                    .info-grid{width:100%;margin-bottom:5px;}
-                    .info-grid td{vertical-align:top;padding:2px 0;}
-                    .dashed-line{border-top:1px dashed #000;margin:8px 0;}
-                    .items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}
-                    .items-table th, .items-table td{padding:4px 2px;text-align:right;font-size:11px;}
-                    .items-table th:nth-child(1), .items-table td:nth-child(1), .items-table th:nth-child(2), .items-table td:nth-child(2), .items-table th:nth-child(3), .items-table td:nth-child(3){text-align:left;}
-                    .items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}
-                    .items-table tbody tr td{border-bottom:none;}
-                    .table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}
-                    .totals-section{width:100%;margin-top:5px;}
-                    .totals-section td{padding:3px 2px;text-align:right;}
-                    .net-payable-row{font-weight:bold;font-size:12px;}
-                    .in-word{margin-top:15px;}
-                </style></head><body>${combinedHtml}</body></html>`;
-                
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
-                document.body.appendChild(iframe);
-                iframe.contentWindow.document.open();
-                iframe.contentWindow.document.write(html);
-                iframe.contentWindow.document.close();
-                let hasPrinted = false;
-                const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
-                iframe.onload = triggerPrint;
-                if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+                    combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: monospace; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
+                    sum.invoices.forEach((invNo, i) => {
+                        const invData = snaps[i].val();
+                        if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`;
+                    });
+                    combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
+                    
+                    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>
+                        body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}
+                        .invoice-container{max-width:800px;margin:auto;}
+                        .top-header{text-align:right;margin-bottom:10px;}
+                        .info-grid{width:100%;margin-bottom:5px;}
+                        .info-grid td{vertical-align:top;padding:2px 0;}
+                        .dashed-line{border-top:1px dashed #000;margin:8px 0;}
+                        .items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}
+                        .items-table th, .items-table td{padding:4px 2px;text-align:right;font-size:11px;}
+                        .items-table th:nth-child(1), .items-table td:nth-child(1), .items-table th:nth-child(2), .items-table td:nth-child(2), .items-table th:nth-child(3), .items-table td:nth-child(3){text-align:left;}
+                        .items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}
+                        .items-table tbody tr td{border-bottom:none;}
+                        .table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}
+                        .totals-section{width:100%;margin-top:5px;}
+                        .totals-section td{padding:3px 2px;text-align:right;}
+                        .net-payable-row{font-weight:bold;font-size:12px;}
+                        .in-word{margin-top:15px;}
+                    </style></head><body>${combinedHtml}</body></html>`;
+
+                    const iframe = document.createElement('iframe');
+                    iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
+                    document.body.appendChild(iframe);
+                    iframe.contentWindow.document.open();
+                    iframe.contentWindow.document.write(html);
+                    iframe.contentWindow.document.close();
+                    let hasPrinted = false;
+                    const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+                    iframe.onload = triggerPrint;
+                    if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+
+                } else {
+                    // NEW PRINT FORMAT FOR REGULAR USER (MPO)
+                    const sharedCSS = `
+                        @page { size: A4; margin: 10mm; }
+                        body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }
+                        .invoice-box { width: 190mm; min-height: 277mm; margin: auto; padding: 5mm; box-sizing: border-box; background: #fff; position: relative; padding-bottom: 50mm; }
+                        .header { text-align: center; margin-bottom: 15px; position: relative; min-height: 45px; }
+                        .company-logo { position: absolute; left: 0; top: 0; }
+                        .company-logo img { height: 40px; }
+                        .company-details { text-align: center; }
+                        .invoice-title { font-weight: bold; text-decoration: underline; margin-top: 5px; font-size: 13px; }
+                        .info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                        .info-table td { padding: 2px 4px; vertical-align: top; font-size: 11px; }
+                        .items-table th, .items-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; }
+                        .items-table th { background-color: #f2f2f2; }
+                        .text-left { text-align: left !important; }
+                        .text-right { text-align: right !important; }
+                        .totals-box { float: right; width: 320px; }
+                        .totals-box table { width: 100%; border-collapse: collapse; }
+                        .totals-box td { border: 1px solid #000; padding: 4px; font-size: 11px; }
+                        .clear { clear: both; }
+                        .amount-in-words { border: 1px solid #000; padding: 5px; margin-top: 10px; font-size: 11px; }
+                        .bottom-section { position: absolute; bottom: 15mm; left: 5mm; right: 5mm; }
+                        .page-number { position: absolute; bottom: 2mm; right: 0; font-size: 24px; font-weight: bold; color: #ccc; text-align: right; }
+                        .signatures { width: 100%; margin-top: 15px; }
+                        .signatures td { text-align: center; width: 33%; vertical-align: bottom; padding-top: 40px; font-size: 11px; }
+                        .sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; }
+                        .summary-box { max-width: 800px; margin: 50px auto; text-align: center; font-family: Arial, sans-serif; }
+                        .summary-table { width: 80%; margin: 20px auto 0; border-collapse: collapse; font-size: 12px; }
+                        .summary-table th, .summary-table td { border: 1px solid #000; padding: 8px; }
+                        .summary-table th { background: #f2f2f2; }
+                    `;
+
+                    snaps.forEach((s, idx) => {
+                        const inv = s.val();
+                        if(!inv) return;
+                        grandTotal += parseFloat(inv.netPayable) || 0;
+
+                        let itemsHtml = '';
+                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => {
+                            itemsHtml += `<tr>
+                                <td>${index + 1}</td>
+                                <td>${item.code || ''}</td>
+                                <td class="text-left">${item.name || ''}</td>
+                                <td>${item.pack || ''}</td>
+                                <td>${item.qty || ''}</td>
+                                <td>${item.bonus || ''}</td>
+                                <td>${item.tp || '0.00'}</td>
+                                <td>${item.vat || '0.00'}</td>
+                                <td>${item.totalTp || '0.00'}</td>
+                                <td>${item.totalVat || '0.00'}</td>
+                                <td>${item.discPct || ''}</td>
+                                <td>${item.disc || '0.00'}</td>
+                                <td>${item.net || '0.00'}</td>
+                            </tr>`;
+                        });
+
+                        const invDate = inv.date || new Date().toLocaleDateString();
+                        const delivDate = invDate;
+                        const inWordText = numberToWords(parseFloat(inv.netPayable));
+
+                        if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+
+                        combinedHtml += `
+<div class="invoice-box">
+    <div class="header">
+        <div class="company-logo">
+            <img src="https://monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="Monico Pharma Logo" crossorigin="anonymous">
+        </div>
+        <div class="company-details">
+            <strong>Monico Pharma LTD</strong><br>
+            Kushtia Depot<br>
+            0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000<br>
+            <div class="invoice-title">Sales Invoice</div>
+        </div>
+    </div>
+    <div class="clear"></div>
+
+    <table class="info-table">
+        <tr>
+            <td style="width: 45%;">
+                <strong>Customer:</strong> ${inv.customerCode || ''}<br>
+                <strong>${inv.customerName || ''}</strong><br>
+                ${inv.address || ''}<br>
+                ${inv.phone || '0000000000'}<br>
+                <strong>Invoice Type:</strong> CASH
+            </td>
+            <td style="width: 25%;">
+                <strong>MPO:</strong> ${inv.mpoCode || ''}<br>
+                <strong>${inv.mpo || ''}</strong><br>
+                ${inv.route || ''}<br>
+                <strong>${inv.da || ''}</strong><br>
+                <strong>Type:</strong> ${inv.customerType || 'N/A'}<br>
+                <strong>Invoice Time :</strong> Anytime
+            </td>
+            <td style="width: 30%;">
+                <strong>Order No.:</strong><br>
+                <strong>Invoice No.:</strong> ${inv.invoiceNo || ''}<br>
+                <strong>Invoice Date.</strong> ${invDate}<br>
+                <strong>Deliv. Date</strong> ${delivDate}<br>
+                <strong>Route</strong> ${inv.route || ''}<br>
+                Summary No. ${sum.summaryId}
+            </td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>S.N.</th><th>Code</th><th class="text-left">Product</th><th>Pack Size</th>
+                <th>Qty</th><th>Bonus</th><th>Unit TP</th><th>Unit Vat</th>
+                <th>Total TP</th><th>Total Vat</th><th>Disc %</th><th>Disc</th><th>Net Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${itemsHtml}
+            <tr style="font-weight: bold;">
+                <td colspan="4" class="text-right"></td>
+                <td>${inv.totalQty || ''}</td>
+                <td>${inv.totalBonus || ''}</td>
+                <td></td><td></td>
+                <td>${inv.totalTp || '0.00'}</td>
+                <td>${inv.totalVat || '0.00'}</td>
+                <td></td>
+                <td>${inv.totalDisc || '0.00'}</td>
+                <td>${inv.netPayable || '0.00'}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="margin-top: 10px;">
+        <div class="totals-box">
+            <table>
+                <tr><td><strong>Total TP Sales =</strong></td><td class="text-right"><strong>${inv.totalTpSales || '0.00'}</strong></td></tr>
+                <tr><td><strong>Net Payable Amount =</strong></td><td class="text-right"><strong>${inv.netPayable || '0.00'}</strong></td></tr>
+            </table>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="amount-in-words"><strong>In Word:</strong> ${inWordText}</div>
+    ${inv.note ? `<div class="amount-in-words" style="margin-top:5px;"><strong>Note:</strong> ${inv.note}</div>` : ''}
+
+    <div class="bottom-section">
+        <div class="page-number">Page 1</div>
+        <table class="signatures">
+            <tr>
+                <td><div class="sig-line"></div><strong>Customer Sign</strong></td>
+                <td><div class="sig-line"></div><strong>MPO Sign</strong></td>
+                <td><div class="sig-line"></div><strong>DIC Sign</strong></td>
+            </tr>
+        </table>
+    </div>
+</div>`;
+                    });
+
+                    // Summary sheet at the end
+                    combinedHtml += `<div style="page-break-after: always;"></div>
+<div class="summary-box">
+    <h2 style="text-decoration: underline;">Summary Sheet</h2>
+    <p><strong>Summary ID:</strong> ${sum.summaryId}</p>
+    <p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p>
+    <hr style="border-top: 1px dashed #000; margin: 20px 0;">
+    <table class="summary-table">
+        <thead>
+            <tr><th>SL</th><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr>
+        </thead>
+        <tbody>`;
+                    sum.invoices.forEach((invNo, i) => {
+                        const invData = snaps[i].val();
+                        if(invData) combinedHtml += `<tr><td>${i+1}</td><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`;
+                    });
+                    combinedHtml += `</tbody>
+                    <tfoot>
+                        <tr><td colspan="3" style="text-align:right;"><strong>Grand Total:</strong></td>
+                        <td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr>
+                    </tfoot>
+                </table>
+            </div>`;
+
+                    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>${sharedCSS}</style></head><body>${combinedHtml}</body></html>`;
+
+                    const iframe = document.createElement('iframe');
+                    iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
+                    document.body.appendChild(iframe);
+                    iframe.contentWindow.document.open();
+                    iframe.contentWindow.document.write(html);
+                    iframe.contentWindow.document.close();
+                    let hasPrinted = false;
+                    const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+                    iframe.onload = triggerPrint;
+                    if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+                }
             });
         });
     }
