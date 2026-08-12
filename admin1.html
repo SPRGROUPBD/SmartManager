@@ -791,7 +791,7 @@ function collectBills(snap,pYear,pMonth){
     return result;
 }
 
-// ========== LOGIN ==========
+// ========== LOGIN ========== 
 function setStatus(text,cls){var el=document.getElementById('w98_status');el.innerText=text;el.className='w98-status-text'+(cls?' '+cls:'');}
 
 function resetLoginUI(){
@@ -969,9 +969,88 @@ function openChangePassModal(){if(!currentUser||currentUser.id==='admin_001'){al
 function changePassword(){var c=document.getElementById('cp_current').value,n=document.getElementById('cp_new').value,cf=document.getElementById('cp_confirm').value;if(!c||!n||!cf){alert("Fill all");return;}if(n!==cf){alert("Mismatch");return;}database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u.password!==c){alert("Wrong current");return;}database.ref('Users/'+currentUser.id).update({password:n}).then(function(){alert("Changed!");bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();}).catch(function(e){alert(e.message);});});}
 function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');userPhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
 
-// ========== PRESENCE ==========
-function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
-function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+// ========== PRESENCE (IP & Location Integration) ==========
+async function setupPresence(){
+    if(!currentUser)return;
+    var ref=database.ref('OnlineUsers/'+currentUser.id);
+    
+    var presenceData = {
+        name:currentUser.name,
+        role:currentUser.role,
+        lastOnline:firebase.database.ServerValue.TIMESTAMP,
+        ip: 'Fetching...',
+        location: 'Fetching...'
+    };
+    ref.set(presenceData);
+    ref.onDisconnect().remove();
+
+    try {
+        let response = await fetch('https://ipwho.is/');
+        let data = await response.json();
+        
+        if(data && data.ip){
+            var ipAddr = data.ip;
+            var locText = (data.city ? data.city + ', ' : '') + (data.country || 'Unknown');
+            
+            ref.update({
+                ip: ipAddr,
+                location: locText
+            });
+        }
+    } catch(e) {
+        console.error("IP/Location fetch error", e);
+        ref.update({ ip: 'Unknown', location: 'Unknown' });
+    }
+}
+
+function listenForOnlineUsers(){
+    var ac=document.getElementById('online_users_list'),
+        ab=document.getElementById('online_count_badge'),
+        uc=document.getElementById('user_online_list_view'),
+        ub=document.getElementById('user_online_count_badge');
+
+    database.ref('OnlineUsers').on('value',function(snap){
+        var ah='',uh='',c=0;
+        if(snap.exists()){
+            snap.forEach(function(ch){
+                var u=ch.val();
+                c++;
+                var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';
+                var roleText=u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA';
+                var locText = u.location || 'Unknown';
+                var ipText = u.ip || 'Unknown';
+
+                var simpleHtml='<div class="p-2 border-bottom d-flex align-items-center justify-content-between">'+
+                    '<span><span class="online-dot"></span> '+escHtml(u.name)+' <small class="badge bg-light text-secondary">'+roleText+'</small></span>'+
+                    '<div class="text-end" style="font-size:10px; line-height:1.2; margin-left: 10px;">'+
+                        '<div><i class="bi bi-geo-alt-fill text-danger"></i> '+escHtml(locText)+'</div>'+
+                        '<div><i class="bi bi-pc-display text-primary"></i> '+escHtml(ipText)+'</div>'+
+                    '</div>'+
+                '</div>';
+
+                var adminHtml='<div class="online-user-item">'+
+                    '<div class="online-avatar">'+initials+'</div>'+
+                    '<div style="flex:1; min-width:0;">'+
+                        '<div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+' <small class="text-muted">('+roleText+')</small></div>'+
+                        '<div class="text-muted" style="font-size:11px; margin-top:2px;"><i class="bi bi-geo-alt-fill"></i> '+escHtml(locText)+'</div>'+
+                        '<div class="text-muted" style="font-size:11px;"><i class="bi bi-pc-display"></i> '+escHtml(ipText)+'</div>'+
+                    '</div>'+
+                '</div>';
+
+                ah+=simpleHtml;
+                uh+=adminHtml;
+            });
+        }
+        if(ac){
+            ac.innerHTML=ah||'<div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">No users online</div>';
+            ab.innerText=c;
+        }
+        if(uc){
+            uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';
+            ub.innerText=c;
+        }
+    });
+}
 
 // ========== DASHBOARD ==========
 function showDashboard(){
