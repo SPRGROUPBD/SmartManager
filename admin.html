@@ -113,11 +113,11 @@
         .modal-table th,.modal-table td{white-space:normal;word-wrap:break-word;vertical-align:middle;padding:6px 4px;font-size:12px}
         .modal-table input{width:100%;min-width:45px;padding:3px;font-size:12px}
         .row-total{font-weight:700;min-width:55px;display:inline-block}
-        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none;position:relative}
+        .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container,.print-approved-batch-container{display:none;position:relative}
         @media print{
             body *{visibility:hidden}
             .no-print{display:none!important}
-            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none!important;visibility:hidden}
+            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container,.print-approved-batch-container{display:none!important;visibility:hidden}
             .active-print{display:block!important;position:absolute;left:0;top:0;width:100%;visibility:visible!important}
             .active-print *{visibility:visible!important}
             #pageFooter,#pageFooterSummary,#pageFooterIOU,#pageFooterTopSheet,#pageFooterTopSheetFinal{position:fixed;bottom:10px;left:0;width:100%;text-align:center;font-size:13px}
@@ -125,8 +125,10 @@
             thead{display:table-header-group}tfoot{display:table-footer-group}
             table,th,td{border:1px solid #000!important;border-collapse:collapse}
             th,td{padding:2px 4px;font-size:13px;line-height:1.2}
-            .sign-row td{height:80px;vertical-align:bottom}
+            .sign-row td{height:120px;vertical-align:bottom}
             .cut-text{text-decoration:line-through;color:red}
+            .print-page-break { page-break-after: always; }
+            .print-page-break:last-child { page-break-after: none; }
         }
         @media(max-width:768px){
             .modal-dialog{margin:0;width:100vw;height:100vh;max-width:100vw}
@@ -251,7 +253,8 @@
         <li class="nav-item admin-superadmin-only"><button class="nav-link" id="summary-tab" data-bs-toggle="tab" data-bs-target="#summaryTab" type="button">Bill Summary</button></li>
         <li class="nav-item admin-superadmin-only"><button class="nav-link" id="top_sheet-tab" data-bs-toggle="tab" data-bs-target="#topSheetTab" type="button">Top Sheet</button></li>
         <li class="nav-item admin-superadmin-only"><button class="nav-link" id="approved-history-tab" data-bs-toggle="tab" data-bs-target="#approvedHistoryTab" type="button">Approved History</button></li>
-        <li class="nav-item admin-only"><button class="nav-link" id="iou-tab" data-bs-toggle="tab" data-bs-target="#iouTab" type="button">IOU List</button></li>
+        <li class="nav-item admin-only"><button class="nav-link" id="iou-entry-tab" data-bs-toggle="tab" data-bs-target="#iouEntryTab" type="button">IOU Entry</button></li>
+        <li class="nav-item admin-only"><button class="nav-link" id="new-user-tab" data-bs-toggle="tab" data-bs-target="#newUserTab" type="button">New User Record</button></li>
     </ul>
 
     <div class="tab-content pt-2">
@@ -272,7 +275,6 @@
                     </div>
                 </div>
                 
-                <!-- ৫টি কার্ড সমন্বিত সেকশন -->
                 <div class="row g-2 mb-3 no-print">
                     <div class="col-6 col-md">
                         <div class="card user-stat-card animate-in animate-in-d1">
@@ -360,19 +362,25 @@
                     <div class="col-6 col-md"><div class="dash-card bg-dc-approve text-white"><div class="dc-body"><div><div class="dc-label">Approval Pending</div><div class="dc-val" id="dash_approve_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-hourglass-split"></i></div></div></div></div>
                     <div class="col-6 col-md"><div class="dash-card bg-dc-approved text-white"><div class="dc-body"><div><div class="dc-label">Approved</div><div class="dc-val" id="dash_approved_count">0</div></div><div class="dc-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-check-circle"></i></div></div></div></div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-white py-2"><h6 class="mb-0"><i class="bi bi-people"></i> DA Wise Status <small class="text-muted" id="dash_da_month_label"></small></h6></div><div class="card-body p-2 scroll-box-md"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>DA Name</th><th class="text-center">IOU</th><th class="text-center">Bills</th><th class="text-center text-warning">Checking</th><th class="text-center text-danger">Approval</th><th class="text-center text-success">Approved</th></tr></thead><tbody id="dash_da_table_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2">IOU Entry</div><div class="card-body"><div class="row g-2 mb-2"><div class="col-6 col-md-3"><label>Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div><div class="col-6 col-md-3"><label>Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div><div class="col-6 col-md-3"><label>MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div><div class="col-4 col-md-2"><label>Invoice Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Bundle Qty</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div><div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div><div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div><div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div></div><button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm w-100">Save IOU Entry</button><button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm w-100 hidden">Cancel Edit</button></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-primary text-white py-2">New User Record</div><div class="card-body"><div class="row g-2"><div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div><div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div><div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div><div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div><div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="col-12"><hr class="my-1"></div><div class="col-md-6"><label class="fw-bold text-muted">Username</label><input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID"></div><div class="col-md-6"><label class="fw-bold text-muted">Password</label><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password"></div><div class="col-md-6"><label class="fw-bold text-muted">Role</label><select id="new_user_role" class="form-select form-control-sm"><option value="user">User</option><option value="admin">Admin (DIC)</option><option value="superadmin">Super Admin (RSM)</option></select></div><div class="col-12"><button onclick="saveNewUser()" class="btn btn-primary w-100 btn-sm mt-2">Save Record</button></div></div></div></div>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 mb-3 mb-md-0"><div class="card-header bg-white py-2"><h6 class="mb-0"><i class="bi bi-people"></i> DA Wise Status <small class="text-muted" id="dash_da_month_label"></small></h6></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive h-100"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>DA Name</th><th class="text-center">IOU</th><th class="text-center">Bills</th><th class="text-center text-warning">Checking</th><th class="text-center text-danger">Approval</th><th class="text-center text-success">Approved</th></tr></thead><tbody id="dash_da_table_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6><span class="badge bg-light text-success" id="online_count_badge">0</span></div><div class="card-body p-2 scroll-box-sm" id="online_users_list"><div class="text-center text-muted p-2">Checking...</div></div></div>
-                        <div class="card dash-card no-print mb-3 border border-danger"><div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-exclamation-octagon-fill me-1"></i> Unbilled IOU <small id="iou_pending_month_label"></small></h6><span class="badge bg-light text-danger" id="unbilled_iou_count">0</span></div><div class="card-body p-2 scroll-box-md" id="unbilled_iou_container"><div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Date</th><th>DA</th><th>Type</th><th>Route</th><th class="text-end">Amount</th></tr></thead><tbody id="unbilled_iou_list"><tr><td colspan="5" class="text-center text-muted p-2">Loading...</td></tr></tbody></table></div></div></div>
-                        <div class="card dash-card no-print mb-3"><div class="card-header bg-info text-white py-2"><h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU <small id="approved_vs_iou_month_label"></small></h6></div><div class="card-body p-2 scroll-box-md"><div class="table-responsive"><table class="table table-bordered table-sm mb-0"><thead class="table-secondary"><tr><th>DA Name</th><th class="text-end">IOU</th><th class="text-end">Appr.Bill</th><th class="text-end">Balance</th><th class="text-center">Bund Qty</th><th class="text-center">Status</th></tr></thead><tbody id="approved_summary_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody></table></div></div></div>
-                        <div class="card dash-card no-print border border-primary"><div class="card-header bg-primary text-white py-2"><h6 class="mb-0"><i class="bi bi-file-earmark-spreadsheet"></i> Excel Operations</h6></div><div class="card-body p-2"><div class="d-grid gap-2"><button onclick="exportBillsToExcel()" class="btn btn-success btn-sm"><i class="bi bi-download me-1"></i>Export Pending Bills</button><div class="input-group"><input type="file" id="excel_upload_input" class="form-control form-control-sm" accept=".xlsx,.xls"><button onclick="importBillsFromExcel('excel_upload_input')" class="btn btn-warning btn-sm"><i class="bi bi-upload me-1"></i>Import Bills</button></div><small class="text-muted">Excel format must match exported file.</small></div></div></div>
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 mb-3 mb-md-0"><div class="card-header bg-info text-white py-2"><h6 class="mb-0"><i class="bi bi-check-circle-fill"></i> Approved Bill vs IOU <small id="approved_vs_iou_month_label"></small></h6></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive h-100"><table class="table table-bordered table-sm mb-0"><thead class="table-secondary"><tr><th>DA Name</th><th class="text-end">IOU</th><th class="text-end">Appr.Bill</th><th class="text-end">Balance</th><th class="text-center">Bund Qty</th><th class="text-center">Status</th></tr></thead><tbody id="approved_summary_body"><tr><td colspan="6" class="text-center">Loading...</td></tr></tbody><tfoot class="table-dark fw-bold"><tr><td>GRAND TOTAL</td><td class="text-end" id="approved_tot_iou">0.00</td><td class="text-end" id="approved_tot_bill">0.00</td><td class="text-end" id="approved_tot_bal">0.00</td><td class="text-center" id="approved_tot_bund">0</td><td></td></tr></tfoot></table></div></div></div>
                     </div>
                 </div>
+
+                <div class="row g-2">
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100 border border-danger"><div class="card-header bg-danger text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-exclamation-octagon-fill me-1"></i> Unbilled IOU <small id="iou_pending_month_label"></small></h6><span class="badge bg-light text-danger" id="unbilled_iou_count">0</span></div><div class="card-body p-2 flex-grow-1"><div class="table-responsive" style="max-height: 230px; overflow-y: auto;"><table class="table table-sm table-hover mb-0"><thead class="table-light" style="position: sticky; top: 0; z-index: 1;"><tr><th>Date</th><th>DA</th><th>Type</th><th>Route</th><th class="text-end">Amount</th></tr></thead><tbody id="unbilled_iou_list"><tr><td colspan="5" class="text-center text-muted p-2">Loading...</td></tr></tbody></table></div></div></div>
+                    </div>
+                    <div class="col-md-6 d-flex">
+                        <div class="card dash-card no-print w-100"><div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center"><h6 class="mb-0"><i class="bi bi-broadcast"></i> Online Users</h6><span class="badge bg-light text-success" id="online_count_badge">0</span></div><div class="card-body p-2 flex-grow-1" id="online_users_list"><div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">Checking...</div></div></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -401,7 +409,7 @@
 
         <!-- BILL HISTORY TAB -->
         <div class="tab-pane fade" id="billTab" role="tabpanel">
-            <div class="card dash-card no-print mb-2 admin-only"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_history_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_history_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetHistoryFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div></div></div>
+            <div class="card dash-card no-print mb-2 admin-only"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_history_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_history_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetHistoryFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
             <div class="card dash-card no-print"><div class="card-body p-1"><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead id="bill_table_head" class="table-dark"></thead><tbody id="bill_table_body"><tr><td colspan="12" class="text-center">Loading...</td></tr></tbody><tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
         </div>
 
@@ -417,7 +425,6 @@
                     <h6 class="mb-0"><i class="bi bi-file-earmark-bar-graph"></i> Top Sheet Generator</h6>
                 </div>
                 <div class="card-body">
-                    <!-- Live Preview Section -->
                     <div class="bg-light p-3 rounded mb-3 border">
                         <h6 class="fw-bold text-primary mb-3"><i class="bi bi-eye"></i> Live Data Preview</h6>
                         <div class="row g-2 align-items-center mb-3">
@@ -439,7 +446,6 @@
                             </div>
                         </div>
 
-                        <!-- Preview Table -->
                         <div class="table-responsive border bg-white">
                             <table class="table table-bordered table-sm table-hover mb-0">
                                 <thead class="table-light">
@@ -470,7 +476,6 @@
                         </small>
                     </div>
 
-                    <!-- Generated Reports List Section -->
                     <div class="mt-4 pt-3 border-top">
                         <h6 class="fw-bold text-dark mb-3"><i class="bi bi-journal-text"></i> Generated Reports History (All Months)</h6>
                         <div class="table-responsive border">
@@ -497,14 +502,124 @@
 
         <!-- APPROVED HISTORY TAB -->
         <div class="tab-pane fade" id="approvedHistoryTab" role="tabpanel">
-            <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div></div></div>
-            <div class="card dash-card no-print"><div class="card-body p-1"><h6 class="text-center text-muted mb-1">Checked & Approved Bills</h6><div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
+            <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
+            <div class="card dash-card no-print"><div class="card-body p-1">
+                <div class="d-flex justify-content-between align-items-center p-1 mb-1">
+                    <h6 class="text-center text-muted mb-0">Checked & Approved Bills</h6>
+                    <button id="btnPrintApprovedBatch" onclick="printNextApprovedBatch()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Print Next 10</button>
+                </div>
+            <div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
         </div>
 
-        <!-- IOU LIST TAB -->
-        <div class="tab-pane fade admin-only" id="iouTab" role="tabpanel">
-            <div class="card dash-card no-print"><div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center"><span>IOU List & Management</span><button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>Print</button></div><div class="card-body"><div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end"><div class="col-6 col-md-2"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">From</label><input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-6 col-md-2"><label class="fw-bold text-muted">To</label><input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()"></div><div class="col-12 col-md-3"><label class="fw-bold text-muted">DA</label><select id="filter_iou_da" class="form-select form-control-sm" onchange="loadAdminIOU()"><option value="">All DA</option></select></div><div class="col-12 col-md-2"><button onclick="resetIOUFilter()" class="btn btn-outline-secondary btn-sm w-100">Reset</button></div></div><div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-secondary"><tr><th>#</th><th>Date</th><th>DA</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Invoice Qty</th><th>Bund Qty</th><th>Taka</th><th>%</th><th>Action</th></tr></thead><tbody id="iou_admin_table_body"></tbody><tfoot><tr class="fw-bold table-warning"><td colspan="7">Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr></tfoot></table></div></div></div>
+        <!-- IOU ENTRY TAB (Form + List) -->
+        <div class="tab-pane fade admin-only" id="iouEntryTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-info text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-pencil-square"></i> IOU Entry Form</h6>
+                    <button onclick="clearIOUForm()" class="btn btn-light btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6 col-md-3"><label class="fw-bold">Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Sales</label><input type="number" id="iou_sales" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>Return</label><input type="number" id="iou_return" class="form-control form-control-sm" value="0" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>Sold</label><input type="number" id="iou_sold" class="form-control form-control-sm" readonly></div>
+                        <div class="col-4 col-md-2"><label>Invoice Qty</label><input type="number" id="iou_qty" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Bundle Qty</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div>
+                        <div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
+                        <div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div>
+                        <div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div>
+                    </div>
+                    <div class="d-flex gap-2 mt-2">
+                        <button id="iou_save_btn" onclick="saveIOU()" class="btn btn-success btn-sm flex-grow-1"><i class="bi bi-save"></i> Save IOU Entry</button>
+                        <button id="iou_cancel_btn" onclick="cancelIOUEdit()" class="btn btn-secondary btn-sm hidden"><i class="bi bi-x-circle"></i> Cancel Edit</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dash-card no-print">
+                <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul"></i> IOU List & Management</span>
+                    <button onclick="printIOUList()" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i>Print</button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2 mb-2 p-2 bg-light border rounded align-items-end">
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_iou_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div>
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">From</label><input type="date" id="iou_filter_start" class="form-control form-control-sm" onchange="loadAdminIOU()"></div>
+                        <div class="col-6 col-md-2"><label class="fw-bold text-muted">To</label><input type="date" id="iou_filter_end" class="form-control form-control-sm" onchange="loadAdminIOU()"></div>
+                        <div class="col-12 col-md-3"><label class="fw-bold text-muted">DA</label><select id="filter_iou_da" class="form-select form-control-sm" onchange="loadAdminIOU()"><option value="">All DA</option></select></div>
+                        <div class="col-12 col-md-2"><button onclick="resetIOUFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm">
+                            <thead class="table-secondary">
+                                <tr><th>#</th><th>Date</th><th>DA</th><th>Type</th><th>Territory</th><th>MPO</th><th>Summary</th><th>Sales</th><th>Ret</th><th>Sold</th><th>Invoice Qty</th><th>Bund Qty</th><th>Taka</th><th>%</th><th>Action</th></tr>
+                            </thead>
+                            <tbody id="iou_admin_table_body"></tbody>
+                            <tfoot>
+                                <tr class="fw-bold table-warning"><td colspan="7">Total</td><td id="iou_tot_sales">0</td><td id="iou_tot_ret">0</td><td id="iou_tot_sold">0</td><td id="iou_tot_qty">0</td><td id="iou_tot_bqty">0</td><td id="iou_tot_taka">0</td><td></td><td></td></tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- NEW USER RECORD TAB (Form + User List) -->
+        <div class="tab-pane fade admin-only" id="newUserTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-person-plus-fill"></i> New User Record</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div>
+                        <div class="col-12"><hr class="my-1"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Username</label><input type="text" id="new_user_username" class="form-control form-control-sm" placeholder="Login ID"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Password</label><input type="text" id="new_user_pass" class="form-control form-control-sm" placeholder="Password"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Role</label><select id="new_user_role" class="form-select form-control-sm"><option value="user">User</option><option value="admin">Admin (DIC)</option><option value="superadmin">Super Admin (RSM)</option></select></div>
+                        <div class="col-12 d-flex gap-2 mt-2">
+                            <button id="saveUserBtn" onclick="saveNewUser()" class="btn btn-primary btn-sm flex-grow-1"><i class="bi bi-save"></i> Save Record</button>
+                            <button id="cancelEditUserBtn" onclick="clearUserForm()" class="btn btn-secondary btn-sm hidden"><i class="bi bi-x-circle"></i> Cancel Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card dash-card no-print">
+                <div class="card-header bg-dark text-white py-2">
+                    <h6 class="mb-0"><i class="bi bi-people"></i> User List</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-sm table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Phone</th>
+                                    <th>Depot</th>
+                                    <th>Role</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user_list_body">
+                                <tr><td colspan="6" class="text-center text-muted p-2">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -537,11 +652,10 @@
 <!-- PRINT CONTAINERS -->
 <div class="print-container" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
 
-<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:100px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
+<div class="print-summary-container" id="print_summary_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Travels Allowance Bill Summary</h4><h5 style="margin:0" id="print_sum_depot">Kushtia Depot</h5></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>DA: <span id="print_sum_da_name"></span></div><div>Designation: Delivery Assistant</div><div>Month: <span id="print_sum_month"></span></div></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:13px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:center">Sl</th><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">Territory</th><th style="padding:2px;text-align:left">Type</th><th style="padding:2px;text-align:right">Net Sales</th><th style="padding:2px;text-align:right">Taka</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Net Amount</th><th style="padding:2px;text-align:right">Cost %</th></tr></thead><tbody id="print_sum_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="4" style="text-align:right;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="print_sum_foot_sales">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_taka">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_da">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_net">0</td><td style="text-align:right;padding:2px" id="print_sum_foot_cost">0%</td></tr></tfoot></table><div style="display:flex;justify-content:space-between;margin-top:10px;font-weight:bold;border:1px solid #000;padding:5px"><div style="width:70%">In Words: <span id="print_sum_words"></span></div><div style="width:28%">Cost %: <span id="print_sum_cost_pct"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:40px"><tr style="height:130px;vertical-align:bottom"><td style="width:25%;text-align:center;border-top:1px solid #000">Prepared DIC</td><td style="width:25%;text-align:center;border-top:1px solid #000">Delivery Assistant</td><td style="width:25%;text-align:center;border-top:1px solid #000">RSM/Sr.RSM</td><td style="width:25%;text-align:center;border-top:1px solid #000">Approved by Accounts</td></tr></table></div>
 
-<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:80px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
+<div class="print-iou-container" id="print_iou_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">IOU Register</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><div style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:bold"><div>Period: <span id="print_iou_period"></span></div><div>Filter: <span id="print_iou_filter_info"></span></div></div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#e0e0e0"><th style="padding:3px;text-align:center;width:4%">#</th><th style="padding:3px;text-align:left;width:9%">Date</th><th style="padding:3px;text-align:left;width:12%">DA</th><th style="padding:3px;text-align:center;width:7%">Type</th><th style="padding:3px;text-align:left;width:12%">Territory</th><th style="padding:3px;text-align:left;width:8%">MPO</th><th style="padding:3px;text-align:center;width:6%">Sum</th><th style="padding:3px;text-align:right;width:8%">Sales</th><th style="padding:3px;text-align:right;width:6%">Ret</th><th style="padding:3px;text-align:right;width:8%">Sold</th><th style="padding:3px;text-align:center;width:5%">Invoice Qty</th><th style="padding:3px;text-align:center;width:5%">Bund Qty</th><th style="padding:3px;text-align:right;width:6%">Taka</th><th style="padding:3px;text-align:right;width:4%">%</th></tr></thead><tbody id="print_iou_tbody"></tbody><tfoot><tr style="font-weight:bold;background:#e9ecef"><td colspan="7" style="text-align:right;padding:3px">Total:</td><td style="text-align:right;padding:3px" id="print_iou_foot_sales">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_ret">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_sold">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_qty">0</td><td style="text-align:center;padding:3px" id="print_iou_foot_bqty">0</td><td style="text-align:right;padding:3px" id="print_iou_foot_taka">0</td><td></td></tr></tfoot></table><table style="width:100%;border-collapse:collapse;margin-top:30px"><tr style="height:120px;vertical-align:bottom"><td style="width:50%;text-align:center;border-top:1px solid #000">Prepared By</td><td style="width:50%;text-align:center;border-top:1px solid #000">Checked By DIC</td></tr></table></div>
 
-<!-- ★★★ GENERATED TOP SHEET PRINT CONTAINER ★★★ -->
 <div class="print-topsheet-final-container" id="print_topsheet_final_area">
     <div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px">
         <h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2>
@@ -583,13 +697,16 @@
     </div>
 
     <table style="width:100%;border-collapse:collapse;margin-top:50px">
-        <tr style="height:100px;vertical-align:bottom">
+        <tr style="height:130px;vertical-align:bottom">
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Prepared By DIC</td>
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Rechecked RSM/Sr.RSM</td>
             <td style="width:33.33%;text-align:center;border-top:1px solid #000">Approved By Accounts</td>
         </tr>
     </table>
 </div>
+
+<!-- ★★★ APPROVED BATCH PRINT CONTAINER ★★★ -->
+<div class="print-approved-batch-container" id="print_approved_batch_area"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -610,6 +727,7 @@ const database=firebase.database();
 
 let currentUser=null,editingBillId=null,editingBillYear=null,editingBillMonth=null,editingBillDaName=null;
 let editingIouId=null,editingIouYear=null,editingIouMonth=null,editingIouDaName=null;
+let editingUserId=null;
 let daListCache={},daNameToIdCache={},iouListGlobal={};
 let currentIouId=null,originalIouId=null,originalIouYear=null,originalIouMonth=null,originalIouDaName=null;
 let userPhotoBase64=null,profilePhotoBase64=null,currentSummaryData=[],iouPrintCache=[];
@@ -617,6 +735,10 @@ let modalSales=0,modalUserBill=0,modalIou=0;
 let globalFilterMonth='',iouGlobalListenerRef=null;
 let lookedUpUser=null,lookupTimeout=null;
 let _iouLoaded=false;
+
+// Variables for batch printing Approved History
+let approvedPrintCache=[];
+let approvedPrintIndex=0;
 
 function sanitizeKey(s){return String(s||'').replace(/[.#$\[\]\/]/g,'_');}
 function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -669,7 +791,7 @@ function collectBills(snap,pYear,pMonth){
     return result;
 }
 
-// ========== LOGIN ==========
+// ========== LOGIN ========== 
 function setStatus(text,cls){var el=document.getElementById('w98_status');el.innerText=text;el.className='w98-status-text'+(cls?' '+cls:'');}
 
 function resetLoginUI(){
@@ -743,10 +865,7 @@ function handleUnifiedLogin(){
     }
     var d=lookedUpUser.data;
     currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};
-    
-    // পেজ রিফ্রেশ দিলে যাতে লগআউট না হয় তার জন্য লোকাল স্টোরেজে সেভ করা হলো
     localStorage.setItem('auth_user', JSON.stringify(currentUser));
-    
     showDashboard();
 }
 
@@ -835,7 +954,7 @@ function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=nul
 // ========== LOGOUT ==========
 function logout(){
     if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();
-    localStorage.removeItem('auth_user'); // লগআউট করলে সেশন মুছে ফেলা হলো
+    localStorage.removeItem('auth_user');
     currentUser=null;
     document.body.className='';
     location.reload();
@@ -850,9 +969,88 @@ function openChangePassModal(){if(!currentUser||currentUser.id==='admin_001'){al
 function changePassword(){var c=document.getElementById('cp_current').value,n=document.getElementById('cp_new').value,cf=document.getElementById('cp_confirm').value;if(!c||!n||!cf){alert("Fill all");return;}if(n!==cf){alert("Mismatch");return;}database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u.password!==c){alert("Wrong current");return;}database.ref('Users/'+currentUser.id).update({password:n}).then(function(){alert("Changed!");bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();}).catch(function(e){alert(e.message);});});}
 function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');userPhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
 
-// ========== PRESENCE ==========
-function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
-function listenForOnlineUsers(){var ac=document.getElementById('online_users_list'),ab=document.getElementById('online_count_badge'),uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var ah='',uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';var simpleHtml='<div class="p-1 d-flex align-items-center"><span class="online-dot"></span> '+escHtml(u.name)+' <small class="text-muted ms-auto">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div>';var adminHtml='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';ah+=simpleHtml;uh+=adminHtml;});}if(ac){ac.innerHTML=ah||'<div class="text-center text-muted p-2">No users online</div>';ab.innerText=c;}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+// ========== PRESENCE (IP & Location Integration) ==========
+async function setupPresence(){
+    if(!currentUser)return;
+    var ref=database.ref('OnlineUsers/'+currentUser.id);
+    
+    var presenceData = {
+        name:currentUser.name,
+        role:currentUser.role,
+        lastOnline:firebase.database.ServerValue.TIMESTAMP,
+        ip: 'Fetching...',
+        location: 'Fetching...'
+    };
+    ref.set(presenceData);
+    ref.onDisconnect().remove();
+
+    try {
+        let response = await fetch('https://ipwho.is/');
+        let data = await response.json();
+        
+        if(data && data.ip){
+            var ipAddr = data.ip;
+            var locText = (data.city ? data.city + ', ' : '') + (data.country || 'Unknown');
+            
+            ref.update({
+                ip: ipAddr,
+                location: locText
+            });
+        }
+    } catch(e) {
+        console.error("IP/Location fetch error", e);
+        ref.update({ ip: 'Unknown', location: 'Unknown' });
+    }
+}
+
+function listenForOnlineUsers(){
+    var ac=document.getElementById('online_users_list'),
+        ab=document.getElementById('online_count_badge'),
+        uc=document.getElementById('user_online_list_view'),
+        ub=document.getElementById('user_online_count_badge');
+
+    database.ref('OnlineUsers').on('value',function(snap){
+        var ah='',uh='',c=0;
+        if(snap.exists()){
+            snap.forEach(function(ch){
+                var u=ch.val();
+                c++;
+                var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';
+                var roleText=u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA';
+                var locText = u.location || 'Unknown';
+                var ipText = u.ip || 'Unknown';
+
+                var simpleHtml='<div class="p-2 border-bottom d-flex align-items-center justify-content-between">'+
+                    '<span><span class="online-dot"></span> '+escHtml(u.name)+' <small class="badge bg-light text-secondary">'+roleText+'</small></span>'+
+                    '<div class="text-end" style="font-size:10px; line-height:1.2; margin-left: 10px;">'+
+                        '<div><i class="bi bi-geo-alt-fill text-danger"></i> '+escHtml(locText)+'</div>'+
+                        '<div><i class="bi bi-pc-display text-primary"></i> '+escHtml(ipText)+'</div>'+
+                    '</div>'+
+                '</div>';
+
+                var adminHtml='<div class="online-user-item">'+
+                    '<div class="online-avatar">'+initials+'</div>'+
+                    '<div style="flex:1; min-width:0;">'+
+                        '<div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+' <small class="text-muted">('+roleText+')</small></div>'+
+                        '<div class="text-muted" style="font-size:11px; margin-top:2px;"><i class="bi bi-geo-alt-fill"></i> '+escHtml(locText)+'</div>'+
+                        '<div class="text-muted" style="font-size:11px;"><i class="bi bi-pc-display"></i> '+escHtml(ipText)+'</div>'+
+                    '</div>'+
+                '</div>';
+
+                ah+=simpleHtml;
+                uh+=adminHtml;
+            });
+        }
+        if(ac){
+            ac.innerHTML=ah||'<div class="text-center text-muted p-2 d-flex align-items-center justify-content-center h-100">No users online</div>';
+            ab.innerText=c;
+        }
+        if(uc){
+            uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';
+            ub.innerText=c;
+        }
+    });
+}
 
 // ========== DASHBOARD ==========
 function showDashboard(){
@@ -867,9 +1065,10 @@ function showDashboard(){
     document.getElementById('dash-tab').classList.add('active');
     document.getElementById('dashTab').classList.add('show','active');
     setupPresence();listenForOnlineUsers();
-    var savedMonth=localStorage.getItem('globalFilterMonth');
-    var targetMonth=getCurrentMonth();
-    if(savedMonth!==null&&savedMonth!==''){if(/^\d{4}-\d{2}$/.test(savedMonth))targetMonth=savedMonth;}
+    
+    localStorage.removeItem('globalFilterMonth'); 
+    var targetMonth=getCurrentMonth(); 
+    
     if(currentUser.role==='user'){
         document.getElementById('user_dash_name').innerText='Welcome, '+currentUser.name+'!';
         document.getElementById('user_dash_depot').innerText=currentUser.depot;
@@ -882,7 +1081,8 @@ function showDashboard(){
     }else{
         loadDAListForFilters(function(){
             setGlobalMonth(targetMonth);
-            loadTopSheetHistory(); // ড্যাশবোর্ড লোড হওয়ার সাথে সাথেই সব মাসের হিস্ট্রি লোড হবে এবং লাইভ আপডেট হবে
+            loadTopSheetHistory(); 
+            loadUserList();
         });
     }
 }
@@ -894,23 +1094,15 @@ function loadUserDashboardData(){
     ab.innerHTML='';ub.innerHTML='';
     var totalIouCount=0,activeIouCount=0;
     
-        Object.keys(iouListGlobal).forEach(function(id){
+    Object.keys(iouListGlobal).forEach(function(id){
         var d=iouListGlobal[id];
         if(d.daName!==myName)return;
         if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
         
         var type=d.type||'Delivery';
-        
-        // No Bill টাইপের আইওইউ লিস্টে দেখানো এবং কাউন্ট করা থেকে বিরত থাকা হলো
         if(isNoBillIOU(type)) return; 
         
-        // Total IOU কাউন্ট করা হচ্ছে (শুধুমাত্র Bill প্রয়োজন এমন আইওইউ)
         totalIouCount++; 
-        
-        var type=d.type||'Delivery';
-        
-        // No Bill টাইপের আইওইউ লিস্টে দেখানো থেকে বিরত থাকা হলো
-        if(isNoBillIOU(type)) return; 
         
         if(d.status==='used'){
             ubCount++;
@@ -928,7 +1120,6 @@ function loadUserDashboardData(){
     if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
     if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
     
-    // Total IOUs কার্ডে ভ্যালু সেট করা হচ্ছে
     var iouEl = document.getElementById('user_stat_total_iou');
     if(iouEl) iouEl.innerText = totalIouCount;
     
@@ -946,7 +1137,6 @@ function loadUserDashboardData(){
             else if(b.status==='green')verifiedCount++;
         });
         
-        // কার্ডগুলোতে ভ্যালু সেট করা হচ্ছে (নিরাপদ পদ্ধতিতে)
         var elTotal = document.getElementById('user_stat_total');
         var elPending = document.getElementById('user_stat_pending');
         var elChecked = document.getElementById('user_stat_checked');
@@ -1030,13 +1220,29 @@ function loadApprovedBillSummary(){
         });
         var tbody=document.getElementById('approved_summary_body');tbody.innerHTML='';
         var allDAs=new Set([].concat(Object.keys(iouPerDA),Object.keys(billPerDA)));
-        if(allDAs.size===0){tbody.innerHTML='<tr><td colspan="6" class="text-center">No Data</td></tr>';return;}
+        var gIou=0,gBill=0,gBal=0,gBund=0;
+        if(allDAs.size===0){
+            tbody.innerHTML='<tr><td colspan="6" class="text-center">No Data</td></tr>';
+            document.getElementById('approved_tot_iou').innerText='0.00';
+            document.getElementById('approved_tot_bill').innerText='0.00';
+            document.getElementById('approved_tot_bal').innerText='0.00';
+            document.getElementById('approved_tot_bund').innerText='0';
+            return;
+        }
         allDAs.forEach(function(dn){
             var ti=iouPerDA[dn]||0,bi=billPerDA[dn]||{appr:0,bund:0};
             var bal=bi.appr-ti;var bc=bal<0?'text-danger':'text-success';
             var st=bal<0?'<span class="badge bg-danger">Due</span>':'<span class="badge bg-success">Clear</span>';
             tbody.innerHTML+='<tr><td>'+escHtml(dn)+'</td><td class="text-end fw-bold">'+ti.toFixed(2)+'</td><td class="text-end fw-bold">'+bi.appr.toFixed(2)+'</td><td class="text-end fw-bold '+bc+'">'+bal.toFixed(2)+'</td><td class="text-center fw-bold">'+bi.bund+'</td><td class="text-center">'+st+'</td></tr>';
+            gIou+=ti;gBill+=bi.appr;gBal+=bal;gBund+=bi.bund;
         });
+        var balColor=gBal<0?'text-danger':'text-success';
+        document.getElementById('approved_tot_iou').innerText=gIou.toFixed(2);
+        document.getElementById('approved_tot_bill').innerText=gBill.toFixed(2);
+        var balEl=document.getElementById('approved_tot_bal');
+        balEl.innerText=gBal.toFixed(2);
+        balEl.className='text-end '+balColor;
+        document.getElementById('approved_tot_bund').innerText=gBund;
     });
 }
 
@@ -1064,14 +1270,95 @@ function loadDAListForFilters(callback){
     });
 }
 
+function loadUserList() {
+    var tbody=document.getElementById('user_list_body');
+    if(!tbody) return;
+    tbody.innerHTML='<tr><td colspan="6" class="text-center p-2">Loading...</td></tr>';
+    database.ref('Users').once('value',function(snap){
+        tbody.innerHTML='';
+        if(!snap.exists()){tbody.innerHTML='<tr><td colspan="6" class="text-center p-2">No users found.</td></tr>';return;}
+        snap.forEach(function(c){
+            var u=c.val();
+            var key = c.key;
+            var roleMap={'superadmin':'Super Admin','admin':'Admin','user':'User'};
+            var tr=document.createElement('tr');
+            tr.innerHTML='<td>'+(u.userId||'-')+'</td><td>'+escHtml(u.name||'-')+'</td><td>'+(u.phone||'-')+'</td><td>'+(u.depot||'-')+'</td><td>'+(roleMap[u.role]||u.role||'-')+'</td><td class="text-center"><button class="btn btn-sm btn-warning" onclick="editUser(\''+key+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteUser(\''+key+'\')"><i class="bi bi-trash"></i></button></td>';
+            tbody.appendChild(tr);
+        });
+    });
+}
+
+function clearUserForm(){
+    document.getElementById('new_user_id').value='';
+    document.getElementById('new_user_name').value='';
+    document.getElementById('new_user_phone').value='';
+    document.getElementById('new_user_username').value='';
+    document.getElementById('new_user_pass').value='';
+    document.getElementById('new_user_depot').value='Kushtia';
+    document.getElementById('new_user_role').value='user';
+    document.getElementById('new_user_photo').value='';
+    document.getElementById('photo_preview').src='';
+    document.getElementById('photo_preview').classList.add('hidden');
+    userPhotoBase64=null;
+    editingUserId=null;
+    document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-save"></i> Save Record';
+    document.getElementById('cancelEditUserBtn').classList.add('hidden');
+}
+
+function editUser(id){
+    database.ref('Users/'+id).once('value', function(snap){
+        var u = snap.val();
+        if(!u) return;
+        editingUserId = id;
+        document.getElementById('new_user_id').value = u.userId||'';
+        document.getElementById('new_user_name').value = u.name||'';
+        document.getElementById('new_user_phone').value = u.phone||'';
+        document.getElementById('new_user_username').value = u.username||'';
+        document.getElementById('new_user_pass').value = u.password||'';
+        document.getElementById('new_user_depot').value = u.depot||'Kushtia';
+        document.getElementById('new_user_role').value = u.role||'user';
+        
+        if(u.photoUrl){
+            document.getElementById('photo_preview').src = u.photoUrl;
+            document.getElementById('photo_preview').classList.remove('hidden');
+        } else {
+            document.getElementById('photo_preview').classList.add('hidden');
+        }
+        userPhotoBase64 = null;
+
+        document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-pencil-square"></i> Update Record';
+        document.getElementById('cancelEditUserBtn').classList.remove('hidden');
+        
+        var newUserTabEl = document.getElementById('new-user-tab');
+        if(newUserTabEl){ var tab = new bootstrap.Tab(newUserTabEl); tab.show(); }
+        window.scrollTo({top:0, behavior:'smooth'});
+    });
+}
+
+function deleteUser(id){
+    if(!confirm("Are you sure you want to delete this user? This cannot be undone.")) return;
+    database.ref('Users/'+id).remove().then(function(){
+        alert("User deleted successfully!");
+        if(editingUserId === id) clearUserForm();
+        loadUserList();
+        loadDAListForFilters();
+    }).catch(function(e){ alert("Error: "+e.message); });
+}
+
 // ========== IOU CRUD ==========
 function calcIouPercent(){var s=parseFloat(document.getElementById('iou_sales').value)||0,r=parseFloat(document.getElementById('iou_return').value)||0,sold=s-r,t=parseFloat(document.getElementById('iou_taka').value)||0;document.getElementById('iou_sold').value=sold;document.getElementById('iou_percent').value=sold>0?((t/sold)*100).toFixed(2):"0";}
 function saveIOU(){var daId=document.getElementById('iou_da_name').value;if(!daId){alert("Select DA");return;}var daName=daListCache[daId];var dateVal=document.getElementById('iou_date').value;if(!dateVal){alert("Select date");return;}var dp=getDateParts(dateVal);var iouType=document.getElementById('iou_type').value;var autoStatus=isNoBillIOU(iouType)?'used':'active';var salesV=parseFloat(document.getElementById('iou_sales').value)||0,retV=parseFloat(document.getElementById('iou_return').value)||0;var data={date:dateVal,daId:daId,daName:daName,territory:document.getElementById('iou_territory').value,mpo:document.getElementById('iou_mpo').value,summary:document.getElementById('iou_summary').value,sales:salesV,returnVal:retV,soldVal:salesV-retV,qty:parseInt(document.getElementById('iou_qty').value)||0,bundleQty:parseInt(document.getElementById('iou_bundle_qty').value)||0,taka:parseFloat(document.getElementById('iou_taka').value)||0,percent:document.getElementById('iou_percent').value,status:autoStatus,type:iouType};var safeName=sanitizeKey(daName);var op;if(editingIouId&&editingIouYear&&editingIouMonth&&editingIouDaName){op=database.ref('IOU_List/'+editingIouYear+'/'+editingIouMonth+'/'+sanitizeKey(editingIouDaName)+'/'+editingIouId).update(data);}else{op=database.ref('IOU_List/'+dp.year+'/'+dp.month+'/'+safeName).push(data);}op.then(function(){alert(editingIouId?"Updated!":"Saved!");clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function clearIOUForm(){document.getElementById('iou_date').value='';document.getElementById('iou_da_name').value='';document.getElementById('iou_territory').value='';document.getElementById('iou_mpo').value='';document.getElementById('iou_summary').value='';document.getElementById('iou_sales').value='';document.getElementById('iou_return').value='';document.getElementById('iou_sold').value='';document.getElementById('iou_qty').value='';document.getElementById('iou_bundle_qty').value='';document.getElementById('iou_taka').value='';document.getElementById('iou_percent').value='0';document.getElementById('iou_type').value='Delivery';editingIouId=null;editingIouYear=null;editingIouMonth=null;editingIouDaName=null;document.getElementById('iou_save_btn').innerText="Save IOU Entry";document.getElementById('iou_cancel_btn').classList.add('hidden');}
-function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cache");return;}editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;document.getElementById('iou_date').value=iou.date||'';document.getElementById('iou_da_name').value=iou.daId||'';document.getElementById('iou_territory').value=iou.territory||'';document.getElementById('iou_mpo').value=iou.mpo||'';document.getElementById('iou_summary').value=iou.summary||'';document.getElementById('iou_sales').value=iou.sales||0;document.getElementById('iou_return').value=iou.returnVal||0;document.getElementById('iou_sold').value=iou.soldVal||0;document.getElementById('iou_qty').value=iou.qty||0;document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;document.getElementById('iou_taka').value=iou.taka||0;document.getElementById('iou_percent').value=iou.percent||'0';document.getElementById('iou_type').value=iou.type||'Delivery';document.getElementById('iou_save_btn').innerText="Update";document.getElementById('iou_cancel_btn').classList.remove('hidden');document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('dashTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('dash-tab').classList.add('active');}
+function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cache");return;}editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;document.getElementById('iou_date').value=iou.date||'';document.getElementById('iou_da_name').value=iou.daId||'';document.getElementById('iou_territory').value=iou.territory||'';document.getElementById('iou_mpo').value=iou.mpo||'';document.getElementById('iou_summary').value=iou.summary||'';document.getElementById('iou_sales').value=iou.sales||0;document.getElementById('iou_return').value=iou.returnVal||0;document.getElementById('iou_sold').value=iou.soldVal||0;document.getElementById('iou_qty').value=iou.qty||0;document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;document.getElementById('iou_taka').value=iou.taka||0;document.getElementById('iou_percent').value=iou.percent||'0';document.getElementById('iou_type').value=iou.type||'Delivery';document.getElementById('iou_save_btn').innerText="Update";document.getElementById('iou_cancel_btn').classList.remove('hidden');var iouEntryTabEl=document.getElementById('iou-entry-tab');if(iouEntryTabEl){var tab=new bootstrap.Tab(iouEntryTabEl);tab.show();}window.scrollTo({top:0,behavior:'smooth'});}
 function deleteIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found");return;}if(!confirm("Delete?"))return;database.ref('IOU_List/'+iou._year+'/'+iou._month+'/'+sanitizeKey(iou._daName)+'/'+id).remove().then(function(){if(editingIouId===id)clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function cancelIOUEdit(){clearIOUForm();}
-function resetIOUFilter(){document.getElementById('filter_iou_month').value='';document.getElementById('iou_filter_start').value='';document.getElementById('iou_filter_end').value='';document.getElementById('filter_iou_da').value='';setGlobalMonth('');}
+
+function resetIOUFilter(){
+    document.getElementById('iou_filter_start').value='';
+    document.getElementById('iou_filter_end').value='';
+    document.getElementById('filter_iou_da').value='';
+    loadAdminIOU();
+}
 
 function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
 
@@ -1126,7 +1413,7 @@ function submitOrUpdateBill(statusType){
     var basePath='Bills/'+dp.year+'/'+dp.month+'/'+safeName;
     var processIOU=function(){
         if(editingBillId&&originalIouId&&originalIouYear&&originalIouMonth&&originalIouDaName&&originalIouId!==currentIouId){database.ref('IOU_List/'+originalIouYear+'/'+originalIouMonth+'/'+sanitizeKey(originalIouDaName)+'/'+originalIouId).update({status:'active'});}
-        if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});}}
+        if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});} }
     };
     var afterSave=function(){
         clearLocalDraft();
@@ -1167,7 +1454,7 @@ function editBill(billId,year,month,daName){
         if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}
         calculateGrandTotal();calculateSoldValue();
         document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';
-        document.getElementById('cancel_edit_btn').classList.remove('hidden');
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
         document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});
         document.getElementById('entryTab').classList.add('show','active');
         document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
@@ -1188,9 +1475,14 @@ function deleteBill(billId,year,month,daName){
 }
 function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();if(currentUser.role!=='user')document.getElementById('history-tab').click();}
 
-// ========== BILL HISTORY ==========
-function resetHistoryFilter(){document.getElementById('filter_history_da').value='';loadBills();}
-function resetApprovedFilter(){document.getElementById('filter_approved_da').value='';loadBills();}
+function resetHistoryFilter(){
+    document.getElementById('filter_history_da').value='';
+    loadBills();
+}
+function resetApprovedFilter(){
+    document.getElementById('filter_approved_da').value='';
+    loadBills();
+}
 
 function resolveDAFilterName(selectId){
     var val=document.getElementById(selectId).value;
@@ -1221,12 +1513,19 @@ function loadBills(){
         var aTotals={iou:0,sales:0,userBill:0,payable:0};
         var allBills=collectBills(snap,null,null);
         var approvedArr=[];
+        
+        approvedPrintCache = [];
+        approvedPrintIndex = 0;
+        var btnPrint = document.getElementById('btnPrintApprovedBatch');
+        if(btnPrint) btnPrint.disabled = false;
+        
         var userBillCount=0;
 
         if(allBills.length===0){
             var cs=currentUser.role==='user'?'6':'9';
             tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            if(btnPrint) btnPrint.disabled = true;
             tableFoot.innerHTML='';appFoot.innerHTML='';return;
         }
 
@@ -1308,6 +1607,14 @@ function loadBills(){
                 if(approvedDAName&&b.daName!==approvedDAName)return;
                 approvedVisibleCount++;
                 aTotals.iou+=item.iou;aTotals.sales+=item.sales;aTotals.userBill+=item.originalAmount;aTotals.payable+=item.approvedAmount;
+                
+                approvedPrintCache.push({
+                    billData: b,
+                    year: item.y,
+                    month: item.m,
+                    daName: item.dn
+                });
+
                 var trA=document.createElement('tr');
                 if(item.b.status==='orange')trA.classList.add('status-orange');
                 else trA.classList.add('status-green');
@@ -1319,6 +1626,7 @@ function loadBills(){
             });
             if(approvedVisibleCount===0){
                 appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+                if(btnPrint) btnPrint.disabled = true;
             }
         }
 
@@ -1522,12 +1830,10 @@ function generateAndSaveTopSheet(){
 function loadTopSheetHistory(){
     var tbody = document.getElementById('topsheet_history_body');
     
-    // TopSheets এর সব ডেটা একসাথে নেওয়া হচ্ছে (সব মাসের)
     database.ref('TopSheets').on('value', function(snapshot){
         tbody.innerHTML = '';
         var reports = [];
         
-        // সব বছর এবং মাসের ডেটা লুপ করে একটি অ্যারেতে নেওয়া হচ্ছে
         if(snapshot.exists()){
             snapshot.forEach(function(yearSnap){
                 yearSnap.forEach(function(monthSnap){
@@ -1541,7 +1847,6 @@ function loadTopSheetHistory(){
             });
         }
 
-        // নতুন থেকে পুরাতন সাজানো হচ্ছে
         reports.sort(function(a,b){ return (b.generatedAt||0) - (a.generatedAt||0); });
 
         if(reports.length === 0){
@@ -1568,7 +1873,6 @@ function loadTopSheetHistory(){
 }
 
 function viewGeneratedTopSheet(reportId, reportMonth){
-    // মাস নির্বাচন করা না থাকলেও রিপোর্টের মাস থেকে পাথ তৈরি করা হচ্ছে
     var monthToUse = reportMonth || globalFilterMonth;
     if(!monthToUse) { alert("Cannot determine report month."); return; }
     
@@ -1615,7 +1919,6 @@ function viewGeneratedTopSheet(reportId, reportMonth){
 }
 
 function printGeneratedTopSheet(reportId, reportMonth){
-    // মাস নির্বাচন করা না থাকলেও রিপোর্টের মাস থেকে পাথ তৈরি করা হচ্ছে
     var monthToUse = reportMonth || globalFilterMonth;
     if(!monthToUse) { alert("Cannot determine report month."); return; }
     
@@ -1655,6 +1958,7 @@ function printGeneratedTopSheet(reportId, reportMonth){
         document.getElementById('print_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
         
         document.getElementById('print_topsheet_final_area').classList.add('active-print');
         
@@ -1742,6 +2046,7 @@ function printBill(billId,year,month,daName){
         document.getElementById('print_topsheet_final_area').classList.remove('active-print');
         document.getElementById('print_summary_area').classList.remove('active-print');
         document.getElementById('print_iou_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
         document.getElementById('print_area').classList.add('active-print');window.print();
     });
 }
@@ -1763,6 +2068,7 @@ function printBillSummary(){
     document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.remove('active-print');
+    document.getElementById('print_approved_batch_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.add('active-print');window.print();
 }
 function printIOUList(){
@@ -1783,7 +2089,87 @@ function printIOUList(){
     document.getElementById('print_topsheet_final_area').classList.remove('active-print');
     document.getElementById('print_area').classList.remove('active-print');
     document.getElementById('print_summary_area').classList.remove('active-print');
+    document.getElementById('print_approved_batch_area').classList.remove('active-print');
     document.getElementById('print_iou_area').classList.add('active-print');window.print();
+}
+
+// ========== PRINT APPROVED BATCH (10 at a time, each on a new page) ==========
+function generateSingleBillPrintHTML(bill) {
+    if(!bill) return '';
+    var costPct="0%"; if(bill.invoiceVal>0) costPct=((bill.totalAmount/bill.invoiceVal)*100).toFixed(2)+"%";
+    var expHtml=''; var tAmt=0,tDa=0,tDed=0,tNet=0,tTot=0;
+    if(bill.expenses){bill.expenses.forEach(function(exp){
+        if(!exp.date)return;var amt=parseFloat(exp.amount)||0,da=parseFloat(exp.da)||0,ded=parseFloat(exp.deduction)||0;
+        var total=amt+da,net=total-ded;tAmt+=amt;tDa+=da;tTot+=total;tDed+=ded;tNet+=net;
+        var tDisp=total;if(ded>0)tDisp='<span class="cut-text">'+total+'</span>';
+        expHtml+='<tr><td style="padding:2px;text-align:left">'+formatDate(exp.date)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.from)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.to)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.mode)+'</td><td style="padding:2px;text-align:right">'+amt+'</td><td style="padding:2px;text-align:right">'+da+'</td><td style="padding:2px;text-align:right">'+tDisp+'</td><td style="padding:2px;text-align:right;color:red">'+(ded>0?ded:'')+'</td><td style="padding:2px;text-align:right;font-weight:bold">'+net+'</td></tr>';
+    });}
+    
+    var html = '<div class="print-page-break" style="padding:20px;">';
+    html += '<div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">';
+    html += '<tr><td style="width:33%;padding:3px"><strong>DA:</strong> '+escHtml(bill.daName)+'</td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> '+escHtml(bill.depot)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Departure:</strong> '+formatDate(bill.depDate)+'</td><td style="text-align:center;padding:3px"><strong>Return:</strong> '+formatDate(bill.retDate)+'</td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> '+formatDate(bill.submitDate)+'</td></tr>';
+    html += '<tr><td colspan="3" style="padding:3px"><strong>Route:</strong> '+escHtml(bill.route)+'</td></tr>';
+    html += '<tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> '+escHtml(bill.mpo)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Summary:</strong> '+escHtml(bill.summaryNo)+'</td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> '+bill.invoiceVal+'</td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> '+(bill.bundleQty||0)+'</td></tr>';
+    html += '<tr><td style="padding:3px"><strong>Return:</strong> '+bill.returnVal+'</td><td style="text-align:center;padding:3px"><strong>Sold:</strong> '+bill.soldVal+'</td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> '+bill.invoiceQty+'</td></tr>';
+    html += '</table>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead>';
+    html += '<tbody>'+expHtml+'</tbody>';
+    html += '<tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px">'+tAmt+'</td><td style="text-align:right;padding:2px">'+tDa+'</td><td style="text-align:right;padding:2px">'+tTot+'</td><td style="text-align:right;padding:2px">'+tDed+'</td><td style="text-align:right;padding:2px">'+tNet+'</td></tr></tfoot></table>';
+    
+    html += '<div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> '+numberToEnglish(bill.totalAmount)+' Taka Only</div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> '+costPct+'</div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> '+(bill.remarks||'')+'</div></div>';
+    
+    html += '<table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.daName)+'</td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.checkedBy||'')+'</td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold">'+escHtml(bill.recheckedBy||bill.approvedBy||'')+'</td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table>';
+    
+    html += '</div>';
+    return html;
+}
+
+function printNextApprovedBatch() {
+    var btn = document.getElementById('btnPrintApprovedBatch');
+    
+    if(approvedPrintCache.length === 0) {
+        alert("No approved bills found to print.");
+        if(btn) btn.disabled = true;
+        return;
+    }
+
+    if(approvedPrintIndex >= approvedPrintCache.length) {
+        alert("All approved bills have been printed.");
+        if(btn) btn.disabled = true;
+        return;
+    }
+
+    var batch = approvedPrintCache.slice(approvedPrintIndex, approvedPrintIndex + 10);
+    approvedPrintIndex += 10;
+
+    var allHtml = '';
+    batch.forEach(function(item) {
+        allHtml += generateSingleBillPrintHTML(item.billData);
+    });
+
+    document.getElementById('print_approved_batch_area').innerHTML = allHtml;
+
+    document.getElementById('print_area').classList.remove('active-print');
+    document.getElementById('print_summary_area').classList.remove('active-print');
+    document.getElementById('print_iou_area').classList.remove('active-print');
+    document.getElementById('print_topsheet_final_area').classList.remove('active-print');
+
+    document.getElementById('print_approved_batch_area').classList.add('active-print');
+    window.print();
+
+    if(approvedPrintIndex >= approvedPrintCache.length) {
+        if(btn) btn.disabled = true;
+    }
+
+    setTimeout(function(){
+        document.getElementById('print_approved_batch_area').classList.remove('active-print');
+        document.getElementById('print_approved_batch_area').innerHTML = ''; 
+    }, 1000);
 }
 
 // ========== NUMBER TO ENGLISH ==========
@@ -1801,42 +2187,6 @@ function numberToEnglish(num){
 }
 
 // ========== EXCEL IMPORT / EXPORT ==========
-function exportBillsToExcel(){
-    if(!currentUser||(currentUser.role!=='admin'&&currentUser.role!=='superadmin')){alert("Unauthorized");return;}
-    database.ref('Bills').once('value',function(snap){
-        var allBills=collectBills(snap,null,null);var data=[];
-        data.push(["BillID","Year","Month","DAName","SubmitDate","DAName2","Depot","Route","Invoice","Return","Sold","Date","From","To","Mode","Amount","DAExp","Total","Deduction","Status"]);
-        var hasData=false;allBills.forEach(function(item){
-            var b=item.data;if(b.status!=='red')return;hasData=true;
-            if(b.expenses){b.expenses.forEach(function(exp){data.push([item.id,item.year,item.month,item.daName,b.submitDate||b.depDate,b.daName,b.depot,b.route,b.invoiceVal,b.returnVal,b.soldVal,exp.date,exp.from,exp.to,exp.mode,exp.amount,exp.da,(parseFloat(exp.amount)||0)+(parseFloat(exp.da)||0),exp.deduction||0,b.status]);});}
-        });
-        if(!hasData){alert("No pending bills for "+formatMonthLabel(globalFilterMonth)+".");return;}
-        var ws=XLSX.utils.aoa_to_sheet(data);var wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Pending Bills");XLSX.writeFile(wb,"Pending_Bills_"+new Date().toISOString().split('T')[0]+".xlsx");
-    });
-}
-function importBillsFromExcel(inputId){
-    var input=document.getElementById(inputId);if(!input.files||!input.files[0]){alert("Select file.");return;}
-    var file=input.files[0];var reader=new FileReader();
-    reader.onload=function(e){
-        try{var data=new Uint8Array(e.target.result);var wb=XLSX.read(data,{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];var jsonData=XLSX.utils.sheet_to_json(ws,{header:1});
-        if(jsonData.length<2){alert("Empty file.");return;}var billGroups={};
-        for(var i=1;i<jsonData.length;i++){var row=jsonData[i];if(!row||row.filter(function(c){return c!=='';}).length===0)continue;
-            var billId=String(row[0]).trim();var daName=row[3]||row[5]||'';if(!daName)continue;
-            if(!billGroups[billId]){billGroups[billId]={data:{daName:daName,depot:row[6]||'Kushtia',route:row[7]||'',invoiceVal:parseFloat(row[8])||0,returnVal:parseFloat(row[9])||0,soldVal:parseFloat(row[10])||0,submitDate:row[4]||new Date().toISOString().split('T')[0],status:'red',expenses:[],timestamp:Date.now()},isNew:(billId==='NEW'||billId==='new'||billId==='')};}
-            billGroups[billId].data.expenses.push({date:row[11]||billGroups[billId].data.submitDate,from:row[12]||'',to:row[13]||'',mode:row[14]||'Rickshaw',amount:parseFloat(row[15])||0,da:parseFloat(row[16])||0,deduction:parseFloat(row[17])||0});
-        }
-        var updates={},newC=0,updC=0;Object.keys(billGroups).forEach(function(key){
-            var item=billGroups[key];var totalAmt=0;item.data.expenses.forEach(function(ex){totalAmt+=((parseFloat(ex.amount)||0)+(parseFloat(ex.da)||0)-(parseFloat(ex.deduction)||0));});
-            item.data.totalAmount=totalAmt;item.data.originalAmount=totalAmt;var billDate=item.data.submitDate||new Date().toISOString().split('T')[0];
-            var dp=getDateParts(billDate);var safeName=sanitizeKey(item.data.daName);var basePath='Bills/'+dp.year+'/'+dp.month+'/'+safeName;
-            if(item.isNew){var newRef=database.ref(basePath).push();updates[basePath+'/'+newRef.key]=item.data;newC++;}
-            else{updates[basePath+'/'+key]=item.data;updC++;}
-        });
-        if(Object.keys(updates).length>0){database.ref().update(updates).then(function(){alert('Import OK!\nNew: '+newC+'\nUpdated: '+updC);input.value='';reloadAllData();}).catch(function(err){alert("Failed: "+err.message);});}
-        else{alert("No valid data.");}
-        }catch(ex){console.error(ex);alert("Error parsing file.");}
-    };reader.readAsArrayBuffer(file);
-}
 function importExpensesToTable(){
     if(typeof XLSX==='undefined'){alert("Excel lib not loaded.");return;}
     var input=document.getElementById('user_exp_excel_input');if(!input.files||!input.files[0]){alert("Select file.");return;}
@@ -1862,16 +2212,36 @@ function saveNewUser(){
     var phone=document.getElementById('new_user_phone').value.trim();var depot=document.getElementById('new_user_depot').value;
     var username=document.getElementById('new_user_username').value.trim();var password=document.getElementById('new_user_pass').value.trim();
     var role=document.getElementById('new_user_role').value;if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
-    var newUserRef=database.ref('Users').push();var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
+    var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
     if(userPhotoBase64)userData.photoUrl=userPhotoBase64;
-    newUserRef.set(userData,function(error){if(error)alert("Error creating user");
-    else{alert("User Created!");document.getElementById('new_user_id').value='';document.getElementById('new_user_name').value='';document.getElementById('new_user_phone').value='';document.getElementById('new_user_username').value='';document.getElementById('new_user_pass').value='';document.getElementById('new_user_depot').value='Kushtia';document.getElementById('new_user_role').value='user';document.getElementById('new_user_photo').value='';document.getElementById('photo_preview').classList.add('hidden');userPhotoBase64=null;loadDAListForFilters();}});
+    
+    if(editingUserId){
+        database.ref('Users/'+editingUserId).update(userData,function(error){
+            if(error)alert("Error updating user");
+            else{
+                alert("User Updated Successfully!");
+                clearUserForm();
+                loadUserList();
+                loadDAListForFilters();
+            }
+        });
+    } else {
+        var newUserRef=database.ref('Users').push();
+        newUserRef.set(userData,function(error){
+            if(error)alert("Error creating user");
+            else{
+                alert("User Created Successfully!");
+                clearUserForm();
+                loadUserList();
+                loadDAListForFilters();
+            }
+        });
+    }
 }
 
 // ========== Tab change listeners ==========
 document.addEventListener('DOMContentLoaded',function(){
     
-    // পেজ রিফ্রেশ দিলে যাতে লগআউট না হয় তার জন্য চেক করা হলো
     var savedUser = localStorage.getItem('auth_user');
     if(savedUser){
         try {
@@ -1883,17 +2253,18 @@ document.addEventListener('DOMContentLoaded',function(){
     }
 
     var summaryTabEl=document.getElementById('summaryTab');
-    var iouTabEl=document.getElementById('iouTab');
+    var iouEntryTabEl=document.getElementById('iouEntryTab');
+    var newUserTabEl=document.getElementById('newUserTab');
     var billTabEl=document.getElementById('billTab');
     var approvedTabEl=document.getElementById('approvedHistoryTab');
     var topSheetTabEl = document.getElementById('topSheetTab');
 
     summaryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)generateSummary();});
-    iouTabEl.addEventListener('shown.bs.tab',function(){if(currentUser&&currentUser.role!=='user')loadAdminIOU();});
+    iouEntryTabEl.addEventListener('shown.bs.tab',function(){if(currentUser&&currentUser.role!=='user'){loadAdminIOU();var daSel=document.getElementById('iou_da_name');if(daSel&&daSel.options.length<=1)loadDAListForFilters();}});
+    newUserTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadUserList();});
     billTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
     approvedTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});
     
-    // টপ শীট ট্যাব ওপেন হলে শুধু লাইভ প্রিভিউ লোড হবে (হিস্ট্রি আলাদাভাবে লোড হয়ে থাকে)
     topSheetTabEl.addEventListener('shown.bs.tab',function(){
         if(currentUser) {
             loadTopSheetData();
@@ -1904,8 +2275,6 @@ document.addEventListener('DOMContentLoaded',function(){
 // ========== AUTO IMPORT LISTENERS ==========
 var userExpInput=document.getElementById('user_exp_excel_input');
 if(userExpInput){userExpInput.addEventListener('change',function(){if(this.files&&this.files[0])importExpensesToTable();});}
-var adminExpInput=document.getElementById('excel_upload_input');
-if(adminExpInput){adminExpInput.addEventListener('change',function(){if(this.files&&this.files[0])importBillsFromExcel('excel_upload_input');});}
 </script>
 </body>
 </html>
