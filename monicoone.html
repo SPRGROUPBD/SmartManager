@@ -430,8 +430,14 @@
                         
                         <input type="text" id="productNoticeInput" placeholder="প্রোডাক্টের নাম লিখুন" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none mb-2">
                         
-                        <div class="grid grid-cols-2 gap-2 mb-2">
+                        <div class="mb-2">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">Stock Quantity:</label>
                             <input type="number" id="productStockInput" placeholder="Stock Quantity" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="block text-[10px] font-bold text-slate-500 mb-1">প্রোডাক্ট ছবি (Image URL অথবা আপলোড):</label>
+                            <input type="text" id="productImageUrlInput" placeholder="ছবির লিংক (URL) পেস্ট করুন" oninput="previewProductNoticeUrl(this.value)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none mb-2">
                             <input type="file" id="productImageInput" accept="image/*" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-success file:text-white hover:file:bg-success/90" onchange="previewProductNoticeImage(this)">
                         </div>
                         
@@ -961,6 +967,20 @@
                 section.classList.add('hidden');
             }
         }
+        
+        // Product Notice URL Preview
+        window.previewProductNoticeUrl = function(url) {
+            if (url) {
+                document.getElementById('productImagePreview').src = url;
+                document.getElementById('productImagePreview').classList.remove('hidden');
+                tempProductNoticeImage = null; // Clear file data if URL is typed
+                document.getElementById('productImageInput').value = ''; // Clear file input
+            } else {
+                document.getElementById('productImagePreview').classList.add('hidden');
+            }
+        };
+        
+        // Product Notice File Upload Preview
         window.previewProductNoticeImage = function(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -968,20 +988,29 @@
                     document.getElementById('productImagePreview').src = e.target.result;
                     document.getElementById('productImagePreview').classList.remove('hidden');
                     tempProductNoticeImage = e.target.result;
+                    document.getElementById('productImageUrlInput').value = ''; // Clear URL if file is uploaded
                 };
                 reader.readAsDataURL(input.files[0]);
             }
         };
+        
+        // Save Product Notice with Name, Image (URL/File), and Stock
         window.saveProductNotice = function() {
             const editKey = document.getElementById('editProductKey').value;
             const name = document.getElementById('productNoticeInput').value.trim();
             const stock = document.getElementById('productStockInput').value.trim();
+            const imageUrl = document.getElementById('productImageUrlInput').value.trim();
             
             if (!name) { showToast('প্রোডাক্টের নাম দিন'); return; }
-            if (!tempProductNoticeImage && !editKey) { showToast('একটি ছবি সিলেক্ট করুন'); return; }
+            if (!tempProductNoticeImage && !imageUrl && !editKey) { showToast('একটি ছবি সিলেক্ট করুন বা URL দিন'); return; }
             
             const productData = { name, stock: stock || '0' };
-            if (tempProductNoticeImage) productData.image = tempProductNoticeImage;
+            // Prioritize File Upload (tempProductNoticeImage), then URL
+            if (tempProductNoticeImage) {
+                productData.image = tempProductNoticeImage;
+            } else if (imageUrl) {
+                productData.image = imageUrl;
+            }
             
             if (editKey) { 
                 db.child('productNotices/' + editKey).update(productData).then(() => { 
@@ -995,6 +1024,8 @@
                 }); 
             }
         };
+        
+        // Edit Product Notice
         window.editProductNotice = function(key) {
             db.child('productNotices/' + key).once('value', (snap) => {
                 const p = snap.val();
@@ -1002,10 +1033,19 @@
                     document.getElementById('editProductKey').value = key;
                     document.getElementById('productNoticeInput').value = p.name || '';
                     document.getElementById('productStockInput').value = p.stock || '';
+                    document.getElementById('productImageUrlInput').value = ''; // Reset URL field
+                    
                     if (p.image) {
                         document.getElementById('productImagePreview').src = p.image;
                         document.getElementById('productImagePreview').classList.remove('hidden');
-                        tempProductNoticeImage = p.image;
+                        // If it's an external URL, populate the URL input field
+                        if (p.image.startsWith('http://') || p.image.startsWith('https://')) {
+                            document.getElementById('productImageUrlInput').value = p.image;
+                            tempProductNoticeImage = null; // It's a URL, not base64
+                        } else {
+                            // It's base64 from previous upload. We don't put it in the URL field.
+                            tempProductNoticeImage = p.image; 
+                        }
                     } else {
                         document.getElementById('productImagePreview').classList.add('hidden');
                         tempProductNoticeImage = null;
@@ -1016,6 +1056,7 @@
                 }
             });
         };
+        
         window.deleteProductNotice = function(key) {
             if (confirm('প্রোডাক্টটি ডিলিট করতে চান?')) {
                 db.child('productNotices/' + key).remove().then(() => { 
@@ -1024,10 +1065,12 @@
                 });
             }
         };
+        
         window.resetProductForm = function() {
             document.getElementById('editProductKey').value = '';
             document.getElementById('productNoticeInput').value = '';
             document.getElementById('productStockInput').value = '';
+            document.getElementById('productImageUrlInput').value = '';
             document.getElementById('productImageInput').value = '';
             document.getElementById('productImagePreview').classList.add('hidden');
             tempProductNoticeImage = null;
@@ -1035,6 +1078,7 @@
             document.getElementById('productFormTitle').innerText = 'Short Product Notice';
             document.getElementById('productCancelBtn').classList.add('hidden');
         };
+        
         function renderAdminProducts(data) {
             const list = document.getElementById('adminProductList');
             list.innerHTML = '';
