@@ -423,16 +423,27 @@
                             <button onclick="resetNoticeForm()" id="noticeCancelBtn" class="hidden px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl">বাতিল</button>
                         </div>
                     </div>
+                    <!-- Short Product Notice Section -->
                     <div class="border-t border-slate-100 dark:border-slate-700 pt-4 mt-4 space-y-3">
                         <h5 id="productFormTitle" class="text-sm font-bold text-success">Short Product Notice</h5>
                         <input type="hidden" id="editProductKey" value="">
+                        
+                        <input type="text" id="productNoticeInput" placeholder="প্রোডাক্টের নাম লিখুন" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none mb-2">
+                        
+                        <div class="grid grid-cols-2 gap-2 mb-2">
+                            <input type="number" id="productStockInput" placeholder="Stock Quantity" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+                            <input type="file" id="productImageInput" accept="image/*" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-success file:text-white hover:file:bg-success/90" onchange="previewProductNoticeImage(this)">
+                        </div>
+                        
+                        <img id="productImagePreview" src="" class="w-full h-32 object-cover rounded-xl mb-2 hidden" alt="Preview">
+                        
                         <div class="flex space-x-2">
-                            <input type="text" id="productNoticeInput" placeholder="প্রোডাক্টের নাম লিখুন" class="flex-1 px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
-                            <button onclick="saveProductNotice()" id="productSaveBtn" class="px-4 py-2.5 bg-success text-white font-bold rounded-xl text-xs shadow-xs flex items-center justify-center space-x-1">
+                            <button onclick="saveProductNotice()" id="productSaveBtn" class="flex-1 py-2.5 bg-success text-white font-bold rounded-xl text-xs shadow-xs flex items-center justify-center space-x-1">
                                 <i class="fa-solid fa-plus text-[10px]"></i><span id="productSaveBtnText">যোগ করুন</span>
                             </button>
                             <button onclick="resetProductForm()" id="productCancelBtn" class="hidden px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl">বাতিল</button>
                         </div>
+                        
                         <div id="adminProductList" class="space-y-2 max-h-40 overflow-y-auto pr-2"></div>
                     </div>
                 </div>
@@ -589,6 +600,7 @@
         let tempUserProfilePic = null; 
         let tempMyProfilePic = null;   
         let tempPopupImage = null;
+        let tempProductNoticeImage = null; 
         let tempProductCardImage = null;
         let tempTrainingCardImage = null; 
         let tempTargetSheetImage = null; 
@@ -931,29 +943,73 @@
             const keys = data ? Object.keys(data) : [];
             if (keys.length > 0) {
                 section.classList.remove('hidden');
-                let badgesHtml = '';
+                let cardsHtml = '';
                 keys.forEach(key => {
-                    badgesHtml += `<span class="mx-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 text-primary border border-slate-200 dark:border-slate-600 rounded-lg text-[11px] font-semibold shadow-xs">${data[key].text}</span>`;
+                    const p = data[key];
+                    cardsHtml += `
+                        <div class="inline-flex flex-col items-center mx-3 shrink-0">
+                            <div class="w-16 h-16 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 shadow-sm bg-white dark:bg-slate-800">
+                                <img src="${p.image || APP_LOGO_URL}" class="w-full h-full object-cover" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${p.name}">
+                            </div>
+                            <span class="mt-1 text-[10px] font-bold text-slate-700 dark:text-slate-200 max-w-[70px] truncate">${p.name}</span>
+                            <span class="text-[9px] font-semibold text-white bg-success px-1.5 py-0.5 rounded-full mt-0.5">Stock: ${p.stock || 0}</span>
+                        </div>`;
                 });
-                container.innerHTML = badgesHtml + badgesHtml;
+                // Duplicate content for seamless right-to-left auto scroll
+                container.innerHTML = cardsHtml + cardsHtml;
             } else {
                 section.classList.add('hidden');
             }
         }
+        window.previewProductNoticeImage = function(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('productImagePreview').src = e.target.result;
+                    document.getElementById('productImagePreview').classList.remove('hidden');
+                    tempProductNoticeImage = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        };
         window.saveProductNotice = function() {
             const editKey = document.getElementById('editProductKey').value;
-            const input = document.getElementById('productNoticeInput');
-            const text = input.value.trim();
-            if (!text) { showToast('প্রোডাক্টের নাম দিন'); return; }
-            if (editKey) { db.child('productNotices/' + editKey).update({ text }).then(() => { showToast('প্রোডাক্ট আপডেট হয়েছে!'); resetProductForm(); }); } 
-            else { db.child('productNotices').push({ text }).then(() => { showToast('প্রোডাক্ট যোগ হয়েছে!'); resetProductForm(); }); }
+            const name = document.getElementById('productNoticeInput').value.trim();
+            const stock = document.getElementById('productStockInput').value.trim();
+            
+            if (!name) { showToast('প্রোডাক্টের নাম দিন'); return; }
+            if (!tempProductNoticeImage && !editKey) { showToast('একটি ছবি সিলেক্ট করুন'); return; }
+            
+            const productData = { name, stock: stock || '0' };
+            if (tempProductNoticeImage) productData.image = tempProductNoticeImage;
+            
+            if (editKey) { 
+                db.child('productNotices/' + editKey).update(productData).then(() => { 
+                    showToast('প্রোডাক্ট আপডেট হয়েছে!'); 
+                    resetProductForm(); 
+                }); 
+            } else { 
+                db.child('productNotices').push(productData).then(() => { 
+                    showToast('প্রোডাক্ট যোগ হয়েছে!'); 
+                    resetProductForm(); 
+                }); 
+            }
         };
         window.editProductNotice = function(key) {
             db.child('productNotices/' + key).once('value', (snap) => {
                 const p = snap.val();
                 if (p) {
                     document.getElementById('editProductKey').value = key;
-                    document.getElementById('productNoticeInput').value = p.text || '';
+                    document.getElementById('productNoticeInput').value = p.name || '';
+                    document.getElementById('productStockInput').value = p.stock || '';
+                    if (p.image) {
+                        document.getElementById('productImagePreview').src = p.image;
+                        document.getElementById('productImagePreview').classList.remove('hidden');
+                        tempProductNoticeImage = p.image;
+                    } else {
+                        document.getElementById('productImagePreview').classList.add('hidden');
+                        tempProductNoticeImage = null;
+                    }
                     document.getElementById('productSaveBtnText').innerText = 'আপডেট করুন';
                     document.getElementById('productFormTitle').innerText = 'প্রোডাক্ট এডিট করুন';
                     document.getElementById('productCancelBtn').classList.remove('hidden');
@@ -971,6 +1027,10 @@
         window.resetProductForm = function() {
             document.getElementById('editProductKey').value = '';
             document.getElementById('productNoticeInput').value = '';
+            document.getElementById('productStockInput').value = '';
+            document.getElementById('productImageInput').value = '';
+            document.getElementById('productImagePreview').classList.add('hidden');
+            tempProductNoticeImage = null;
             document.getElementById('productSaveBtnText').innerText = 'যোগ করুন';
             document.getElementById('productFormTitle').innerText = 'Short Product Notice';
             document.getElementById('productCancelBtn').classList.add('hidden');
@@ -978,9 +1038,26 @@
         function renderAdminProducts(data) {
             const list = document.getElementById('adminProductList');
             list.innerHTML = '';
-            if (!data || Object.keys(data).length === 0) { list.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">কোনো প্রোডাক্ট যোগ করা হয়নি।</p>'; return; }
+            if (!data || Object.keys(data).length === 0) { 
+                list.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">কোনো প্রোডাক্ট যোগ করা হয়নি।</p>'; 
+                return; 
+            }
             Object.keys(data).forEach(key => {
-                list.innerHTML += `<div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs"><span class="truncate font-medium text-slate-700 dark:text-slate-200">${data[key].text}</span><div class="flex items-center space-x-1.5"><button onclick="editProductNotice('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteProductNotice('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button></div></div>`;
+                const p = data[key];
+                list.innerHTML += `
+                    <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                        <div class="flex items-center space-x-2 truncate max-w-[60%]">
+                            <img src="${p.image || APP_LOGO_URL}" class="w-8 h-8 rounded-md object-cover" alt="">
+                            <div class="truncate">
+                                <span class="font-medium text-slate-700 dark:text-slate-200 block truncate">${p.name}</span>
+                                <span class="text-[9px] text-success">Stock: ${p.stock || 0}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <button onclick="editProductNotice('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button>
+                            <button onclick="deleteProductNotice('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>`;
             });
         }
 
