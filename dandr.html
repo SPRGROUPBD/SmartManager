@@ -261,14 +261,14 @@
                         <input type="hidden" id="fProdIdx" value="">
                     </div>
                     <div class="form-group"><label>Pack Size</label><input type="text" id="fPack" readonly></div>
-                    <div class="form-group"><label>Batch No *</label><input type="text" id="fBatch" placeholder="e.g. 231225"></div>
+                    <div class="form-group"><label>Batch No *</label><input type="text" id="fBatch" placeholder="e.g. 140526" onblur="calcMfgFromBatch('f')"></div>
                     <div class="form-group">
                         <label>Manufacture Date *</label>
-                        <input type="text" id="fMfgDate" placeholder="e.g. DEC-25" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                        <input type="text" id="fMfgDate" placeholder="e.g. MAY-26" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" onblur="calcExpDate('f')">
                     </div>
                     <div class="form-group">
                         <label>Expiry Date *</label>
-                        <input type="text" id="fExpDate" placeholder="e.g. NOV-27" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                        <input type="text" id="fExpDate" placeholder="e.g. APR-28" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group"><label>Repacking Qty *</label><input type="number" id="fQty" placeholder="0" min="0"></div>
                     <div class="form-group"><label>MRP (৳)</label><input type="text" id="fMrp" readonly></div>
@@ -324,14 +324,14 @@
                         <input type="hidden" id="dProdIdx" value="">
                     </div>
                     <div class="form-group"><label>Pack Size</label><input type="text" id="dPack" readonly></div>
-                    <div class="form-group"><label>Batch No *</label><input type="text" id="dBatch" placeholder="e.g. 231225"></div>
+                    <div class="form-group"><label>Batch No *</label><input type="text" id="dBatch" placeholder="e.g. 140526" onblur="calcMfgFromBatch('d')"></div>
                     <div class="form-group">
                         <label>Manufacture Date *</label>
-                        <input type="text" id="dMfgDate" placeholder="e.g. DEC-25" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                        <input type="text" id="dMfgDate" placeholder="e.g. MAY-26" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" onblur="calcExpDate('d')">
                     </div>
                     <div class="form-group">
                         <label>Expiry Date *</label>
-                        <input type="text" id="dExpDate" placeholder="e.g. NOV-27" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
+                        <input type="text" id="dExpDate" placeholder="e.g. APR-28" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();">
                     </div>
                     <div class="form-group"><label>Damage Qty *</label><input type="number" id="dQty" placeholder="0" min="0"></div>
                     <div class="form-group"><label>MRP (৳)</label><input type="text" id="dMrp" readonly></div>
@@ -969,6 +969,104 @@ function clearForm(px) {
     }
 }
 
+// --- Date Auto Calculation Functions for Main Forms ---
+function calcMfgFromBatch(px) {
+    var batchInput = document.getElementById(px + 'Batch');
+    var mfgInput = document.getElementById(px + 'MfgDate');
+    var batchVal = batchInput.value.trim();
+    
+    if (/^\d{6}$/.test(batchVal)) {
+        var mmStr = batchVal.substring(2, 4);
+        var yyStr = batchVal.substring(4, 6);
+        var mm = parseInt(mmStr, 10);
+        var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        if (mm >= 1 && mm <= 12) {
+            var monthName = months[mm - 1];
+            mfgInput.value = monthName + '-' + yyStr;
+            calcExpDate(px);
+        }
+    }
+}
+
+function calcExpDate(px) {
+    var mfgInput = document.getElementById(px + 'MfgDate');
+    var expInput = document.getElementById(px + 'ExpDate');
+    var mfgValue = mfgInput.value.trim().toUpperCase();
+    
+    if (!mfgValue) {
+        expInput.value = '';
+        return;
+    }
+    
+    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var parts = mfgValue.split('-');
+    if (parts.length === 2) {
+        var monthStr = parts[0].toUpperCase();
+        var yearStr = parts[1];
+        var monthIdx = months.indexOf(monthStr);
+        if (monthIdx !== -1 && yearStr.length === 2 && !isNaN(parseInt(yearStr))) {
+            var mfgYear = parseInt('20' + yearStr);
+            
+            // Add 2 years, then subtract 1 month (because the start month counts)
+            // Using Date object to safely handle year rollover
+            var expDateObj = new Date(mfgYear + 2, monthIdx - 1, 1);
+            var expMonthIdx = expDateObj.getMonth();
+            var expYear = String(expDateObj.getFullYear()).slice(-2);
+            
+            expInput.value = months[expMonthIdx] + '-' + expYear;
+        }
+    }
+}
+
+// --- Date Auto Calculation Functions for Edit History Modal Table ---
+function calcMfgFromBatchHist(input) {
+    var row = input.closest('tr');
+    var mfgInput = row.querySelector('.inp-mfg');
+    var batchVal = input.value.trim();
+    
+    if (/^\d{6}$/.test(batchVal)) {
+        var mmStr = batchVal.substring(2, 4);
+        var yyStr = batchVal.substring(4, 6);
+        var mm = parseInt(mmStr, 10);
+        var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        if (mm >= 1 && mm <= 12) {
+            var monthName = months[mm - 1];
+            mfgInput.value = monthName + '-' + yyStr;
+            calcExpDateHist(mfgInput);
+        }
+    }
+}
+
+function calcExpDateHist(input) {
+    var row = input.closest('tr');
+    var expInput = row.querySelector('.inp-exp');
+    var mfgValue = input.value.trim().toUpperCase();
+    
+    if (!mfgValue) {
+        expInput.value = '';
+        return;
+    }
+    
+    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var parts = mfgValue.split('-');
+    if (parts.length === 2) {
+        var monthStr = parts[0].toUpperCase();
+        var yearStr = parts[1];
+        var monthIdx = months.indexOf(monthStr);
+        if (monthIdx !== -1 && yearStr.length === 2 && !isNaN(parseInt(yearStr))) {
+            var mfgYear = parseInt('20' + yearStr);
+            
+            // Add 2 years, then subtract 1 month (because the start month counts)
+            var expDateObj = new Date(mfgYear + 2, monthIdx - 1, 1);
+            var expMonthIdx = expDateObj.getMonth();
+            var expYear = String(expDateObj.getFullYear()).slice(-2);
+            
+            expInput.value = months[expMonthIdx] + '-' + expYear;
+        }
+    }
+}
+// --------------------------------------
+
 function addEntry(type) {
     var px = type === 'repacking' ? 'f' : 'd';
     var id = document.getElementById(px + 'ProdIdx').value;
@@ -976,7 +1074,6 @@ function addEntry(type) {
     var p = products.find(function(x) { return x.id === id; });
     if (!p) { msg('প্রোডাক্ট পাওয়া যায়নি', 'err'); clearForm(px); return; }
     var batch = document.getElementById(px + 'Batch').value.trim();
-    // Ensuring values are converted to uppercase permanently
     var mfg = document.getElementById(px + 'MfgDate').value.trim().toUpperCase();
     var exp = document.getElementById(px + 'ExpDate').value.trim().toUpperCase();
     var qty = parseInt(document.getElementById(px + 'Qty').value) || 0;
@@ -1123,7 +1220,8 @@ function addHistRow(e) {
         reasonOptions += '<option value="' + esc(e.reason) + '" selected>' + esc(e.reason) + '</option>';
     }
 
-    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="DEC-25" oninput="this.value = this.value.toUpperCase();"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="NOV-27" oninput="this.value = this.value.toUpperCase();"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><select class="inp-reason">' + reasonOptions + '</select></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
+    // The inputs now have onblur events attached to auto-calculate the dates on edit
+    tr.innerHTML = '<td style="padding:4px;border:1px solid #000;text-align:center">' + String(sl).padStart(2, '0') + '</td><td style="padding:4px;border:1px solid #000;text-align:left;font-weight:600">' + esc(e.product || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center">' + esc(e.packSize || '') + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-batch" value="' + esc(e.batch || '') + '" onblur="calcMfgFromBatchHist(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-mfg" value="' + esc(e.mfgDate || '') + '" placeholder="DEC-25" oninput="this.value = this.value.toUpperCase();" onblur="calcExpDateHist(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-exp" value="' + esc(e.expDate || '') + '" placeholder="NOV-27" oninput="this.value = this.value.toUpperCase();"></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="number" class="inp-qty" value="' + (e.qty || 0) + '" min="0" oninput="updateRowTotal(this)"></td><td style="padding:4px;border:1px solid #000;text-align:center">' + (e.mrp || 0) + '</td><td style="padding:4px;border:1px solid #000;text-align:center;font-weight:700" class="inp-total">' + tv + '</td><td style="padding:4px;border:1px solid #000;text-align:center"><select class="inp-reason">' + reasonOptions + '</select></td><td style="padding:4px;border:1px solid #000;text-align:center"><input type="text" class="inp-remarks" value="' + esc(e.remarks || '') + '"></td><td style="padding:4px;border:1px solid #000;text-align:center"><button class="del-row" onclick="this.closest(\'tr\').remove()"><i class="fa-solid fa-xmark"></i></button></td>';
     tbody.appendChild(tr);
 }
 function updateRowTotal(input) {
