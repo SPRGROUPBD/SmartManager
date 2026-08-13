@@ -635,10 +635,15 @@
     // --- DISCOUNT LOGIC ---
     function getDiscountPercentage(item, custType, custDccDisc) {
         if (item.isFlat) return 0;
+        
+        // If Customer is DCC, give DCC discount on ALL products (skip bonus check)
+        if (custType === 'D') return custDccDisc;
+        
+        // For non-DCC customers, check bonus rule
         let bonusQty = 0;
         if(item.bonusRule > 0) bonusQty = Math.floor(item.qty / item.bonusRule);
         if (bonusQty > 0) return 0;
-        if (custType === 'D' && item.isDcc) return custDccDisc;
+        
         return 2; 
     }
 
@@ -652,6 +657,14 @@
                 isDcc: row.dataset.isDcc === 'true',
                 bonusRule: parseInt(row.dataset.bonusRule) || 0
             };
+            
+            // Update Bonus for DCC customers (DCC gets no bonus)
+            let bonusQty = 0;
+            if(activeCustomerType !== 'D' && item.bonusRule > 0) {
+                bonusQty = Math.floor(item.qty / item.bonusRule);
+            }
+            row.cells[5].innerText = bonusQty; // Update Bonus Column
+            
             let discPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc);
             row.cells[10].innerText = discPct + '%';
             updateRowCalculations(row, discPct);
@@ -684,8 +697,12 @@
         const sn = tbody.rows.length + 1;
         const totalTp = item.tp * item.qty;
         const totalVat = item.vat * item.qty;
+        
+        // DCC Customers get NO BONUS
         let bonusQty = 0;
-        if(item.bonusRule > 0) bonusQty = Math.floor(item.qty / item.bonusRule);
+        if(activeCustomerType !== 'D' && item.bonusRule > 0) {
+            bonusQty = Math.floor(item.qty / item.bonusRule);
+        }
         
         let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc);
         let disc = (totalTp * actualDiscPct) / 100;
@@ -704,7 +721,7 @@
             <td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td>
             <td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td>
             <td class="text-right">${netValue.toFixed(2)}</td>
-            <td class="text-center no-print"><button class="action-btn btn-danger" onclick="this.parentElement.parentElement.remove(); calculateTotals();">X</button></td>
+            <td class="center no-print"><button class="action-btn btn-danger" onclick="this.parentElement.parentElement.remove(); calculateTotals();">X</button></td>
         `;
         calculateTotals();
     }
