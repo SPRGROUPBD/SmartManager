@@ -12,6 +12,8 @@
     <!-- Cropper.js for Image Crop & Rotate -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <!-- JSZip for downloading multiple images as ZIP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     
     <script>
         tailwind.config = { theme: { extend: { colors: {
@@ -235,7 +237,7 @@
             <!-- MPO LIST -->
             <div id="page-mpo-list" class="page-content hidden">
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                    <div class="px-5 py-4 border-b border-slate-101 flex items-center justify-between flex-wrap gap-3">
                         <h3 class="font-bold text-slate-700">All MPOs</h3>
                         <div class="flex gap-2 items-center">
                             <input type="text" id="mpoSearchInput" oninput="loadMPOs()" placeholder="Search Name, Code, Area..." class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none w-52">
@@ -346,9 +348,10 @@
             <div id="page-image-report" class="page-content hidden">
                 <div class="bg-white rounded-xl border border-slate-200 p-5 mb-6">
                     <div class="flex flex-wrap items-end gap-4">
-                        <div><h3 class="font-bold flex items-center gap-2"><i class="fas fa-images text-pink-500"></i> Image Report</h3><p class="text-xs text-slate-400 mt-1">View and download Pay Order images</p></div>
+                        <div><h3 class="font-bold flex items-center gap-2"><i class="fas fa-images text-pink-500"></i> Image Report</h3><p class="text-xs text-slate-400 mt-1">View, edit and download Pay Order images</p></div>
                         <div class="flex-1"></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Month</label><select id="imgRptMonth" onchange="loadImageReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select></div>
+                        <button onclick="downloadAllImages()" class="btn-excel text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-file-zipper mr-1"></i> Download All</button>
                     </div>
                 </div>
                 <div id="imageReportGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5"></div>
@@ -411,16 +414,16 @@
                 <button onclick="closeModal('modalImageEditor')" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fas fa-times"></i></button>
             </div>
             <div class="w-full h-80 bg-slate-100 overflow-hidden rounded-lg">
-                <img id="poImageEditorSrc" src="" class="max-w-full">
+                <img id="poImageEditorSrc" src="" class="block max-w-full">
             </div>
             <div class="flex gap-2 mt-4 flex-wrap justify-center">
-                <button onclick="if(cropper)cropper.rotate(-90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-left"></i> Rotate L</button>
-                <button onclick="if(cropper)cropper.rotate(90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-right"></i> Rotate R</button>
-                <button onclick="if(cropper)cropper.zoom(0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-plus"></i> Zoom In</button>
-                <button onclick="if(cropper)cropper.zoom(-0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-minus"></i> Zoom Out</button>
-                <button onclick="if(cropper)cropper.setAspectRatio(1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">1:1</button>
-                <button onclick="if(cropper)cropper.setAspectRatio(1.5)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">3:2</button>
-                <button onclick="if(cropper)cropper.setAspectRatio(NaN)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">Free</button>
+                <button onclick="rotateCropper(-90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-left"></i> Rotate L</button>
+                <button onclick="rotateCropper(90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-right"></i> Rotate R</button>
+                <button onclick="zoomCropper(0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-plus"></i> Zoom In</button>
+                <button onclick="zoomCropper(-0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                <button onclick="setAspectCropper(1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">1:1</button>
+                <button onclick="setAspectCropper(1.5)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">3:2</button>
+                <button onclick="setAspectCropper(NaN)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">Free</button>
             </div>
             <div class="mt-5 text-right">
                 <button onclick="applyAndSaveImage()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i> Crop & Save</button>
@@ -800,7 +803,7 @@
             document.getElementById('doctorFormTitle').innerHTML='<i class="fas fa-user-doctor text-brand-600"></i> Add Doctor';
             document.getElementById('btnSaveDoctor').className='btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold';
             document.getElementById('btnSaveDoctor').innerHTML='<i class="fas fa-save mr-1"></i> Save';
-            document.getElementById('btnCancelEdit').classList.remove('hidden');
+            document.getElementById('btnCancelEdit').classList.add('hidden');
             document.getElementById('doctorFormCard').classList.remove('ring-2','ring-blue-500','ring-offset-2');
             document.getElementById('docId').value=generateNextDoctorId();
         }
@@ -1647,25 +1650,75 @@
             reader.onload = function(e) {
                 currentEditingPOId = id;
                 const imageEl = document.getElementById('poImageEditorSrc');
-                imageEl.src = e.target.result;
-                openModal('modalImageEditor');
+                
                 if (cropper) {
                     cropper.destroy();
+                    cropper = null;
                 }
-                cropper = new Cropper(imageEl, {
-                    aspectRatio: NaN,
-                    viewMode: 1,
-                    autoCropArea: 0.8,
-                    movable: true,
-                    zoomable: true,
-                    rotatable: true,
-                    scalable: true
-                });
+                
+                openModal('modalImageEditor');
+                
+                imageEl.onload = function() {
+                    setTimeout(() => {
+                        cropper = new Cropper(imageEl, {
+                            aspectRatio: NaN,
+                            viewMode: 1,
+                            autoCropArea: 0.8,
+                            movable: true,
+                            zoomable: true,
+                            rotatable: true,
+                            scalable: true
+                        });
+                    }, 100);
+                };
+                imageEl.src = e.target.result;
             };
             reader.readAsDataURL(file);
             event.target.value = ''; 
         }
         window.uploadPOImage = uploadPOImage;
+        
+        function editReportImage(id) {
+            const h = honorariumCache[id];
+            if (!h || !h.poImage) {
+                showToast('Image not found', 'error');
+                return;
+            }
+            currentEditingPOId = id;
+            const imageEl = document.getElementById('poImageEditorSrc');
+            
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+            
+            openModal('modalImageEditor');
+            
+            imageEl.onload = function() {
+                setTimeout(() => {
+                    cropper = new Cropper(imageEl, {
+                        aspectRatio: NaN,
+                        viewMode: 1,
+                        autoCropArea: 0.8,
+                        movable: true,
+                        zoomable: true,
+                        rotatable: true,
+                        scalable: true
+                    });
+                }, 100);
+            };
+            
+            imageEl.src = '';
+            imageEl.src = h.poImage;
+        }
+        window.editReportImage = editReportImage;
+        
+        function rotateCropper(deg) { if(cropper) cropper.rotate(deg); }
+        window.rotateCropper = rotateCropper;
+        function zoomCropper(val) { if(cropper) cropper.zoom(val); }
+        window.zoomCropper = zoomCropper;
+        function setAspectCropper(val) { if(cropper) cropper.setAspectRatio(val); }
+        window.setAspectCropper = setAspectCropper;
 
         function applyAndSaveImage() {
             if (!cropper || !currentEditingPOId) return;
@@ -1684,7 +1737,7 @@
             
             update(ref(db, 'honorarium/' + currentEditingPOId), { poImage: base64 })
                 .then(() => {
-                    showToast('Image uploaded successfully');
+                    showToast('Image updated successfully');
                     closeModal('modalImageEditor');
                     currentEditingPOId = null;
                 })
@@ -1721,14 +1774,52 @@
                         <div class="text-xs text-slate-500">PO No: ${h.payOrderNo || '-'}</div>
                         <div class="text-xs text-slate-500">MPO: ${mpo.name || '-'}</div>
                         <div class="flex gap-2 mt-2">
-                            <button onclick="openImageViewer('${h.poImage}')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-center px-4 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-eye mr-1"></i> View</button>
-                            <a href="${h.poImage}" download="${doc.name||'image'}_${h.payOrderNo||''}.jpg" class="btn-primary text-white text-center px-4 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-download mr-1"></i> Download</a>
+                            <button onclick="openImageViewer('${h.poImage}')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-center px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-eye"></i> View</button>
+                            <button onclick="editReportImage('${id}')" class="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-center px-3 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-crop-simple"></i> Edit</button>
                         </div>
+                        <a href="${h.poImage}" download="${doc.name||'image'}_${h.payOrderNo||''}.jpg" class="btn-primary text-white text-center px-3 py-1.5 rounded-lg text-xs font-semibold mt-2 w-full block"><i class="fas fa-download mr-1"></i> Download</a>
                     </div>
                 </div>`;
             }).join('');
         }
         window.loadImageReport = loadImageReport;
+
+        async function downloadAllImages() {
+            const month = document.getElementById('imgRptMonth').value;
+            const entries = Object.entries(honorariumCache).filter(([id,h]) => h.month === month && h.poImage && !h.isCancelled);
+            
+            if (entries.length === 0) {
+                showToast('No images found for this month', 'error');
+                return;
+            }
+            
+            showToast('Preparing ZIP file...', 'info');
+            
+            const zip = new JSZip();
+            const folder = zip.folder(`Images_${month}`);
+            
+            entries.forEach(([id, h]) => {
+                const doc = doctorsCache[h.doctorId] || {};
+                const mpo = mposCache[h.mpoId] || {};
+                let fileName = `${doc.name || 'Image'}_${h.payOrderNo || id}.jpg`;
+                fileName = fileName.replace(/[\\\/:*?"<>|]/g, '_');
+                
+                const base64Data = h.poImage.split(',')[1];
+                folder.file(fileName, base64Data, {base64: true});
+            });
+            
+            const content = await zip.generateAsync({type:"blob"});
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Images_${month}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('Download started', 'success');
+        }
+        window.downloadAllImages = downloadAllImages;
 
         function openImageViewer(imgSrc) {
             const imgEl = document.getElementById('imageViewerImg');
