@@ -71,7 +71,6 @@
         .po-print-table td{border:1px solid #999;padding:5px 6px;white-space:normal;word-break:break-word;}
         .po-print-table tfoot td{border:1px solid #333}
         
-        /* Print Sheet Table - Row height 40px, Black Border, No Extra Header Space */
         .ps-print-table{width:100%;border-collapse:collapse;font-size:12px;font-family:'Inter',sans-serif;table-layout:auto;}
         .ps-print-table th{background:#d1fae5;border:1px solid #000;height:40px;padding:0 4px;text-align:left;font-weight:700;font-size:11px;white-space:normal;word-break:break-word;}
         .ps-print-table td{border:1px solid #000;height:40px;padding:0 4px;font-size:11px;white-space:normal;word-break:break-word;}
@@ -104,12 +103,9 @@
             .po-print-table{font-size:14px!important;line-height:36px!important}
             .po-print-table td{padding:5px 6px!important}
             .po-print-table th{padding:7px 5px!important}
-            
-            /* Print Media Query specific for PS Table */
             .ps-print-table{font-size:11px!important;line-height:20px!important}
             .ps-print-table td{padding:0 4px!important; height:20px!important;}
             .ps-print-table th{padding:0 4px!important; height:20px!important;}
-            
             .po-print-table tr, .ps-print-table tr { page-break-inside: avoid; }
             .doc-row-inactive { display: none !important; }
             .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; height: 100% !important; line-height: 20px !important;}
@@ -329,7 +325,9 @@
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">PO Date</label><input type="date" id="poRptDate" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none"></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Area</label><select id="poRptArea" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory</label><select id="poRptTerritory" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Bank / Type</label><select id="poRptType" onchange="loadPayOrderReport()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
                         <div class="flex-1"></div>
+                        <button onclick="exportPayOrderReportToExcel()" class="btn-excel text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-file-excel mr-1"></i> Excel</button>
                         <button onclick="printAs('landscape')" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i> Print</button>
                     </div>
                 </div>
@@ -385,6 +383,12 @@
     <!-- SLAB SETTINGS MODAL -->
     <div id="modalSlabSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSlabSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-xl p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-sliders text-blue-600 mr-2"></i>Commission Slab Settings</h3><button onclick="closeModal('modalSlabSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div>
     <p class="text-xs text-slate-500 mb-3">Rule: If Amount (>=) is set, it will match for that amount or higher. If 0, it matches any amount for that type. (VAT is auto 15% but editable)</p>
+    
+    <div class="mb-4">
+        <label class="block text-xs font-semibold text-slate-500 mb-1">Default Bank / Type (Will be auto-selected on new Pay Order)</label>
+        <select id="slabDefaultType" class="input-focus w-full border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select>
+    </div>
+    
     <div class="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 mb-2 px-1">
         <div class="col-span-3">Payment Type</div>
         <div class="col-span-2">Amount (>=)</div>
@@ -394,7 +398,7 @@
     </div>
     <div id="slabSettingsContainer" class="space-y-3 max-h-60 overflow-y-auto"></div><button onclick="addSlabRow()" class="mt-3 text-sm text-brand-600 font-semibold flex items-center gap-1"><i class="fas fa-plus"></i> Add Slab Row</button><div class="flex gap-3 mt-6"><button onclick="saveSlabSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Settings</button></div></div></div>
 
-    <!-- SIGNATURE SETTINGS MODAL (Firebase Auto Save Enabled) -->
+    <!-- SIGNATURE SETTINGS MODAL -->
     <div id="modalSignatureSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalSignatureSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-file-signature text-blue-600 mr-2"></i>Signature Settings</h3><button onclick="closeModal('modalSignatureSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><p class="text-xs text-slate-500 mb-4">Upload transparent PNG signatures for the best print result. (Max 100KB). Signatures are saved directly to the cloud.</p><div class="grid grid-cols-2 gap-4" id="sigUploadContainer"></div><div class="flex gap-3 mt-6"><button onclick="closeModal('modalSignatureSettings')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Close</button></div></div></div>
 
     <!-- QUALIFIED SALES SETTINGS MODAL -->
@@ -461,16 +465,19 @@
         const COMPANY = { name: "Monico Pharma Ltd", address: "04-01, Dr Anowarul Karim Sarok, Kanabiler More, Jugiya, Kushtia-7000", depot: "Depot: Kushtia" };
         const signatureLabels = ['Prepared by', 'Checked by', 'ReChecked by', 'Verified by', 'Approved By', 'Applicant by (MPL)', 'Regional Sales Manager (MPL)', 'Accounts Officer (Bank)', 'Officer (Bank)', 'Branch Manager (Bank)'];
         
-        let signaturesCache = {}; // Holds signatures fetched from Firebase
+        let signaturesCache = {}; 
 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
         let qualifiedSalesCache = { currentMonth: 70000, nextMonth: 80000 };
-        let settingsCache = { commissionSlabs: [
-            { type: 'IBBL', amount: 1000, commission: 58, vat: 8.7 },
-            { type: 'IBBL', amount: 2000, commission: 58, vat: 8.7 },
-            { type: 'IBBL', amount: 3000, commission: 58, vat: 8.7 },
-            { type: 'Bkash', amount: 0, commission: 0, vat: 0 }
-        ]}; 
+        let settingsCache = { 
+            defaultType: 'IBBL',
+            commissionSlabs: [
+                { type: 'IBBL', amount: 1000, commission: 58, vat: 8.7 },
+                { type: 'IBBL', amount: 2000, commission: 58, vat: 8.7 },
+                { type: 'IBBL', amount: 3000, commission: 58, vat: 8.7 },
+                { type: 'Bkash', amount: 0, commission: 0, vat: 0 }
+            ]
+        }; 
         let docActiveTemp = true;
 
         function getQualifiedSalesAmount(appMonth) {
@@ -481,7 +488,6 @@
             const monthIdx = ms.indexOf(parts[0]);
             const year = parseInt('20' + parts[1]);
             
-            // Use system current month instead of real world current month
             const currentSystemMonthStr = getCurrentMonth();
             const currentParts = currentSystemMonthStr.split('-');
             const currentMonthIdx = ms.indexOf(currentParts[0]);
@@ -508,24 +514,14 @@
         }
         window.printAs = printAs;
 
-        function getRowsPerPage(orientation) {
-            const pageH_mm = orientation === 'landscape' ? 210 : 297;
-            const usableH_px = (pageH_mm - 16) * 3.78; 
-            const availableH_px = usableH_px - 200; 
-            const rowH_px = orientation === 'landscape' ? 48 : 30; 
-            return Math.max(Math.floor(availableH_px / rowH_px), 5); 
-        }
-
         function formatBDT(n){return'\u09F3 '+Number(n||0).toLocaleString('en-BD');}
         function parseAmount(val) { if (!val) return 0; return parseFloat(String(val).replace(/,/g, '')) || 0; }
         
-        // Force month options to start from 2026
         function getMonthOptions(){
             const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],o=[];
             for(let y=2026;y<=2031;y++)ms.forEach(m=>o.push(m+'-'+String(y).slice(-2)));
             return o;
         }
-        // Force default current month to Jan-26 if real year is < 2026
         function getCurrentMonth(){
             const ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],n=new Date();
             if (n.getFullYear() < 2026) return 'Jan-26';
@@ -574,7 +570,6 @@
         function getMPOArea(mpoId){return mposCache[mpoId]?mposCache[mpoId].area:'';}
         function flashField(id){const el=document.getElementById(id);if(el){el.classList.add('auto-fill-flash');setTimeout(()=>el.classList.remove('auto-fill-flash'),600);}}
         
-        // Get Historical MPO for a Doctor in a specific month
         function getDoctorMPOForMonth(docId, monthStr) {
             const doc = doctorsCache[docId];
             if (!doc) return null;
@@ -582,17 +577,12 @@
             if (!doc.mpoHistory || doc.mpoHistory.length === 0) return currentMpo;
             
             const targetDate = getMonthEndDate(monthStr);
-            // Sort history descending by date to process from latest to oldest
             const sortedHistory = [...doc.mpoHistory].sort((a, b) => b.date - a.date);
             
             for (let record of sortedHistory) {
                 if (record.date > targetDate) {
-                    // This transfer happened AFTER the target month
-                    // So during the target month, the doctor was with prevMpoId
                     currentMpo = record.prevMpoId;
                 } else {
-                    // This transfer happened BEFORE or DURING the target month
-                    // So the newMpoId is valid for this month
                     break; 
                 }
             }
@@ -641,7 +631,7 @@
             return `<div style="margin-top:40px;display:flex;flex-wrap:nowrap;justify-content:space-between;gap:10px;overflow-x:auto;">
                 ${labels.map(l => {
                     const sigKey = 'sig_' + l.replace(/\s/g, '_');
-                    const img = signaturesCache[sigKey]; // Fetched from Firebase
+                    const img = signaturesCache[sigKey];
                     return `<div class="sig-box">
                         ${img ? `<img src="${img}" style="max-height:40px; max-width:100%; object-fit:contain; margin-bottom:2px;">` : ''}
                         <div class="sig-line">${l}</div>
@@ -702,16 +692,18 @@
         });
         onValue(ref(db,'settings'),snap=>{
             const val = snap.val();
-            if(val && Array.isArray(val.commissionSlabs)) {
-                settingsCache.commissionSlabs = val.commissionSlabs;
-            } else {
-                settingsCache.commissionSlabs = val && val.commissionSlabs ? Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0})) : settingsCache.commissionSlabs;
+            if(val) {
+                if (val.defaultType) settingsCache.defaultType = val.defaultType;
+                if(Array.isArray(val.commissionSlabs)) {
+                    settingsCache.commissionSlabs = val.commissionSlabs;
+                } else if (val.commissionSlabs) {
+                    settingsCache.commissionSlabs = Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0}));
+                }
             }
             populatePOTypeDropdown();
             refreshCurrentPage();
         });
         
-        // Qualified Sales Settings Listener
         onValue(ref(db,'settings/qualifiedSales'),snap=>{
             const val = snap.val();
             if(val) {
@@ -839,7 +831,6 @@
                 const oldDoc = doctorsCache[editId] || {};
                 const oldMpoId = oldDoc.assignedMpoId || '';
                 
-                // Check if MPO is changed (Transfer)
                 if (assignedMpoId !== oldMpoId) {
                     const history = oldDoc.mpoHistory ? [...oldDoc.mpoHistory] : [];
                     history.push({ date: Date.now(), prevMpoId: oldMpoId, newMpoId: assignedMpoId });
@@ -977,11 +968,9 @@
             if(!m) return;
             const newActive = m.active === false ? true : false;
             
-            // Update MPO
             update(ref(db, 'mpos/'+id), {active: newActive}).then(() => {
                 showToast(newActive ? 'MPO Activated' : 'MPO Deactivated & Doctors Cascaded', newActive ? 'success' : 'info');
                 
-                // If deactivating, cascade to doctors
                 if (!newActive) {
                     const updates = {};
                     Object.entries(doctorsCache).forEach(([docId, d]) => {
@@ -1077,15 +1066,12 @@
         }
         window.addNewArea = addNewArea;
 
-        // =====================================================================
-        // SIGNATURE SETTINGS (Firebase Auto-Save Integrated)
-        // =====================================================================
         function openSignatureSettings() {
             const container = document.getElementById('sigUploadContainer');
             container.innerHTML = '';
             signatureLabels.forEach(label => {
                 const sigKey = 'sig_' + label.replace(/\s/g, '_');
-                const currentImg = signaturesCache[sigKey]; // Read from Firebase Cache
+                const currentImg = signaturesCache[sigKey]; 
                 container.insertAdjacentHTML('beforeend', `
                     <div id="sig-box-${sigKey}">
                         <label class="block text-xs font-semibold text-slate-500 mb-1">${label}</label>
@@ -1107,7 +1093,7 @@
             const file = e.target.files[0];
             if (!file) return;
             
-            if (file.size > 100000) { // 100KB limit for Firebase RTDB
+            if (file.size > 100000) { 
                 showToast('Image too large! Max 100KB allowed for cloud sync.', 'error');
                 e.target.value = '';
                 return;
@@ -1120,11 +1106,9 @@
             reader.onload = function(ev) {
                 const base64 = ev.target.result;
                 
-                // Save directly to Firebase
                 update(ref(db, 'settings/signatures'), { [sigKey]: base64 })
                     .then(() => {
                         showToast('Signature saved to cloud');
-                        // Update UI Instantly
                         const previewDiv = document.getElementById('sig-preview-' + sigKey);
                         const btnContainer = e.target.parentElement;
                         
@@ -1148,7 +1132,6 @@
             remove(ref(db, 'settings/signatures/' + sigKey))
                 .then(() => {
                     showToast('Signature deleted from cloud');
-                    // Update UI
                     const box = document.getElementById('sig-box-' + sigKey);
                     if (box) {
                         const previewDiv = box.querySelector('#sig-preview-' + sigKey);
@@ -1164,7 +1147,6 @@
                 .catch(err => showToast('Error deleting: ' + err.message, 'error'));
         }
         window.deleteSignature = deleteSignature;
-        // =====================================================================
 
         function calculateVAT(element) {
             const comm = parseFloat(element.value) || 0;
@@ -1181,6 +1163,15 @@
             const container = document.getElementById('slabSettingsContainer');
             container.innerHTML = '';
             const slabs = settingsCache.commissionSlabs || [];
+            const uniqueTypes = [...new Set(slabs.map(s => s.type))];
+            if(uniqueTypes.length === 0) uniqueTypes.push('IBBL', 'Bkash');
+            
+            const defaultSel = document.getElementById('slabDefaultType');
+            if(defaultSel) {
+                defaultSel.innerHTML = uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+                defaultSel.value = settingsCache.defaultType || uniqueTypes[0];
+            }
+            
             if (slabs.length === 0) {
                 addSlabRow();
             } else {
@@ -1230,7 +1221,8 @@
                     });
                 }
             });
-            update(ref(db, 'settings'), { commissionSlabs: newSlabs }).then(() => {
+            const defaultBank = document.getElementById('slabDefaultType').value;
+            update(ref(db, 'settings'), { commissionSlabs: newSlabs, defaultType: defaultBank }).then(() => {
                 showToast('Slab Settings Saved');
                 closeModal('modalSlabSettings');
                 populatePOTypeDropdown();
@@ -1238,9 +1230,6 @@
         }
         window.saveSlabSettings = saveSlabSettings;
 
-        // =====================================================================
-        // QUALIFIED SALES SETTINGS
-        // =====================================================================
         function openQualifiedSalesSettings() {
             document.getElementById('qualCurrentMonth').value = qualifiedSalesCache.currentMonth || 70000;
             document.getElementById('qualNextMonth').value = qualifiedSalesCache.nextMonth || 80000;
@@ -1270,7 +1259,6 @@
             }).catch(err => showToast('Error: ' + err.message, 'error'));
         }
         window.saveQualifiedSalesSettings = saveQualifiedSalesSettings;
-        // =====================================================================
 
         function loadMPOSalesTable(){
             const month=document.getElementById('salesMonth').value;
@@ -1282,7 +1270,6 @@
             document.getElementById('salesTP2Header').textContent=tpP.tp2Full + ' (Target: ' + qualAmount.toLocaleString() + ')';
             const b=document.getElementById('mpoSalesBody');
             const e=document.getElementById('mpoSalesEmpty');
-            // Filter out inactive MPOs
             let mpoEntries=Object.entries(mposCache).filter(([id,m]) => m.active !== false);
             if(filterArea) mpoEntries = mpoEntries.filter(([id,m]) => m.area === filterArea);
             mpoEntries.sort((a,b) => {
@@ -1314,13 +1301,28 @@
 
         function populatePOTypeDropdown() {
             const sel = document.getElementById('poEntryType');
+            const rptSel = document.getElementById('poRptType');
             if(!sel) return;
-            const currentVal = sel.value;
             const slabs = settingsCache.commissionSlabs || [];
             const uniqueTypes = [...new Set(slabs.map(s => s.type))];
             if(uniqueTypes.length === 0) uniqueTypes.push('IBBL', 'Bkash');
+            
+            // If editing, keep current value. Otherwise, use default.
+            const editId = document.getElementById('editPOId').value;
+            const currentVal = editId ? sel.value : (settingsCache.defaultType || uniqueTypes[0]);
+            
             sel.innerHTML = uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
-            if (uniqueTypes.includes(currentVal)) sel.value = currentVal;
+            if (uniqueTypes.includes(currentVal)) {
+                sel.value = currentVal;
+            } else {
+                sel.value = uniqueTypes[0];
+            }
+            
+            if(rptSel) {
+                const rptVal = rptSel.value;
+                rptSel.innerHTML = '<option value="">All</option>' + uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+                if (rptVal && uniqueTypes.includes(rptVal)) rptSel.value = rptVal;
+            }
             updatePOCommission();
         }
 
@@ -1338,7 +1340,6 @@
             const ms=document.getElementById('poEntryMPO');
             const mv=ms.value;
             const month=document.getElementById('poEntryMonth').value;
-            // Only Active and Qualified MPOs
             const qualifiedMpos = Object.entries(mposCache).filter(([id,m]) => m.active !== false && isMPOQualified(month, id));
             qualifiedMpos.sort((a,b) => {
                 const areaA = a[1].area || '', areaB = b[1].area || '';
@@ -1394,15 +1395,13 @@
                 if (!historicalMpoId) return false;
                 if (!isMPOQualified(month, historicalMpoId)) return false;
                 
-                // Duplicate Check: Has ACTIVE entry for this month?
                 const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month && !h.isCancelled);
                 
                 if (hasEntry) {
-                    // Allow if we are editing the specific entry for this doctor
                     if (editId && honorariumCache[editId] && honorariumCache[editId].doctorId === id) {
                         return true;
                     }
-                    return false; // Hide to prevent duplicate
+                    return false; 
                 }
                 
                 return true;
@@ -1475,7 +1474,6 @@
 
         function showMPOOptions(searchTerm) {
             const dropdown = document.getElementById('mpoSearchDropdown');
-            // Filter only Active MPOs for new assignment
             const mpoEntries = Object.entries(mposCache).filter(([id,m]) => m.active !== false);
             mpoEntries.sort((a,b) => {
                 const areaA = a[1].area || '', areaB = b[1].area || '';
@@ -1755,18 +1753,22 @@
             const month=document.getElementById('poRptMonth').value,
             filterDate=document.getElementById('poRptDate').value,
             territory=document.getElementById('poRptTerritory').value,
-            filterArea=document.getElementById('poRptArea').value;
+            filterArea=document.getElementById('poRptArea').value,
+            filterType=document.getElementById('poRptType')?.value || '';
+            
             let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             if(filterDate)entries=entries.filter(([,h])=>h.poDate===filterDate);
             if(territory)entries=entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
             if(filterArea)entries=entries.filter(([,h])=>getMPOArea(h.mpoId)===filterArea);
+            if(filterType)entries=entries.filter(([,h])=>h.poType===filterType);
+            
             entries.sort((a,b)=>{
                 const areaA = getMPOArea(a[1].mpoId) || '';
                 const areaB = getMPOArea(b[1].mpoId) || '';
                 if(areaA !== areaB) return areaA.localeCompare(areaB);
                 const da=a[1].poDate||'',db2=b[1].poDate||'';
                 if(da!==db2)return da.localeCompare(db2);
-                return(mposCache[a[1].mpoId]?.employeeId||'').localeCompare(mposCache[b[1].mpoId]?.employeeId||'');
+                return (mposCache[a[1].mpoId]?.employeeId||'').localeCompare(mposCache[b[1].mpoId]?.employeeId||'');
             });
             const totalAmount=entries.reduce((s,[,h])=>s+(h.amount||0),0);
             const totalCommission=entries.reduce((s,[,h])=>s+(h.commission||0),0);
@@ -1774,20 +1776,21 @@
             const grandTotal=totalAmount+totalCommission+totalVat;
             const today=formatDateDMY(new Date());
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
+            const typeLabel=filterType?` - Bank: ${filterType}`:'';
             const ROWS_PER_PAGE = 8;
             let paginatedEntries=[];
             if(entries.length>0){let offset=0;while(offset<entries.length){paginatedEntries.push(entries.slice(offset,offset+ROWS_PER_PAGE));offset+=ROWS_PER_PAGE;}}
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1400px;margin:0 auto;font-size:15px;">`;
             let globalIndex=0;
             if(entries.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}${typeLabel}</h2></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
             }else{
                 paginatedEntries.forEach((pageEntries,pageIndex)=>{
                     const isLastPage=(pageIndex===paginatedEntries.length-1);
                     const pageTotal=pageEntries.reduce((s,[,h])=>s+(h.amount||0),0);
                     const pageComm=pageEntries.reduce((s,[,h])=>s+(h.commission||0),0);
                     const pageVat=pageEntries.reduce((s,[,h])=>s+(h.vat||0),0);
-                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
+                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}${typeLabel}</h2>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
                     pageEntries.forEach(([id,h])=>{
                         globalIndex++;
                         const doc=doctorsCache[h.doctorId]||{},mpo=mposCache[h.mpoId]||{};
@@ -1806,6 +1809,99 @@
             document.getElementById('poReportPrintArea').innerHTML=html;
         }
         window.loadPayOrderReport=loadPayOrderReport;
+
+        function exportPayOrderReportToExcel() {
+            const month=document.getElementById('poRptMonth').value;
+            const filterDate=document.getElementById('poRptDate').value;
+            const territory=document.getElementById('poRptTerritory').value;
+            const filterArea=document.getElementById('poRptArea').value;
+            const filterType=document.getElementById('poRptType')?.value || '';
+            
+            let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
+            if(filterDate) entries = entries.filter(([,h])=>h.poDate===filterDate);
+            if(territory) entries = entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
+            if(filterArea) entries = entries.filter(([,h])=>getMPOArea(h.mpoId)===filterArea);
+            if(filterType) entries = entries.filter(([,h])=>h.poType===filterType);
+            
+            entries.sort((a,b)=>{
+                const areaA = getMPOArea(a[1].mpoId) || '';
+                const areaB = getMPOArea(b[1].mpoId) || '';
+                if(areaA !== areaB) return areaA.localeCompare(areaB);
+                const da=a[1].poDate||'', db2=b[1].poDate||'';
+                if(da!==db2) return da.localeCompare(db2);
+                return (mposCache[a[1].mpoId]?.employeeId||'').localeCompare(mposCache[b[1].mpoId]?.employeeId||'');
+            });
+            
+            let aoa = [];
+            aoa.push([COMPANY.name]);
+            aoa.push([COMPANY.address]);
+            aoa.push([COMPANY.depot]);
+            aoa.push([`Doctor Honorarium List ${month}`]);
+            if(filterDate) aoa.push([`PO Date: ${formatDateDMY(filterDate)}`]);
+            if(filterArea) aoa.push([`Area: ${filterArea}`]);
+            if(territory) aoa.push([`Territory: ${territory}`]);
+            if(filterType) aoa.push([`Bank/Type: ${filterType}`]);
+            aoa.push([]);
+            
+            aoa.push(['SL', 'Pay Order No', 'Name of Doctor', 'Amount', 'Comm.', '15% VAT', 'Name of MPO', 'Territory', 'Bank/Type']);
+            
+            let totalAmount = 0;
+            let totalComm = 0;
+            let totalVat = 0;
+            
+            entries.forEach(([id, h], i) => {
+                const doc = doctorsCache[h.doctorId] || {};
+                const mpo = mposCache[h.mpoId] || {};
+                const amt = h.amount || 0;
+                const comm = h.commission || 0;
+                const vat = h.vat || 0;
+                
+                totalAmount += amt;
+                totalComm += comm;
+                totalVat += vat;
+                
+                aoa.push([
+                    i + 1,
+                    h.payOrderNo || '-',
+                    doc.name || '-',
+                    amt,
+                    comm,
+                    vat,
+                    mpo.name || '-',
+                    doc.territory || '-',
+                    h.poType || '-'
+                ]);
+            });
+            
+            if(entries.length === 0) {
+                showToast('No data to export','error');
+                return;
+            }
+            
+            aoa.push([]);
+            aoa.push(['', '', 'Grand Total:', totalAmount, totalComm, totalVat, '', '', '']);
+            aoa.push([]);
+            aoa.push([`Date: ${formatDateDMY(new Date())}`]);
+            aoa.push([`Taka In Word: ${numberToWords(totalAmount + totalComm + totalVat)}`]);
+            
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!merges'] = [
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 8 } },
+                { s: { r: 3, c: 0 }, e: { r: 3, c: 8 } }
+            ];
+            
+            ws['!cols'] = [
+                {wch: 5}, {wch: 15}, {wch: 25}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 20}, {wch: 15}, {wch: 10}
+            ];
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Pay Order Report');
+            XLSX.writeFile(wb, `PayOrderReport_${month}.xlsx`);
+            showToast('Excel exported successfully');
+        }
+        window.exportPayOrderReportToExcel = exportPayOrderReportToExcel;
 
         function buildReportTable(data,columns){if(!data.length)return'<div class="px-5 py-10 text-center text-slate-400">No data</div>';return'<table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr>'+columns.map(c=>'<th class="text-left px-5 py-3">'+c+'</th>').join('')+'</tr></thead><tbody class="divide-y divide-slate-100">'+data.map(row=>'<tr class="table-row">'+row.map(cell=>'<td class="px-5 py-3">'+cell+'</td>').join('')+'</tr>').join('')+'</tbody></table>';}
         
@@ -1895,7 +1991,6 @@
                 });
             });
 
-            // ✅ Changed: 20 rows per page (was 40)
             const ROWS_PER_PAGE = 25;
             let pages=[];
             if(flatRows.length>0){let offset=0;while(offset<flatRows.length){pages.push(flatRows.slice(offset,offset+ROWS_PER_PAGE));offset+=ROWS_PER_PAGE;}}
@@ -1910,7 +2005,7 @@
                 html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
-                let cumulativeTotal=0; // ✅ Running total across all pages
+                let cumulativeTotal=0; 
                 pages.forEach((pageRows,pageIndex)=>{
                     const isLastPage=(pageIndex===pages.length-1);
                     const pageTotal=pageRows.filter(r=>r.active).reduce((s,r)=>s+r.amount,0);
@@ -1919,7 +2014,6 @@
                     cumulativeTotal += pageTotal;
                     
                     html+=`<div style="${!isLastPage?'page-break-after: always;':''}">`;
-                    // ✅ Header on EVERY page
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
                     html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
                     html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
@@ -1951,10 +2045,8 @@
                     });
                     
                     html+=`</tbody><tfoot>`;
-                    // ✅ Page Total on EVERY page (was only on middle pages before)
                     html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     
-                    // ✅ Grand Total on LAST page = Page 1 + Page 2 + ... + Last Page
                     if(isLastPage){
                         if(pages.length>1){
                             html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
@@ -1967,7 +2059,6 @@
                     if(isLastPage){
                         html+=`<div style="margin-top:10px;font-size:10px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>`;
                     }
-                    // ✅ Signature Area on EVERY page (was only on last page before)
                     html+=sigRowHTML(['Prepared by','Checked by','ReChecked by','Verified by','Approved By']);
                     html+=`</div>`;
                 });
