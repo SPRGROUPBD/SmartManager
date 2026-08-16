@@ -9,6 +9,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Cropper.js for Image Crop & Rotate -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    
     <script>
         tailwind.config = { theme: { extend: { colors: {
             brand: { 50:'#effefb',100:'#c8fff4',200:'#91fee9',300:'#53f5d9',400:'#20e0c4',500:'#0bbfaa',600:'#0d9488',700:'#0f766e',800:'#115e59',900:'#134e4a' },
@@ -397,6 +401,53 @@
     <div id="modalQualifiedSalesSettings" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalQualifiedSalesSettings')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-md p-6"><div class="flex items-center justify-between mb-5"><h3 class="text-lg font-bold"><i class="fas fa-bullseye text-blue-600 mr-2"></i>Qualified Sales Settings</h3><button onclick="closeModal('modalQualifiedSalesSettings')" class="text-slate-400 hover:text-slate-600"><i class="fas fa-times"></i></button></div><p class="text-xs text-slate-500 mb-4">MPO এর TP2 Sales এই amount বা তার বেশি হলে Qualified ধরা হবে। Pay Order Entry এবং Print Sheet-এ শুধু Qualified MPO-দের Doctor দেখানো হবে।</p><div class="space-y-4"><div><label class="block text-xs font-semibold text-slate-500 mb-1">Current Month Qualified Amount (৳)</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="qualCurrentMonth" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none" placeholder="70000"></div><p class="text-[10px] text-slate-400 mt-1">বর্তমান মাসের জন্য qualifying threshold</p></div><div><label class="block text-xs font-semibold text-slate-500 mb-1">Next Month & Onwards Qualified Amount (৳)</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="qualNextMonth" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none" placeholder="80000"></div><p class="text-[10px] text-slate-400 mt-1">আগামী মাস থেকে qualifying threshold (যেমন: 80000)</p></div></div><div class="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mt-4"><p class="text-xs text-blue-700"><i class="fas fa-info-circle mr-1"></i> <strong>Rule:</strong> আগামী মাস বা তার পরের মাস সিলেক্ট করলে Next Month Amount কাজে লাগবে। বর্তমান বা আগের মাসের জন্য Current Month Amount কাজে লাগবে।</p></div><div class="flex gap-3 mt-6"><button onclick="saveQualifiedSalesSettings()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-save mr-1"></i> Save Settings</button><button onclick="closeModal('modalQualifiedSalesSettings')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Close</button></div></div></div>
 
     <div id="modalConfirmDelete" class="fixed inset-0 z-50 hidden"><div class="absolute inset-0 bg-black/50" onclick="closeModal('modalConfirmDelete')"></div><div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center"><div class="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4"><i class="fas fa-trash-alt text-red-500 text-xl"></i></div><h3 class="text-lg font-bold mb-2">Delete?</h3><p class="text-sm text-slate-500 mb-6" id="deleteConfirmText"></p><input type="hidden" id="deleteTargetId"><input type="hidden" id="deleteTargetType"><div class="flex gap-3 justify-center"><button onclick="confirmDelete()" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-trash mr-1"></i> Delete</button><button onclick="closeModal('modalConfirmDelete')" class="px-6 py-2.5 rounded-lg text-sm font-semibold border border-slate-300 text-slate-600">Cancel</button></div></div></div>
+    
+    <!-- Image Editor Modal (Crop & Rotate) -->
+    <div id="modalImageEditor" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/80" onclick="closeModal('modalImageEditor')"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl w-full max-w-lg p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold flex items-center gap-2"><i class="fas fa-crop-simple text-purple-600"></i> Edit Image</h3>
+                <button onclick="closeModal('modalImageEditor')" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="w-full h-80 bg-slate-100 overflow-hidden rounded-lg">
+                <img id="poImageEditorSrc" src="" class="max-w-full">
+            </div>
+            <div class="flex gap-2 mt-4 flex-wrap justify-center">
+                <button onclick="if(cropper)cropper.rotate(-90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-left"></i> Rotate L</button>
+                <button onclick="if(cropper)cropper.rotate(90)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-rotate-right"></i> Rotate R</button>
+                <button onclick="if(cropper)cropper.zoom(0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-plus"></i> Zoom In</button>
+                <button onclick="if(cropper)cropper.zoom(-0.1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                <button onclick="if(cropper)cropper.setAspectRatio(1)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">1:1</button>
+                <button onclick="if(cropper)cropper.setAspectRatio(1.5)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">3:2</button>
+                <button onclick="if(cropper)cropper.setAspectRatio(NaN)" class="px-3 py-2 bg-slate-200 rounded-lg text-sm hover:bg-slate-300 font-semibold">Free</button>
+            </div>
+            <div class="mt-5 text-right">
+                <button onclick="applyAndSaveImage()" class="btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold"><i class="fas fa-check mr-1"></i> Crop & Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal (Zoom & Download) -->
+    <div id="modalImageViewer" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/95 flex flex-col items-center justify-center">
+            <button onclick="closeModal('modalImageViewer')" class="absolute top-4 right-4 text-white text-3xl z-10 bg-black/50 w-12 h-12 rounded-full flex items-center justify-center hover:bg-black/80"><i class="fas fa-times"></i></button>
+            
+            <div class="absolute top-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/50 p-2 rounded-lg z-10">
+                <button onclick="zoomImgViewer(0.2)" class="w-10 h-10 bg-white/20 text-white rounded-full hover:bg-white/40 flex items-center justify-center"><i class="fas fa-search-plus"></i></button>
+                <button onclick="zoomImgViewer(-0.2)" class="w-10 h-10 bg-white/20 text-white rounded-full hover:bg-white/40 flex items-center justify-center"><i class="fas fa-search-minus"></i></button>
+                <button onclick="rotateImgViewer(-90)" class="w-10 h-10 bg-white/20 text-white rounded-full hover:bg-white/40 flex items-center justify-center"><i class="fas fa-rotate-left"></i></button>
+                <button onclick="rotateImgViewer(90)" class="w-10 h-10 bg-white/20 text-white rounded-full hover:bg-white/40 flex items-center justify-center"><i class="fas fa-rotate-right"></i></button>
+            </div>
+            
+            <div class="w-full h-full flex items-center justify-center overflow-auto p-10">
+                <img id="imageViewerImg" src="" class="max-w-full max-h-full transition-transform duration-200" style="transform-origin: center center;">
+            </div>
+            
+            <a id="viewerDownloadBtn" href="#" download class="absolute bottom-4 left-1/2 -translate-x-1/2 btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold z-10"><i class="fas fa-download mr-1"></i> Download Image</a>
+        </div>
+    </div>
+
     <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2 no-print"></div>
 
     <script type="module">
@@ -431,6 +482,10 @@
             ]
         }; 
         let docActiveTemp = true;
+        let cropper = null;
+        let currentEditingPOId = null;
+        let imgViewerZoom = 1;
+        let imgViewerRotate = 0;
 
         function getQualifiedSalesAmount(appMonth) {
             if (!appMonth) return qualifiedSalesCache.currentMonth || 70000;
@@ -505,7 +560,18 @@
         function populateMonthSelects(){const opts=getMonthOptions(),cur=getCurrentMonth();['salesMonth','poEntryMonth','poListMonth','poRptMonth','rptMonthlyMonth','printMonth','imgRptMonth'].forEach(id=>{const el=document.getElementById(id);if(!el)return;el.innerHTML='';opts.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;if(m===cur)o.selected=true;el.appendChild(o);});});}
         function showToast(msg,type='success'){const c=document.getElementById('toastContainer'),cl={success:'bg-emerald-600',error:'bg-red-600',info:'bg-blue-600',purple:'bg-purple-600'},ic={success:'fa-check-circle',error:'fa-times-circle',info:'fa-info-circle',purple:'fa-hashtag'},t=document.createElement('div');t.className=`toast ${cl[type]||cl.info} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-3 text-sm font-medium min-w-[300px]`;t.innerHTML=`<i class="fas ${ic[type]||ic.info}"></i><span>${msg}</span>`;c.appendChild(t);setTimeout(()=>t.remove(),3000);}
         function openModal(id){document.getElementById(id).classList.remove('hidden');}
-        function closeModal(id){document.getElementById(id).classList.add('hidden');}
+        function closeModal(id){
+            document.getElementById(id).classList.add('hidden');
+            if(id==='modalImageEditor' && cropper){
+                cropper.destroy();
+                cropper = null;
+            }
+            if(id==='modalImageViewer'){
+                imgViewerZoom = 1;
+                imgViewerRotate = 0;
+                applyImgTransform();
+            }
+        }
         window.closeModal=closeModal;
         function getDoctorName(id){return doctorsCache[id]?doctorsCache[id].name:'Unknown';}
         function getMPOName(id){return mposCache[id]?mposCache[id].name:'Unknown';}
@@ -734,7 +800,7 @@
             document.getElementById('doctorFormTitle').innerHTML='<i class="fas fa-user-doctor text-brand-600"></i> Add Doctor';
             document.getElementById('btnSaveDoctor').className='btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold';
             document.getElementById('btnSaveDoctor').innerHTML='<i class="fas fa-save mr-1"></i> Save';
-            document.getElementById('btnCancelEdit').classList.add('hidden');
+            document.getElementById('btnCancelEdit').classList.remove('hidden');
             document.getElementById('doctorFormCard').classList.remove('ring-2','ring-blue-500','ring-offset-2');
             document.getElementById('docId').value=generateNextDoctorId();
         }
@@ -1531,7 +1597,7 @@
                         <i class="fas fa-camera-retro"></i>
                         <input type="file" accept="image/*" capture="environment" class="hidden" onchange="uploadPOImage('${id}', event)">
                     </label>
-                    ${h.poImage ? `<img src="${h.poImage}" class="w-8 h-8 object-cover rounded inline-block mr-2 cursor-pointer" onclick="window.open('${h.poImage}', '_blank')">` : ''}
+                    ${h.poImage ? `<img src="${h.poImage}" class="w-8 h-8 object-cover rounded inline-block mr-2 cursor-pointer" onclick="openImageViewer('${h.poImage}')">` : ''}
                     ${h.poImage ? `<button onclick="removePOImage('${id}')" class="text-red-500 hover:text-red-700 mr-2" title="Delete Image"><i class="fas fa-trash"></i></button>` : ''}
                 `;
                 
@@ -1579,32 +1645,52 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const maxDim = 600;
-                    let w = img.width, h = img.height;
-                    if (w > h) {
-                        if (w > maxDim) { h *= maxDim / w; w = maxDim; }
-                    } else {
-                        if (h > maxDim) { w *= maxDim / h; h = maxDim; }
-                    }
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.7);
-                    
-                    update(ref(db, 'honorarium/' + id), { poImage: base64 })
-                        .then(() => showToast('Image uploaded successfully'))
-                        .catch(err => showToast('Upload failed: ' + err.message, 'error'));
-                };
-                img.src = e.target.result;
+                currentEditingPOId = id;
+                const imageEl = document.getElementById('poImageEditorSrc');
+                imageEl.src = e.target.result;
+                openModal('modalImageEditor');
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(imageEl, {
+                    aspectRatio: NaN,
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                    movable: true,
+                    zoomable: true,
+                    rotatable: true,
+                    scalable: true
+                });
             };
             reader.readAsDataURL(file);
             event.target.value = ''; 
         }
         window.uploadPOImage = uploadPOImage;
+
+        function applyAndSaveImage() {
+            if (!cropper || !currentEditingPOId) return;
+            const canvas = cropper.getCroppedCanvas({
+                maxWidth: 800,
+                maxHeight: 800,
+                fillColor: '#fff',
+                imageSmoothingEnabled: true,
+                imageSmoothingQuality: 'high'
+            });
+            if (!canvas) {
+                showToast('Crop failed. Please try again.', 'error');
+                return;
+            }
+            const base64 = canvas.toDataURL('image/jpeg', 0.7);
+            
+            update(ref(db, 'honorarium/' + currentEditingPOId), { poImage: base64 })
+                .then(() => {
+                    showToast('Image uploaded successfully');
+                    closeModal('modalImageEditor');
+                    currentEditingPOId = null;
+                })
+                .catch(err => showToast('Upload failed: ' + err.message, 'error'));
+        }
+        window.applyAndSaveImage = applyAndSaveImage;
 
         function removePOImage(id) {
             if (confirm('Are you sure you want to delete this image?')) {
@@ -1629,17 +1715,49 @@
                 const doc = doctorsCache[h.doctorId] || {};
                 const mpo = mposCache[h.mpoId] || {};
                 return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                    <img src="${h.poImage}" class="w-full h-48 object-contain bg-slate-50">
+                    <img src="${h.poImage}" class="w-full h-48 object-contain bg-slate-50 cursor-pointer" onclick="openImageViewer('${h.poImage}')">
                     <div class="p-3">
                         <div class="font-bold text-sm truncate">${doc.name || '-'}</div>
                         <div class="text-xs text-slate-500">PO No: ${h.payOrderNo || '-'}</div>
                         <div class="text-xs text-slate-500">MPO: ${mpo.name || '-'}</div>
-                        <a href="${h.poImage}" download="${doc.name||'image'}_${h.payOrderNo||''}.jpg" class="btn-primary text-white text-center px-4 py-1.5 rounded-lg text-xs font-semibold mt-2 w-full block"><i class="fas fa-download mr-1"></i> Download</a>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="openImageViewer('${h.poImage}')" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-center px-4 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-eye mr-1"></i> View</button>
+                            <a href="${h.poImage}" download="${doc.name||'image'}_${h.payOrderNo||''}.jpg" class="btn-primary text-white text-center px-4 py-1.5 rounded-lg text-xs font-semibold"><i class="fas fa-download mr-1"></i> Download</a>
+                        </div>
                     </div>
                 </div>`;
             }).join('');
         }
         window.loadImageReport = loadImageReport;
+
+        function openImageViewer(imgSrc) {
+            const imgEl = document.getElementById('imageViewerImg');
+            const dlBtn = document.getElementById('viewerDownloadBtn');
+            imgEl.src = imgSrc;
+            dlBtn.href = imgSrc;
+            imgViewerZoom = 1;
+            imgViewerRotate = 0;
+            applyImgTransform();
+            openModal('modalImageViewer');
+        }
+        window.openImageViewer = openImageViewer;
+
+        function zoomImgViewer(delta) {
+            imgViewerZoom = Math.max(0.5, Math.min(5, imgViewerZoom + delta));
+            applyImgTransform();
+        }
+        window.zoomImgViewer = zoomImgViewer;
+
+        function rotateImgViewer(delta) {
+            imgViewerRotate += delta;
+            applyImgTransform();
+        }
+        window.rotateImgViewer = rotateImgViewer;
+
+        function applyImgTransform() {
+            const imgEl = document.getElementById('imageViewerImg');
+            imgEl.style.transform = `scale(${imgViewerZoom}) rotate(${imgViewerRotate}deg)`;
+        }
 
         function loadPayOrderReport(){
             const month=document.getElementById('poRptMonth').value,filterDate=document.getElementById('poRptDate').value,territory=document.getElementById('poRptTerritory').value,filterArea=document.getElementById('poRptArea').value,filterType=document.getElementById('poRptType')?.value || '';
