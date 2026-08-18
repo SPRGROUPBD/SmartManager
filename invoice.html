@@ -230,7 +230,7 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let quickEntryState = { code: '', name: '', pack: '', tp: 0, vat: 0, qty: 0, isFlat: false, bonusRule: 0, isDcc: false };
+    let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '' };
     let activeCustomerType = null; 
     let activeCustomerDccDisc = 0; 
     let currentUser = null; 
@@ -321,6 +321,21 @@
     function getCustomerTypeLabel(code) {
         const map = { 'R': 'Retailer (R)', 'D': 'DCC (D)', 'H': 'Hospital (H)', 'C': 'Clinic (C)' };
         return map[code] || 'N/A';
+    }
+
+    function calculateBonusQty(qty, bonusRuleStr) {
+        if (!bonusRuleStr) return 0;
+        let reqQty = 0, bonusPerSet = 0;
+        if (bonusRuleStr.toString().includes(':')) {
+            const parts = bonusRuleStr.toString().split(':');
+            reqQty = parseInt(parts[0]) || 0;
+            bonusPerSet = parseInt(parts[1]) || 0;
+        } else {
+            reqQty = parseInt(bonusRuleStr) || 0;
+            bonusPerSet = 1;
+        }
+        if (reqQty <= 0) return 0;
+        return Math.floor(qty / reqQty) * bonusPerSet;
     }
 
     function numberToWords(num) {
@@ -459,12 +474,13 @@
                 const name = row.Name || row.name;
                 const pack = row.Pack || row.pack || row['Pack Size'] || row['Pack size'];
                 const tp = parseFloat(row.TP || row.tp || row['TP Price'] || 0);
+                const flatTp = parseFloat(row.FlatTP || row.flatTp || row['Flat Rate'] || 0);
                 const vat = parseFloat(row.VAT || row.vat || row.Vat || 0);
                 const bonus = row.Bonus || row.bonus || '';
-                const flatStr = (row.Flat || row.flat || 'No').toString().toLowerCase();
-                const flat = (flatStr === 'yes' || flatStr === 'true') ? 'true' : 'false';
+                const dccStr = (row.DCC || row.dcc || 'No').toString().toLowerCase();
+                const dcc = (dccStr === 'yes' || dccStr === 'true') ? 'true' : 'false';
                 if (code) {
-                    updates['INVOICE/products/' + code] = { code, name, pack, tp, vat, bonus, flat, dcc: 'false', status: 'active' };
+                    updates['INVOICE/products/' + code] = { code, name, pack, tp, flatTp, vat, bonus, dcc, status: 'active' };
                     count++;
                 }
             });
@@ -603,10 +619,14 @@
             if(snap.exists()) {
                 const p = snap.val();
                 if(p.status === 'inactive') { return showAlert('Product is inactive!'); }
-                let isFlat = (p.flat === 'true' || p.flat === true);
-                let isDcc = (p.dcc === 'true' || p.dcc === true);
-                let bonusRule = parseInt(p.bonus) || 0;
-                quickEntryState = { code: p.code, name: p.name, pack: p.pack, tp: Number(p.tp || 0), vat: Number(p.vat || 0), qty: 0, isFlat, bonusRule, isDcc };
+                quickEntryState = { 
+                    code: p.code, name: p.name, pack: p.pack, 
+                    originalTp: Number(p.tp || 0), 
+                    flatTp: Number(p.flatTp || 0), 
+                    vat: Number(p.vat || 0), 
+                    qty: 0, 
+                    bonusRule: p.bonus || '' 
+                };
                 nameInput.value = p.name + ' (' + p.pack + ')';
                 document.getElementById('quick-qty').focus(); 
             } else { 
@@ -632,58 +652,77 @@
         }
     }
 
-    // --- DISCOUNT LOGIC ---
-    function getDiscountPercentage(item, custType, custDccDisc) {
-        if (item.isFlat) return 0;
+    // --- NEW RATE & DISCOUNT LOGIC ---
+    function getActualTpAndVat(item, custType) {
+        let tp = item.originalTp;
+        let vat = item.vat;
         
-        // If Customer is DCC, give DCC discount on ALL products (skip bonus check)
+        // DCC সবসময় Original Rate এবং Original Vat পাবে
+        if (custType === 'D') {
+            return { tp: item.originalTp, vat: item.vat };
+        }
+        
+        // সাধারণ কাস্টমার Flat Rate থাকলে তা পাবে এবং VAT থাকবে না (0)
+        if (item.flatTp > 0) {
+            return { tp: item.flatTp, vat: 0 };
+        }
+        
+        // Flat Rate না থাকলে সাধারণ কাস্টমার Original Rate এবং Original Vat পাবে
+        return { tp: item.originalTp, vat: item.vat };
+    }
+
+    function getDiscountPercentage(item, custType, custDccDisc, actualTp) {
+        // DCC কাস্টমার তার নিজস্ব Discount পাবে (Original Rate এর উপর)
         if (custType === 'D') return custDccDisc;
         
-        // For non-DCC customers, check bonus rule
-        let bonusQty = 0;
-        if(item.bonusRule > 0) bonusQty = Math.floor(item.qty / item.bonusRule);
+        // সাধারণ কাস্টমার যদি Flat Rate তে পণ্য নেয়, তবে তার 0% Discount
+        if (item.flatTp > 0) return 0;
+        
+        // সাধারণ কাস্টমারের ক্ষেত্রে Bonus Rule চেক
+        let bonusQty = calculateBonusQty(item.qty, item.bonusRule);
         if (bonusQty > 0) return 0;
         
-        return 2; 
+        return 2; // ডিফল্ট ডিসকাউন্ট
     }
 
     function recalculateAllRows() {
         const rows = document.querySelectorAll('#invoice-item-tbody tr');
         rows.forEach(row => {
             const item = {
-                tp: parseFloat(row.cells[6].innerText) || 0,
+                originalTp: parseFloat(row.dataset.originalTp) || 0,
+                flatTp: parseFloat(row.dataset.flatTp) || 0,
+                originalVat: parseFloat(row.dataset.originalVat) || 0,
                 qty: parseInt(row.cells[4].innerText) || 0,
-                isFlat: row.dataset.isFlat === 'true',
-                isDcc: row.dataset.isDcc === 'true',
-                bonusRule: parseInt(row.dataset.bonusRule) || 0
+                bonusRule: row.dataset.bonusRule || ''
             };
+            
+            const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+            
+            row.cells[6].innerText = actualTp.toFixed(2); // Update TP Cell
+            row.cells[7].innerText = actualVat.toFixed(2); // Update VAT Cell
             
             // Update Bonus for DCC customers (DCC gets no bonus)
             let bonusQty = 0;
-            if(activeCustomerType !== 'D' && item.bonusRule > 0) {
-                bonusQty = Math.floor(item.qty / item.bonusRule);
+            if(activeCustomerType !== 'D') {
+                bonusQty = calculateBonusQty(item.qty, item.bonusRule);
             }
             row.cells[5].innerText = bonusQty; // Update Bonus Column
             
-            let discPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc);
+            let discPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
             row.cells[10].innerText = discPct + '%';
-            updateRowCalculations(row, discPct);
+            
+            // Recalculate Row Totals
+            const totalTp = actualTp * item.qty;
+            const totalVat = actualVat * item.qty;
+            const disc = (totalTp * discPct) / 100;
+            const netValue = totalTp + totalVat - disc;
+            
+            row.cells[8].innerText = totalTp.toFixed(2);
+            row.cells[9].innerText = totalVat.toFixed(2);
+            row.cells[11].innerText = disc.toFixed(2);
+            row.cells[12].innerText = netValue.toFixed(2);
         });
         calculateTotals();
-    }
-
-    function updateRowCalculations(row, discPct) {
-        const tp = parseFloat(row.cells[6].innerText) || 0;
-        const vat = parseFloat(row.cells[7].innerText) || 0;
-        const qty = parseInt(row.cells[4].innerText) || 0;
-        const totalTp = tp * qty;
-        const totalVat = vat * qty;
-        const disc = (totalTp * discPct) / 100;
-        const netValue = totalTp + totalVat - disc;
-        row.cells[8].innerText = totalTp.toFixed(2);
-        row.cells[9].innerText = totalVat.toFixed(2);
-        row.cells[11].innerText = disc.toFixed(2);
-        row.cells[12].innerText = netValue.toFixed(2);
     }
 
     function addInvoiceRow(item) {
@@ -695,29 +734,31 @@
         if (isDuplicate) { return showAlert('This product is already added to the invoice.'); }
 
         const sn = tbody.rows.length + 1;
-        const totalTp = item.tp * item.qty;
-        const totalVat = item.vat * item.qty;
+        const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+        const totalTp = actualTp * item.qty;
+        const totalVat = actualVat * item.qty;
         
         // DCC Customers get NO BONUS
         let bonusQty = 0;
-        if(activeCustomerType !== 'D' && item.bonusRule > 0) {
-            bonusQty = Math.floor(item.qty / item.bonusRule);
+        if(activeCustomerType !== 'D') {
+            bonusQty = calculateBonusQty(item.qty, item.bonusRule);
         }
         
-        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc);
+        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
         let disc = (totalTp * actualDiscPct) / 100;
         const netValue = totalTp + totalVat - disc;
 
         const row = tbody.insertRow();
-        row.dataset.isFlat = item.isFlat;
-        row.dataset.isDcc = item.isDcc;
-        row.dataset.bonusRule = item.bonusRule || 0;
+        row.dataset.originalTp = item.originalTp;
+        row.dataset.flatTp = item.flatTp || 0;
+        row.dataset.originalVat = item.vat || 0;
+        row.dataset.bonusRule = item.bonusRule || '';
 
         row.innerHTML = `
             <td class="text-center">${sn}</td>
             <td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td>
             <td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td>
-            <td class="text-right">${item.tp.toFixed(2)}</td><td class="text-right">${item.vat.toFixed(2)}</td>
+            <td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td>
             <td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td>
             <td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td>
             <td class="text-right">${netValue.toFixed(2)}</td>
@@ -1777,12 +1818,12 @@
         const name = document.getElementById('p-name').value;
         const pack = document.getElementById('p-pack').value;
         const tp = parseFloat(document.getElementById('p-tp').value);
+        const flatTp = parseFloat(document.getElementById('p-flat-tp').value) || 0; 
         const vat = parseFloat(document.getElementById('p-vat').value);
         const bonus = document.getElementById('p-bonus').value; 
-        const flat = document.getElementById('p-flat').value;
-        const dcc = document.getElementById('p-dcc').value; 
+        const dcc = document.getElementById('p-dcc').value;
         const status = isEdit ? document.getElementById('p-status-hidden').value : 'active';
-        const productData = { code, name, pack, tp, vat, bonus, flat, dcc, status };
+        const productData = { code, name, pack, tp, flatTp, vat, bonus, dcc, status };
         db.ref('INVOICE/products/' + code).set(productData).then(() => {
             showAlert(isEdit ? 'Product updated successfully!' : 'Product saved successfully!');
             closeModal('modal-product');
@@ -1795,7 +1836,7 @@
             const tbody = document.getElementById('product-list-body');
             tbody.innerHTML = '';
             if (!snapshot.exists()) {
-                tbody.innerHTML = '<tr><td colspan="10" class="text-center">No products found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="text-center">No products found</td></tr>';
                 return;
             }
             snapshot.forEach((child) => {
@@ -1804,11 +1845,18 @@
                 const toggleBtnText = p.status === 'inactive' ? 'Activate' : 'Deactivate';
                 const toggleBtnColor = p.status === 'inactive' ? '#16a34a' : '#f1f5f9';
                 const toggleBtnTextColor = p.status === 'inactive' ? '#fff' : '#000';
+                const origTp = Number(p.tp||0);
+                const vat = Number(p.vat||0);
+                const tpVat = origTp + vat;
+                
                 tbody.innerHTML += `
                     <tr>
                         <td>${p.code}</td><td>${p.name}</td><td>${p.pack}</td>
-                        <td class="text-right">${Number(p.tp||0).toFixed(2)}</td><td class="text-right">${Number(p.vat||0).toFixed(2)}</td>
-                        <td>${p.bonus || 'N/A'}</td><td>${(p.flat === 'true' || p.flat === true) ? 'Yes' : 'No'}</td>
+                        <td class="text-right">${origTp.toFixed(2)}</td>
+                        <td class="text-right">${vat.toFixed(2)}</td>
+                        <td class="text-right">${tpVat.toFixed(2)}</td>
+                        <td class="text-right">${Number(p.flatTp||0).toFixed(2)}</td>
+                        <td>${p.bonus || 'N/A'}</td>
                         <td>${(p.dcc === 'true' || p.dcc === true) ? 'Yes' : 'No'}</td>
                         <td style="color: ${statusColor}; font-weight: 600;">${p.status ? p.status.toUpperCase() : 'ACTIVE'}</td>
                         <td class="text-center">
@@ -1821,6 +1869,115 @@
         });
     }
 
+    // ---------------- PRINT ACTIVE PRODUCTS ----------------
+    function printActiveProducts() {
+        db.ref('INVOICE/products').once('value').then((snapshot) => {
+            if (!snapshot.exists()) {
+                return showAlert('No products found to print!');
+            }
+
+            let activeProducts = [];
+            snapshot.forEach((child) => {
+                const p = child.val();
+                if (p.status === 'active') {
+                    activeProducts.push(p);
+                }
+            });
+
+            if (activeProducts.length === 0) {
+                return showAlert('No ACTIVE products available to print!');
+            }
+
+            activeProducts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+            let rowsHtml = '';
+            activeProducts.forEach((p, index) => {
+                let origTp = Number(p.tp || 0);
+                let vat = Number(p.vat || 0);
+                let tpVat = origTp + vat;
+                rowsHtml += `<tr>
+                    <td style="text-align: center;">${index + 1}</td>
+                    <td>${p.code || ''}</td>
+                    <td>${p.name || ''}</td>
+                    <td>${p.pack || ''}</td>
+                    <td style="text-align: right;">${origTp.toFixed(2)}</td>
+                    <td style="text-align: right;">${vat.toFixed(2)}</td>
+                    <td style="text-align: right;">${tpVat.toFixed(2)}</td>
+                    <td style="text-align: right;">${Number(p.flatTp || 0).toFixed(2)}</td>
+                    <td style="text-align: center;">${p.bonus || '-'}</td>
+                    <td style="text-align: center;">${(p.dcc === 'true' || p.dcc === true) ? 'Yes' : 'No'}</td>
+                </tr>`;
+            });
+
+            const printHtml = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <title>Active Product List</title>
+                <style>
+                    body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
+                    h2 { text-align: center; text-decoration: underline; margin-bottom: 5px; }
+                    p { text-align: center; margin-top: 0; margin-bottom: 20px; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+                    th { background-color: #f2f2f2; }
+                    @media print {
+                        body { margin: 10mm; }
+                        th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; }
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>Monico Pharma LTD</h2>
+                <p><strong>Active Product List</strong><br>Date: ${new Date().toLocaleDateString()}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: center; width: 5%;">SL</th>
+                            <th>Code</th>
+                            <th>Name</th>
+                            <th>Pack</th>
+                            <th style="text-align: right;">Original TP</th>
+                            <th style="text-align: right;">VAT</th>
+                            <th style="text-align: right;">TP+VAT</th>
+                            <th style="text-align: right;">Flat Rate</th>
+                            <th style="text-align: center;">Bonus</th>
+                            <th style="text-align: center;">DCC</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </body>
+            </html>`;
+
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute'; 
+            iframe.style.width = '0'; 
+            iframe.style.height = '0'; 
+            iframe.style.border = 'none';
+            document.body.appendChild(iframe);
+            
+            iframe.contentWindow.document.open();
+            iframe.contentWindow.document.write(printHtml);
+            iframe.contentWindow.document.close();
+            
+            let hasPrinted = false;
+            const triggerPrint = () => { 
+                if (hasPrinted) return; 
+                hasPrinted = true; 
+                iframe.contentWindow.focus(); 
+                iframe.contentWindow.print(); 
+                setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); 
+            };
+            
+            iframe.onload = triggerPrint;
+            if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+        }).catch(err => {
+            showAlert('Error generating print: ' + err.message);
+        });
+    }
+
     function editProduct(code) {
         db.ref('INVOICE/products/' + code).once('value').then((snapshot) => {
             const p = snapshot.val();
@@ -1830,9 +1987,9 @@
             document.getElementById('p-name').value = p.name;
             document.getElementById('p-pack').value = p.pack;
             document.getElementById('p-tp').value = p.tp;
+            document.getElementById('p-flat-tp').value = p.flatTp || 0;
             document.getElementById('p-vat').value = p.vat;
             document.getElementById('p-bonus').value = p.bonus || '';
-            document.getElementById('p-flat').value = (p.flat === 'true' || p.flat === true) ? 'true' : 'false';
             document.getElementById('p-dcc').value = (p.dcc === 'true' || p.dcc === true) ? 'true' : 'false';
             if (!document.getElementById('p-status-hidden')) {
                 let hiddenInput = document.createElement('input');
@@ -2100,6 +2257,7 @@
         <h2 style="margin:0;">Product Management</h2>
         <div>
             <button class="btn btn-secondary" onclick="document.getElementById('excel-file').click()">Import Excel</button>
+            <button class="btn btn-warning" onclick="printActiveProducts()">Print Active Products</button>
             <button class="btn btn-primary" onclick="resetProductForm(); openModal('modal-product');">Add New Product</button>
             <input type="file" id="excel-file" accept=".xlsx, .xls" style="display:none;" onchange="importExcel()">
         </div>
@@ -2110,8 +2268,11 @@
             <thead>
                 <tr>
                     <th>Code</th><th>Name</th><th>Pack</th>
-                    <th class="text-right">TP</th><th class="text-right">VAT</th>
-                    <th>Bonus</th><th>Flat</th><th>DCC</th><th>Status</th><th class="text-center">Action</th>
+                    <th class="text-right">Original TP</th>
+                    <th class="text-right">VAT</th>
+                    <th class="text-right">TP+VAT</th>
+                    <th class="text-right">Flat Rate</th>
+                    <th>Bonus</th><th>DCC</th><th>Status</th><th class="text-center">Action</th>
                 </tr>
             </thead>
             <tbody id="product-list-body"></tbody>
@@ -2245,7 +2406,7 @@
                 </select>
             </div>
             <div class="form-group" id="c-dcc-disc-group" style="display:none;">
-                <label>DCC Discount %:</label>
+                <label>DCC Discount % (Applied on Original Rate):</label>
                 <input type="number" id="c-dcc-disc" placeholder="e.g. 10" min="0" max="100">
             </div>
             <div class="form-group">
@@ -2284,23 +2445,20 @@
                 <input type="text" id="p-pack" placeholder="e.g. 200ml / 30s" required>
             </div>
             <div class="form-group">
-                <label>TP Price:</label>
+                <label>Original TP Price (For DCC):</label>
                 <input type="number" step="0.01" id="p-tp" placeholder="0.00" required>
             </div>
             <div class="form-group">
-                <label>Vat:</label>
+                <label>Flat TP Price (For Regular Customer):</label>
+                <input type="number" step="0.01" id="p-flat-tp" placeholder="0.00 (Leave 0 if no flat rate)">
+            </div>
+            <div class="form-group">
+                <label>Vat (Applicable on Original TP):</label>
                 <input type="number" step="0.01" id="p-vat" placeholder="0.00" required>
             </div>
             <div class="form-group">
-                <label>Bonus Rule (e.g. Enter 5 for 1 bonus per 5 qty):</label>
-                <input type="text" id="p-bonus" placeholder="e.g. 5 (Leave empty if none)">
-            </div>
-            <div class="form-group">
-                <label>Flat Product (0% Discount):</label>
-                <select id="p-flat">
-                    <option value="false">No</option>
-                    <option value="true">Yes</option>
-                </select>
+                <label>Bonus Rule (X:Y format e.g. 5:1, 3:2, 1:1):</label>
+                <input type="text" id="p-bonus" placeholder="e.g. 5:1 (Leave empty if none)">
             </div>
             <div class="form-group">
                 <label>DCC Product (Gets DCC Discount):</label>
