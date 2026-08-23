@@ -602,7 +602,7 @@
     let currentSummaryData = {}, currentReportTitle = "", currentFilteredData = [];
     let parsedImportData = [], selectedDepositIds = new Set();
     let cropper = null, uploadedFileName = '';
-    let currentPresetFilter = ''; // Holds extra filters like saturate
+    let currentPresetFilter = ''; 
 
     const $ = id => document.getElementById(id);
     const fmt = n => '৳ ' + parseFloat(n).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
@@ -641,17 +641,17 @@
     window.handleLogout = () => { sessionStorage.removeItem('depotAuth'); location.reload(); };
 
     onValue(banksRef, snap => {
-        const d=snap.val(); banks=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
-        banks.forEach(b=>{if(b.isActive===undefined)b.isActive=true;});
+        const d=snap.val(); banks=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[]; 
+        banks.forEach(b=>{if(b.isActive===undefined)b.isActive=true;}); 
         renderBankList(); populateBankDropdown(); populateBankFilterDropdown(); renderDashboard();
     });
     onValue(bankDepositsRef, snap => {
-        const d=snap.val(); bankDeposits=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
+        const d=snap.val(); bankDeposits=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[]; 
         renderDeposits(); renderDashboard();
     });
     onValue(usersRef, snap => {
-        const d=snap.val(); users=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[];
-        if(!users.some(u=>u.userId==='K'))push(usersRef,{userId:'K',password:'K',name:'Admin',role:'DIC'});
+        const d=snap.val(); users=d?Object.entries(d).map(([k,v])=>({id:k,...v})):[]; 
+        if(!users.some(u=>u.userId==='K'))push(usersRef,{userId:'K',password:'K',name:'Admin',role:'DIC'}); 
     });
 
     function renderDashboard() {
@@ -697,12 +697,9 @@
         else{s.value='';$('depositAccNo').value='';$('depositBranch').value='';}
     }
     
-    // --- MODIFIED FUNCTION: Show ALL Banks (Active + Inactive) in Statement Filter ---
     function populateBankFilterDropdown() {
         const s=$('depositFilterBank'),cv=s.value; 
         s.innerHTML='<option value="">All Banks</option>';
-        
-        // Sort: Active banks first, then alphabetically — show ALL banks (active + inactive)
         banks.slice().sort((a,b)=>{
             const aActive = a.isActive !== false;
             const bActive = b.isActive !== false;
@@ -719,8 +716,6 @@
             }
             s.appendChild(o);
         });
-        
-        // Preserve current selection if it still exists (regardless of active status)
         if(cv && banks.some(b=>b.id===cv)) s.value=cv;
     }
     
@@ -904,9 +899,9 @@
             if (cropper) cropper.destroy();
             cropper = new Cropper($('cropImage'), {
                 aspectRatio: NaN,
-                viewMode: 1,
+                viewMode: 2, 
                 autoCrop: true,
-                autoCropArea: 0.8,
+                autoCropArea: 1.0, // Full fit initially
                 background: false,
                 movable: true,
                 zoomable: true,
@@ -915,6 +910,7 @@
                 dragMode: 'move',
                 cropBoxMovable: true,
                 cropBoxResizable: true,
+                zoomOnTouchDragged: false, 
                 ready: function() {
                     updateFilters(); 
                 },
@@ -932,7 +928,19 @@
     });
 
     window.rotateImage = (deg) => {
-        if (cropper) cropper.rotate(deg);
+        if (cropper) {
+            cropper.rotate(deg);
+            // Wait a tiny bit for rotation to apply and canvas to resize, then fit crop box
+            setTimeout(() => {
+                const cd = cropper.getContainerData();
+                cropper.setCropBoxData({
+                    left: 0,
+                    top: 0,
+                    width: cd.width,
+                    height: cd.height
+                });
+            }, 150);
+        }
     };
 
     // Zoom In / Out (ratio 0.1 = 10% per click)
