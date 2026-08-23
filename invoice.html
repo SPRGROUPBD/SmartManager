@@ -137,7 +137,7 @@
     .login-box button:hover { background: var(--primary-hover); }
     .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; display: none; text-align: center; }
 
-    /* Simple Order Entry Styles */
+    /* Simple Order & User Pages Styles */
     .simple-order-box { max-width: 950px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
     .simple-order-box h2 { margin: 0 0 25px; color: #1f4e79; }
     .simple-quick-entry { margin-top: 25px; padding: 18px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
@@ -149,6 +149,35 @@
     .simple-product-table th { background: #f8fafc; text-align: left; }
     .simple-submit-btn { width: 100%; margin-top: 20px; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
     .simple-submit-btn:hover { background: var(--primary-hover); }
+
+    /* User Dashboard Styles */
+    .user-dashboard-container { max-width: 950px; margin: 20px auto; padding: 4px; font-family: Arial, Helvetica, sans-serif; color: #111; }
+    .info-box { background: #fff; border: 1px solid #d9dee3; border-radius: 3px; overflow: hidden; }
+    .info-row { display: grid; grid-template-columns: 32% 68%; min-height: 35px; border-bottom: 1px solid #d9dee3; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { padding: 9px 12px; border-right: 1px solid #d9dee3; font-size: 13px; }
+    .info-value { padding: 9px 8px; font-size: 13px; font-weight: bold; }
+    .summary-area { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 24px; }
+    .summary-box { border: 1px solid #d9dee3; border-radius: 4px; padding: 8px 10px 10px; background: #fff; position: relative; }
+    .summary-title { position: absolute; top: -9px; left: 10px; padding: 0 5px; background: #fff; color: #174cff; font-size: 12px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; }
+    .summary-row strong { font-size: 12px; }
+    .total-dues { margin-top: 10px; padding: 7px 8px; background: #fff; border-radius: 0 0 10px 10px; display: flex; justify-content: space-between; color: red; font-size: 12px; font-weight: bold; }
+    .menu-box { margin-top: 10px; padding: 10px; background: #fff; border-radius: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .menu-btn { min-height: 62px; background: #087ff5; border-radius: 11px; color: white; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,.12); transition: .2s; border: none; cursor: pointer; }
+    .menu-btn:hover { background: #006fe0; transform: translateY(-1px); }
+    .menu-icon { font-size: 22px; line-height: 24px; margin-bottom: 4px; }
+    .menu-text { font-size: 13px; }
+    
+    @media (max-width: 600px) {
+        .summary-area { grid-template-columns: 1fr 1fr; }
+        .menu-box { grid-template-columns: repeat(2, 1fr); }
+        .menu-btn { min-height: 70px; }
+    }
+    @media (max-width: 400px) {
+        .summary-area { grid-template-columns: 1fr; }
+        .menu-box { grid-template-columns: 1fr 1fr; }
+    }
 
     /* Responsive Media Queries */
     @media (max-width: 992px) { .dashboard-row { grid-template-columns: 1fr; } }
@@ -202,6 +231,7 @@
     let customerCache = []; 
     let simpleProducts = [];
     let onlineOrdersCache = [];
+    let currentProcessingOrderNo = null; // Tracks order when admin creates invoice
 
     // --- AUTHENTICATION ---
     function doLogin() {
@@ -245,13 +275,17 @@
         if (isAdmin) {
             document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = '');
             document.getElementById('admin-nav').style.display = 'flex';
+            document.getElementById('user-dashboard').style.display = 'none';
             document.getElementById('simple-order-page').style.display = 'none';
-            switchTab(event, 'tab-dashboard'); // Default to dashboard for admin
+            document.getElementById('user-orders-page').style.display = 'none';
+            switchTab(event, 'tab-dashboard');
         } else {
             document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = 'none');
             document.getElementById('admin-nav').style.display = 'none';
-            document.getElementById('simple-order-page').style.display = 'block'; // Show only order page for normal users
-            loadSimpleOrderData(); // Fetch real customers and products for the dropdowns
+            document.getElementById('user-dashboard').style.display = 'block';
+            document.getElementById('simple-order-page').style.display = 'none';
+            document.getElementById('user-orders-page').style.display = 'none';
+            loadUserDashboardData();
         }
 
         loadMpos();
@@ -273,6 +307,93 @@
     }
 
     function logout() { location.reload(); }
+
+    // --- USER DASHBOARD LOGIC ---
+    function showOrderEntryPage() {
+        document.getElementById('user-dashboard').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'none';
+        document.getElementById('simple-order-page').style.display = 'block';
+        loadSimpleOrderData();
+    }
+
+    function showUserDashboard() {
+        document.getElementById('simple-order-page').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'none';
+        document.getElementById('user-dashboard').style.display = 'block';
+        loadUserDashboardData();
+    }
+
+    function showUserOrdersPage() {
+        document.getElementById('user-dashboard').style.display = 'none';
+        document.getElementById('simple-order-page').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'block';
+        loadUserOrders();
+    }
+
+    async function loadUserDashboardData() {
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const today = new Date();
+        document.getElementById("dash-month").textContent = monthNames[today.getMonth()];
+
+        const userSnap = await db.ref('INVOICE/mpos/' + currentUser).once('value');
+        const uData = userSnap.val() || {};
+        document.getElementById("dash-userName").textContent = uData.name ? `${uData.name} (${uData.code})` : currentUser;
+        document.getElementById("dash-area").textContent = uData.route || 'N/A';
+        document.getElementById("dash-joiningDate").textContent = uData.joiningDate || 'N/A';
+
+        let currTP = 0, currNet = 0, prevTP = 0, prevNet = 0;
+        const invSnap = await db.ref('INVOICE/invoices').orderByChild('mpoCode').equalTo(currentUser).once('value');
+        
+        invSnap.forEach(child => {
+            const inv = child.val();
+            const invDate = new Date(inv.date);
+            if (isNaN(invDate)) return;
+            
+            if (invDate.getMonth() === today.getMonth() && invDate.getFullYear() === today.getFullYear()) {
+                currTP += parseFloat(inv.totalTpSales) || 0;
+                currNet += parseFloat(inv.netPayable) || 0;
+            } else if (invDate.getMonth() === today.getMonth() - 1 && invDate.getFullYear() === today.getFullYear()) {
+                prevTP += parseFloat(inv.totalTpSales) || 0;
+                prevNet += parseFloat(inv.netPayable) || 0;
+            }
+        });
+
+        document.getElementById("dash-curr-tp").textContent = currTP.toFixed(2);
+        document.getElementById("dash-curr-net").textContent = currNet.toFixed(2);
+        document.getElementById("dash-prev-tp").textContent = prevTP.toFixed(2);
+        document.getElementById("dash-prev-net").textContent = prevNet.toFixed(2);
+        document.getElementById("dash-dues").textContent = (currNet + prevNet).toFixed(2);
+    }
+
+    function loadUserOrders() {
+        const tbody = document.getElementById('user-orders-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+        
+        db.ref('INVOICE/simple_orders').orderByChild('orderBy').equalTo(currentUser).on('value', (snap) => {
+            let html = '';
+            if (!snap.exists()) {
+                html = '<tr><td colspan="4" class="text-center">No orders found</td></tr>';
+            } else {
+                const orders = [];
+                snap.forEach(child => orders.push(child.val()));
+                orders.sort((a, b) => (b.orderNo || "").localeCompare(a.orderNo || ""));
+                
+                orders.forEach(order => {
+                    const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '';
+                    let status = order.status || 'pending';
+                    let statusColor = status === 'invoiced' ? 'green' : (status === 'cancelled' ? 'red' : 'orange');
+                    html += `<tr>
+                        <td>${order.orderNo}</td>
+                        <td>${dateStr}</td>
+                        <td>${order.customer}</td>
+                        <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${status}</td>
+                    </tr>`;
+                });
+            }
+            tbody.innerHTML = html;
+        });
+    }
 
     // --- MODAL CONTROLS ---
     function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
@@ -360,7 +481,6 @@
 
     // ---------------- SIMPLE ORDER ENTRY LOGIC ----------------
     function loadSimpleOrderData() {
-        // Load Customers assigned to this MPO
         db.ref('INVOICE/customers').orderByChild('mpoCode').equalTo(currentUser).on('value', (snap) => {
             let options = '';
             snap.forEach(child => {
@@ -372,7 +492,6 @@
             document.getElementById('customerList').innerHTML = options;
         });
 
-        // Load Active Products
         db.ref('INVOICE/products').on('value', (snap) => {
             let options = '';
             snap.forEach(child => {
@@ -429,7 +548,7 @@
         sequence++; localStorage.setItem(storageKey, sequence);
         const orderNo = year + month + String(sequence).padStart(2, "0");
         
-        const orderData = { orderNo, customer, products: simpleProducts, orderDate: new Date().toISOString(), orderBy: currentUser };
+        const orderData = { orderNo, customer, products: simpleProducts, orderDate: new Date().toISOString(), orderBy: currentUser, status: 'pending' };
         db.ref('INVOICE/simple_orders/' + orderNo).set(orderData).then(() => {
             alert("Order submitted successfully!\nOrder No: " + orderNo);
             document.getElementById("simple-order-no").value = orderNo;
@@ -455,10 +574,12 @@
         if (!tbody) return;
         let html = '';
         
-        let filtered = onlineOrdersCache;
+        // Filter out 'invoiced' orders so admin doesn't see them again
+        let filtered = onlineOrdersCache.filter(o => o.status !== 'invoiced');
+        
         if (filterText) {
             filterText = filterText.toLowerCase();
-            filtered = onlineOrdersCache.filter(o => 
+            filtered = filtered.filter(o => 
                 (o.orderNo && o.orderNo.toLowerCase().includes(filterText)) ||
                 (o.orderBy && o.orderBy.toLowerCase().includes(filterText)) ||
                 (o.customer && o.customer.toLowerCase().includes(filterText))
@@ -466,19 +587,24 @@
         }
 
         if (filtered.length === 0) {
-            html = '<tr><td colspan="5" class="text-center">No online orders found</td></tr>';
+            html = '<tr><td colspan="6" class="text-center">No pending online orders found</td></tr>';
         } else {
             filtered.forEach(order => {
                 const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '';
+                let statusText = order.status === 'cancelled' ? '<span style="color:red; font-weight:bold;">Cancelled</span>' : '<span style="color:orange; font-weight:bold;">Pending</span>';
+                let actionBtn = order.status === 'cancelled' ? 
+                    `<button class="action-btn btn-secondary" onclick="deleteCancelledOrder('${order.orderNo}')">Delete</button>` : 
+                    `<button class="action-btn btn-primary" onclick="createInvoiceFromOrder('${order.orderNo}')">Create Invoice</button>
+                     <button class="action-btn btn-danger" onclick="cancelOnlineOrder('${order.orderNo}')">Cancel</button>`;
+                
                 html += `
                     <tr>
                         <td>${order.orderNo}</td>
                         <td>${dateStr}</td>
                         <td>${order.orderBy || 'N/A'}</td>
                         <td>${order.customer}</td>
-                        <td class="text-center">
-                            <button class="action-btn btn-primary" onclick="createInvoiceFromOrder('${order.orderNo}')">Create Invoice</button>
-                        </td>
+                        <td>${statusText}</td>
+                        <td class="text-center">${actionBtn}</td>
                     </tr>`;
             });
         }
@@ -490,16 +616,28 @@
         renderOnlineOrders(searchText);
     }
 
+    function cancelOnlineOrder(orderNo) {
+        if (confirm('Are you sure you want to CANCEL this order?')) {
+            db.ref('INVOICE/simple_orders/' + orderNo + '/status').set('cancelled').then(() => {
+                showAlert('Order cancelled successfully!');
+            }).catch(err => showAlert('Error: ' + err.message));
+        }
+    }
+
+    function deleteCancelledOrder(orderNo) {
+        if (confirm('Delete this cancelled order permanently?')) {
+            db.ref('INVOICE/simple_orders/' + orderNo).remove();
+        }
+    }
+
     async function createInvoiceFromOrder(orderNo) {
         const orderSnap = await db.ref('INVOICE/simple_orders/' + orderNo).once('value');
         const order = orderSnap.val();
         if (!order) return showAlert('Order not found!');
 
-        // Parse Customer Code (format: "Name - Code")
         const parts = order.customer.split(' - ');
         const custCode = parts.length > 1 ? parts[parts.length - 1].trim() : order.customer.trim();
         
-        // Fetch Customer Details
         let custData = {};
         try {
             const custSnap = await db.ref('INVOICE/customers/' + custCode).once('value');
@@ -515,7 +653,6 @@
             }
         } catch (e) { return showAlert('Error fetching customer'); }
 
-        // Build items array for invoice form
         let itemsHtml = '';
         for (const item of order.products) {
             const codeMatch = item.product.match(/\(([A-Z0-9]+)\)$/);
@@ -532,16 +669,13 @@
                         qty: Number(item.qty) || 0, 
                         bonusRule: p.bonus || '' 
                     };
-                    // Directly append row HTML
                     itemsHtml += getInvoiceRowHtml(quickEntryState);
                 }
             }
         }
 
-        // Clear existing invoice form
         document.getElementById('invoice-item-tbody').innerHTML = itemsHtml;
         
-        // Fill Customer Info
         document.getElementById('inv-customer-code').value = custData.code;
         document.getElementById('inv-customer-name').innerText = custData.name;
         document.getElementById('inv-customer-type').innerText = getCustomerTypeLabel(custData.type);
@@ -552,22 +686,13 @@
         document.getElementById('inv-route').innerText = custData.route || 'N/A';
         document.getElementById('inv-da-name').innerText = custData.da || 'N/A';
         
-        // Fill Order No
         document.getElementById('inv-order-no').innerText = order.orderNo;
-        
-        // Leave Note blank
         document.getElementById('inv-note').value = '';
         
         calculateTotals();
 
-        // Remove order from database
-        try {
-            await db.ref('INVOICE/simple_orders/' + orderNo).remove();
-        } catch(err) {
-            console.error('Failed to delete order', err);
-        }
+        currentProcessingOrderNo = order.orderNo; // Set tracking variable
 
-        // Close modal and switch to invoice tab
         closeModal('modal-online-orders');
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove("active"));
         document.getElementById('tab-invoice').classList.add('active');
@@ -576,7 +701,6 @@
         if(invBtn) invBtn.classList.add('active');
     }
 
-    // Helper function to generate invoice row HTML
     function getInvoiceRowHtml(item) {
         const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
         const totalTp = actualTp * item.qty; 
@@ -590,7 +714,7 @@
         const netValue = totalTp + totalVat - disc;
 
         const tbody = document.getElementById('invoice-item-tbody');
-        const sn = tbody.rows.length + 1; // Calculate SN based on existing rows
+        const sn = tbody.rows.length + 1;
 
         return `<tr data-original-tp="${item.originalTp}" data-flat-tp="${item.flatTp || 0}" data-original-vat="${item.vat || 0}" data-bonus-rule="${item.bonusRule || ''}">
             <td class="text-center">${sn}</td>
@@ -703,7 +827,7 @@
         items.sort((a, b) => (a.name || "").localeCompare(b.name || "")); items.forEach((item, index) => { item.sn = index + 1; });
         const invoiceData = {
             invoiceNo: invNo, 
-            orderNo: document.getElementById('inv-order-no').innerText, // Save Order No
+            orderNo: document.getElementById('inv-order-no').innerText, 
             customerCode: custCode, customerName: document.getElementById('inv-customer-name').innerText,
             customerType: document.getElementById('inv-customer-type').innerText, address: document.getElementById('inv-customer-address').innerText,
             phone: document.getElementById('inv-customer-phone').innerText, mpoCode: document.getElementById('inv-mpo-code').innerText,
@@ -717,6 +841,13 @@
         };
         db.ref('INVOICE/invoices/' + invNo).set(invoiceData).then(() => {
             showAlert('Invoice saved successfully!');
+            
+            // If this invoice came from an online order, update the order status to 'invoiced'
+            if (currentProcessingOrderNo) {
+                db.ref('INVOICE/simple_orders/' + currentProcessingOrderNo + '/status').set('invoiced');
+                currentProcessingOrderNo = null; // Reset tracker
+            }
+            
             resetInvoiceForm();
             generateInvoiceNo(); loadInvoiceHistory();
         }).catch(error => showAlert('Save failed: ' + error.message));
@@ -885,7 +1016,7 @@
             if(!inv) return showAlert('Invoice not found');
             switchTab(event, 'tab-invoice');
             document.getElementById('inv-no').innerText = inv.invoiceNo;
-            document.getElementById('inv-order-no').innerText = inv.orderNo || ''; // Populate Order No
+            document.getElementById('inv-order-no').innerText = inv.orderNo || ''; 
             document.getElementById('inv-customer-code').value = inv.customerCode;
             document.getElementById('inv-customer-name').innerText = inv.customerName;
             document.getElementById('inv-customer-type').innerText = inv.customerType || 'N/A';
@@ -1167,7 +1298,7 @@
     function resetInvoiceForm() {
         document.getElementById('invoice-item-tbody').innerHTML = '';
         document.getElementById('inv-customer-code').value = ''; document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME'; document.getElementById('inv-customer-type').innerText = 'N/A'; document.getElementById('inv-customer-address').innerText = 'Address Line'; document.getElementById('inv-customer-phone').innerText = '0000000000'; document.getElementById('inv-mpo-code').innerText = ''; document.getElementById('inv-mpo-name').innerText = 'MPO NAME'; document.getElementById('inv-note').value = '';
-        const invOrderNoEl = document.getElementById('inv-order-no'); if(invOrderNoEl) invOrderNoEl.innerText = ''; // Clear Order No
+        const invOrderNoEl = document.getElementById('inv-order-no'); if(invOrderNoEl) invOrderNoEl.innerText = ''; 
         activeCustomerType = null; activeCustomerDccDisc = 0; calculateTotals(); generateInvoiceNo(); 
     }
 </script>
@@ -1185,11 +1316,91 @@
     </div>
 </div>
 
+<!-- USER DASHBOARD PAGE (FOR NORMAL USERS) -->
+<div id="user-dashboard" class="user-dashboard-container" style="display: none;">
+    <div class="info-box">
+        <div class="info-row">
+            <div class="info-label">Month:</div>
+            <div class="info-value" id="dash-month">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Name:</div>
+            <div class="info-value" id="dash-userName">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Area:</div>
+            <div class="info-value" id="dash-area">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Joining Date:</div>
+            <div class="info-value" id="dash-joiningDate">Loading...</div>
+        </div>
+    </div>
+
+    <div class="summary-area">
+        <div class="summary-box">
+            <div class="summary-title">Current Month</div>
+            <div class="summary-row"><span>Sales (TP):</span><strong id="dash-curr-tp">0.00</strong></div>
+            <div class="summary-row"><span>Sales (Net):</span><strong id="dash-curr-net">0.00</strong></div>
+            <div class="summary-row"><span>Col.:</span><strong id="dash-curr-col">0.00</strong></div>
+        </div>
+        <div class="summary-box">
+            <div class="summary-title">Previous Month</div>
+            <div class="summary-row"><span>Sales (TP):</span><strong id="dash-prev-tp">0.00</strong></div>
+            <div class="summary-row"><span>Sales (Net):</span><strong id="dash-prev-net">0.00</strong></div>
+            <div class="summary-row"><span>Col.:</span><strong id="dash-prev-col">0.00</strong></div>
+        </div>
+    </div>
+
+    <div class="total-dues">
+        <span>Total Dues:</span>
+        <span id="dash-dues">0.00</span>
+    </div>
+
+    <div class="menu-box">
+        <button class="menu-btn" onclick="showOrderEntryPage()">
+            <div class="menu-icon">🛒</div>
+            <div class="menu-text">Order Entry</div>
+        </button>
+        <button class="menu-btn" onclick="showUserOrdersPage()">
+            <div class="menu-icon">👁</div>
+            <div class="menu-text">Order View</div>
+        </button>
+        <button class="menu-btn" onclick="logout()" style="background: #dc2626;">
+            <div class="menu-icon">🚪</div>
+            <div class="menu-text">Logout</div>
+        </button>
+    </div>
+</div>
+
+<!-- USER ORDERS PAGE (FOR NORMAL USERS) -->
+<div id="user-orders-page" class="simple-order-box" style="display: none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0;">My Orders</h2>
+        <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
+    </div>
+    <div class="table-wrapper">
+        <table class="simple-product-table">
+            <thead>
+                <tr>
+                    <th>Order No</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="user-orders-tbody">
+                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- SIMPLE ORDER ENTRY PAGE (FOR NORMAL USERS) -->
 <div id="simple-order-page" class="simple-order-box" style="display: none;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
         <h2 style="margin:0;">Order Entry</h2>
-        <button class="logout-btn" onclick="logout()">Logout</button>
+        <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
     </div>
     <div class="form-group">
         <label for="simple-customer">Customer</label>
@@ -1284,7 +1495,6 @@
 <!-- TAB 1: INVOICE -->
 <div id="tab-invoice" class="tab-content">
     <div class="page-container">
-        <!-- View Online Orders Button (Admin Only) -->
         <div class="no-print" data-admin="true" style="text-align: right; margin-bottom: 15px;">
             <button class="btn btn-warning" onclick="openModal('modal-online-orders'); loadOnlineOrders();">View Online Orders</button>
         </div>
@@ -1412,6 +1622,7 @@
                         <th>Date</th>
                         <th>User (MPO)</th>
                         <th>Customer</th>
+                        <th>Status</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
