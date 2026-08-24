@@ -184,8 +184,8 @@
                     <span id="activeRoleBadge" class="text-[10px] bg-primary/10 text-primary font-bold px-3 py-2 rounded-xl uppercase shrink-0">Role: MPO</span>
                 </div>
 
-                <!-- ONLINE USERS REALTIME SECTION -->
-                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-3 shadow-xs max-w-7xl mx-auto w-full">
+                <!-- ONLINE USERS REALTIME SECTION (শুধুমাত্র সুপার অ্যাডমিন দেখতে পাবে) -->
+                <div id="onlineUsersSection" class="hidden bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-3 shadow-xs max-w-7xl mx-auto w-full">
                     <h3 class="font-bold text-xs uppercase tracking-wider text-success mb-2 flex items-center gap-1.5">
                         <i class="fa-solid fa-users-line"></i> Active Users (Realtime)
                     </h3>
@@ -841,9 +841,17 @@
             loadNotices();  
             loadProductNotices(); 
 
-            // Realtime Active Users Tracking
+            // সবার অনলাইন স্ট্যাটাস ফায়ারবেসে সেভ হবে
             trackUserPresence(user); 
-            listenOnlineUsers();     
+            
+            // শুধুমাত্র SUPER_ADMIN অনলাইন ইউজারদের লিস্ট দেখতে পাবে
+            const onlineUsersSection = document.getElementById('onlineUsersSection');
+            if (isSuperAdmin) {
+                onlineUsersSection.classList.remove('hidden');
+                listenOnlineUsers();     
+            } else {
+                onlineUsersSection.classList.add('hidden');
+            }
         }
 
         // ১. ইউজারের অনলাইন স্ট্যাটাস ফায়ারবেসে সেভ করার ফাংশন
@@ -854,8 +862,7 @@
             
             connectedRef.on('value', (snap) => {
                 if (snap.val() === true) {
-                    // ইউজার কানেক্টেড থাকলে ডাটাবেসে তার তথ্য সেট করা হবে
-                    userStatusRef.onDisconnect().remove(); // ইউজার অফলাইন হলে ডাটা ডিলিট হবে
+                    userStatusRef.onDisconnect().remove(); 
                     userStatusRef.set({
                         employeeId: user.employeeId,
                         fullName: user.fullName || user.employeeId,
@@ -885,7 +892,6 @@
                 return;
             }
             
-            // ইউজারদের ডিজাইন করে HTML-এ পুশ করা হচ্ছে
             container.innerHTML = userArray.map(u => `
                 <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 rounded-full px-3 py-1.5 border border-slate-200 dark:border-slate-600">
                     <span class="relative flex h-2 w-2">
@@ -1081,26 +1087,23 @@
                             <span class="text-[9px] font-semibold text-white bg-success px-1.5 py-0.5 rounded-full mt-0.5">Stock: ${p.stock || 0}</span>
                         </div>`;
                 });
-                // Duplicate content for seamless right-to-left auto scroll
                 container.innerHTML = cardsHtml + cardsHtml;
             } else {
                 section.classList.add('hidden');
             }
         }
         
-        // Product Notice URL Preview
         window.previewProductNoticeUrl = function(url) {
             if (url) {
                 document.getElementById('productImagePreview').src = url;
                 document.getElementById('productImagePreview').classList.remove('hidden');
-                tempProductNoticeImage = null; // Clear file data if URL is typed
-                document.getElementById('productImageInput').value = ''; // Clear file input
+                tempProductNoticeImage = null; 
+                document.getElementById('productImageInput').value = ''; 
             } else {
                 document.getElementById('productImagePreview').classList.add('hidden');
             }
         };
         
-        // Product Notice File Upload Preview
         window.previewProductNoticeImage = function(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -1108,13 +1111,12 @@
                     document.getElementById('productImagePreview').src = e.target.result;
                     document.getElementById('productImagePreview').classList.remove('hidden');
                     tempProductNoticeImage = e.target.result;
-                    document.getElementById('productImageUrlInput').value = ''; // Clear URL if file is uploaded
+                    document.getElementById('productImageUrlInput').value = ''; 
                 };
                 reader.readAsDataURL(input.files[0]);
             }
         };
         
-        // Save Product Notice with Name, Image (URL/File), and Stock
         window.saveProductNotice = function() {
             const editKey = document.getElementById('editProductKey').value;
             const name = document.getElementById('productNoticeInput').value.trim();
@@ -1125,7 +1127,6 @@
             if (!tempProductNoticeImage && !imageUrl && !editKey) { showToast('একটি ছবি সিলেক্ট করুন বা URL দিন'); return; }
             
             const productData = { name, stock: stock || '0' };
-            // Prioritize File Upload (tempProductNoticeImage), then URL
             if (tempProductNoticeImage) {
                 productData.image = tempProductNoticeImage;
             } else if (imageUrl) {
@@ -1145,7 +1146,6 @@
             }
         };
         
-        // Edit Product Notice
         window.editProductNotice = function(key) {
             db.child('productNotices/' + key).once('value', (snap) => {
                 const p = snap.val();
@@ -1153,17 +1153,15 @@
                     document.getElementById('editProductKey').value = key;
                     document.getElementById('productNoticeInput').value = p.name || '';
                     document.getElementById('productStockInput').value = p.stock || '';
-                    document.getElementById('productImageUrlInput').value = ''; // Reset URL field
+                    document.getElementById('productImageUrlInput').value = ''; 
                     
                     if (p.image) {
                         document.getElementById('productImagePreview').src = p.image;
                         document.getElementById('productImagePreview').classList.remove('hidden');
-                        // If it's an external URL, populate the URL input field
                         if (p.image.startsWith('http://') || p.image.startsWith('https://')) {
                             document.getElementById('productImageUrlInput').value = p.image;
-                            tempProductNoticeImage = null; // It's a URL, not base64
+                            tempProductNoticeImage = null; 
                         } else {
-                            // It's base64 from previous upload. We don't put it in the URL field.
                             tempProductNoticeImage = p.image; 
                         }
                     } else {
@@ -1364,15 +1362,12 @@
 
             const pinnedMenus = allMenus.filter(m => m.isPinned === true && hasRoleAccess(m) && (!searchKw || (m.title && m.title.toLowerCase().includes(searchKw))));
 
-            // 🔥 SORT PINNED MENUS: Newest file first
             pinnedMenus.sort((a, b) => {
-                // Priority 1: Date field দিয়ে sort (descending - newest first)
                 const dateA = parseDateSafe(a.date);
                 const dateB = parseDateSafe(b.date);
                 if (dateB.getTime() !== dateA.getTime()) {
                     return dateB.getTime() - dateA.getTime();
                 }
-                // Priority 2: Firebase push key (timestamp based, lexicographic descending)
                 if (b.id > a.id) return 1;
                 if (b.id < a.id) return -1;
                 return 0;
@@ -2024,7 +2019,6 @@
         window.resetUserForm = function() { tempUserProfilePic = null; document.getElementById('editUserKey').value = ''; const empInput = document.getElementById('userEmpIdInput'); empInput.value = ''; empInput.disabled = false; document.getElementById('userFullNameInput').value = ''; document.getElementById('userPassInput').value = ''; document.getElementById('userRoleInput').value = 'MPO'; document.getElementById('userProfilePicInput').value = ''; document.getElementById('userProfilePreview').src = APP_LOGO_URL; document.getElementById('userFormTitle').innerText = 'নতুন ইউজার তৈরি করুন'; document.getElementById('userSaveBtnText').innerText = 'ইউজার সেভ করুন'; document.getElementById('userCancelBtn').classList.add('hidden'); }
         window.deleteUser = function(key) { if (key === 'KS') { showToast('মূল সুপার অ্যাডমিন ডিলিট করা নিষেধ!'); return; } if (confirm('ইউজারটি ডিলিট করতে চান?')) { db.child('users/' + key).remove().then(() => { renderAdminUsers(); showToast('ইউজার মুছে ফেলা হয়েছে!'); }); } }
         
-        // Admin Global Search Filter Logic
         window.filterAdminList = function(type, keyword) {
             const k = keyword.toLowerCase().trim();
             if (type === 'slider') {
@@ -2213,7 +2207,6 @@
         window.confirmLogout = function() { closeProfileMenu(); document.getElementById('logoutModal').classList.remove('hidden'); }
         window.closeLogoutModal = function() { document.getElementById('logoutModal').classList.add('hidden'); }
         window.executeLogout = function() { 
-            // লগআউটের আগে ফায়ারবেস থেকে অনলাইন স্ট্যাটাস মুছে ফেলা হচ্ছে
             if (currentUserData && currentUserData.employeeId) {
                 db.child('onlineUsers/' + currentUserData.employeeId).remove();
             }
