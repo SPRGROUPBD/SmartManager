@@ -184,6 +184,16 @@
                     <span id="activeRoleBadge" class="text-[10px] bg-primary/10 text-primary font-bold px-3 py-2 rounded-xl uppercase shrink-0">Role: MPO</span>
                 </div>
 
+                <!-- ONLINE USERS REALTIME SECTION -->
+                <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-m3 p-3 shadow-xs max-w-7xl mx-auto w-full">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-success mb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-users-line"></i> Active Users (Realtime)
+                    </h3>
+                    <div id="onlineUsersList" class="flex flex-wrap gap-2">
+                        <p class="text-[11px] text-slate-400">লোড হচ্ছে...</p>
+                    </div>
+                </div>
+
                 <!-- All Sections Rendered Sequentially with Horizontal Scroll -->
                 <div class="space-y-6 pb-8 pt-2 max-w-7xl mx-auto w-full">
                     <!-- Grid 1: Primary Menus (Grid View) -->
@@ -830,6 +840,62 @@
             loadSliders(); 
             loadNotices();  
             loadProductNotices(); 
+
+            // Realtime Active Users Tracking
+            trackUserPresence(user); 
+            listenOnlineUsers();     
+        }
+
+        // ১. ইউজারের অনলাইন স্ট্যাটাস ফায়ারবেসে সেভ করার ফাংশন
+        function trackUserPresence(user) {
+            if (!user || !user.employeeId) return;
+            const userStatusRef = db.child('onlineUsers/' + user.employeeId);
+            const connectedRef = firebase.database().ref('.info/connected');
+            
+            connectedRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    // ইউজার কানেক্টেড থাকলে ডাটাবেসে তার তথ্য সেট করা হবে
+                    userStatusRef.onDisconnect().remove(); // ইউজার অফলাইন হলে ডাটা ডিলিট হবে
+                    userStatusRef.set({
+                        employeeId: user.employeeId,
+                        fullName: user.fullName || user.employeeId,
+                        role: user.role || 'MPO',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
+            });
+        }
+
+        // ২. রিয়েল-টাইমে অনলাইন ইউজারদের লিস্ট ড্যাশবোর্ডে শো করার ফাংশন
+        function listenOnlineUsers() {
+            db.child('onlineUsers').on('value', (snapshot) => {
+                const onlineUsers = snapshot.val() || {};
+                renderOnlineUsers(onlineUsers);
+            });
+        }
+
+        // ৩. অনলাইন ইউজারদের UI তে রেন্ডার করার ফাংশন
+        function renderOnlineUsers(users) {
+            const container = document.getElementById('onlineUsersList');
+            if (!container) return;
+            
+            const userArray = Object.values(users);
+            if (userArray.length === 0) {
+                container.innerHTML = '<p class="text-[11px] text-slate-400">কেউ অনলাইনে নেই।</p>';
+                return;
+            }
+            
+            // ইউজারদের ডিজাইন করে HTML-এ পুশ করা হচ্ছে
+            container.innerHTML = userArray.map(u => `
+                <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700 rounded-full px-3 py-1.5 border border-slate-200 dark:border-slate-600">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                    </span>
+                    <span class="text-[11px] font-bold text-slate-700 dark:text-slate-200">${u.fullName || u.employeeId}</span>
+                    <span class="text-[9px] text-primary font-semibold uppercase">(${u.role})</span>
+                </div>
+            `).join('');
         }
 
         window.syncData = function() {
@@ -2146,7 +2212,14 @@
 
         window.confirmLogout = function() { closeProfileMenu(); document.getElementById('logoutModal').classList.remove('hidden'); }
         window.closeLogoutModal = function() { document.getElementById('logoutModal').classList.add('hidden'); }
-        window.executeLogout = function() { localStorage.removeItem('MonicoOne_current_user'); location.reload(); }
+        window.executeLogout = function() { 
+            // লগআউটের আগে ফায়ারবেস থেকে অনলাইন স্ট্যাটাস মুছে ফেলা হচ্ছে
+            if (currentUserData && currentUserData.employeeId) {
+                db.child('onlineUsers/' + currentUserData.employeeId).remove();
+            }
+            localStorage.removeItem('MonicoOne_current_user'); 
+            location.reload(); 
+        }
         window.toggleDarkMode = function() { document.documentElement.classList.toggle('dark'); }
         window.showToast = function(message) { const container = document.getElementById('toastContainer'); const toast = document.createElement('div'); toast.className = "bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 border border-slate-700"; toast.innerHTML = `<i class="fa-solid fa-circle-check text-success"></i><span>${message}</span>`; container.appendChild(toast); setTimeout(() => toast.remove(), 2500); }
 
