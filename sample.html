@@ -336,8 +336,6 @@
                 text-transform: uppercase; 
                 margin-bottom: 15px; 
                 text-align: center; 
-                border-bottom: 2px solid #000; 
-                padding-bottom: 5px; 
                 letter-spacing: 1px; 
                 color: #000 !important; 
             }
@@ -800,13 +798,21 @@
                     <input type="text" id="ho-from-depot" readonly style="background:#eee; font-weight:bold;">
                 </div>
                 <div class="form-group">
+                    <label>Select AM (Area Manager)</label>
+                    <select id="ho-am" onchange="window.updateHandOverAM()"><option value="">-- Choose AM --</option></select>
+                </div>
+                <div id="ho-am-details" style="display:none; background: #e0f2f1; padding: 10px; border-radius: 4px; margin-bottom: 15px; font-size: 0.85rem; border-left: 4px solid var(--teal);">
+                    <strong>AM Name:</strong> <span id="ho-am-display-name"></span><br>
+                    <strong>AM ID:</strong> <span id="ho-am-display-id"></span>
+                </div>
+                <div class="form-group">
                     <label>To Area / Depot / Destination</label>
                     <select id="ho-to-area"><option value="">-- Select Destination --</option></select>
                 </div>
                 
                 <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                     <strong>Total Qty: <span id="ho-total-qty">0</span></strong>
-                    <button class="btn btn-teal" onclick="window.generateHandOverChallan()" id="btn-gen-ho" disabled style="background:var(--teal)"><i class="fa-solid fa-print"></i> Generate & Print</button>
+                    <button class="btn btn-teal" onclick="window.generateHandOverChallan()" id="btn-gen-ho" disabled style="background:var(--teal)"><i class="fa-solid fa-check"></i> Generate Challan</button>
                 </div>
             </div>
             <div class="panel">
@@ -907,6 +913,7 @@
         
         <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
             <button class="btn btn-secondary" onclick="window.showMgmt('mpo')"><i class="fa-solid fa-user-tie"></i> MPOs</button>
+            <button class="btn btn-secondary" onclick="window.showMgmt('am')"><i class="fa-solid fa-user-shield"></i> AMs</button>
             <button class="btn btn-secondary" onclick="window.showMgmt('prod')"><i class="fa-solid fa-box"></i> Products</button>
             <button class="btn btn-secondary" style="background-color: var(--purple); color: white;" onclick="window.showMgmt('gift')"><i class="fa-solid fa-gift"></i> Gifts</button>
             <button class="btn btn-secondary" onclick="window.showMgmt('da')"><i class="fa-solid fa-truck"></i> Transport (DA)</button>
@@ -931,6 +938,14 @@
                 </div>
             </div>
             <div class="table-responsive"><table id="table-mpo"></table></div>
+        </div>
+
+        <div id="mgmt-am" class="panel" style="display:none">
+            <div class="panel-header">
+                <h3>Area Manager (AM) List</h3>
+                <button class="btn btn-primary" onclick="window.openModal('am')"><i class="fa-solid fa-plus"></i> Add AM</button>
+            </div>
+            <div class="table-responsive"><table id="table-am"></table></div>
         </div>
         
         <div id="mgmt-prod" class="panel" style="display:none">
@@ -1013,7 +1028,7 @@
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 0.9rem;">
             <div>
-                <strong>MPO:</strong> <span id="vc-mpo-name"></span><br>
+                <strong>MPO / To:</strong> <span id="vc-mpo-name"></span><br>
                 <strong>ID:</strong> <span id="vc-mpo-id"></span><br>
                 <strong>Territory:</strong> <span id="vc-territory"></span>
             </div>
@@ -1146,6 +1161,10 @@
             <div>Date: <span id="ho-p-date"></span></div>
         </div>
         <div class="ho-header-row">
+            <div>AM Name:= <span id="ho-p-am-name"></span></div>
+            <div>AM ID = <span id="ho-p-am-id"></span></div>
+        </div>
+        <div class="ho-header-row">
             <div>From: <span id="ho-p-from"></span></div>
             <div>To: <span id="ho-p-to"></span></div>
         </div>
@@ -1231,7 +1250,7 @@
     let handoverListeners = []; 
 
     let data = {
-        mpos: [], das: [], prods: [], gifts: [], challans: [], users: [], handovers: [], settings: {}
+        mpos: [], das: [], prods: [], gifts: [], challans: [], users: [], handovers: [], ams: [], settings: {}
     };
     
     let currentMPO = null;
@@ -1398,6 +1417,7 @@
         listen('das', 'das');
         listen('users', 'users');
         listen('settings', 'settings');
+        listen('ams', 'ams');
 
         initProductListeners();
         initGiftListeners();
@@ -1658,6 +1678,7 @@
         
         const fMpos = getFilteredData(data.mpos);
         const fDas = getFilteredData(data.das);
+        const fAms = data.ams; 
         const fProds = data.prods; 
         const fGifts = data.gifts; 
         const fChallans = data.challans; 
@@ -1721,8 +1742,8 @@
 
         window.renderDashboardChallanStats(monthChallans);
 
-        window.populateSelects(activeMpos, fDas);
-        window.renderMgmtTables(fMpos, fProds, fGifts, fDas, fUsers);
+        window.populateSelects(activeMpos, fDas, fAms);
+        window.renderMgmtTables(fMpos, fProds, fGifts, fDas, fUsers, fAms);
         window.renderChallans(fChallans, fMpos);
         
         window.renderCategoryView(activeMpos);
@@ -1731,6 +1752,17 @@
         const hoDepotInput = document.getElementById('ho-from-depot');
         if(currentUser.role === 'admin') hoDepotInput.value = currentDepotFilter === 'ALL' ? 'All Depots' : currentDepotFilter;
         else hoDepotInput.value = currentUser.depotId;
+
+        const hoAmSelect = document.getElementById('ho-am');
+        if(hoAmSelect) {
+            const currentAm = hoAmSelect.value;
+            hoAmSelect.innerHTML = '<option value="">-- Choose AM --</option>';
+            fAms.forEach(am => {
+                hoAmSelect.innerHTML += `<option value="${am.id}">${am.name} (${am.id})</option>`;
+            });
+            hoAmSelect.value = currentAm;
+            window.updateHandOverAM();
+        }
 
         const hoAreaSelect = document.getElementById('ho-to-area');
         const currentHoArea = hoAreaSelect.value;
@@ -1816,7 +1848,7 @@
     };
 
     window.showMgmt = function(type) {
-        ['mpo', 'prod', 'gift', 'da', 'users'].forEach(t => {
+        ['mpo', 'am', 'prod', 'gift', 'da', 'users'].forEach(t => {
             const el = document.getElementById('mgmt-'+t);
             if(el) el.style.display = (t === type) ? 'block' : 'none';
         });
@@ -1936,7 +1968,7 @@
         });
     }
 
-    window.populateSelects = function(fMpos, fDas) {
+    window.populateSelects = function(fMpos, fDas, fAms) {
         const mpoSel = document.getElementById('gen-mpo');
         const mpoSelGift = document.getElementById('gen-mpo-gift');
         const mpoSelManual = document.getElementById('manual-mpo'); 
@@ -2059,9 +2091,24 @@
         updateCount('handover');
     };
 
+    window.updateHandOverAM = function() {
+        const amId = document.getElementById('ho-am').value;
+        const am = data.ams.find(a => a.id === amId);
+        const detailsDiv = document.getElementById('ho-am-details');
+        if(am) {
+            document.getElementById('ho-am-display-name').innerText = am.name;
+            document.getElementById('ho-am-display-id').innerText = am.id;
+            detailsDiv.style.display = 'block';
+        } else {
+            detailsDiv.style.display = 'none';
+        }
+    };
+
     window.generateHandOverChallan = function() {
         const toArea = document.getElementById('ho-to-area').value;
         const fromDepot = document.getElementById('ho-from-depot').value;
+        const amId = document.getElementById('ho-am').value;
+        const am = data.ams.find(a => a.id === amId);
         
         if(!toArea) return showToast("Please select a destination.");
         if(Object.keys(handOverSelections).length === 0) return showToast("Please add items.");
@@ -2106,15 +2153,19 @@
             type: 'Hand Over',
             from: fromDepot,
             to: toArea,
+            amId: am ? am.id : '',
+            amName: am ? am.name : '',
             items: itemsArray,
             depotId: assignedDepotId
         };
 
         push(ref(db, `depots/${assignedDepotId}/handovers`), newChallan).then(() => {
-            showToast("Hand Over Challan Generated!");
-            window.printHandOverChallan(newChallan);
+            showToast("Hand Over Challan Generated & Saved!");
             handOverSelections = {};
+            document.getElementById('ho-am').value = '';
+            window.updateHandOverAM();
             window.loadHandOverItems();
+            window.nav('challans'); 
         }).catch(err => showToast("Error: " + err.message));
     };
 
@@ -2127,6 +2178,8 @@
         document.getElementById('ho-p-date').innerText = c.date;
         document.getElementById('ho-p-from').innerText = c.from;
         document.getElementById('ho-p-to').innerText = c.to;
+        document.getElementById('ho-p-am-name').innerText = c.amName || '-';
+        document.getElementById('ho-p-am-id').innerText = c.amId || '-';
 
         const tbody = document.getElementById('ho-p-items');
         tbody.innerHTML = '';
@@ -2603,8 +2656,8 @@
 
         const da = data.das.find(d => d.id === c.daId) || {name: 'N/A'};
         
-        document.getElementById('vc-mpo-name').innerText = isHandover ? c.to : c.mpoName;
-        document.getElementById('vc-mpo-id').innerText = isHandover ? '-' : c.mpoId;
+        document.getElementById('vc-mpo-name').innerText = isHandover ? `To: ${c.to}` : c.mpoName;
+        document.getElementById('vc-mpo-id').innerText = isHandover ? (c.amId || '-') : c.mpoId;
         document.getElementById('vc-territory').innerText = isHandover ? `From: ${c.from}` : c.mpoTerritory;
         document.getElementById('vc-da-name').innerText = isHandover ? '-' : da.name;
         document.getElementById('vc-date').innerText = c.date;
@@ -2666,7 +2719,7 @@
         document.getElementById('p-region').innerText = c.mpoRegion || '-';
         
         document.getElementById('p-da-name').innerText = da.name;
-                document.getElementById('p-da-id').innerText = da.id;
+        document.getElementById('p-da-id').innerText = da.id;
         document.getElementById('p-ch-no').innerText = c.id;
         document.getElementById('p-date').innerText = c.date;
         document.getElementById('p-tp-sales').innerText = c.mpoSales ? Number(c.mpoSales).toLocaleString() : '0';
@@ -2958,12 +3011,13 @@
     };
 
     // --- MANAGEMENT TABLES ---
-    window.renderMgmtTables = function(fMpos, fProds, fGifts, fDas, fUsers) {
+    window.renderMgmtTables = function(fMpos, fProds, fGifts, fDas, fUsers, fAms) {
         if (!fMpos) fMpos = getFilteredData(data.mpos);
         if (!fProds) fProds = data.prods; 
         if (!fGifts) fGifts = data.gifts;
         if (!fDas) fDas = getFilteredData(data.das);
         if (!fUsers) fUsers = currentUser.role === 'admin' ? data.users : [];
+        if (!fAms) fAms = data.ams;
         
         const areaSelect = document.getElementById('filter-mpo-area');
         const currentAreaSelection = areaSelect.value;
@@ -3085,6 +3139,15 @@
             daT.innerHTML += `<tr><td>${d.id}</td><td>${d.name}</td><td>${d.phone || '-'}</td><td>${d.depotId || '<span style="color:red">Missing</span>'}</td>
             <td><button class="btn btn-sm btn-secondary" onclick="window.editItem('da','${d.id}')"><i class="fa-solid fa-pen"></i></button> <button class="btn btn-sm btn-danger" onclick="window.deleteItem('da','${d.id}')"><i class="fa-solid fa-trash"></i></button></td></tr>`;
         });
+
+        const amT = document.getElementById('table-am');
+        if(amT) {
+            amT.innerHTML = `<thead><tr><th>ID</th><th>Name</th><th>Area</th><th>Phone</th><th>Actions</th></tr></thead>`;
+            fAms.forEach(am => {
+                amT.innerHTML += `<tr><td>${am.id}</td><td>${am.name}</td><td>${am.area || '-'}</td><td>${am.phone || '-'}</td>
+                <td><button class="btn btn-sm btn-secondary" onclick="window.editItem('am','${am.id}')"><i class="fa-solid fa-pen"></i></button> <button class="btn btn-sm btn-danger" onclick="window.deleteItem('am','${am.id}')"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+        }
 
         if(document.getElementById('table-users')) {
             const userT = document.getElementById('table-users');
@@ -3228,6 +3291,8 @@
                 const daSelect = document.getElementById('modal-da-select');
                 if(daSelect) daSelect.innerHTML = '<option value="" disabled selected>Select Depot First</option>';
             }
+        } else if (type === 'am') {
+            container.innerHTML = `${depotSelect()}<div class="form-group"><label>AM ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Area</label><input name="area"></div><div class="form-group"><label>Phone</label><input name="phone"></div>`;
         } else if (type === 'da') {
             container.innerHTML = `${depotSelect()}<div class="form-group"><label>DA ID</label><input name="id" required></div><div class="form-group"><label>Name</label><input name="name" required></div><div class="form-group"><label>Phone</label><input name="phone"></div><div class="form-group"><label>Vehicle No.</label><input name="vehicle"></div>`;
         } else if (type === 'prod' || type === 'gift') {
@@ -3277,7 +3342,7 @@
         let item;
         if(type === 'user') item = data.users.find(x => x.key === id);
         else if (type === 'gift') item = data.gifts.find(x => x.id === id);
-        else item = (type==='mpo'?data.mpos:type==='da'?data.das:data.prods).find(x => x.id === id);
+        else item = (type==='mpo'?data.mpos:type==='da'?data.das:type==='am'?data.ams:data.prods).find(x => x.id === id);
         if(!item) return;
         window.openModal(type); editId = item.key || id;
         document.getElementById('modal-title').innerText = 'Edit ' + type.toUpperCase();
@@ -3290,7 +3355,7 @@
                 window.autoSetMpoCategories(form.elements['sales'].value);
             }
         }
-        if((type === 'prod' || type === 'gift') && item.depotId) form.elements['depotId'].value = item.depotId;
+        if((type === 'prod' || type === 'gift' || type === 'am') && item.depotId) form.elements['depotId'].value = item.depotId;
     };
 
     window.deleteItem = function(type, id) {
@@ -3298,6 +3363,7 @@
         if(type === 'user') path = 'users/' + id;
         else if(type === 'mpo') path = 'mpos/' + id;
         else if(type === 'da') path = 'das/' + id;
+        else if(type === 'am') path = 'ams/' + id;
         else if(type === 'prod') { const prod = data.prods.find(p => p.id === id); if(!prod || !prod.depotId) return showToast("Error"); path = `depots/${prod.depotId}/products/${id}`; }
         else if(type === 'gift') { const gift = data.gifts.find(g => g.id === id); if(!gift || !gift.depotId) return showToast("Error"); path = `depots/${gift.depotId}/gifts/${id}`; }
         remove(ref(db, path)).then(() => showToast("Record Deleted"));
@@ -3333,7 +3399,11 @@
             set(ref(db, path), obj).then(() => { showToast("Saved Successfully"); closeModal(); }).catch(err => showToast("Error Saving: " + err.message)); return;
         }
         if(obj.sales) obj.sales = Number(obj.sales); if(obj.isActive !== undefined) obj.isActive = obj.isActive === 'true' || obj.isActive === true;
-        let path = ''; if(editType === 'user') path = 'users/' + (editId || Date.now()); else if(editType === 'mpo') path = 'mpos/' + (editId || obj.id); else if(editType === 'da') path = `das/${(editId || obj.id)}`;
+        let path = ''; 
+        if(editType === 'user') path = 'users/' + (editId || Date.now()); 
+        else if(editType === 'mpo') path = 'mpos/' + (editId || obj.id); 
+        else if(editType === 'da') path = `das/${(editId || obj.id)}`;
+        else if(editType === 'am') path = `ams/${(editId || obj.id)}`;
         set(ref(db, path), obj).then(() => { showToast("Saved Successfully"); closeModal(); }).catch(err => showToast("Error Saving: " + err.message));
     };
 
