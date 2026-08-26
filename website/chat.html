@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WhatsApp Clone</title>
+    <meta name="theme-color" content="#075E54">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href='data:application/manifest+json,{ "name": "WhatsApp Clone", "short_name": "WA Clone", "start_url": ".", "display": "standalone", "background_color": "#0b141a", "theme_color": "#075E54" }'>
+    
+    <!-- Firebase SDK (Realtime Database Only) -->
+    <script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.8.4/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0b141a; --bg-panel: #111b21; --bg-panel-2: #202c33; --bg-chat: #0b141a;
+            --text-primary: #e9edef; --text-secondary: #8696a0; --accent: #00a884; --accent-dark: #008f72;
+            --chat-bubble-me: #005c4b; --chat-bubble-them: #202c33; --border-color: #222d34;
+            --tick-color: #53bdeb;
+        }
+        [data-theme="light"] {
+            --bg-color: #f0f2f5; --bg-panel: #ffffff; --bg-panel-2: #f0f2f5; --bg-chat: #efeae2;
+            --text-primary: #111b21; --text-secondary: #667781; --accent: #00a884; --accent-dark: #008f72;
+            --chat-bubble-me: #d9fdd3; --chat-bubble-them: #ffffff; --border-color: #e9edef;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+        body { background-color: var(--bg-color); color: var(--text-primary); display: flex; }
+        button { cursor: pointer; border: none; outline: none; background: transparent; color: inherit; }
+        input, textarea { outline: none; border: none; background: transparent; color: inherit; font-size: 16px; /* Prevents iOS zoom */ }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--bg-panel-2); border-radius: 3px; }
+
+        .app-container { display: flex; width: 100%; height: 100%; }
+        .sidebar { width: 30%; min-width: 350px; max-width: 450px; background: var(--bg-panel); display: flex; flex-direction: column; border-right: 1px solid var(--border-color); transition: transform 0.3s ease; }
+        .main-content { flex: 1; background: var(--bg-chat); display: flex; flex-direction: column; position: relative; width: 70%; }
+        
+        .auth-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: var(--bg-panel); padding: 20px; }
+        .auth-box { background: var(--bg-panel-2); padding: 40px; border-radius: 8px; width: 400px; max-width: 100%; text-align: center; }
+        .auth-box h2 { color: var(--accent); margin-bottom: 20px; }
+        .auth-input { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-panel); border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-primary); font-size: 16px; }
+        .auth-btn { width: 100%; padding: 12px; background: var(--accent); color: white; border-radius: 8px; font-weight: bold; }
+        .auth-switch { margin-top: 15px; color: var(--text-secondary); cursor: pointer; font-size: 14px; }
+
+        .sidebar-header { background: var(--bg-panel-2); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; height: 60px; min-height: 60px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--border-color); display: flex; justify-content: center; align-items: center; font-size: 16px; color: white; cursor: pointer; overflow: hidden; flex-shrink: 0; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .header-icons { display: flex; gap: 20px; color: var(--text-secondary); position: relative; align-items: center; }
+        .header-icons svg { width: 24px; height: 24px; cursor: pointer; }
+
+        .dropdown-menu { position: absolute; right: 0; top: 50px; background: var(--bg-panel); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 10px 0; z-index: 100; display: none; min-width: 150px; border: 1px solid var(--border-color); }
+        .dropdown-item { padding: 10px 20px; cursor: pointer; text-align: left; font-size: 14px; display: flex; align-items: center; gap: 10px; }
+        .dropdown-item:hover { background: var(--bg-panel-2); }
+
+        .search-bar { padding: 8px 16px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); }
+        .search-container { background: var(--bg-panel-2); border-radius: 8px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; }
+        .search-container svg { width: 18px; height: 18px; color: var(--text-secondary); }
+        .search-container input { flex: 1; font-size: 14px; }
+
+        .nav-tabs { display: flex; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); }
+        .nav-tab { flex: 1; padding: 15px 0; text-align: center; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; }
+        .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+        .list-container { flex: 1; overflow-y: auto; overflow-x: hidden; }
+        .list-item { display: flex; padding: 12px 16px; border-bottom: 1px solid var(--border-color); cursor: pointer; align-items: center; }
+        .list-item:hover { background: var(--bg-panel-2); }
+        .list-item .avatar { width: 49px; height: 49px; margin-right: 15px; }
+        .list-item-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .top-row { display: flex; justify-content: space-between; }
+        .name { font-size: 16px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .time { font-size: 12px; color: var(--text-secondary); margin-left: 10px; }
+        .bottom-row { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+        .last-msg { font-size: 14px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%; }
+
+        .empty-state { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; color: var(--text-secondary); text-align: center; padding: 20px; }
+        .chat-header { background: var(--bg-panel-2); padding: 10px 16px; display: flex; align-items: center; height: 60px; min-height: 60px; gap: 15px; }
+        .chat-header .back-btn { display: none; }
+        .chat-header-info { flex: 1; overflow: hidden; }
+        .chat-header-info h3 { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-header-info span { font-size: 13px; color: var(--text-secondary); }
+        .chat-header-actions { display: flex; gap: 15px; color: var(--text-secondary); align-items: center; }
+
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIiBmaWxsPSJub25lIiBzdHJva2U9InJnYmEoMTM3LCAxNTAsIDE2MCwgMC4wNSkiIHN0cm9rZS13aWR0aD0iMSI+PHBhdGggZD0iTTAgNDBMNDAgME0wIDBMMjAgMjBNMjAgNDBMNDAgMjAiLz48L3N2Zz4='); display: flex; flex-direction: column; }
+        .message { max-width: 65%; margin-bottom: 8px; padding: 8px 12px; border-radius: 8px; font-size: 14.2px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .message.sent { background: var(--chat-bubble-me); margin-left: auto; border-top-right-radius: 0; }
+        .message.received { background: var(--chat-bubble-them); margin-right: auto; border-top-left-radius: 0; }
+        .msg-meta { font-size: 11px; color: var(--text-secondary); text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 2px; }
+        
+        .chat-image { width: 100px; height: 100px; object-fit: cover; border-radius: 8px; cursor: pointer; margin-bottom: 5px; display: block; }
+        .chat-file { display: flex; align-items: center; gap: 10px; color: var(--text-primary); text-decoration: none; padding: 5px 0; }
+        .chat-file svg { width: 32px; height: 32px; fill: var(--accent); }
+
+        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; z-index: 2000; cursor: zoom-out; }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
+
+        .chat-input-area { background: var(--bg-panel-2); padding: 10px 16px; display: flex; align-items: center; gap: 10px; position: relative; min-height: 60px; flex-shrink: 0; }
+        .chat-input { flex: 1; background: var(--bg-panel); border-radius: 8px; padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+        .chat-input input { flex: 1; font-size: 16px; }
+        .send-btn { background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .attach-menu { position: absolute; bottom: 60px; left: 20px; background: var(--bg-panel); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); padding: 10px; z-index: 100; display: none; }
+        .attach-item { padding: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+        .attach-item:hover { background: var(--bg-panel-2); border-radius: 4px; }
+        .attach-item svg { width: 24px; height: 24px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: none; justify-content: center; align-items: center; padding: 20px; }
+        .modal-box { background: var(--bg-panel); padding: 30px; border-radius: 12px; width: 400px; max-width: 100%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-title { font-size: 20px; margin-bottom: 20px; color: var(--accent); text-align: center; }
+        .modal-back-btn { position: absolute; top: 20px; left: 20px; cursor: pointer; color: var(--text-secondary); display: flex; align-items: center; z-index: 10; }
+        
+        .new-chat-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .option-btn { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--bg-panel-2); border-radius: 8px; cursor: pointer; width: 100%; text-align: left; }
+        .option-btn:hover { background: var(--border-color); }
+
+        .user-select-list .list-item.selected { background: var(--accent); color: white; }
+        .group-name-input { margin-bottom: 15px; padding: 15px; border-radius: 8px; background: var(--bg-panel-2); border: 1px solid var(--border-color); width: 100%; color: var(--text-primary); font-size: 16px; }
+
+        .profile-header { display: flex; flex-direction: column; align-items: center; margin-bottom: 20px; }
+        .profile-avatar { width: 120px; height: 120px; font-size: 40px; margin-bottom: 10px; cursor: pointer; border: 2px solid var(--accent); }
+        .change-photo-btn { background: var(--bg-panel-2); padding: 8px 15px; border-radius: 15px; font-size: 12px; margin-bottom: 15px; border: 1px solid var(--accent); color: var(--accent); }
+
+        /* Responsive Media Queries */
+        @media (max-width: 1024px) {
+            .sidebar { width: 35%; min-width: 300px; }
+            .main-content { width: 65%; }
+        }
+
+        @media (max-width: 768px) {
+            body { overflow: hidden; }
+            .sidebar { width: 100%; min-width: 0; max-width: 100%; position: absolute; top: 0; left: 0; height: 100%; z-index: 10; }
+            .sidebar.hidden { transform: translateX(-100%); }
+            .main-content { width: 100%; }
+            .chat-header .back-btn { display: block; }
+            
+            /* Modals are Full Screen on Mobile */
+            .modal-overlay { padding: 0; }
+            .modal-box { 
+                width: 100%; max-width: 100%; 
+                height: 100dvh; max-height: 100dvh; 
+                border-radius: 0; padding-top: 60px; 
+            }
+            
+            .message { max-width: 80%; }
+        }
+
+        @media (max-width: 480px) {
+            .chat-messages { padding: 10px; }
+            .chat-input-area { padding: 8px 10px; gap: 5px; }
+            .send-btn { width: 40px; height: 40px; }
+            .modal-box { padding: 15px; padding-top: 60px; }
+            .header-icons { gap: 15px; }
+            .chat-header-actions { gap: 10px; }
+            #localVideo { width: 100px; height: 140px; bottom: 70px; right: 10px; }
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <!-- Auth View -->
+    <div id="authView" class="auth-container" style="display: none;">
+        <div class="auth-box">
+            <h2>WhatsApp Clone</h2>
+            <input type="text" id="nameInput" class="auth-input" placeholder="Name (For Sign Up)" style="display:none;">
+            <input type="tel" id="phoneInput" class="auth-input" placeholder="Mobile Number">
+            <input type="password" id="passInput" class="auth-input" placeholder="Password">
+            <button id="authBtn" class="auth-btn">Login</button>
+            <div class="auth-switch" id="switchAuth">Don't have an account? Sign Up</div>
+        </div>
+    </div>
+
+    <!-- Main App View -->
+    <div id="appView" class="app-container" style="display: none;">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="avatar" id="myProfileBtn">U</div>
+                <div class="header-icons">
+                    <div style="position: relative; display: flex; gap: 15px; align-items: center;">
+                        <svg id="newChatBtn" viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/></svg>
+                        <svg id="menuBtn" viewBox="0 0 24 24" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <div id="dropdownMenu" class="dropdown-menu">
+                            <div class="dropdown-item" id="openProfileBtn">Profile</div>
+                            <div class="dropdown-item" id="settingsBtn">Settings</div>
+                            <div class="dropdown-item" id="logoutBtn" style="color: #f44336;">Logout</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="search-bar">
+                <div class="search-container">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="searchInput" placeholder="Search users & groups...">
+                </div>
+            </div>
+            <div class="nav-tabs">
+                <div class="nav-tab active" data-tab="chats">Chats</div>
+                <div class="nav-tab" data-tab="status">Status</div>
+                <div class="nav-tab" data-tab="calls">Calls</div>
+            </div>
+            <div class="list-container" id="listContainer"></div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="empty-state" id="emptyState">
+                <h2>WhatsApp Clone</h2>
+                <p>Select a chat to start messaging</p>
+            </div>
+
+            <div id="chatView" style="display: none; flex: 1; flex-direction: column; height: 100%;">
+                <div class="chat-header">
+                    <button class="back-btn" id="backBtn">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    </button>
+                    <div class="avatar" id="chatAvatar">U</div>
+                    <div class="chat-header-info">
+                        <h3 id="chatName">User</h3>
+                        <span id="chatStatus">online</span>
+                    </div>
+                    <div class="chat-header-actions">
+                        <svg id="voiceCallBtn" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                        <svg id="videoCallBtn" viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                        <svg id="groupInfoBtn" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" style="display:none;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-area">
+                    <div id="attachMenu" class="attach-menu">
+                        <div class="attach-item" id="attachImageBtn">
+                            <svg viewBox="0 0 24 24" fill="#ff0000"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                            Image
+                        </div>
+                        <div class="attach-item" id="attachFileBtn">
+                            <svg viewBox="0 0 24 24" fill="#00a884"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+                            Document (PDF)
+                        </div>
+                    </div>
+                    <svg id="attachBtn" viewBox="0 0 24 24" width="24px" height="24px" fill="currentColor" style="cursor:pointer; color:var(--text-secondary);"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5c0 1.38 1.12 2.5 2.5 2.5s2.5-1.12 2.5-2.5V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
+                    <input type="file" id="imageInput" accept="image/*" style="display:none;">
+                    <input type="file" id="fileInput" accept="application/pdf" style="display:none;">
+                    <div class="chat-input">
+                        <input type="text" id="messageInput" placeholder="Type a message">
+                    </div>
+                    <button class="send-btn" id="sendBtn">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Chat Modal -->
+    <div id="newChatModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-back-btn" id="newChatBackBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </div>
+            <div class="modal-title">New Chat</div>
+            <div id="newChatContent">
+                <div class="new-chat-options">
+                    <button class="option-btn" id="newGroupBtn">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="var(--accent)"><path d="M12 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5.5 12c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2zm13 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM9.5 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM12 8c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>
+                        New Group
+                    </button>
+                </div>
+            </div>
+
+            <div id="createGroupContent" style="display: none;">
+                <div class="profile-header" style="margin-bottom: 15px;">
+                    <div class="avatar profile-avatar" id="groupAvatarPreview" style="width: 80px; height: 80px; font-size: 24px;">G</div>
+                    <button class="change-photo-btn" id="changeGroupPicBtn">Change Group Photo</button>
+                    <input type="file" id="groupPicInput" accept="image/*" style="display:none;">
+                </div>
+                <input type="text" id="groupNameInput" class="group-name-input" placeholder="Group Name">
+                <div style="max-height: 300px; overflow-y: auto;" class="user-select-list" id="groupUserList"></div>
+                <button id="createGroupBtn" class="auth-btn" style="margin-top: 15px;">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-back-btn" id="profileBackBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </div>
+            <div class="modal-title">Profile</div>
+            <div class="profile-header">
+                <div class="avatar profile-avatar" id="profileAvatar">U</div>
+                <button class="change-photo-btn" id="changePicBtn">Change Photo</button>
+            </div>
+            <input type="file" id="profilePicInput" accept="image/*" style="display:none;">
+            <input type="text" id="profileName" class="auth-input" placeholder="Name">
+            <input type="text" id="profileAbout" class="auth-input" placeholder="About">
+            <button id="saveProfileBtn" class="auth-btn">Save</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-back-btn" id="settingsBackBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </div>
+            <div class="modal-title">Settings</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 0; border-bottom:1px solid var(--border-color); margin-top: 20px;">
+                <span>Dark Mode</span>
+                <input type="checkbox" id="themeToggle" style="width:20px; height:20px; cursor:pointer;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Info & Admin Modal -->
+    <div id="groupInfoModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-back-btn" id="groupInfoBackBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </div>
+            
+            <div id="groupInfoMainView">
+                <div class="modal-title">Group Info</div>
+                
+                <button id="favoriteGroupBtn" class="change-photo-btn" style="width: 100%; margin-bottom: 15px; border-color: #ffc107; color: #ffc107;">☆ Add to Favorite</button>
+                
+                <div class="profile-header">
+                    <div class="avatar profile-avatar" id="groupInfoAvatar" style="position: relative;">G</div>
+                    <input type="file" id="groupInfoPicInput" accept="image/*" style="display:none;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center;">
+                        <h3 id="groupInfoName" style="color: var(--text-primary); text-align: center;"></h3>
+                        <button id="editGroupNameBtn" style="display: none; color: var(--accent);">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        </button>
+                        <input type="text" id="editGroupNameInput" style="display: none; flex: 1; padding: 8px; background: var(--bg-panel-2); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); min-width: 150px;">
+                        <button id="saveGroupNameBtn" style="display: none; color: var(--accent); font-weight: bold;">Save</button>
+                    </div>
+                    <button id="changeGroupInfoPicBtn" class="change-photo-btn" style="display: none;">Change Logo</button>
+                </div>
+                
+                <div id="adminControls" style="display: none; margin: 20px 0; border: 1px solid var(--border-color); padding: 15px; border-radius: 8px;">
+                    <h4 style="margin-bottom: 10px; color: var(--accent);">Admin Controls</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span>Edit Group Info</span>
+                        <input type="checkbox" id="editInfoPerm" style="width:20px; height:20px; cursor:pointer;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Send Messages</span>
+                        <input type="checkbox" id="sendMsgPerm" style="width:20px; height:20px; cursor:pointer;">
+                    </div>
+                </div>
+
+                <button id="addMemberBtn" style="display: none; width: 100%; padding: 10px; margin-bottom: 15px; background: var(--bg-panel-2); color: var(--accent); border-radius: 8px; border: 1px solid var(--accent); font-weight: bold;">+ Add New Member</button>
+                
+                <h4 style="margin-bottom: 10px;">Members</h4>
+                <div id="groupMembersList" style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;"></div>
+                <button id="deleteGroupBtn" style="background: #f44336; color: white; padding: 10px; border-radius: 8px; width: 100%; font-weight: bold; display: none;">Delete Group</button>
+            </div>
+
+            <div id="addMemberView" style="display: none;">
+                <div class="modal-title">Add New Member</div>
+                <div style="max-height: 400px; overflow-y: auto;" class="user-select-list" id="addMemberUserList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Call Modal -->
+    <div id="callModal" class="modal-overlay" style="z-index: 3000;">
+        <div class="modal-box" style="width: 100%; height: 100%; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; padding: 0; position:relative; border-radius: 0;">
+            <div style="flex: 1; background: black; display: flex; align-items: center; justify-content: center; color: white; position: relative;" id="remoteVideoContainer">
+                <span id="callStatusText" style="font-size: 20px; font-weight: bold;">Connecting...</span>
+                <video id="remoteVideo" autoplay playsinline style="width:100%; height:100%; object-fit:cover; display:none;"></video>
+            </div>
+            <video id="localVideo" autoplay muted playsinline style="width: 150px; height: 200px; position: absolute; bottom: 100px; right: 20px; background: #333; border-radius: 8px; object-fit: cover; border: 2px solid white; z-index: 10;"></video>
+            <div style="padding: 20px; background: var(--bg-panel-2); display: flex; justify-content: center; gap: 20px; align-items: center;">
+                <div id="incomingCallActions" style="display: none; gap: 30px;">
+                    <button id="rejectCallBtn" style="background: #ff0000; color: white; padding: 15px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+                    </button>
+                    <button id="acceptCallBtn" style="background: #00a884; color: white; padding: 15px; border-radius: 50%; width: 60px; height: 60px; display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                    </button>
+                </div>
+                <button id="endCallBtn" style="background: #ff0000; color: white; padding: 15px 20px; border-radius: 8px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08c-.18-.17-.29-.42-.29-.7 0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.1-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+                    End Call
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox (Zoom View) -->
+    <div id="imageLightbox" class="lightbox">
+        <img id="lightboxImage" src="" alt="Zoomed Image">
+    </div>
+
+    <!-- Audio for Message Sound -->
+    <audio id="messageSound" src="data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="></audio>
+
+    <script>
+        // ==========================================
+        // 1. FIREBASE CONFIG
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeC8Bd3DH0wqC-Rfx-yAmyk2zeu5hgec4",
+            authDomain: "whatapp-8d8ed.firebaseapp.com",
+            databaseURL: "https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "whatapp-8d8ed",
+            storageBucket: "whatapp-8d8ed.firebasestorage.app",
+            messagingSenderId: "618833956157",
+            appId: "1:618833956157:web:3f9305abf19c55bda7c954",
+            measurementId: "G-989CSYJ6JS"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // ==========================================
+        // 2. STATE MANAGEMENT
+        // ==========================================
+        let currentUser = null;
+        let currentChatId = null;
+        let isLoginMode = true;
+        let activeTab = 'chats';
+        let tempBase64Pic = null;
+        let tempGroupBase64Pic = null;
+        let selectedGroupUsers = new Set();
+        let currentGroupInfo = null;
+
+        // WebRTC Globals
+        let localStream = null;
+        let remoteStream = null;
+        let peerConnection = null;
+        let currentCallId = null;
+        let isCallCreator = false;
+        let callTimeout = null;
+        const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+        // ==========================================
+        // 3. INITIALIZATION
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedUser = localStorage.getItem('wa_clone_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                showApp();
+                setupPresence();
+            } else {
+                showAuth();
+            }
+            setupEventListeners();
+            initTheme();
+        });
+
+        function setupEventListeners() {
+            // Auth
+            document.getElementById('authBtn').addEventListener('click', handleAuth);
+            document.getElementById('switchAuth').addEventListener('click', toggleAuthMode);
+            
+            // Chat
+            document.getElementById('sendBtn').addEventListener('click', sendMessage);
+            document.getElementById('messageInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+            document.getElementById('messageInput').addEventListener('input', handleTyping);
+            
+            // Attachments
+            document.getElementById('attachBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('attachMenu').style.display = 'block';
+            });
+            document.body.addEventListener('click', () => {
+                document.getElementById('attachMenu').style.display = 'none';
+                document.getElementById('dropdownMenu').style.display = 'none';
+            });
+            document.getElementById('attachImageBtn').addEventListener('click', () => document.getElementById('imageInput').click());
+            document.getElementById('attachFileBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+            document.getElementById('imageInput').addEventListener('change', (e) => handleFileUpload(e, 'image'));
+            document.getElementById('fileInput').addEventListener('change', (e) => handleFileUpload(e, 'file'));
+            
+            // Navigation & Back Buttons
+            document.getElementById('backBtn').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.remove('hidden');
+                document.getElementById('chatView').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'flex';
+            });
+            document.getElementById('newChatBackBtn').addEventListener('click', () => closePopUp('newChatModal'));
+            document.getElementById('profileBackBtn').addEventListener('click', () => closePopUp('profileModal'));
+            document.getElementById('settingsBackBtn').addEventListener('click', () => closePopUp('settingsModal'));
+            document.getElementById('groupInfoBackBtn').addEventListener('click', () => {
+                if (document.getElementById('addMemberView').style.display === 'block') {
+                    document.getElementById('addMemberView').style.display = 'none';
+                    document.getElementById('groupInfoMainView').style.display = 'block';
+                } else {
+                    closePopUp('groupInfoModal');
+                }
+            });
+
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal && modal.id !== 'callModal') {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+
+            document.getElementById('imageLightbox').addEventListener('click', () => {
+                document.getElementById('imageLightbox').style.display = 'none';
+            });
+            
+            // Menu & Settings
+            document.getElementById('menuBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                document.getElementById('dropdownMenu').style.display = 'block';
+            });
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            document.getElementById('settingsBtn').addEventListener('click', () => {
+                document.getElementById('settingsModal').style.display = 'flex';
+            });
+            document.getElementById('themeToggle').addEventListener('change', (e) => {
+                document.body.setAttribute('data-theme', e.target.checked ? 'dark' : 'light');
+                localStorage.setItem('wa_theme', e.target.checked ? 'dark' : 'light');
+            });
+            document.getElementById('openProfileBtn').addEventListener('click', openProfile);
+            document.getElementById('myProfileBtn').addEventListener('click', openProfile);
+            document.getElementById('saveProfileBtn').addEventListener('click', saveProfile);
+            document.getElementById('changePicBtn').addEventListener('click', () => document.getElementById('profilePicInput').click());
+            document.getElementById('profilePicInput').addEventListener('change', (e) => handleImageUpload(e, 'profile'));
+
+            // New Chat & Group
+            document.getElementById('newChatBtn').addEventListener('click', openNewChatModal);
+            document.getElementById('newGroupBtn').addEventListener('click', openCreateGroupView);
+            document.getElementById('createGroupBtn').addEventListener('click', createGroup);
+            document.getElementById('changeGroupPicBtn').addEventListener('click', () => document.getElementById('groupPicInput').click());
+            document.getElementById('groupPicInput').addEventListener('change', (e) => handleImageUpload(e, 'group'));
+
+            // Group Info & Admin Controls
+            document.getElementById('groupInfoBtn').addEventListener('click', openGroupInfo);
+            document.getElementById('deleteGroupBtn').addEventListener('click', deleteGroup);
+            document.getElementById('editInfoPerm').addEventListener('change', (e) => updateGroupPermission('canEditInfo', e.target.checked));
+            document.getElementById('sendMsgPerm').addEventListener('change', (e) => updateGroupPermission('canSendMessages', e.target.checked));
+            
+            document.getElementById('addMemberBtn').addEventListener('click', openAddMemberView);
+            document.getElementById('favoriteGroupBtn').addEventListener('click', toggleFavoriteGroup);
+            document.getElementById('changeGroupInfoPicBtn').addEventListener('click', () => document.getElementById('groupInfoPicInput').click());
+            document.getElementById('groupInfoPicInput').addEventListener('change', handleGroupInfoPicUpload);
+            document.getElementById('editGroupNameBtn').addEventListener('click', () => {
+                document.getElementById('groupInfoName').style.display = 'none';
+                document.getElementById('editGroupNameBtn').style.display = 'none';
+                document.getElementById('editGroupNameInput').style.display = 'block';
+                document.getElementById('saveGroupNameBtn').style.display = 'block';
+                document.getElementById('editGroupNameInput').value = currentGroupInfo.name;
+            });
+            document.getElementById('saveGroupNameBtn').addEventListener('click', saveGroupName);
+
+            // Search
+            document.getElementById('searchInput').addEventListener('input', (e) => filterList(e.target.value));
+
+            // Calls (WebRTC)
+            document.getElementById('videoCallBtn').addEventListener('click', () => startCall(true));
+            document.getElementById('voiceCallBtn').addEventListener('click', () => startCall(false));
+            document.getElementById('endCallBtn').addEventListener('click', endCall);
+            document.getElementById('acceptCallBtn').addEventListener('click', acceptCall);
+            document.getElementById('rejectCallBtn').addEventListener('click', () => rejectCall());
+
+            // Tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+            });
+            
+            window.addEventListener('resize', () => {
+                if (window.innerWidth > 768) {
+                    document.getElementById('sidebar').classList.remove('hidden');
+                } else if (currentChatId) {
+                    document.getElementById('sidebar').classList.add('hidden');
+                }
+            });
+        }
+
+        function closePopUp(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function openLightbox(url) {
+            document.getElementById('lightboxImage').src = url;
+            document.getElementById('imageLightbox').style.display = 'flex';
+        }
+
+        // ==========================================
+        // 4. AUTHENTICATION
+        // ==========================================
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            document.getElementById('authBtn').innerText = isLoginMode ? "Login" : "Sign Up";
+            document.getElementById('switchAuth').innerText = isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Login";
+            document.getElementById('nameInput').style.display = isLoginMode ? 'none' : 'block';
+        }
+
+        function handleAuth() {
+            const phone = document.getElementById('phoneInput').value;
+            const pass = document.getElementById('passInput').value;
+            const name = document.getElementById('nameInput').value;
+
+            if (!phone || !pass) return alert("Enter phone and password");
+
+            if (isLoginMode) {
+                db.ref('users').orderByChild('phone').equalTo(phone).once('value', snapshot => {
+                    if (snapshot.exists()) {
+                        snapshot.forEach(child => {
+                            const user = child.val();
+                            if (user.password === pass) {
+                                currentUser = { uid: child.key, ...user };
+                                localStorage.setItem('wa_clone_user', JSON.stringify(currentUser));
+                                showApp(); setupPresence();
+                            } else { alert("Incorrect password"); }
+                        });
+                    } else { alert("User not found"); }
+                });
+            } else {
+                if (!name) return alert("Please enter your name");
+                const newUserRef = db.ref('users').push();
+                const userData = {
+                    name: name, phone: phone, password: pass,
+                    avatar: name.substring(0, 2).toUpperCase(),
+                    about: "Hey there! I am using WhatsApp Clone.", status: "online"
+                };
+                newUserRef.set(userData).then(() => {
+                    currentUser = { uid: newUserRef.key, ...userData };
+                    localStorage.setItem('wa_clone_user', JSON.stringify(currentUser));
+                    showApp(); setupPresence();
+                });
+            }
+        }
+
+        function logout() {
+            if (currentUser) db.ref(`users/${currentUser.uid}/status`).set('offline');
+            localStorage.removeItem('wa_clone_user');
+            currentUser = null;
+            showAuth();
+        }
+
+        function showAuth() {
+            document.getElementById('authView').style.display = 'flex';
+            document.getElementById('appView').style.display = 'none';
+        }
+        function showApp() {
+            document.getElementById('authView').style.display = 'none';
+            document.getElementById('appView').style.display = 'flex';
+            renderMyAvatar();
+            switchTab('chats');
+        }
+
+        // ==========================================
+        // 5. PRESENCE & TYPING
+        // ==========================================
+        function setupPresence() {
+            const userStatusRef = db.ref(`users/${currentUser.uid}/status`);
+            const connRef = db.ref('.info/connected');
+            connRef.on('value', snap => {
+                if (snap.val() === true) {
+                    userStatusRef.onDisconnect().set('offline');
+                    userStatusRef.set('online');
+                }
+            });
+        }
+
+        let typingTimeout;
+        function handleTyping() {
+            if (!currentChatId) return;
+            db.ref(`typing/${currentChatId}/${currentUser.uid}`).set(true);
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => db.ref(`typing/${currentChatId}/${currentUser.uid}`).set(false), 1500);
+        }
+
+        // ==========================================
+        // 6. TABS & GLOBAL LIST
+        // ==========================================
+        function switchTab(tab) {
+            activeTab = tab;
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.nav-tab[data-tab="${tab}"]`).classList.add('active');
+            const container = document.getElementById('listContainer');
+            container.innerHTML = '';
+            if (tab === 'chats') loadGlobalChatList();
+            else if (tab === 'status') container.innerHTML = '<div style="padding:20px; color:var(--text-secondary)">Status updates will appear here.</div>';
+            else if (tab === 'calls') container.innerHTML = '<div style="padding:20px; color:var(--text-secondary)">No recent calls.</div>';
+        }
+
+        function loadGlobalChatList() {
+            db.ref('users').on('value', usersSnap => {
+                db.ref(`userChats/${currentUser.uid}`).on('value', chatsSnap => {
+                    if (activeTab !== 'chats') return;
+                    const container = document.getElementById('listContainer');
+                    container.innerHTML = '';
+                    
+                    let combinedList = [];
+                    let userChatsMap = {};
+
+                    chatsSnap.forEach(c => {
+                        const chat = c.val();
+                        if (chat.isGroup) {
+                            combinedList.push({ ...chat, id: c.key, sortTime: chat.timestamp || 0 });
+                        } else if (chat.otherUserId) {
+                            userChatsMap[chat.otherUserId] = { ...chat, id: c.key, sortTime: chat.timestamp || 0 };
+                        }
+                    });
+
+                    usersSnap.forEach(u => {
+                        if (u.key !== currentUser.uid) {
+                            if (userChatsMap[u.key]) {
+                                combinedList.push(userChatsMap[u.key]);
+                            } else {
+                                combinedList.push({ 
+                                    id: null, name: u.val().name, avatar: u.val().avatar, 
+                                    picUrl: u.val().picUrl, otherUserId: u.key, isGroup: false, 
+                                    lastMessage: "Tap to chat", sortTime: 0 
+                                });
+                            }
+                        }
+                    });
+
+                    combinedList.sort((a, b) => {
+                        if (a.sortTime === 0 && b.sortTime === 0) return a.name.localeCompare(b.name);
+                        return b.sortTime - a.sortTime;
+                    });
+
+                    combinedList.forEach(chat => {
+                        const div = document.createElement('div');
+                        div.className = 'list-item chat-item';
+                        div.dataset.name = chat.name.toLowerCase();
+                        div.onclick = () => {
+                            if (chat.isGroup) {
+                                openChat(chat.id, chat.name, chat.avatar, chat.picUrl, null, true);
+                            } else if (chat.id) {
+                                openChat(chat.id, chat.name, chat.avatar, chat.picUrl, chat.otherUserId, false);
+                            } else {
+                                startNewChat(chat.otherUserId, { name: chat.name, avatar: chat.avatar, picUrl: chat.picUrl });
+                            }
+                        };
+                        div.innerHTML = `
+                            <div class="avatar">${chat.picUrl ? `<img src="${chat.picUrl}" alt="">` : chat.avatar}</div>
+                            <div class="list-item-info">
+                                <div class="top-row">
+                                    <span class="name">${chat.name} ${chat.isFavorite ? '⭐' : ''}</span>
+                                    <span class="time">${chat.sortTime ? formatTime(chat.sortTime) : ''}</span>
+                                </div>
+                                <div class="bottom-row">
+                                    <span class="last-msg">${chat.lastMessage || 'No messages yet'}</span>
+                                </div>
+                            </div>`;
+                        container.appendChild(div);
+                    });
+                });
+            });
+        }
+
+        function filterList(query) {
+            const items = document.querySelectorAll('.chat-item');
+            items.forEach(item => {
+                if (item.dataset.name.includes(query.toLowerCase())) item.style.display = 'flex';
+                else item.style.display = 'none';
+            });
+        }
+
+        // ==========================================
+        // 7. MESSAGING
+        // ==========================================
+        function openNewChatModal() {
+            document.getElementById('newChatModal').style.display = 'flex';
+            document.getElementById('newChatContent').style.display = 'block';
+            document.getElementById('createGroupContent').style.display = 'none';
+        }
+
+        function openCreateGroupView() {
+            document.getElementById('newChatContent').style.display = 'none';
+            document.getElementById('createGroupContent').style.display = 'block';
+            selectedGroupUsers.clear();
+            tempGroupBase64Pic = null;
+            document.getElementById('groupAvatarPreview').innerHTML = 'G';
+            document.getElementById('groupNameInput').value = '';
+            
+            const groupUserList = document.getElementById('groupUserList');
+            groupUserList.innerHTML = 'Loading users...';
+            db.ref('users').once('value', snapshot => {
+                groupUserList.innerHTML = '';
+                snapshot.forEach(child => {
+                    const user = child.val();
+                    if (child.key !== currentUser.uid) {
+                        const div = document.createElement('div');
+                        div.className = 'list-item';
+                        div.dataset.name = user.name.toLowerCase();
+                        div.innerHTML = `
+                            <div class="avatar">${user.picUrl ? `<img src="${user.picUrl}" alt="">` : user.avatar}</div>
+                            <div class="list-item-info"><div class="top-row"><span class="name">${user.name}</span></div></div>`;
+                        div.onclick = () => {
+                            if (selectedGroupUsers.has(child.key)) {
+                                selectedGroupUsers.delete(child.key);
+                                div.classList.remove('selected');
+                            } else {
+                                selectedGroupUsers.add(child.key);
+                                div.classList.add('selected');
+                            }
+                        };
+                        groupUserList.appendChild(div);
+                    }
+                });
+            });
+        }
+
+        function createGroup() {
+            const groupName = document.getElementById('groupNameInput').value;
+            if (!groupName) return alert("Please enter group name");
+            if (selectedGroupUsers.size === 0) return alert("Please select at least one user");
+
+            const newGroupRef = db.ref('chats').push();
+            const groupId = newGroupRef.key;
+            const members = {};
+            members[currentUser.uid] = true;
+            selectedGroupUsers.forEach(uid => members[uid] = true);
+
+            db.ref(`chats/${groupId}/info`).set({
+                name: groupName, isGroup: true, members: members, createdBy: currentUser.uid, picUrl: tempGroupBase64Pic || "",
+                canEditInfo: true, canSendMessages: true
+            });
+
+            const groupData = {
+                chatId: groupId, name: groupName, avatar: groupName.substring(0, 2).toUpperCase(),
+                picUrl: tempGroupBase64Pic || "", isGroup: true, lastMessage: "", timestamp: Date.now()
+            };
+            
+            db.ref(`userChats/${currentUser.uid}/${groupId}`).set(groupData);
+            selectedGroupUsers.forEach(uid => db.ref(`userChats/${uid}/${groupId}`).set(groupData));
+
+            closePopUp('newChatModal');
+            openChat(groupId, groupName, groupData.avatar, groupData.picUrl, null, true);
+        }
+
+        function startNewChat(otherUserId, otherUser) {
+            db.ref(`userChats/${currentUser.uid}`).orderByChild('otherUserId').equalTo(otherUserId).once('value', snap => {
+                let chatId;
+                if (snap.exists()) {
+                    snap.forEach(child => { chatId = child.key; });
+                } else {
+                    const newChatRef = db.ref('chats').push();
+                    chatId = newChatRef.key;
+                    const myChatData = { chatId, name: otherUser.name, avatar: otherUser.avatar, picUrl: otherUser.picUrl || "", otherUserId, isGroup: false, lastMessage: "", timestamp: Date.now() };
+                    const theirChatData = { chatId, name: currentUser.name, avatar: currentUser.avatar, picUrl: currentUser.picUrl || "", otherUserId: currentUser.uid, isGroup: false, lastMessage: "", timestamp: Date.now() };
+                    db.ref(`userChats/${currentUser.uid}/${chatId}`).set(myChatData);
+                    db.ref(`userChats/${otherUserId}/${chatId}`).set(theirChatData);
+                }
+                openChat(chatId, otherUser.name, otherUser.avatar, otherUser.picUrl, otherUserId, false);
+            });
+        }
+
+        function openChat(chatId, name, avatar, picUrl, otherUserId, isGroup) {
+            currentChatId = chatId;
+            document.getElementById('chatName').innerText = name;
+            document.getElementById('chatAvatar').innerHTML = picUrl ? `<img src="${picUrl}" alt="">` : avatar;
+            
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('chatView').style.display = 'flex';
+            if (window.innerWidth <= 768) document.getElementById('sidebar').classList.add('hidden');
+
+            if (isGroup) {
+                document.getElementById('chatStatus').innerText = "Group chat";
+                document.getElementById('groupInfoBtn').style.display = 'block';
+            } else {
+                document.getElementById('groupInfoBtn').style.display = 'none';
+                if (otherUserId) {
+                    db.ref(`users/${otherUserId}/status`).on('value', snap => {
+                        document.getElementById('chatStatus').innerText = snap.val() || 'offline';
+                    });
+                    db.ref(`typing/${chatId}/${otherUserId}`).on('value', snap => {
+                        if (snap.val()) document.getElementById('chatStatus').innerText = "typing...";
+                    });
+                }
+            }
+
+            db.ref(`chats/${chatId}/messages`).on('value', snapshot => {
+                const container = document.getElementById('chatMessages');
+                container.innerHTML = '';
+                let lastSenderId = null;
+                snapshot.forEach(child => {
+                    const msg = child.val();
+                    const isSent = msg.senderId === currentUser.uid;
+                    
+                    if (!isSent && msg.status !== 'seen' && !isGroup) {
+                        db.ref(`chats/${chatId}/messages/${child.key}/status`).set('seen');
+                    }
+
+                    if (!isSent && lastSenderId !== msg.senderId) {
+                        document.getElementById('messageSound').play().catch(e=>{});
+                    }
+
+                    const ticks = msg.status === 'seen' ? '✓✓' : (msg.status === 'delivered' ? '✓✓' : '✓');
+                    const div = document.createElement('div');
+                    div.className = `message ${isSent ? 'sent' : 'received'}`;
+                    
+                    let contentHtml = '';
+                    if (msg.type === 'image') {
+                        const imgEl = document.createElement('img');
+                        imgEl.src = msg.url;
+                        imgEl.className = 'chat-image';
+                        imgEl.onclick = () => openLightbox(msg.url);
+                        div.appendChild(imgEl);
+                        
+                        const metaDiv = document.createElement('div');
+                        metaDiv.className = 'msg-meta';
+                        metaDiv.innerHTML = `<span class="time">${formatTime(msg.timestamp)}</span>${isSent ? `<span class="tick">${ticks}</span>` : ''}`;
+                        div.appendChild(metaDiv);
+                    } else {
+                        if (msg.type === 'file') {
+                            contentHtml = `<a href="${msg.url}" download="${msg.text}" class="chat-file"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> ${msg.text}</a>`;
+                        } else {
+                            contentHtml = msg.text;
+                        }
+                        div.innerHTML = `${contentHtml} <div class="msg-meta"><span class="time">${formatTime(msg.timestamp)}</span>${isSent ? `<span class="tick">${ticks}</span>` : ''}</div>`;
+                    }
+                    container.appendChild(div);
+                    lastSenderId = msg.senderId;
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const text = input.value.trim();
+            if (!text || !currentChatId) return;
+            pushMessage({ type: 'text', text });
+            input.value = '';
+            // Fix for mobile keyboard causing scroll issues
+            window.scrollTo(0, 0);
+            input.focus();
+        }
+
+        function pushMessage(msgData) {
+            msgData.senderId = currentUser.uid;
+            msgData.timestamp = Date.now();
+            msgData.status = 'sent';
+            
+            db.ref(`chats/${currentChatId}/messages`).push(msgData);
+
+            db.ref(`userChats/${currentUser.uid}/${currentChatId}`).once('value', snap => {
+                const chat = snap.val();
+                if (chat) {
+                    let preview = msgData.text;
+                    if (msgData.type === 'image') preview = "Image";
+                    if (msgData.type === 'file') preview = "Document";
+                    
+                    db.ref(`userChats/${currentUser.uid}/${currentChatId}`).update({ lastMessage: preview, timestamp: Date.now() });
+                    if (chat.isGroup) {
+                        db.ref(`chats/${currentChatId}/info/members`).once('value', mSnap => {
+                            mSnap.forEach(m => {
+                                db.ref(`userChats/${m.key}/${currentChatId}`).update({ lastMessage: preview, timestamp: Date.now() });
+                            });
+                        });
+                    } else {
+                        db.ref(`userChats/${chat.otherUserId}/${currentChatId}`).update({ lastMessage: preview, timestamp: Date.now() });
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // 8. FILE & IMAGE UPLOADS
+        // ==========================================
+        function handleFileUpload(e, type) {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 1024 * 1024) return alert("File too large! Max 1MB for database storage.");
+            
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                if (type === 'image') {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        const MAX_WIDTH = 400; 
+                        const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scale;
+                        ctx.drawImage(img, 0,0, canvas.width, canvas.height);
+                        const base64Url = canvas.toDataURL('image/jpeg', 0.7);
+                        pushMessage({ type: 'image', text: "Image", url: base64Url });
+                    };
+                    img.src = event.target.result;
+                } else {
+                    pushMessage({ type: 'file', text: file.name, url: event.target.result });
+                }
+            };
+            reader.readAsDataURL(file);
+            e.target.value = "";
+        }
+
+        // ==========================================
+        // 9. PROFILE & GROUP IMAGE SETTINGS
+        // ==========================================
+        function renderMyAvatar() {
+            const btn = document.getElementById('myProfileBtn');
+            btn.innerHTML = currentUser.picUrl ? `<img src="${currentUser.picUrl}" alt="Profile">` : currentUser.avatar;
+        }
+
+        function openProfile() {
+            document.getElementById('profileName').value = currentUser.name;
+            document.getElementById('profileAbout').value = currentUser.about || "";
+            tempBase64Pic = currentUser.picUrl || null;
+            const av = document.getElementById('profileAvatar');
+            av.innerHTML = currentUser.picUrl ? `<img src="${currentUser.picUrl}" alt="Profile">` : currentUser.avatar;
+            document.getElementById('profileModal').style.display = 'flex';
+        }
+
+        function handleImageUpload(e, type) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_WIDTH = 150;
+                    const scale = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                    if (type === 'profile') {
+                        tempBase64Pic = base64;
+                        document.getElementById('profileAvatar').innerHTML = `<img src="${tempBase64Pic}" alt="Profile">`;
+                    } else if (type === 'group') {
+                        tempGroupBase64Pic = base64;
+                        document.getElementById('groupAvatarPreview').innerHTML = `<img src="${tempGroupBase64Pic}" alt="Group">`;
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveProfile() {
+            const name = document.getElementById('profileName').value;
+            const about = document.getElementById('profileAbout').value;
+            const updates = { name, about, picUrl: tempBase64Pic || "", avatar: name.substring(0, 2).toUpperCase() };
+            db.ref(`users/${currentUser.uid}`).update(updates).then(() => {
+                currentUser = { ...currentUser, ...updates };
+                localStorage.setItem('wa_clone_user', JSON.stringify(currentUser));
+                renderMyAvatar();
+                closePopUp('profileModal');
+            });
+        }
+
+        // ==========================================
+        // 10. GROUP INFO & ADMIN CONTROLS
+        // ==========================================
+        function openGroupInfo() {
+            if (!currentChatId) return;
+            db.ref(`chats/${currentChatId}/info`).once('value', snap => {
+                if (!snap.exists()) return;
+                currentGroupInfo = snap.val();
+                
+                document.getElementById('groupInfoMainView').style.display = 'block';
+                document.getElementById('addMemberView').style.display = 'none';
+                
+                document.getElementById('groupInfoName').style.display = 'block';
+                document.getElementById('editGroupNameBtn').style.display = 'none';
+                document.getElementById('editGroupNameInput').style.display = 'none';
+                document.getElementById('saveGroupNameBtn').style.display = 'none';
+
+                document.getElementById('groupInfoName').innerText = currentGroupInfo.name;
+                document.getElementById('groupInfoAvatar').innerHTML = currentGroupInfo.picUrl ? `<img src="${currentGroupInfo.picUrl}" alt="">` : currentGroupInfo.name.substring(0, 2).toUpperCase();
+                
+                const isAdmin = currentGroupInfo.createdBy === currentUser.uid;
+                document.getElementById('adminControls').style.display = isAdmin ? 'block' : 'none';
+                document.getElementById('deleteGroupBtn').style.display = isAdmin ? 'block' : 'none';
+                document.getElementById('addMemberBtn').style.display = isAdmin ? 'block' : 'none';
+                document.getElementById('changeGroupInfoPicBtn').style.display = isAdmin ? 'inline-block' : 'none';
+                document.getElementById('editGroupNameBtn').style.display = isAdmin ? 'inline-block' : 'none';
+                
+                db.ref(`userChats/${currentUser.uid}/${currentChatId}/isFavorite`).once('value', favSnap => {
+                    const isFav = favSnap.val();
+                    const btn = document.getElementById('favoriteGroupBtn');
+                    if (isFav) {
+                        btn.innerText = "★ Remove from Favorite";
+                        btn.style.color = "#ffc107";
+                        btn.style.borderColor = "#ffc107";
+                    } else {
+                        btn.innerText = "☆ Add to Favorite";
+                        btn.style.color = "var(--accent)";
+                        btn.style.borderColor = "var(--accent)";
+                    }
+                });
+
+                if (isAdmin) {
+                    document.getElementById('editInfoPerm').checked = currentGroupInfo.canEditInfo !== false;
+                    document.getElementById('sendMsgPerm').checked = currentGroupInfo.canSendMessages !== false;
+                }
+
+                const membersList = document.getElementById('groupMembersList');
+                membersList.innerHTML = '';
+                const memberIds = Object.keys(currentGroupInfo.members || {});
+                memberIds.forEach(uid => {
+                    db.ref(`users/${uid}`).once('value', userSnap => {
+                        if (userSnap.exists()) {
+                            const user = userSnap.val();
+                            const div = document.createElement('div');
+                            div.className = 'list-item';
+                            
+                            let actionsHtml = '';
+                            if (isAdmin && uid !== currentUser.uid) {
+                                actionsHtml = `
+                                    <div style="display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; margin-left: 10px;">
+                                        <button onclick="removeMember('${uid}')" style="background:transparent; color:#f44336; font-size:11px; padding:5px 8px; border:1px solid #f44336; border-radius:4px; cursor:pointer;">Remove</button>
+                                        <button onclick="blockMember('${uid}')" style="background:transparent; color:#ff9800; font-size:11px; padding:5px 8px; border:1px solid #ff9800; border-radius:4px; cursor:pointer;">Block</button>
+                                    </div>
+                                `;
+                            }
+
+                            div.innerHTML = `
+                                <div class="avatar">${user.picUrl ? `<img src="${user.picUrl}" alt="">` : user.avatar}</div>
+                                <div class="list-item-info">
+                                    <div class="top-row">
+                                        <span class="name">${user.name}</span>
+                                        ${uid === currentGroupInfo.createdBy ? '<span style="color:var(--accent); font-size:12px; margin-left: 5px;">Admin</span>' : ''}
+                                    </div>
+                                </div>
+                                ${actionsHtml}`;
+                            membersList.appendChild(div);
+                        }
+                    });
+                });
+
+                document.getElementById('groupInfoModal').style.display = 'flex';
+            });
+        }
+
+        function updateGroupPermission(perm, value) {
+            if (!currentChatId || !currentGroupInfo) return;
+            db.ref(`chats/${currentChatId}/info`).update({ [perm]: value });
+        }
+
+        function deleteGroup() {
+            if (!currentChatId || !currentGroupInfo) return;
+            if (currentGroupInfo.createdBy !== currentUser.uid) return alert("Only admin can delete the group.");
+            if (!confirm("Are you sure you want to delete this group?")) return;
+
+            const memberIds = Object.keys(currentGroupInfo.members || {});
+            const updates = {};
+            updates[`chats/${currentChatId}`] = null;
+            memberIds.forEach(uid => { updates[`userChats/${uid}/${currentChatId}`] = null; });
+            
+            db.ref().update(updates).then(() => {
+                closePopUp('groupInfoModal');
+                document.getElementById('chatView').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'flex';
+                alert("Group deleted successfully.");
+            });
+        }
+
+        function toggleFavoriteGroup() {
+            if (!currentChatId) return;
+            const favRef = db.ref(`userChats/${currentUser.uid}/${currentChatId}/isFavorite`);
+            favRef.once('value', snap => {
+                favRef.set(!snap.val());
+                openGroupInfo();
+            });
+        }
+
+        function handleGroupInfoPicUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const MAX_WIDTH = 150;
+                    const scale = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scale;
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    db.ref(`chats/${currentChatId}/info/picUrl`).set(base64);
+                    
+                    const memberIds = Object.keys(currentGroupInfo.members || {});
+                    memberIds.forEach(uid => {
+                        db.ref(`userChats/${uid}/${currentChatId}/picUrl`).set(base64);
+                    });
+                    
+                    document.getElementById('groupInfoAvatar').innerHTML = `<img src="${base64}" alt="">`;
+                    document.getElementById('chatAvatar').innerHTML = `<img src="${base64}" alt="">`;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+            e.target.value = "";
+        }
+
+        function saveGroupName() {
+            const newName = document.getElementById('editGroupNameInput').value.trim();
+            if (!newName) return alert("Group name cannot be empty");
+            
+            db.ref(`chats/${currentChatId}/info/name`).set(newName);
+            
+            const memberIds = Object.keys(currentGroupInfo.members || {});
+            memberIds.forEach(uid => {
+                db.ref(`userChats/${uid}/${currentChatId}/name`).set(newName);
+            });
+            
+            document.getElementById('chatName').innerText = newName;
+            openGroupInfo();
+        }
+
+        function openAddMemberView() {
+            document.getElementById('groupInfoMainView').style.display = 'none';
+            document.getElementById('addMemberView').style.display = 'block';
+            
+            const list = document.getElementById('addMemberUserList');
+            list.innerHTML = 'Loading users...';
+            
+            db.ref('users').once('value', snapshot => {
+                list.innerHTML = '';
+                const currentMembers = currentGroupInfo.members || {};
+                const blockedUsers = currentGroupInfo.blockedUsers || {};
+                
+                snapshot.forEach(child => {
+                    const user = child.val();
+                    const uid = child.key;
+                    if (currentMembers[uid] || blockedUsers[uid]) return;
+
+                    const div = document.createElement('div');
+                    div.className = 'list-item';
+                    div.innerHTML = `
+                        <div class="avatar">${user.picUrl ? `<img src="${user.picUrl}" alt="">` : user.avatar}</div>
+                        <div class="list-item-info">
+                            <div class="top-row"><span class="name">${user.name}</span></div>
+                        </div>
+                        <button style="background:var(--accent); color:white; padding:5px 15px; border-radius:4px; font-size:12px; cursor:pointer;">Add</button>
+                    `;
+                    div.querySelector('button').onclick = () => addMemberToGroup(uid, user);
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        function addMemberToGroup(uid, user) {
+            db.ref(`chats/${currentChatId}/info/members/${uid}`).set(true);
+            
+            const groupData = {
+                chatId: currentChatId, 
+                name: currentGroupInfo.name, 
+                avatar: currentGroupInfo.name.substring(0, 2).toUpperCase(),
+                picUrl: currentGroupInfo.picUrl || "", 
+                isGroup: true, 
+                lastMessage: "You were added", 
+                timestamp: Date.now()
+            };
+            db.ref(`userChats/${uid}/${currentChatId}`).set(groupData);
+            
+            alert(user.name + " added to group.");
+            openGroupInfo();
+        }
+
+        function removeMember(uid) {
+            if (!confirm("Remove this member from the group?")) return;
+            db.ref(`chats/${currentChatId}/info/members/${uid}`).remove();
+            db.ref(`userChats/${uid}/${currentChatId}`).remove();
+            openGroupInfo();
+        }
+
+        function blockMember(uid) {
+            if (!confirm("Block this member from rejoining the group?")) return;
+            db.ref(`chats/${currentChatId}/info/blockedUsers/${uid}`).set(true);
+            db.ref(`chats/${currentChatId}/info/members/${uid}`).remove();
+            db.ref(`userChats/${uid}/${currentChatId}`).remove();
+            openGroupInfo();
+        }
+
+        // ==========================================
+        // 11. WEBRTC AUDIO / VIDEO CALLS
+        // ==========================================
+        async function startCall(isVideo) {
+            if (!currentChatId) return alert("Open a chat first");
+            isCallCreator = true;
+            currentCallId = db.ref('calls').push().key;
+            
+            document.getElementById('callModal').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "Calling...";
+            document.getElementById('callStatusText').style.display = 'block';
+            document.getElementById('endCallBtn').style.display = 'flex';
+            document.getElementById('incomingCallActions').style.display = 'none';
+            document.getElementById('remoteVideo').style.display = 'none';
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: isVideo, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').style.display = isVideo ? 'block' : 'none';
+                
+                db.ref(`calls/${currentCallId}`).set({ callerId: currentUser.uid, chatId: currentChatId, isVideo, status: 'ringing' });
+                
+                // Timeout if not answered in 30s
+                callTimeout = setTimeout(() => {
+                    if (currentCallId) {
+                        alert("No answer");
+                        endCall();
+                    }
+                }, 30000);
+
+                db.ref(`calls/${currentCallId}`).on('value', async (snap) => {
+                    const callData = snap.val();
+                    if (!callData) { endCall(); return; }
+                    if (callData.status === 'accepted' && !peerConnection) {
+                        clearTimeout(callTimeout);
+                        document.getElementById('callStatusText').innerText = "Connected";
+                        await createPeerConnection();
+                        const offer = await peerConnection.createOffer();
+                        await peerConnection.setLocalDescription(offer);
+                        db.ref(`calls/${currentCallId}/offer`).set({ sdp: offer.sdp, type: offer.type });
+                    } else if (callData.status === 'rejected') {
+                        clearTimeout(callTimeout);
+                        endCall();
+                        alert("Call rejected");
+                    }
+                });
+            } catch (err) {
+                alert("Camera/Mic access denied or not available.");
+                endCall();
+            }
+        }
+
+        db.ref('calls').orderByChild('status').equalTo('ringing').on('child_added', async (snap) => {
+            const callData = snap.val();
+            const callId = snap.key;
+            if (callData.callerId !== currentUser.uid) {
+                if (currentCallId === callId) return; 
+                
+                currentCallId = callId;
+                isCallCreator = false;
+                
+                document.getElementById('callModal').style.display = 'flex';
+                document.getElementById('callStatusText').innerText = "Incoming call...";
+                document.getElementById('callStatusText').style.display = 'block';
+                
+                document.getElementById('endCallBtn').style.display = 'none';
+                document.getElementById('incomingCallActions').style.display = 'flex';
+                document.getElementById('remoteVideo').style.display = 'none';
+
+                // Store temporarily to use in acceptCall
+                window.incomingCallData = callData;
+            }
+        });
+
+        async function acceptCall() {
+            const callData = window.incomingCallData;
+            if (!callData) return;
+
+            document.getElementById('incomingCallActions').style.display = 'none';
+            document.getElementById('endCallBtn').style.display = 'flex';
+            document.getElementById('callStatusText').innerText = "Connecting...";
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: callData.isVideo, audio: true });
+                document.getElementById('localVideo').srcObject = localStream;
+                document.getElementById('localVideo').style.display = callData.isVideo ? 'block' : 'none';
+                
+                db.ref(`calls/${currentCallId}`).update({ status: 'accepted' });
+                
+                db.ref(`calls/${currentCallId}/offer`).on('value', async (offSnap) => {
+                    if (offSnap.exists() && !peerConnection) {
+                        await createPeerConnection();
+                        await peerConnection.setRemoteDescription(new RTCSessionDescription(offSnap.val()));
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        db.ref(`calls/${currentCallId}/answer`).set({ sdp: answer.sdp, type: answer.type });
+                    }
+                });
+            } catch (err) {
+                alert("Camera/Mic access denied.");
+                endCall();
+            }
+        }
+
+        function rejectCall() {
+            if (currentCallId) db.ref(`calls/${currentCallId}`).update({ status: 'rejected' });
+            endCall();
+        }
+
+        async function createPeerConnection() {
+            peerConnection = new RTCPeerConnection(configuration);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+            peerConnection.ontrack = (event) => {
+                document.getElementById('remoteVideo').srcObject = event.streams[0];
+                document.getElementById('remoteVideo').style.display = 'block';
+                document.getElementById('callStatusText').style.display = 'none';
+            };
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) db.ref(`calls/${currentCallId}/ice/${currentUser.uid}`).push(event.candidate.toJSON());
+            };
+            db.ref(`calls/${currentCallId}/ice`).on('child_added', (snap) => {
+                snap.forEach(c => { if (c.key !== currentUser.uid) peerConnection.addIceCandidate(c.val()); });
+            });
+        }
+
+        function endCall() {
+            if (callTimeout) clearTimeout(callTimeout);
+            if (localStream) localStream.getTracks().forEach(track => track.stop());
+            if (peerConnection) peerConnection.close();
+            if (currentCallId) db.ref(`calls/${currentCallId}`).remove();
+            
+            peerConnection = null; 
+            currentCallId = null;
+            window.incomingCallData = null;
+            
+            document.getElementById('callModal').style.display = 'none';
+            document.getElementById('remoteVideo').style.display = 'none';
+            document.getElementById('callStatusText').style.display = 'block';
+            document.getElementById('localVideo').style.display = 'none';
+        }
+
+        // ==========================================
+        // 12. UTILITIES
+        // ==========================================
+        function formatTime(ts) {
+            if (!ts) return '';
+            return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        function initTheme() {
+            const theme = localStorage.getItem('wa_theme') || 'dark';
+            document.body.setAttribute('data-theme', theme);
+            document.getElementById('themeToggle').checked = theme === 'dark';
+        }
+    </script>
+</body>
+</html>

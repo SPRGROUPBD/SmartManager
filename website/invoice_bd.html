@@ -1,0 +1,1725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice & Management Portal</title>
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --secondary: #64748b;
+        --danger: #dc2626;
+        --success: #16a34a;
+        --warning: #f59e0b;
+        --info: #0ea5e9;
+        --bg: #f1f5f9;
+        --card-bg: #ffffff;
+        --text: #1e293b;
+        --border: #e2e8f0;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+        font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        color: var(--text);
+        margin: 0;
+        padding: 0;
+        background-color: var(--bg);
+    }
+    
+    @page { size: letter; margin: 1.5cm; }
+
+    @media print {
+        body { background: #fff !important; }
+        .no-print, .tab-bar, .quick-entry-container, .save-invoice-btn, .action-bar, .modal-overlay { display: none !important; }
+        .tab-content { display: none !important; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; width: 100% !important; }
+        .tab-content.active { display: block !important; }
+        .item-table th, .item-table td { white-space: nowrap !important; font-size: 11px !important; padding: 4px 6px !important; }
+        .print-input { border: none !important; border-bottom: 1px solid #000 !important; width: 90% !important; font-size: 11px !important; outline: none !important; }
+    }
+
+    /* Navigation */
+    .tab-bar {
+        background: var(--card-bg); padding: 10px 15px; display: flex; gap: 8px; justify-content: space-between;
+        border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.05); overflow-x: auto;
+    }
+    .tab-left-group { display: flex; gap: 4px; flex-wrap: nowrap; }
+    .tab-btn {
+        background: transparent; color: var(--secondary); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500;
+        cursor: pointer; border-radius: 6px; transition: all 0.2s; white-space: nowrap;
+    }
+    .tab-btn:hover { background: #f1f5f9; color: var(--primary); }
+    .tab-btn.active { background: #eff6ff; color: var(--primary); font-weight: 600; }
+    .logout-btn { background: #fee2e2; color: var(--danger); border: none; padding: 8px 12px; font-size: 14px; font-weight: 500; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+    .logout-btn:hover { background: var(--danger); color: white; }
+
+    /* Layout */
+    .tab-content {
+        display: none; padding: 20px; max-width: 1200px; margin: 20px auto; background: var(--card-bg);
+        border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid var(--border);
+    }
+    .tab-content.active { display: block; }
+    .page-container { width: 100%; }
+
+    /* Dashboard Grid */
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .kpi-card {
+        background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border);
+        border-left: 5px solid var(--primary); box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 8px 12px rgba(0,0,0,0.08); }
+    .kpi-title { font-size: 13px; color: var(--secondary); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+    .kpi-value { font-size: 28px; font-weight: 700; color: var(--text); }
+    .kpi-sub { font-size: 12px; color: var(--secondary); margin-top: 5px; }
+    .dashboard-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+    
+    /* Invoice Header */
+    .header-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .header-card { background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid var(--border); }
+    .header-card h4 { margin: 0 0 8px 0; color: var(--secondary); font-size: 12px; text-transform: uppercase; }
+    .header-card p { margin: 2px 0; font-weight: 500; }
+    
+    /* Tables */
+    .table-wrapper { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
+    .item-table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 800px; }
+    .item-table th, .item-table td { border: 1px solid var(--border); padding: 10px 12px; text-align: left; font-size: 13px; white-space: nowrap; }
+    .item-table th { background: #f8fafc; font-weight: 600; color: var(--secondary); }
+    .item-table tbody tr:hover { background: #f8fafc; }
+    
+    .text-right { text-align: right !important; }
+    .text-center { text-align: center; }
+
+    /* Forms */
+    .management-form { max-width: 600px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 13px; color: var(--secondary); }
+    .form-group input, .form-group select {
+        width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; background: #fff;
+    }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    
+    .btn { padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: var(--text); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-warning { background: var(--warning); color: white; }
+    
+    .action-btn { padding: 6px 10px; font-size: 12px; margin-right: 4px; cursor: pointer; border: none; border-radius: 4px; color: white; font-weight: 500; margin-bottom: 4px; }
+
+    /* Quick Entry */
+    .quick-entry-container { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 15px; align-items: flex-end; }
+    
+    /* Footer */
+    .invoice-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+    .totals-table { width: 100%; border-collapse: collapse; }
+    .totals-table td { padding: 8px 10px; font-size: 14px; }
+    .net-payable-cell { border-top: 2px solid var(--text); border-bottom: 2px solid var(--text); font-weight: bold; font-size: 16px; }
+
+    /* Modal (Popup) */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: flex-start; z-index: 10000; padding: 50px 20px; overflow-y: auto; }
+    .modal-box { background: var(--card-bg); padding: 25px; border-radius: 8px; width: 100%; max-width: 600px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); position: relative; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .modal-header h3 { margin: 0; }
+    .modal-close-btn { background: #fee2e2; color: var(--danger); border: none; width: 30px; height: 30px; border-radius: 4px; font-size: 18px; cursor: pointer; font-weight: bold; }
+    .modal-close-btn:hover { background: var(--danger); color: white; }
+
+    /* Login Screen */
+    .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+    .login-box { background: var(--card-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 400px; border: 1px solid var(--border); }
+    .login-box h2 { margin: 0 0 20px 0; color: var(--text); text-align: center; }
+    .login-box input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+    .login-box button { width: 100%; padding: 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    .login-box button:hover { background: var(--primary-hover); }
+    .login-error { color: var(--danger); font-size: 13px; margin-top: 10px; display: none; text-align: center; }
+
+    /* Simple Order & User Pages Styles */
+    .simple-order-box { max-width: 950px; margin: 20px auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
+    .simple-order-box h2 { margin: 0 0 25px; color: #1f4e79; }
+    .simple-quick-entry { margin-top: 25px; padding: 18px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; }
+    .simple-entry-row { display: grid; grid-template-columns: 1fr 140px 140px; gap: 12px; align-items: end; }
+    .simple-add-btn { width: 100%; padding: 11px; background: var(--success); color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+    .simple-add-btn:hover { background: #157347; }
+    .simple-product-table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+    .simple-product-table th, .simple-product-table td { border: 1px solid var(--border); padding: 10px; }
+    .simple-product-table th { background: #f8fafc; text-align: left; }
+    .simple-submit-btn { width: 100%; margin-top: 20px; padding: 13px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .simple-submit-btn:hover { background: var(--primary-hover); }
+
+    /* User Dashboard Styles */
+    .user-dashboard-container { max-width: 950px; margin: 20px auto; padding: 4px; font-family: Arial, Helvetica, sans-serif; color: #111; }
+    .info-box { background: #fff; border: 1px solid #d9dee3; border-radius: 3px; overflow: hidden; }
+    .info-row { display: grid; grid-template-columns: 32% 68%; min-height: 35px; border-bottom: 1px solid #d9dee3; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { padding: 9px 12px; border-right: 1px solid #d9dee3; font-size: 13px; }
+    .info-value { padding: 9px 8px; font-size: 13px; font-weight: bold; }
+    .summary-area { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 24px; }
+    .summary-box { border: 1px solid #d9dee3; border-radius: 4px; padding: 8px 10px 10px; background: #fff; position: relative; }
+    .summary-title { position: absolute; top: -9px; left: 10px; padding: 0 5px; background: #fff; color: #174cff; font-size: 12px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; }
+    .summary-row strong { font-size: 12px; }
+    .total-dues { margin-top: 10px; padding: 7px 8px; background: #fff; border-radius: 0 0 10px 10px; display: flex; justify-content: space-between; color: red; font-size: 12px; font-weight: bold; }
+    .menu-box { margin-top: 10px; padding: 10px; background: #fff; border-radius: 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .menu-btn { min-height: 62px; background: #087ff5; border-radius: 11px; color: white; text-decoration: none; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,.12); transition: .2s; border: none; cursor: pointer; }
+    .menu-btn:hover { background: #006fe0; transform: translateY(-1px); }
+    .menu-icon { font-size: 22px; line-height: 24px; margin-bottom: 4px; }
+    .menu-text { font-size: 13px; }
+    
+    @media (max-width: 600px) {
+        .summary-area { grid-template-columns: 1fr 1fr; }
+        .menu-box { grid-template-columns: repeat(2, 1fr); }
+        .menu-btn { min-height: 70px; }
+    }
+    @media (max-width: 400px) {
+        .summary-area { grid-template-columns: 1fr; }
+        .menu-box { grid-template-columns: 1fr 1fr; }
+    }
+
+    /* Responsive Media Queries */
+    @media (max-width: 992px) { .dashboard-row { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) {
+        .tab-content { padding: 15px; margin: 10px auto; }
+        .quick-entry-container { grid-template-columns: 1fr; }
+        .simple-entry-row { grid-template-columns: 1fr; }
+        .invoice-footer { grid-template-columns: 1fr; }
+        .item-table { min-width: 600px; }
+        .kpi-value { font-size: 22px; }
+        .dashboard-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+        .header-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+        .tab-bar { padding: 8px 10px; }
+        .tab-btn { padding: 8px 10px; font-size: 13px; }
+        .dashboard-grid { grid-template-columns: 1fr 1fr; }
+        .btn { width: 100%; margin-bottom: 10px; }
+        .action-btn { width: 100%; margin-right: 0; }
+        .modal-box { padding: 20px; }
+    }
+</style>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<!-- SheetJS for Excel Import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBVCQyLO6GG0ylIzYdIij4GfulHWchnVp4",
+      authDomain: "livetv-5a773.firebaseapp.com",
+      databaseURL: "https://livetv-5a773-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "livetv-5a773",
+      storageBucket: "livetv-5a773.appspot.com",
+      messagingSenderId: "814020931617",
+      appId: "1:814020931617:web:710213b3212fb039f67360",
+      measurementId: "G-9YBS0CLR63"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '' };
+    let editingRow = null; // Tracks the row being edited on double click
+    let activeCustomerType = null; 
+    let activeCustomerDccDisc = 0; 
+    let currentUser = null; 
+    let isAdmin = false; 
+    let routeOptions = []; 
+    let currentSummaryFilter = null; 
+    let customerCache = []; 
+    let simpleProducts = [];
+    let onlineOrdersCache = [];
+    let currentProcessingOrderNo = null; // Tracks order when admin creates invoice
+
+    // --- AUTHENTICATION ---
+    function doLogin() {
+        const userId = document.getElementById('login-user').value.trim();
+        const password = document.getElementById('login-pass').value;
+        const errorEl = document.getElementById('login-error');
+        errorEl.style.display = 'none';
+
+        if (userId === 'KS' && password === 'Monico@Ku007') {
+            currentUser = 'KS';
+            isAdmin = true;
+            loginSuccess();
+            return;
+        }
+
+        db.ref('INVOICE/mpos/' + userId).once('value').then((snap) => {
+            if (snap.exists()) {
+                const mpoData = snap.val();
+                if (mpoData.password === password && mpoData.status !== 'inactive') {
+                    currentUser = userId;
+                    isAdmin = false;
+                    loginSuccess();
+                } else {
+                    errorEl.innerText = "Invalid password or inactive account.";
+                    errorEl.style.display = 'block';
+                }
+            } else {
+                errorEl.innerText = "User ID not found.";
+                errorEl.style.display = 'block';
+            }
+        }).catch(err => {
+            errorEl.innerText = "Login error: " + err.message;
+            errorEl.style.display = 'block';
+        });
+    }
+
+    function loginSuccess() {
+        document.getElementById('login-overlay').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+
+        if (isAdmin) {
+            document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = '');
+            document.getElementById('admin-nav').style.display = 'flex';
+            document.getElementById('user-dashboard').style.display = 'none';
+            document.getElementById('simple-order-page').style.display = 'none';
+            document.getElementById('user-orders-page').style.display = 'none';
+            switchTab(event, 'tab-dashboard');
+        } else {
+            document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = 'none');
+            document.getElementById('admin-nav').style.display = 'none';
+            document.getElementById('user-dashboard').style.display = 'block';
+            document.getElementById('simple-order-page').style.display = 'none';
+            document.getElementById('user-orders-page').style.display = 'none';
+            loadUserDashboardData();
+        }
+
+        loadMpos();
+        loadProducts();
+        loadCustomers();
+        loadInvoiceHistory();
+        loadSummaries();
+        generateCustomerCode();
+        generateInvoiceNo();
+        loadRoutes(); 
+        loadDashboardData(); 
+        
+        const cTypeEl = document.getElementById('c-type');
+        if(cTypeEl) {
+            cTypeEl.addEventListener('change', function() {
+                document.getElementById('c-dcc-disc-group').style.display = (this.value === 'D') ? 'block' : 'none';
+            });
+        }
+    }
+
+    function logout() { location.reload(); }
+
+    // --- USER DASHBOARD LOGIC ---
+    function showOrderEntryPage() {
+        document.getElementById('user-dashboard').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'none';
+        document.getElementById('simple-order-page').style.display = 'block';
+        loadSimpleOrderData();
+    }
+
+    function showUserDashboard() {
+        document.getElementById('simple-order-page').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'none';
+        document.getElementById('user-dashboard').style.display = 'block';
+        loadUserDashboardData();
+    }
+
+    function showUserOrdersPage() {
+        document.getElementById('user-dashboard').style.display = 'none';
+        document.getElementById('simple-order-page').style.display = 'none';
+        document.getElementById('user-orders-page').style.display = 'block';
+        loadUserOrders();
+    }
+
+    async function loadUserDashboardData() {
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        const today = new Date();
+        document.getElementById("dash-month").textContent = monthNames[today.getMonth()];
+
+        const userSnap = await db.ref('INVOICE/mpos/' + currentUser).once('value');
+        const uData = userSnap.val() || {};
+        document.getElementById("dash-userName").textContent = uData.name ? `${uData.name} (${uData.code})` : currentUser;
+        document.getElementById("dash-area").textContent = uData.route || 'N/A';
+        document.getElementById("dash-joiningDate").textContent = uData.joiningDate || 'N/A';
+
+        let currTP = 0, currNet = 0, prevTP = 0, prevNet = 0;
+        const invSnap = await db.ref('INVOICE/invoices').orderByChild('mpoCode').equalTo(currentUser).once('value');
+        
+        invSnap.forEach(child => {
+            const inv = child.val();
+            const invDate = new Date(inv.date);
+            if (isNaN(invDate)) return;
+            
+            if (invDate.getMonth() === today.getMonth() && invDate.getFullYear() === today.getFullYear()) {
+                currTP += parseFloat(inv.totalTpSales) || 0;
+                currNet += parseFloat(inv.netPayable) || 0;
+            } else if (invDate.getMonth() === today.getMonth() - 1 && invDate.getFullYear() === today.getFullYear()) {
+                prevTP += parseFloat(inv.totalTpSales) || 0;
+                prevNet += parseFloat(inv.netPayable) || 0;
+            }
+        });
+
+        document.getElementById("dash-curr-tp").textContent = currTP.toFixed(2);
+        document.getElementById("dash-curr-net").textContent = currNet.toFixed(2);
+        document.getElementById("dash-prev-tp").textContent = prevTP.toFixed(2);
+        document.getElementById("dash-prev-net").textContent = prevNet.toFixed(2);
+        document.getElementById("dash-dues").textContent = (currNet + prevNet).toFixed(2);
+    }
+
+    function loadUserOrders() {
+        const tbody = document.getElementById('user-orders-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">Loading...</td></tr>';
+        
+        db.ref('INVOICE/simple_orders').orderByChild('orderBy').equalTo(currentUser).on('value', (snap) => {
+            let html = '';
+            if (!snap.exists()) {
+                html = '<tr><td colspan="4" class="text-center">No orders found</td></tr>';
+            } else {
+                const orders = [];
+                snap.forEach(child => orders.push(child.val()));
+                orders.sort((a, b) => (b.orderNo || "").localeCompare(a.orderNo || ""));
+                
+                orders.forEach(order => {
+                    const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '';
+                    let status = order.status || 'pending';
+                    let statusColor = status === 'invoiced' ? 'green' : (status === 'cancelled' ? 'red' : 'orange');
+                    html += `<tr>
+                        <td>${order.orderNo}</td>
+                        <td>${dateStr}</td>
+                        <td>${order.customer}</td>
+                        <td style="color: ${statusColor}; font-weight: 600; text-transform: capitalize;">${status}</td>
+                    </tr>`;
+                });
+            }
+            tbody.innerHTML = html;
+        });
+    }
+
+    // --- MODAL CONTROLS ---
+    function openModal(modalId) { document.getElementById(modalId).style.display = 'flex'; }
+    function closeModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
+
+    // --- CUSTOM ALERT ---
+    function showAlert(message, title = "Notice", callback = null) {
+        document.getElementById('alert-message').innerText = message;
+        document.getElementById('alert-title').innerText = title;
+        const okBtn = document.getElementById('alert-ok-btn');
+        okBtn.onclick = function() {
+            closeModal('modal-alert');
+            if (typeof callback === 'function') {
+                callback();
+            }
+        };
+        document.getElementById('modal-alert').style.display = 'flex';
+    }
+
+    // --- HELPERS ---
+    function getCustomerTypeLabel(code) {
+        const map = { 'R': 'Retailer (R)', 'D': 'DCC (D)', 'H': 'Hospital (H)', 'C': 'Clinic (C)', 'SP': 'Special (SP)' };
+        return map[code] || 'N/A';
+    }
+
+    function calculateBonusQty(qty, bonusRuleStr) {
+        if (!bonusRuleStr) return 0;
+        let reqQty = 0, bonusPerSet = 0;
+        if (bonusRuleStr.toString().includes(':')) {
+            const parts = bonusRuleStr.toString().split(':');
+            reqQty = parseInt(parts[0]) || 0;
+            bonusPerSet = parseInt(parts[1]) || 0;
+        } else {
+            reqQty = parseInt(bonusRuleStr) || 0;
+            bonusPerSet = 1;
+        }
+        if (reqQty <= 0) return 0;
+        return Math.floor(qty / reqQty) * bonusPerSet;
+    }
+
+    function numberToWords(num) {
+        if (num === 0) return "Zero Only.";
+        let words = "";
+        function helper(n) {
+            const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+            const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+            if (n < 20) return ones[n];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " : "") + ones[n % 10];
+            if (n < 1000) return ones[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " " : "") + helper(n % 100);
+            if (n < 1000000) return helper(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " : "") + helper(n % 1000);
+            if (n < 1000000000) return helper(Math.floor(n / 1000000)) + " Million" + (n % 1000000 !== 0 ? " " : "") + helper(n % 1000000);
+            return helper(Math.floor(n / 1000000000)) + " Billion" + (n % 1000000000 !== 0 ? " " : "") + helper(n % 1000000000);
+        }
+        let intPart = Math.floor(num);
+        let decimalPart = Math.round((num - intPart) * 100);
+        if (intPart > 0) words = helper(intPart);
+        if (decimalPart > 0) {
+            if (intPart > 0) words += " and Paisa " + helper(decimalPart) + " Only.";
+            else words = "Paisa " + helper(decimalPart) + " Only.";
+        } else { words += " Taka Only."; }
+        return words;
+    }
+
+    function switchTab(evt, tabId) {
+        var contents = document.getElementsByClassName("tab-content");
+        for (var i = 0; i < contents.length; i++) contents[i].classList.remove("active");
+        var buttons = document.getElementsByClassName("tab-btn");
+        for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove("active");
+        document.getElementById(tabId).classList.add('active');
+        if(evt && evt.currentTarget) evt.currentTarget.classList.add("active");
+        if(tabId === 'tab-customer') generateCustomerCode();
+    }
+
+    function loadRoutes() {
+        db.ref('INVOICE/mpos').once('value').then(snap => {
+            const routes = new Set();
+            snap.forEach(child => { if(child.val().route) routes.add(child.val().route); });
+            routeOptions = Array.from(routes).sort();
+            const datalist = document.getElementById('route-list');
+            if (datalist) datalist.innerHTML = routeOptions.map(r => `<option value="${r}">`).join('');
+            const selectEl = document.getElementById('rep-sum-route');
+            if (selectEl) selectEl.innerHTML = '<option value="">Select Route</option>' + routeOptions.map(r => `<option value="${r}">${r}</option>`).join('');
+        });
+    }
+
+    // ---------------- SIMPLE ORDER ENTRY LOGIC ----------------
+    function loadSimpleOrderData() {
+        db.ref('INVOICE/customers').orderByChild('mpoCode').equalTo(currentUser).on('value', (snap) => {
+            let options = '';
+            snap.forEach(child => {
+                const c = child.val();
+                if(c.status !== 'inactive') {
+                    options += `<option value="${c.name} - ${c.code}">`;
+                }
+            });
+            document.getElementById('customerList').innerHTML = options;
+        });
+
+        db.ref('INVOICE/products').on('value', (snap) => {
+            let options = '';
+            snap.forEach(child => {
+                const p = child.val();
+                if(p.status === 'active') {
+                    options += `<option value="${p.name} - ${p.pack} (${p.code})">`;
+                }
+            });
+            document.getElementById('productList').innerHTML = options;
+        });
+    }
+
+    function addSimpleProduct() {
+        const productInput = document.getElementById("simple-product");
+        const qtyInput = document.getElementById("simple-quantity");
+        const product = productInput.value.trim();
+        const qty = Number(qtyInput.value);
+
+        if (!product) { alert("Please select Product / Service."); productInput.focus(); return; }
+        if (!qty || qty < 1) { alert("Please enter quantity."); qtyInput.focus(); return; }
+
+        simpleProducts.push({ product, qty });
+        productInput.value = ""; qtyInput.value = "";
+        productInput.focus();
+        renderSimpleProducts();
+    }
+
+    function renderSimpleProducts() {
+        const tbody = document.getElementById("simple-order-rows");
+        tbody.innerHTML = "";
+        if (simpleProducts.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center" style="color:#888; padding:20px;">No product added</td></tr>`;
+            return;
+        }
+        simpleProducts.forEach(function(item, index) {
+            const row = document.createElement("tr");
+            row.innerHTML = `<td class="text-center">${index + 1}</td><td>${item.product}</td><td class="text-center">${item.qty}</td><td class="text-center"><button type="button" class="action-btn btn-danger" onclick="removeSimpleProduct(${index})">Remove</button></td>`;
+            tbody.appendChild(row);
+        });
+    }
+
+    function removeSimpleProduct(index) { simpleProducts.splice(index, 1); renderSimpleProducts(); }
+
+    function submitSimpleOrder() {
+        const customer = document.getElementById("simple-customer").value.trim();
+        if (!customer) { alert("Please select a customer."); return; }
+        if (simpleProducts.length === 0) { alert("Please add at least one product."); return; }
+
+        const now = new Date();
+        const year = String(now.getFullYear()).slice(-2);
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const storageKey = "orderSequence_" + year + month;
+        let sequence = Number(localStorage.getItem(storageKey) || 0);
+        sequence++; localStorage.setItem(storageKey, sequence);
+        const orderNo = year + month + String(sequence).padStart(2, "0");
+        
+        const orderData = { orderNo, customer, products: simpleProducts, orderDate: new Date().toISOString(), orderBy: currentUser, status: 'pending' };
+        db.ref('INVOICE/simple_orders/' + orderNo).set(orderData).then(() => {
+            alert("Order submitted successfully!\nOrder No: " + orderNo);
+            document.getElementById("simple-order-no").value = orderNo;
+            simpleProducts = []; renderSimpleProducts();
+            document.getElementById("simple-customer").value = '';
+        }).catch(err => alert("Error: " + err.message));
+    }
+
+    // ---------------- ONLINE ORDERS PROCESSING (ADMIN) ----------------
+    function loadOnlineOrders() {
+        db.ref('INVOICE/simple_orders').on('value', (snap) => {
+            onlineOrdersCache = [];
+            if (snap.exists()) {
+                snap.forEach(child => { onlineOrdersCache.push(child.val()); });
+            }
+            onlineOrdersCache.sort((a, b) => (b.orderNo || "").localeCompare(a.orderNo || ""));
+            renderOnlineOrders();
+        });
+    }
+
+    function renderOnlineOrders(filterText = '') {
+        const tbody = document.getElementById('online-orders-tbody');
+        if (!tbody) return;
+        let html = '';
+        
+        let filtered = onlineOrdersCache.filter(o => o.status !== 'invoiced');
+        
+        if (filterText) {
+            filterText = filterText.toLowerCase();
+            filtered = filtered.filter(o => 
+                (o.orderNo && o.orderNo.toLowerCase().includes(filterText)) ||
+                (o.orderBy && o.orderBy.toLowerCase().includes(filterText)) ||
+                (o.customer && o.customer.toLowerCase().includes(filterText))
+            );
+        }
+
+        if (filtered.length === 0) {
+            html = '<tr><td colspan="6" class="text-center">No pending online orders found</td></tr>';
+        } else {
+            filtered.forEach(order => {
+                const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString() : '';
+                let statusText = order.status === 'cancelled' ? '<span style="color:red; font-weight:bold;">Cancelled</span>' : '<span style="color:orange; font-weight:bold;">Pending</span>';
+                let actionBtn = order.status === 'cancelled' ? 
+                    `<button class="action-btn btn-secondary" onclick="deleteCancelledOrder('${order.orderNo}')">Delete</button>` : 
+                    `<button class="action-btn btn-primary" onclick="createInvoiceFromOrder('${order.orderNo}')">Create Invoice</button>
+                     <button class="action-btn btn-danger" onclick="cancelOnlineOrder('${order.orderNo}')">Cancel</button>`;
+                
+                html += `
+                    <tr>
+                        <td>${order.orderNo}</td>
+                        <td>${dateStr}</td>
+                        <td>${order.orderBy || 'N/A'}</td>
+                        <td>${order.customer}</td>
+                        <td>${statusText}</td>
+                        <td class="text-center">${actionBtn}</td>
+                    </tr>`;
+            });
+        }
+        tbody.innerHTML = html;
+    }
+
+    function filterOnlineOrders() {
+        const searchText = document.getElementById('online-order-search').value;
+        renderOnlineOrders(searchText);
+    }
+
+    function cancelOnlineOrder(orderNo) {
+        if (confirm('Are you sure you want to CANCEL this order?')) {
+            db.ref('INVOICE/simple_orders/' + orderNo + '/status').set('cancelled').then(() => {
+                showAlert('Order cancelled successfully!');
+            }).catch(err => showAlert('Error: ' + err.message));
+        }
+    }
+
+    function deleteCancelledOrder(orderNo) {
+        if (confirm('Delete this cancelled order permanently?')) {
+            db.ref('INVOICE/simple_orders/' + orderNo).remove();
+        }
+    }
+
+    async function createInvoiceFromOrder(orderNo) {
+        const orderSnap = await db.ref('INVOICE/simple_orders/' + orderNo).once('value');
+        const order = orderSnap.val();
+        if (!order) return showAlert('Order not found!');
+
+        const parts = order.customer.split(' - ');
+        const custCode = parts.length > 1 ? parts[parts.length - 1].trim() : order.customer.trim();
+        
+        let custData = {};
+        try {
+            const custSnap = await db.ref('INVOICE/customers/' + custCode).once('value');
+            if (custSnap.exists()) {
+                const c = custSnap.val();
+                if (c.status === 'inactive') { return showAlert('Customer is inactive!'); }
+                activeCustomerType = c.type || null;
+                activeCustomerDccDisc = parseFloat(c.dccDisc) || 0;
+                custData = c;
+            } else {
+                showAlert('Customer Not Found', 'Error');
+                return;
+            }
+        } catch (e) { return showAlert('Error fetching customer'); }
+
+        let itemsHtml = '';
+        for (const item of order.products) {
+            const codeMatch = item.product.match(/\(([A-Z0-9]+)\)$/);
+            if (codeMatch && codeMatch[1]) {
+                const pCode = codeMatch[1];
+                const pSnap = await db.ref('INVOICE/products/' + pCode).once('value');
+                const p = pSnap.val();
+                if (p && p.status !== 'inactive') {
+                    quickEntryState = { 
+                        code: p.code, name: p.name, pack: p.pack, 
+                        originalTp: Number(p.tp || 0), 
+                        flatTp: Number(p.flatTp || 0), 
+                        vat: Number(p.vat || 0), 
+                        qty: Number(item.qty) || 0, 
+                        bonusRule: p.bonus || '' 
+                    };
+                    itemsHtml += getInvoiceRowHtml(quickEntryState);
+                }
+            }
+        }
+
+        document.getElementById('invoice-item-tbody').innerHTML = itemsHtml;
+        
+        document.getElementById('inv-customer-code').value = custData.code;
+        document.getElementById('inv-customer-name').innerText = custData.name;
+        document.getElementById('inv-customer-type').innerText = getCustomerTypeLabel(custData.type);
+        document.getElementById('inv-customer-address').innerText = custData.address;
+        document.getElementById('inv-customer-phone').innerText = custData.phone;
+        document.getElementById('inv-mpo-code').innerText = custData.mpoCode || '';
+        document.getElementById('inv-mpo-name').innerText = custData.mpoName || 'N/A';
+        document.getElementById('inv-route').innerText = custData.route || 'N/A';
+        document.getElementById('inv-da-name').innerText = custData.da || 'N/A';
+        
+        document.getElementById('inv-order-no').innerText = order.orderNo;
+        document.getElementById('inv-note').value = '';
+        
+        calculateTotals();
+
+        currentProcessingOrderNo = order.orderNo;
+
+        closeModal('modal-online-orders');
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove("active"));
+        document.getElementById('tab-invoice').classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        const invBtn = document.querySelector("[onclick*='tab-invoice']");
+        if(invBtn) invBtn.classList.add('active');
+    }
+
+    function getInvoiceRowHtml(item) {
+        const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+        const totalTp = actualTp * item.qty; 
+        const totalVat = actualVat * item.qty;
+        let bonusQty = 0;
+        if(activeCustomerType !== 'D' && activeCustomerType !== 'SP') { 
+            bonusQty = calculateBonusQty(item.qty, item.bonusRule); 
+        }
+        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
+        let disc = (totalTp * actualDiscPct) / 100; 
+        const netValue = totalTp + totalVat - disc;
+
+        const tbody = document.getElementById('invoice-item-tbody');
+        const sn = tbody.rows.length + 1;
+
+        return `<tr data-original-tp="${item.originalTp}" data-flat-tp="${item.flatTp || 0}" data-original-vat="${item.vat || 0}" data-bonus-rule="${item.bonusRule || ''}" ondblclick="editQuickEntryItem(this)">
+            <td class="text-center">${sn}</td>
+            <td>${item.code}</td>
+            <td>${item.name}</td>
+            <td>${item.pack}</td>
+            <td class="text-center">${item.qty}</td>
+            <td class="text-center">${bonusQty}</td>
+            <td class="text-right">${actualTp.toFixed(2)}</td>
+            <td class="text-right">${actualVat.toFixed(2)}</td>
+            <td class="text-right">${totalTp.toFixed(2)}</td>
+            <td class="text-right">${totalVat.toFixed(2)}</td>
+            <td class="text-right">${actualDiscPct}%</td>
+            <td class="text-right">${disc.toFixed(2)}</td>
+            <td class="text-right">${netValue.toFixed(2)}</td>
+            <td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>
+        </tr>`;
+    }
+
+    // ---------------- DASHBOARD LOGIC ----------------
+    function loadDashboardData() {
+        let query = db.ref('INVOICE/invoices');
+        if (!isAdmin) { query = query.orderByChild('createdBy').equalTo(currentUser); }
+        query.on('value', (snap) => {
+            let totalSales = 0, totalInvoices = 0, pendingInvoices = 0;
+            const recentInvoices = [];
+            snap.forEach(child => {
+                const inv = child.val(); totalInvoices++; totalSales += parseFloat(inv.netPayable) || 0;
+                if (!inv.summaryNo) pendingInvoices++;
+                recentInvoices.push(inv);
+            });
+            document.getElementById('kpi-sales').innerText = totalSales.toFixed(2);
+            document.getElementById('kpi-invoices').innerText = totalInvoices;
+            document.getElementById('kpi-pending').innerText = pendingInvoices;
+            recentInvoices.sort((a,b) => (b.invoiceNo || "").localeCompare(a.invoiceNo || ""));
+            const top5 = recentInvoices.slice(0, 5);
+            let html = '';
+            if (top5.length === 0) html = '<tr><td colspan="4" class="text-center">No invoices found</td></tr>';
+            else { top5.forEach(inv => { html += `<tr><td>${inv.invoiceNo}</td><td>${inv.customerName}</td><td>${inv.date}</td><td class="text-right">${inv.netPayable}</td></tr>`; }); }
+            const recentBody = document.getElementById('dashboard-recent-invoices');
+            if(recentBody) recentBody.innerHTML = html;
+        });
+
+        db.ref('INVOICE/customers').once('value').then(snap => {
+            let count = snap.numChildren();
+            if (!isAdmin) { count = 0; snap.forEach(child => { if(child.val().mpoCode === currentUser) count++; }); }
+            document.getElementById('kpi-customers').innerText = count;
+        });
+
+        db.ref('INVOICE/products').once('value').then(snap => { document.getElementById('kpi-products').innerText = snap.numChildren(); });
+        db.ref('INVOICE/mpos').once('value').then(snap => { document.getElementById('kpi-mpos').innerText = snap.numChildren(); });
+        let sumQuery = db.ref('INVOICE/summaries');
+        if (!isAdmin) { sumQuery = sumQuery.orderByChild('generatedBy').equalTo(currentUser); }
+        sumQuery.once('value').then(snap => { document.getElementById('kpi-summaries').innerText = snap.numChildren(); });
+    }
+
+    // ---------------- EXCEL IMPORT ----------------
+    function importExcel() {
+        if (!isAdmin) return;
+        const fileInput = document.getElementById('excel-file');
+        if (!fileInput.files.length) return showAlert('Please select an Excel file first.');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            let updates = {}; let count = 0;
+            json.forEach(row => {
+                const code = row.Code || row.code; const name = row.Name || row.name;
+                const pack = row.Pack || row.pack || row['Pack Size'] || row['Pack size'];
+                const tp = parseFloat(row.TP || row.tp || row['TP Price'] || 0);
+                const flatTp = parseFloat(row.FlatTP || row.flatTp || row['Flat Rate'] || 0);
+                const vat = parseFloat(row.VAT || row.vat || row.Vat || 0);
+                const bonus = row.Bonus || row.bonus || '';
+                const dccStr = (row.DCC || row.dcc || 'No').toString().toLowerCase();
+                const dcc = (dccStr === 'yes' || dccStr === 'true') ? 'true' : 'false';
+                if (code) { updates['INVOICE/products/' + code] = { code, name, pack, tp, flatTp, vat, bonus, dcc, status: 'active' }; count++; }
+            });
+            if (count === 0) return showAlert('No valid products found in the Excel file.');
+            db.ref().update(updates).then(() => { showAlert(count + ' products imported successfully!'); fileInput.value = ''; }).catch(err => showAlert('Import failed: ' + err.message));
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    // ---------------- INVOICE AUTO GENERATE & SAVE ----------------
+    function generateInvoiceNo() {
+        const now = new Date(); const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0');
+        const prefix = `KS${y}${m}`;
+        db.ref('INVOICE/invoices').once('value').then((snapshot) => {
+            let maxSeq = 0;
+            snapshot.forEach(child => { const invNo = child.key; if (invNo && invNo.startsWith(prefix)) { const seqNum = parseInt(invNo.substring(prefix.length)); if (!isNaN(seqNum) && seqNum > maxSeq) maxSeq = seqNum; } });
+            const nextSeq = maxSeq + 1; const seqStr = String(nextSeq).padStart(3, '0');
+            const invNoEl = document.getElementById('inv-no'); if(invNoEl) invNoEl.innerText = prefix + seqStr;
+        });
+    }
+
+    function saveInvoiceToFirebase() {
+        const invNo = document.getElementById('inv-no').innerText;
+        let custCode = document.getElementById('inv-customer-code').value.trim();
+        if(/^\d+$/.test(custCode)) { custCode = 'KS' + custCode.padStart(5, '0'); }
+        if(!custCode || document.getElementById('inv-customer-name').innerText === 'CUSTOMER NAME') { return showAlert('Please enter a valid Customer Code!'); }
+        let items = [];
+        document.querySelectorAll('#invoice-item-tbody tr').forEach(row => {
+            items.push({ sn: row.cells[0].innerText, code: row.cells[1].innerText, name: row.cells[2].innerText, pack: row.cells[3].innerText, qty: row.cells[4].innerText, bonus: row.cells[5].innerText, tp: row.cells[6].innerText, vat: row.cells[7].innerText, totalTp: row.cells[8].innerText, totalVat: row.cells[9].innerText, discPct: row.cells[10].innerText, disc: row.cells[11].innerText, net: row.cells[12].innerText });
+        });
+        if(items.length === 0) { return showAlert('Cannot save empty invoice. Please add products.'); }
+        items.sort((a, b) => (a.name || "").localeCompare(b.name || "")); items.forEach((item, index) => { item.sn = index + 1; });
+        const invoiceData = {
+            invoiceNo: invNo, 
+            orderNo: document.getElementById('inv-order-no').innerText, 
+            customerCode: custCode, customerName: document.getElementById('inv-customer-name').innerText,
+            customerType: document.getElementById('inv-customer-type').innerText, address: document.getElementById('inv-customer-address').innerText,
+            phone: document.getElementById('inv-customer-phone').innerText, mpoCode: document.getElementById('inv-mpo-code').innerText,
+            mpo: document.getElementById('inv-mpo-name').innerText, da: document.getElementById('inv-da-name').innerText,
+            route: document.getElementById('inv-route').innerText, date: new Date().toLocaleDateString(), items: items,
+            note: document.getElementById('inv-note').value, totalQty: document.getElementById('foot-qty').innerText,
+            totalBonus: document.getElementById('foot-bonus').innerText, totalTp: document.getElementById('foot-tp').innerText,
+            totalVat: document.getElementById('foot-vat').innerText, totalDisc: document.getElementById('foot-disc').innerText,
+            totalTpSales: document.getElementById('total-tp-sales').innerText, netPayable: document.getElementById('foot-net').innerText,
+            createdBy: currentUser 
+        };
+        db.ref('INVOICE/invoices/' + invNo).set(invoiceData).then(() => {
+            showAlert('Invoice saved successfully!');
+            if (currentProcessingOrderNo) {
+                db.ref('INVOICE/simple_orders/' + currentProcessingOrderNo + '/status').set('invoiced');
+                currentProcessingOrderNo = null;
+            }
+            resetInvoiceForm();
+            generateInvoiceNo(); loadInvoiceHistory();
+        }).catch(error => showAlert('Save failed: ' + error.message));
+    }
+
+    function autofillCustomer() {
+        let code = document.getElementById('inv-customer-code').value.trim();
+        if(!code) return;
+        if(/^\d+$/.test(code)) { code = 'KS' + code.padStart(5, '0'); document.getElementById('inv-customer-code').value = code; }
+        db.ref('INVOICE/customers/' + code).once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                const c = snapshot.val();
+                if(c.status === 'inactive') { return showAlert('Customer is inactive!'); }
+                activeCustomerType = c.type || null; activeCustomerDccDisc = parseFloat(c.dccDisc) || 0;
+                document.getElementById('inv-customer-name').innerText = c.name;
+                document.getElementById('inv-customer-type').innerText = getCustomerTypeLabel(c.type);
+                document.getElementById('inv-customer-address').innerText = c.address;
+                document.getElementById('inv-customer-phone').innerText = c.phone;
+                document.getElementById('inv-mpo-code').innerText = c.mpoCode || '';
+                document.getElementById('inv-mpo-name').innerText = c.mpoName || 'N/A';
+                document.getElementById('inv-route').innerText = c.route || 'N/A';
+                document.getElementById('inv-da-name').innerText = c.da || 'N/A';
+                document.getElementById('quick-code').focus(); recalculateAllRows();
+            } else {
+                showAlert('Customer Not Found', 'Error', function() { document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME'; });
+            }
+        });
+    }
+
+    // ---------------- QUICK ENTRY ----------------
+    function fetchProductByCode() {
+        const codeInput = document.getElementById('quick-code'); const nameInput = document.getElementById('quick-name');
+        const code = codeInput.value.trim().toUpperCase();
+        if(!code) { nameInput.value = ''; return; }
+        db.ref('INVOICE/products/' + code).once('value').then((snap) => {
+            if(snap.exists()) {
+                const p = snap.val();
+                if(p.status === 'inactive') { return showAlert('Product is inactive!'); }
+                quickEntryState = { code: p.code, name: p.name, pack: p.pack, originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0), vat: Number(p.vat || 0), qty: 0, bonusRule: p.bonus || '' };
+                nameInput.value = p.name + ' (' + p.pack + ')'; document.getElementById('quick-qty').focus(); 
+            } else { showAlert('Product code not found!', 'Error', function() { nameInput.value = ''; codeInput.focus(); }); }
+        });
+    }
+
+    // --- NEW: EDIT INVOICE ROW FEATURE ---
+    async function editQuickEntryItem(row) {
+        editingRow = row;
+        row.style.backgroundColor = '#fff3cd'; // Highlight row being edited
+        
+        const code = row.cells[1].innerText;
+        const name = row.cells[2].innerText;
+        const pack = row.cells[3].innerText;
+        const qty = parseInt(row.cells[4].innerText) || 0;
+        
+        document.getElementById('quick-code').value = code;
+        document.getElementById('quick-name').value = name + ' (' + pack + ')';
+        document.getElementById('quick-qty').value = qty;
+        
+        if (row.dataset.originalTp) {
+            quickEntryState = {
+                code: code, name: name, pack: pack,
+                originalTp: parseFloat(row.dataset.originalTp) || 0,
+                flatTp: parseFloat(row.dataset.flatTp) || 0,
+                vat: parseFloat(row.dataset.originalVat) || 0,
+                qty: qty, bonusRule: row.dataset.bonusRule || ''
+            };
+        } else {
+            const snap = await db.ref('INVOICE/products/' + code).once('value');
+            if (snap.exists()) {
+                const p = snap.val();
+                quickEntryState = {
+                    code: p.code, name: p.name, pack: p.pack,
+                    originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0),
+                    vat: Number(p.vat || 0), qty: qty, bonusRule: p.bonus || ''
+                };
+                row.dataset.originalTp = quickEntryState.originalTp;
+                row.dataset.flatTp = quickEntryState.flatTp;
+                row.dataset.originalVat = quickEntryState.vat;
+                row.dataset.bonusRule = quickEntryState.bonusRule;
+            } else {
+                showAlert('Could not fetch product details for editing!');
+                row.style.backgroundColor = '';
+                editingRow = null;
+                return;
+            }
+        }
+        document.getElementById('quick-qty').focus();
+        document.getElementById('quick-qty').select();
+    }
+
+    function updateInvoiceRow(row, item) {
+        const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+        const totalTp = actualTp * item.qty;
+        const totalVat = actualVat * item.qty;
+        let bonusQty = 0;
+        if(activeCustomerType !== 'D' && activeCustomerType !== 'SP') { 
+            bonusQty = calculateBonusQty(item.qty, item.bonusRule); 
+        }
+        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
+        let disc = (totalTp * actualDiscPct) / 100;
+        const netValue = totalTp + totalVat - disc;
+
+        row.dataset.originalTp = item.originalTp;
+        row.dataset.flatTp = item.flatTp || 0;
+        row.dataset.originalVat = item.vat || 0;
+        row.dataset.bonusRule = item.bonusRule || '';
+        row.style.backgroundColor = ''; // Remove highlight
+
+        row.cells[4].innerText = item.qty;
+        row.cells[5].innerText = bonusQty;
+        row.cells[6].innerText = actualTp.toFixed(2);
+        row.cells[7].innerText = actualVat.toFixed(2);
+        row.cells[8].innerText = totalTp.toFixed(2);
+        row.cells[9].innerText = totalVat.toFixed(2);
+        row.cells[10].innerText = actualDiscPct + '%';
+        row.cells[11].innerText = disc.toFixed(2);
+        row.cells[12].innerText = netValue.toFixed(2);
+
+        calculateTotals();
+    }
+
+    function addQuickEntryItem() {
+        if(quickEntryState.code) {
+            const qtyVal = parseInt(document.getElementById('quick-qty').value) || 0;
+            if (qtyVal > 0) {
+                quickEntryState.qty = qtyVal; 
+                
+                if (editingRow) {
+                    updateInvoiceRow(editingRow, quickEntryState);
+                    editingRow = null;
+                } else {
+                    addInvoiceRow(quickEntryState);
+                }
+                
+                document.getElementById('quick-code').value = ''; 
+                document.getElementById('quick-name').value = ''; 
+                document.getElementById('quick-qty').value = '';
+                document.getElementById('quick-code').focus(); 
+            }
+        }
+    }
+
+    // --- NEW RATE & DISCOUNT LOGIC ---
+    function getActualTpAndVat(item, custType) {
+        let tp = item.originalTp; let vat = item.vat;
+        if (custType === 'SP' || custType === 'D') { return { tp: item.originalTp, vat: item.vat }; }
+        if (item.flatTp > 0) { return { tp: item.flatTp, vat: 0 }; }
+        return { tp: item.originalTp, vat: item.vat };
+    }
+
+    function getDiscountPercentage(item, custType, custDccDisc, actualTp) {
+        if (custType === 'SP') return custDccDisc || 0;
+        if (custType === 'D') return custDccDisc;
+        if (item.flatTp > 0) return 0;
+        let bonusQty = calculateBonusQty(item.qty, item.bonusRule);
+        if (bonusQty > 0) return 0;
+        return 2;
+    }
+
+    function recalculateAllRows() {
+        const rows = document.querySelectorAll('#invoice-item-tbody tr');
+        rows.forEach(row => {
+            const item = { originalTp: parseFloat(row.dataset.originalTp) || 0, flatTp: parseFloat(row.dataset.flatTp) || 0, originalVat: parseFloat(row.dataset.originalVat) || 0, qty: parseInt(row.cells[4].innerText) || 0, bonusRule: row.dataset.bonusRule || '' };
+            const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+            row.cells[6].innerText = actualTp.toFixed(2); row.cells[7].innerText = actualVat.toFixed(2); 
+            let bonusQty = 0;
+            if(activeCustomerType !== 'D' && activeCustomerType !== 'SP') { bonusQty = calculateBonusQty(item.qty, item.bonusRule); }
+            row.cells[5].innerText = bonusQty; 
+            let discPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
+            row.cells[10].innerText = discPct + '%';
+            const totalTp = actualTp * item.qty; const totalVat = actualVat * item.qty; const disc = (totalTp * discPct) / 100; const netValue = totalTp + totalVat - disc;
+            row.cells[8].innerText = totalTp.toFixed(2); row.cells[9].innerText = totalVat.toFixed(2); row.cells[11].innerText = disc.toFixed(2); row.cells[12].innerText = netValue.toFixed(2);
+        });
+        calculateTotals();
+    }
+
+    function addInvoiceRow(item) {
+        const tbody = document.getElementById('invoice-item-tbody');
+        let isDuplicate = false;
+        document.querySelectorAll('#invoice-item-tbody tr').forEach(row => { if (row.cells[1].innerText.trim() === item.code) isDuplicate = true; });
+        if (isDuplicate) { return showAlert('This product is already added to the invoice.'); }
+        const sn = tbody.rows.length + 1;
+        const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+        const totalTp = actualTp * item.qty; const totalVat = actualVat * item.qty;
+        let bonusQty = 0;
+        if(activeCustomerType !== 'D' && activeCustomerType !== 'SP') { bonusQty = calculateBonusQty(item.qty, item.bonusRule); }
+        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
+        let disc = (totalTp * actualDiscPct) / 100; const netValue = totalTp + totalVat - disc;
+        const row = tbody.insertRow();
+        row.ondblclick = function() { editQuickEntryItem(this); }; // Double click to edit
+        row.dataset.originalTp = item.originalTp; row.dataset.flatTp = item.flatTp || 0; row.dataset.originalVat = item.vat || 0; row.dataset.bonusRule = item.bonusRule || '';
+        row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td><td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>`;
+        calculateTotals();
+    }
+
+    function calculateTotals() {
+        let totalTp = 0, totalVat = 0, totalDisc = 0, totalNet = 0, totalQty = 0, totalBonus = 0;
+        document.querySelectorAll('#invoice-item-tbody tr').forEach(row => {
+            totalQty += parseInt(row.cells[4].innerText); totalBonus += parseInt(row.cells[5].innerText);
+            totalTp += parseFloat(row.cells[8].innerText); totalVat += parseFloat(row.cells[9].innerText);
+            totalDisc += parseFloat(row.cells[11].innerText); totalNet += parseFloat(row.cells[12].innerText);
+        });
+        document.getElementById('foot-qty').innerText = totalQty; document.getElementById('foot-bonus').innerText = totalBonus;
+        document.getElementById('foot-tp').innerText = totalTp.toFixed(2); document.getElementById('foot-vat').innerText = totalVat.toFixed(2);
+        document.getElementById('foot-disc').innerText = totalDisc.toFixed(2);
+        const netPayableNum = totalNet;
+        document.getElementById('foot-net').innerText = netPayableNum.toFixed(2);
+        document.getElementById('total-tp-sales').innerText = (totalTp - totalDisc).toFixed(2);
+        document.getElementById('net-payable').innerText = netPayableNum.toFixed(2);
+        document.getElementById('inv-in-word').innerText = numberToWords(netPayableNum);
+    }
+
+    // ---------------- INVOICE HISTORY & SUMMARY ----------------
+    function loadInvoiceHistory() {
+        let query = db.ref('INVOICE/invoices');
+        if (!isAdmin) { query = query.orderByChild('createdBy').equalTo(currentUser); }
+        query.on('value', (snapshot) => {
+            const tbody = document.getElementById('history-table-body');
+            let html = ''; const headingEl = document.getElementById('all-invoices-heading');
+            if(!snapshot.exists()) { html = '<tr><td colspan="5" class="text-center">No invoices found</td></tr>'; } 
+            else {
+                let invoices = [];
+                snapshot.forEach((child) => { if(child.val()) invoices.push(child.val()); });
+                invoices.sort((a, b) => (a.invoiceNo || "").localeCompare(b.invoiceNo || ""));
+                let filteredInvoices = [];
+                if (currentSummaryFilter) {
+                    if (headingEl) headingEl.innerText = `Invoices for Summary: ${currentSummaryFilter}`;
+                    filteredInvoices = invoices.filter(inv => inv.summaryNo === currentSummaryFilter);
+                } else {
+                    if (headingEl) headingEl.innerText = 'Pending Invoices for Summary';
+                    filteredInvoices = invoices.filter(inv => !inv.summaryNo || inv.summaryNo === '');
+                }
+                if (filteredInvoices.length === 0) { html = `<tr><td colspan="5" class="text-center">No invoices found!</td></tr>`; } 
+                else {
+                    filteredInvoices.forEach(inv => {
+                        html += `<tr><td>${inv.invoiceNo}</td><td>${inv.date}</td><td>${inv.customerName}</td><td class="text-right">${inv.netPayable}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editInvoice('${inv.invoiceNo}')">Edit</button><button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}')">Print</button><button class="action-btn btn-danger" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</button></td></tr>`;
+                    });
+                }
+            }
+            tbody.innerHTML = html;
+            const clearBtn = document.getElementById('clear-filter-btn'); const printAllBtn = document.getElementById('print-all-btn');
+            if (currentSummaryFilter) { if(clearBtn) clearBtn.style.display = 'inline-block'; if(printAllBtn) printAllBtn.style.display = 'inline-block'; } 
+            else { if(clearBtn) clearBtn.style.display = 'none'; if(printAllBtn) printAllBtn.style.display = 'none'; }
+        });
+    }
+
+    function filterInvoicesBySummary(summaryId) { currentSummaryFilter = summaryId; loadInvoiceHistory(); document.getElementById('all-invoices-section').scrollIntoView({ behavior: 'smooth' }); }
+    function clearSummaryFilter() { currentSummaryFilter = null; loadInvoiceHistory(); }
+    function printAllFilteredInvoices() { if (currentSummaryFilter) { printSummary(currentSummaryFilter); } else { showAlert('Please select a summary to print.'); } }
+
+    function editInvoice(invNo) {
+        db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
+            const inv = snap.val();
+            if(!inv) return showAlert('Invoice not found');
+            switchTab(event, 'tab-invoice');
+            document.getElementById('inv-no').innerText = inv.invoiceNo;
+            document.getElementById('inv-order-no').innerText = inv.orderNo || ''; 
+            document.getElementById('inv-customer-code').value = inv.customerCode;
+            document.getElementById('inv-customer-name').innerText = inv.customerName;
+            document.getElementById('inv-customer-type').innerText = inv.customerType || 'N/A';
+            document.getElementById('inv-customer-address').innerText = inv.address;
+            document.getElementById('inv-customer-phone').innerText = inv.phone;
+            document.getElementById('inv-mpo-code').innerText = inv.mpoCode || '';
+            document.getElementById('inv-mpo-name').innerText = inv.mpo;
+            document.getElementById('inv-route').innerText = inv.route;
+            document.getElementById('inv-da-name').innerText = inv.da;
+            document.getElementById('inv-note').value = inv.note || '';
+            const tbody = document.getElementById('invoice-item-tbody'); tbody.innerHTML = '';
+            let items = inv.items || []; items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            let html = '';
+            items.forEach((item, index) => {
+                html += `<tr ondblclick="editQuickEntryItem(this)"><td class="text-center">${index + 1}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${item.bonus}</td><td class="text-right">${item.tp}</td><td class="text-right">${item.vat}</td><td class="text-right">${item.totalTp}</td><td class="text-right">${item.totalVat}</td><td class="text-right">${item.discPct}</td><td class="text-right">${item.disc}</td><td class="text-right">${item.net}</td><td class="text-center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null;} calculateTotals();">X</button></td></tr>`;
+            });
+            tbody.innerHTML = html; calculateTotals(); window.scrollTo(0, 0);
+        });
+    }
+
+    function getInvoiceHTMLString(inv, roleIsAdmin) {
+        let printItems = [...(inv.items || [])];
+        printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        let itemsHtml = '';
+        if (roleIsAdmin) {
+            printItems.forEach((item, index) => { itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`; });
+            const inWordText = numberToWords(parseFloat(inv.netPayable));
+            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Invoice</title><style>body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}.invoice-container{max-width:800px;margin:auto;}.top-header{text-align:right;margin-bottom:10px;}.info-grid{width:100%;margin-bottom:5px;}.info-grid td{vertical-align:top;padding:2px 0;}.dashed-line{border-top:1px dashed #000;margin:8px 0;}.items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}.items-table th, .items-table td{padding:4px 2px;text-align:right;font-size:11px;}.items-table th:nth-child(1), .items-table td:nth-child(1), .items-table th:nth-child(2), .items-table td:nth-child(2), .items-table th:nth-child(3), .items-table td:nth-child(3){text-align:left;}.items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}.items-table tbody tr td{border-bottom:none;}.table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}.totals-section{width:100%;margin-top:5px;}.totals-section td{padding:3px 2px;text-align:right;}.net-payable-row{font-weight:bold;font-size:12px;}.in-word{margin-top:15px;}</style></head><body><div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width:35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width:35%;"><u>MPO</u><br><strong>${inv.mpoCode||''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width:30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.orderNo || ''}<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc||'0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable||'0.00'}</td></tr><tr><td colspan="12" style="padding-top:10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales||'0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top:25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable||'0.00'}</td></tr></table><div class="in-word">In word : ${inWordText}</div>${inv.note?`<div style="margin-top:15px;text-align:left;font-size:11px;"><strong>Note:</strong> ${inv.note}</div>`:''}</div></body></html>`;
+        } else {
+            printItems.forEach((item, index) => {
+                itemsHtml += `<tr><td>${index + 1}</td><td>${item.code || ''}</td><td class="text-left">${item.name || ''}</td><td>${item.pack || ''}</td><td>${item.qty || ''}</td><td>${item.bonus || ''}</td><td>${item.tp || '0.00'}</td><td>${item.vat || '0.00'}</td><td>${item.totalTp || '0.00'}</td><td>${item.totalVat || '0.00'}</td><td>${item.discPct || ''}</td><td>${item.disc || '0.00'}</td><td>${item.net || '0.00'}</td></tr>`;
+            });
+            const inWordText = numberToWords(parseFloat(inv.netPayable)); const invDate = inv.date || new Date().toLocaleDateString(); const delivDate = invDate;
+            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sales Invoice - Monico Pharma LTD</title><style>@page { size: A4; margin: 10mm; }body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }.invoice-box { width: 190mm; min-height: 277mm; margin: auto; padding: 5mm; box-sizing: border-box; background: #fff; position: relative; padding-bottom: 50mm; }.header { text-align: center; margin-bottom: 15px; position: relative; min-height: 45px; }.company-logo { position: absolute; left: 0; top: 0; }.company-logo img { height: 40px; }.company-details { text-align: center; }.invoice-title { font-weight: bold; text-decoration: underline; margin-top: 5px; font-size: 13px; }.info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }.info-table td { padding: 2px 4px; vertical-align: top; font-size: 11px; }.items-table th, .items-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; }.items-table th { background-color: #f2f2f2; }.text-left { text-align: left !important; }.text-right { text-align: right !important; }.totals-box { float: right; width: 320px; }.totals-box table { width: 100%; border-collapse: collapse; }.totals-box td { border: 1px solid #000; padding: 4px; font-size: 11px; }.clear { clear: both; }.amount-in-words { border: 1px solid #000; padding: 5px; margin-top: 10px; font-size: 11px; }.bottom-section { position: absolute; bottom: 15mm; left: 5mm; right: 5mm; }.page-number { position: absolute; bottom: 2mm; right: 0; font-size: 24px; font-weight: bold; color: #ccc; text-align: right; }.signatures { width: 100%; margin-top: 15px; }.signatures td { text-align: center; width: 33%; vertical-align: bottom; padding-top: 40px; font-size: 11px; }.sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; }</style></head><body><div class="invoice-box"><div class="header"><div class="company-logo"><img src="https://monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="Monico Pharma Logo" crossorigin="anonymous"></div><div class="company-details"><strong>Monico Pharma LTD</strong><br>Kushtia Depot<br>0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000<br><div class="invoice-title">Sales Invoice</div></div></div><div class="clear"></div><table class="info-table"><tr><td style="width: 45%;"><strong>Customer:</strong> ${inv.customerCode || ''}<br><strong>${inv.customerName || ''}</strong><br>${inv.address || ''}<br>${inv.phone || '0000000000'}<br><strong>Invoice Type:</strong> CASH</td><td style="width: 25%;"><strong>MPO:</strong> ${inv.mpoCode || ''}<br><strong>${inv.mpo || ''}</strong><br>${inv.route || ''}<br><strong>${inv.da || ''}</strong><br><strong>Type:</strong> ${inv.customerType || 'N/A'}<br><strong>Invoice Time :</strong> Anytime</td><td style="width: 30%;"><strong>Order No.:</strong> ${inv.orderNo || ''}<br><strong>Invoice No.:</strong> ${inv.invoiceNo || ''}<br><strong>Invoice Date.</strong> ${invDate}<br><strong>Deliv. Date</strong> ${delivDate}<br><strong>Route</strong> ${inv.route || ''}<br>Summary No. ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><thead><tr><th>S.N.</th><th>Code</th><th class="text-left">Product</th><th>Pack Size</th><th>Qty</th><th>Bonus</th><th>Unit TP</th><th>Unit Vat</th><th>Total TP</th><th>Total Vat</th><th>Disc %</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}<tr style="font-weight: bold;"><td colspan="4" class="text-right"></td><td>${inv.totalQty || ''}</td><td>${inv.totalBonus || ''}</td><td></td><td></td><td>${inv.totalTp || '0.00'}</td><td>${inv.totalVat || '0.00'}</td><td></td><td>${inv.totalDisc || '0.00'}</td><td>${inv.netPayable || '0.00'}</td></tr></tbody></table><div style="margin-top: 10px;"><div class="totals-box"><table><tr><td><strong>Total TP Sales =</strong></td><td class="text-right"><strong>${inv.totalTpSales || '0.00'}</strong></td></tr><tr><td><strong>Net Payable Amount =</strong></td><td class="text-right"><strong>${inv.netPayable || '0.00'}</strong></td></tr></table></div><div class="clear"></div></div><div class="amount-in-words"><strong>In Word:</strong> ${inWordText}</div>${inv.note ? `<div class="amount-in-words" style="margin-top:5px;"><strong>Note:</strong> ${inv.note}</div>` : ''}<div class="bottom-section"><div class="page-number">Page 1</div><table class="signatures"><tr><td><div class="sig-line"></div><strong>Customer Sign</strong></td><td><div class="sig-line"></div><strong>MPO Sign</strong></td><td><div class="sig-line"></div><strong>DIC Sign</strong></td></tr></table></div></div></body></html>`;
+        }
+    }
+
+    function printInvoiceDirectly(invNo) {
+        db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
+            const inv = snap.val(); if(!inv) return showAlert('Invoice not found');
+            const html = getInvoiceHTMLString(inv, isAdmin);
+            const iframe = document.createElement('iframe');
+            iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
+            document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(html); iframe.contentWindow.document.close();
+            let hasPrinted = false;
+            const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+            iframe.onload = triggerPrint; if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+        });
+    }
+
+    function deleteInvoice(invNo) { if(confirm('Delete this invoice?')) db.ref('INVOICE/invoices/' + invNo).remove(); }
+
+    // --- SUMMARY GENERATION ---
+    function generateSummary() {
+        const delivDate = document.getElementById('rep-sum-date').value; const route = document.getElementById('rep-sum-route').value; 
+        if(!delivDate || !route) { return showAlert('Please select Date and Route'); }
+        const formattedDate = new Date(delivDate).toLocaleDateString(); const now = new Date(); const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const prefix = `SN${y}${m}`; 
+        db.ref('INVOICE/summaries').once('value').then(snap => {
+            let maxSeq = 0;
+            snap.forEach(child => { if(child.key && child.key.startsWith(prefix)) { const seq = parseInt(child.key.substring(prefix.length)); if(!isNaN(seq) && seq > maxSeq) maxSeq = seq; } });
+            const nextSeq = maxSeq + 1; const summaryNo = prefix + String(nextSeq).padStart(2, '0'); 
+            let query = db.ref('INVOICE/invoices'); if (!isAdmin) query = query.orderByChild('createdBy').equalTo(currentUser);
+            query.once('value').then(snap => {
+                const matchingInvoices = [];
+                snap.forEach(child => { const inv = child.val(); if (inv.date === formattedDate && inv.route === route) { matchingInvoices.push(inv); } });
+                if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route!'); }
+                let totalAmount = 0; const invNos = []; const updates = {};
+                matchingInvoices.forEach(inv => { totalAmount += parseFloat(inv.netPayable) || 0; invNos.push(inv.invoiceNo); updates[`INVOICE/invoices/${inv.invoiceNo}/summaryNo`] = summaryNo; });
+                updates[`INVOICE/summaries/${summaryNo}`] = { summaryId: summaryNo, date: formattedDate, route: route, invoiceCount: matchingInvoices.length, totalAmount: totalAmount.toFixed(2), invoices: invNos, generatedBy: currentUser, generatedAt: new Date().toISOString() };
+                db.ref().update(updates).then(() => {
+                    showAlert(`Summary generated successfully!\nSummary No: ${summaryNo}`); document.getElementById('rep-sum-date').value = ''; document.getElementById('rep-sum-route').value = '';
+                    loadSummaries(); loadInvoiceHistory(); 
+                }).catch(err => showAlert('Error generating summary: ' + err.message));
+            });
+        });
+    }
+
+    function loadSummaries() {
+        let query = db.ref('INVOICE/summaries');
+        if (!isAdmin) { query = query.orderByChild('generatedBy').equalTo(currentUser); }
+        query.on('value', snap => {
+            const tbody = document.getElementById('summary-list-body'); let html = '';
+            if (!snap.exists()) { html = '<tr><td colspan="6" class="text-center">No summaries generated yet</td></tr>'; } 
+            else {
+                const summaries = [];
+                snap.forEach(child => { summaries.push({ key: child.key, ...child.val() }); });
+                summaries.sort((a, b) => (b.summaryId || "").localeCompare(a.summaryId || ""));
+                summaries.forEach(s => { html += `<tr><td>${s.summaryId || ''}</td><td>${s.date || ''}</td><td>${s.route || ''}</td><td class="text-center">${s.invoiceCount || 0}</td><td class="text-right">${s.totalAmount || 0}</td><td class="text-center"><button class="action-btn btn-primary" onclick="filterInvoicesBySummary('${s.summaryId}')">View / Print</button></td></tr>`; });
+            }
+            tbody.innerHTML = html;
+        }, error => {
+            console.error("Error loading summaries:", error);
+            const tbody = document.getElementById('summary-list-body');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Failed to load summaries. Check database rules/indexes.</td></tr>';
+        });
+    }
+
+    function printSummary(summaryId) {
+        db.ref('INVOICE/summaries/' + summaryId).once('value').then(snap => {
+            const sum = snap.val(); if(!sum) return showAlert('Summary not found');
+            const promises = sum.invoices.map(invNo => db.ref('INVOICE/invoices/' + invNo).once('value'));
+            Promise.all(promises).then(snaps => {
+                let combinedHtml = ''; let grandTotal = 0;
+                if (isAdmin) {
+                    snaps.forEach((s, idx) => {
+                        const inv = s.val(); if(!inv) return;
+                        grandTotal += parseFloat(inv.netPayable) || 0;
+                        let itemsHtml = '';
+                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => { itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`; });
+                        if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                        combinedHtml += `<div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width: 35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width: 35%;"><u>MPO</u><br><strong>${inv.mpoCode || ''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width: 30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.orderNo || ''}<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${sum.summaryId}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable || '0.00'}</td></tr><tr><td colspan="12" style="padding-top: 10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales || '0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top: 25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable || '0.00'}</td></tr></table><div class="in-word">In word : ${numberToWords(parseFloat(inv.netPayable))}</div>${inv.note ? `<div style="margin-top: 15px; text-align: left; font-size: 11px;"><strong>Note:</strong> ${inv.note}</div>` : ''}</div>`;
+                    });
+                    combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: monospace; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
+                    sum.invoices.forEach((invNo, i) => { const invData = snaps[i].val(); if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`; });
+                    combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
+                    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}.invoice-container{max-width:800px;margin:auto;}.top-header{text-align:right;margin-bottom:10px;}.info-grid{width:100%;margin-bottom:5px;}.info-grid td{vertical-align:top;padding:2px 0;}.dashed-line{border-top:1px dashed #000;margin:8px 0;}.items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}.items-table th, .items-table td{padding:4px 2px;text-align:right;font-size:11px;}.items-table th:nth-child(1), .items-table td:nth-child(1), .items-table th:nth-child(2), .items-table td:nth-child(2), .items-table th:nth-child(3), .items-table td:nth-child(3){text-align:left;}.items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}.items-table tbody tr td{border-bottom:none;}.table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}.totals-section{width:100%;margin-top:5px;}.totals-section td{padding:3px 2px;text-align:right;}.net-payable-row{font-weight:bold;font-size:12px;}.in-word{margin-top:15px;}</style></head><body>${combinedHtml}</body></html>`;
+                    const iframe = document.createElement('iframe'); iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(html); iframe.contentWindow.document.close();
+                    let hasPrinted = false;
+                    const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+                    iframe.onload = triggerPrint; if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+                }
+            });
+        });
+    }
+
+    // ---------------- MPO & USER MANAGEMENT ----------------
+    function handleMpoSubmit(event) {
+        event.preventDefault(); const isEdit = document.getElementById('mpo-is-edit').value === 'true'; const code = document.getElementById('mpo-code').value; const name = document.getElementById('mpo-name').value; const route = document.getElementById('mpo-route').value; const da = document.getElementById('mpo-da').value; const password = document.getElementById('mpo-password').value; const status = isEdit ? document.getElementById('mpo-status-hidden').value : 'active';
+        db.ref('INVOICE/mpos/' + code).set({ code, name, route, da, password, status }).then(() => { showAlert(isEdit ? 'MPO/User updated successfully!' : 'MPO/User saved successfully!'); closeModal('modal-mpo'); resetMpoForm(); loadRoutes(); }).catch((error) => showAlert('Error: ' + error.message));
+    }
+
+    function loadMpos() {
+        db.ref('INVOICE/mpos').on('value', (snapshot) => {
+            const mpoSelect = document.getElementById('c-mpo'); const filterMpoSelect = document.getElementById('customer-filter-mpo'); const tbody = document.getElementById('mpo-list-body'); tbody.innerHTML = ''; mpoSelect.innerHTML = '<option value="">Select MPO</option>'; if(filterMpoSelect) filterMpoSelect.innerHTML = '<option value="">All MPOs</option>';
+            if (snapshot.exists()) {
+                snapshot.forEach((child) => {
+                    const m = child.val();
+                    if(m.status !== 'inactive') { mpoSelect.innerHTML += `<option value="${m.code}" data-route="${m.route}" data-da="${m.da || ''}">${m.name} (${m.code})</option>`; }
+                    if(filterMpoSelect) filterMpoSelect.innerHTML += `<option value="${m.code}">${m.name} (${m.code})</option>`;
+                    const statusColor = m.status === 'inactive' ? 'red' : 'green'; const toggleBtnText = m.status === 'inactive' ? 'Activate' : 'Deactivate'; const toggleBtnColor = m.status === 'inactive' ? '#16a34a' : '#f1f5f9'; const toggleBtnTextColor = m.status === 'inactive' ? '#fff' : '#000';
+                    tbody.innerHTML += `<tr><td>${m.code}</td><td>${m.name}</td><td>${m.route}</td><td>${m.da || 'N/A'}</td><td style="color: ${statusColor}; font-weight: 600;">${m.status ? m.status.toUpperCase() : 'ACTIVE'}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editMpo('${m.code}')">Edit</button><button class="action-btn" style="background:${toggleBtnColor};color:${toggleBtnTextColor};" onclick="toggleMpoStatus('${m.code}', '${m.status}')">${toggleBtnText}</button><button class="action-btn btn-danger" onclick="deleteMpo('${m.code}')">Delete</button></td></tr>`;
+                });
+            }
+        });
+    }
+
+    function editMpo(code) {
+        db.ref('INVOICE/mpos/' + code).once('value').then((snap) => {
+            const m = snap.val();
+            document.getElementById('mpo-is-edit').value = 'true'; document.getElementById('mpo-code').value = m.code; document.getElementById('mpo-code').readOnly = true; document.getElementById('mpo-name').value = m.name; document.getElementById('mpo-route').value = m.route; document.getElementById('mpo-da').value = m.da || ''; document.getElementById('mpo-password').value = m.password || ''; 
+            if (!document.getElementById('mpo-status-hidden')) { let h = document.createElement('input'); h.type = 'hidden'; h.id = 'mpo-status-hidden'; document.getElementById('mpo-form').appendChild(h); }
+            document.getElementById('mpo-status-hidden').value = m.status || 'active'; document.getElementById('mpo-submit-btn').innerText = 'Update MPO'; openModal('modal-mpo');
+        });
+    }
+    function resetMpoForm() { document.getElementById('mpo-form').reset(); document.getElementById('mpo-is-edit').value = 'false'; document.getElementById('mpo-code').readOnly = false; document.getElementById('mpo-submit-btn').innerText = 'Save MPO'; }
+    function toggleMpoStatus(code, status) { db.ref('INVOICE/mpos/' + code + '/status').set(status === 'inactive' ? 'active' : 'inactive'); }
+    function deleteMpo(code) { if(confirm('Delete this MPO/User?')) db.ref('INVOICE/mpos/' + code).remove(); }
+
+    // ---------------- CUSTOMER MANAGEMENT ----------------
+    function generateCustomerCode() {
+        db.ref('INVOICE/customers').once('value').then((snapshot) => {
+            let maxNum = 0;
+            snapshot.forEach(child => { const numPart = parseInt(child.key.replace('KS', '')); if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart; });
+            const nextNum = maxNum + 1;
+            document.getElementById('c-code').value = 'KS' + String(nextNum).padStart(5, '0');
+            if (!isAdmin && currentUser) { const mpoSelect = document.getElementById('c-mpo'); mpoSelect.value = currentUser; mpoSelect.disabled = true; }
+        });
+    }
+
+    function handleCustomerSubmit(event) {
+        event.preventDefault();
+        const isEdit = document.getElementById('c-is-edit').value === 'true'; const code = document.getElementById('c-code').value; const name = document.getElementById('c-name').value; const address = document.getElementById('c-address').value; const phone = document.getElementById('c-phone').value; const type = document.getElementById('c-type').value; 
+        const dccDisc = (type === 'D' || type === 'SP') ? (parseFloat(document.getElementById('c-dcc-disc').value) || 0) : 0;
+        const mpoSelect = document.getElementById('c-mpo'); const mpoCode = mpoSelect.value; const mpoName = mpoSelect.options[mpoSelect.selectedIndex].text.split(' (')[0]; const route = mpoSelect.options[mpoSelect.selectedIndex].getAttribute('data-route') || ''; const da = mpoSelect.options[mpoSelect.selectedIndex].getAttribute('data-da') || ''; const status = isEdit ? document.getElementById('c-status-hidden').value : 'active';
+        db.ref('INVOICE/customers/' + code).set({ code, name, type, dccDisc, address, phone, mpoCode, mpoName, route, da, status }).then(() => { showAlert('Customer saved successfully!'); closeModal('modal-customer'); resetCustomerForm(); generateCustomerCode(); }).catch((error) => showAlert('Error: ' + error.message));
+    }
+
+    function loadCustomers() {
+        let query = db.ref('INVOICE/customers');
+        if (!isAdmin) { query = query.orderByChild('mpoCode').equalTo(currentUser); }
+        query.on('value', (snapshot) => {
+            customerCache = [];
+            if (snapshot.exists()) { snapshot.forEach((child) => { customerCache.push(child.val()); }); }
+            renderCustomers();
+        });
+    }
+
+    function renderCustomers() {
+        const tbody = document.getElementById('customer-list-body');
+        if (!tbody) return; tbody.innerHTML = '';
+        const filterMpo = document.getElementById('customer-filter-mpo'); const selectedMpo = (isAdmin && filterMpo) ? filterMpo.value : '';
+        let filtered = customerCache;
+        if (selectedMpo) { filtered = customerCache.filter(c => c.mpoCode === selectedMpo); }
+        if (filtered.length > 0) {
+            filtered.forEach(c => {
+                const statusColor = c.status === 'inactive' ? 'red' : 'green'; const toggleBtnText = c.status === 'inactive' ? 'Activate' : 'Deactivate'; const toggleBtnColor = c.status === 'inactive' ? '#16a34a' : '#f1f5f9'; const toggleBtnTextColor = c.status === 'inactive' ? '#fff' : '#000';
+                tbody.innerHTML += `<tr><td>${c.code}</td><td>${c.name}</td><td>${getCustomerTypeLabel(c.type)}</td><td>${c.address}</td><td>${c.phone}</td><td>${c.mpoName || 'N/A'}</td><td>${c.da || 'N/A'}</td><td style="color: ${statusColor}; font-weight: 600;">${c.status ? c.status.toUpperCase() : 'ACTIVE'}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editCustomer('${c.code}')">Edit</button><button class="action-btn" style="background:${toggleBtnColor};color:${toggleBtnTextColor};" onclick="toggleCustomerStatus('${c.code}', '${c.status}')">${toggleBtnText}</button><button class="action-btn btn-danger" onclick="deleteCustomer('${c.code}')">Delete</button></td></tr>`;
+            });
+        } else { tbody.innerHTML = '<tr><td colspan="9" class="text-center">No customers found</td></tr>'; }
+    }
+
+    function printCustomerList() {
+        const filterMpo = document.getElementById('customer-filter-mpo'); const selectedMpo = (isAdmin && filterMpo) ? filterMpo.value : ''; const selectedMpoText = (isAdmin && filterMpo && filterMpo.selectedIndex >= 0) ? filterMpo.options[filterMpo.selectedIndex].text : 'All MPOs';
+        let filtered = customerCache;
+        if (selectedMpo) { filtered = customerCache.filter(c => c.mpoCode === selectedMpo); }
+        if (filtered.length === 0) { return showAlert('No customers available to print for this selection!'); }
+        let rowsHtml = '';
+        filtered.forEach(c => { rowsHtml += `<tr><td>${c.code}</td><td>${c.name}</td><td>${getCustomerTypeLabel(c.type)}</td><td>${c.address || ''}</td><td>${c.phone || ''}</td><td>${c.mpoName || 'N/A'}</td><td>${c.da || 'N/A'}</td><td>${c.status ? c.status.toUpperCase() : 'ACTIVE'}</td></tr>`; });
+        const printHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Customer List</title><style>body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }h2 { text-align: center; text-decoration: underline; margin-bottom: 5px; }p { text-align: center; margin-top: 0; }table { width: 100%; border-collapse: collapse; margin-top: 20px; }th, td { border: 1px solid #000; padding: 6px; text-align: left; }th { background-color: #f2f2f2; }@media print { body { margin: 10mm; } }</style></head><body><h2>Monico Pharma LTD</h2><p><strong>Customer List</strong><br>MPO: ${selectedMpoText}</p><table><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Address</th><th>Phone</th><th>MPO</th><th>DA</th><th>Status</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`;
+        const iframe = document.createElement('iframe'); iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(printHtml); iframe.contentWindow.document.close();
+        let hasPrinted = false;
+        const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+        iframe.onload = triggerPrint; if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+    }
+
+    function editCustomer(code) {
+        db.ref('INVOICE/customers/' + code).once('value').then((snap) => {
+            const c = snap.val();
+            document.getElementById('c-is-edit').value = 'true'; document.getElementById('c-code').value = c.code; document.getElementById('c-code').readOnly = true; document.getElementById('c-name').value = c.name; document.getElementById('c-type').value = c.type || 'R';
+            if (c.type === 'D' || c.type === 'SP') { document.getElementById('c-dcc-disc-group').style.display = 'block'; document.getElementById('c-dcc-disc').value = c.dccDisc || 0; } else { document.getElementById('c-dcc-disc-group').style.display = 'none'; }
+            document.getElementById('c-address').value = c.address; document.getElementById('c-phone').value = c.phone; document.getElementById('c-mpo').disabled = false; document.getElementById('c-mpo').value = c.mpoCode; if (!isAdmin) document.getElementById('c-mpo').disabled = true;
+            if (!document.getElementById('c-status-hidden')) { let h = document.createElement('input'); h.type = 'hidden'; h.id = 'c-status-hidden'; document.getElementById('customer-form').appendChild(h); }
+            document.getElementById('c-status-hidden').value = c.status || 'active'; document.getElementById('c-submit-btn').innerText = 'Update Customer'; openModal('modal-customer');
+        });
+    }
+    function resetCustomerForm() { document.getElementById('customer-form').reset(); document.getElementById('c-is-edit').value = 'false'; document.getElementById('c-code').readOnly = false; document.getElementById('c-submit-btn').innerText = 'Save Customer'; document.getElementById('c-type').value = 'R'; document.getElementById('c-dcc-disc-group').style.display = 'none'; generateCustomerCode(); }
+    function toggleCustomerStatus(code, status) { db.ref('INVOICE/customers/' + code + '/status').set(status === 'inactive' ? 'active' : 'inactive'); }
+    function deleteCustomer(code) { if(confirm('Delete this Customer?')) db.ref('INVOICE/customers/' + code).remove(); }
+
+    // ---------------- PRODUCT MANAGEMENT ----------------
+    function handleProductSubmit(event) {
+        event.preventDefault(); const isEdit = document.getElementById('p-is-edit').value === 'true'; const code = document.getElementById('p-code').value; const name = document.getElementById('p-name').value; const pack = document.getElementById('p-pack').value; const tp = parseFloat(document.getElementById('p-tp').value); const flatTp = parseFloat(document.getElementById('p-flat-tp').value) || 0; const vat = parseFloat(document.getElementById('p-vat').value); const bonus = document.getElementById('p-bonus').value; const dcc = document.getElementById('p-dcc').value; const status = isEdit ? document.getElementById('p-status-hidden').value : 'active';
+        const productData = { code, name, pack, tp, flatTp, vat, bonus, dcc, status };
+        db.ref('INVOICE/products/' + code).set(productData).then(() => { showAlert(isEdit ? 'Product updated successfully!' : 'Product saved successfully!'); closeModal('modal-product'); resetProductForm(); }).catch((error) => showAlert('Error: ' + error.message));
+    }
+
+    function loadProducts() {
+        db.ref('INVOICE/products').on('value', (snapshot) => {
+            const tbody = document.getElementById('product-list-body'); tbody.innerHTML = '';
+            if (!snapshot.exists()) { tbody.innerHTML = '<tr><td colspan="11" class="text-center">No products found</td></tr>'; return; }
+            snapshot.forEach((child) => {
+                const p = child.val();
+                const statusColor = p.status === 'inactive' ? 'red' : 'green'; const toggleBtnText = p.status === 'inactive' ? 'Activate' : 'Deactivate'; const toggleBtnColor = p.status === 'inactive' ? '#16a34a' : '#f1f5f9'; const toggleBtnTextColor = p.status === 'inactive' ? '#fff' : '#000';
+                const origTp = Number(p.tp||0); const vat = Number(p.vat||0); const tpVat = origTp + vat;
+                tbody.innerHTML += `<tr><td>${p.code}</td><td>${p.name}</td><td>${p.pack}</td><td class="text-right">${origTp.toFixed(2)}</td><td class="text-right">${vat.toFixed(2)}</td><td class="text-right">${tpVat.toFixed(2)}</td><td class="text-right">${Number(p.flatTp||0).toFixed(2)}</td><td>${p.bonus || 'N/A'}</td><td>${(p.dcc === 'true' || p.dcc === true) ? 'Yes' : 'No'}</td><td style="color: ${statusColor}; font-weight: 600;">${p.status ? p.status.toUpperCase() : 'ACTIVE'}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editProduct('${p.code}')">Edit</button><button class="action-btn" style="background:${toggleBtnColor};color:${toggleBtnTextColor};" onclick="toggleProductStatus('${p.code}', '${p.status}')">${toggleBtnText}</button><button class="action-btn btn-danger" onclick="deleteProduct('${p.code}')">Delete</button></td></tr>`;
+            });
+        });
+    }
+
+    function printActiveProducts() {
+        db.ref('INVOICE/products').once('value').then((snapshot) => {
+            if (!snapshot.exists()) { return showAlert('No products found to print!'); }
+            let activeProducts = [];
+            snapshot.forEach((child) => { const p = child.val(); if (p.status === 'active') { activeProducts.push(p); } });
+            if (activeProducts.length === 0) { return showAlert('No ACTIVE products available to print!'); }
+            activeProducts.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            let rowsHtml = '';
+            activeProducts.forEach((p, index) => { let origTp = Number(p.tp || 0); let vat = Number(p.vat || 0); let tpVat = origTp + vat; rowsHtml += `<tr><td style="text-align: center;">${index + 1}</td><td>${p.code || ''}</td><td>${p.name || ''}</td><td>${p.pack || ''}</td><td style="text-align: right;">${origTp.toFixed(2)}</td><td style="text-align: right;">${vat.toFixed(2)}</td><td style="text-align: right;">${tpVat.toFixed(2)}</td><td style="text-align: right;">${Number(p.flatTp || 0).toFixed(2)}</td><td style="text-align: center;">${p.bonus || '-'}</td><td style="text-align: center;">${(p.dcc === 'true' || p.dcc === true) ? 'Yes' : 'No'}</td></tr>`; });
+            const printHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Active Product List</title><style>body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }h2 { text-align: center; text-decoration: underline; margin-bottom: 5px; }p { text-align: center; margin-top: 0; margin-bottom: 20px; }table { width: 100%; border-collapse: collapse; }th, td { border: 1px solid #000; padding: 6px; text-align: left; }th { background-color: #f2f2f2; }@media print { body { margin: 10mm; } th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; } }</style></head><body><h2>Monico Pharma LTD</h2><p><strong>Active Product List</strong><br>Date: ${new Date().toLocaleDateString()}</p><table><thead><tr><th style="text-align: center; width: 5%;">SL</th><th>Code</th><th>Name</th><th>Pack</th><th style="text-align: right;">Original TP</th><th style="text-align: right;">VAT</th><th style="text-align: right;">TP+VAT</th><th style="text-align: right;">Flat Rate</th><th style="text-align: center;">Bonus</th><th style="text-align: center;">DCC</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`;
+            const iframe = document.createElement('iframe'); iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(printHtml); iframe.contentWindow.document.close();
+            let hasPrinted = false;
+            const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
+            iframe.onload = triggerPrint; if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+        }).catch(err => showAlert('Error generating print: ' + err.message));
+    }
+
+    function editProduct(code) {
+        db.ref('INVOICE/products/' + code).once('value').then((snapshot) => {
+            const p = snapshot.val();
+            document.getElementById('p-is-edit').value = 'true'; document.getElementById('p-code').value = p.code; document.getElementById('p-code').readOnly = true; document.getElementById('p-name').value = p.name; document.getElementById('p-pack').value = p.pack; document.getElementById('p-tp').value = p.tp; document.getElementById('p-flat-tp').value = p.flatTp || 0; document.getElementById('p-vat').value = p.vat; document.getElementById('p-bonus').value = p.bonus || ''; document.getElementById('p-dcc').value = (p.dcc === 'true' || p.dcc === true) ? 'true' : 'false';
+            if (!document.getElementById('p-status-hidden')) { let hiddenInput = document.createElement('input'); hiddenInput.type = 'hidden'; hiddenInput.id = 'p-status-hidden'; document.getElementById('product-form').appendChild(hiddenInput); }
+            document.getElementById('p-status-hidden').value = p.status || 'active'; document.getElementById('p-submit-btn').innerText = 'Update Product'; openModal('modal-product');
+        });
+    }
+    function resetProductForm() { document.getElementById('product-form').reset(); document.getElementById('p-is-edit').value = 'false'; document.getElementById('p-code').readOnly = false; document.getElementById('p-submit-btn').innerText = 'Save Product'; }
+    function toggleProductStatus(code, currentStatus) { const newStatus = currentStatus === 'inactive' ? 'active' : 'inactive'; db.ref('INVOICE/products/' + code + '/status').set(newStatus); }
+    function deleteProduct(code) { if (confirm('Are you sure you want to delete this product?')) { db.ref('INVOICE/products/' + code).remove().then(() => showAlert('Product deleted!')); } }
+
+    function resetInvoiceForm() {
+        document.getElementById('invoice-item-tbody').innerHTML = '';
+        document.getElementById('inv-customer-code').value = ''; document.getElementById('inv-customer-name').innerText = 'CUSTOMER NAME'; document.getElementById('inv-customer-type').innerText = 'N/A'; document.getElementById('inv-customer-address').innerText = 'Address Line'; document.getElementById('inv-customer-phone').innerText = '0000000000'; document.getElementById('inv-mpo-code').innerText = ''; document.getElementById('inv-mpo-name').innerText = 'MPO NAME'; document.getElementById('inv-note').value = '';
+        const invOrderNoEl = document.getElementById('inv-order-no'); if(invOrderNoEl) invOrderNoEl.innerText = ''; 
+        activeCustomerType = null; activeCustomerDccDisc = 0; calculateTotals(); generateInvoiceNo(); 
+    }
+</script>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-overlay" class="login-overlay">
+    <div class="login-box">
+        <h2>Portal Login</h2>
+        <input type="text" id="login-user" placeholder="User ID (e.g. KS or MPO Code)">
+        <input type="password" id="login-pass" placeholder="Password">
+        <button onclick="doLogin()">Login</button>
+        <p id="login-error" class="login-error">Invalid credentials</p>
+    </div>
+</div>
+
+<!-- USER DASHBOARD PAGE (FOR NORMAL USERS) -->
+<div id="user-dashboard" class="user-dashboard-container" style="display: none;">
+    <div class="info-box">
+        <div class="info-row">
+            <div class="info-label">Month:</div>
+            <div class="info-value" id="dash-month">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Name:</div>
+            <div class="info-value" id="dash-userName">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Area:</div>
+            <div class="info-value" id="dash-area">Loading...</div>
+        </div>
+        <div class="info-row">
+            <div class="info-label">Joining Date:</div>
+            <div class="info-value" id="dash-joiningDate">Loading...</div>
+        </div>
+    </div>
+
+    <div class="summary-area">
+        <div class="summary-box">
+            <div class="summary-title">Current Month</div>
+            <div class="summary-row"><span>Sales (TP):</span><strong id="dash-curr-tp">0.00</strong></div>
+            <div class="summary-row"><span>Sales (Net):</span><strong id="dash-curr-net">0.00</strong></div>
+            <div class="summary-row"><span>Col.:</span><strong id="dash-curr-col">0.00</strong></div>
+        </div>
+        <div class="summary-box">
+            <div class="summary-title">Previous Month</div>
+            <div class="summary-row"><span>Sales (TP):</span><strong id="dash-prev-tp">0.00</strong></div>
+            <div class="summary-row"><span>Sales (Net):</span><strong id="dash-prev-net">0.00</strong></div>
+            <div class="summary-row"><span>Col.:</span><strong id="dash-prev-col">0.00</strong></div>
+        </div>
+    </div>
+
+    <div class="total-dues">
+        <span>Total Dues:</span>
+        <span id="dash-dues">0.00</span>
+    </div>
+
+    <div class="menu-box">
+        <button class="menu-btn" onclick="showOrderEntryPage()">
+            <div class="menu-icon">🛒</div>
+            <div class="menu-text">Order Entry</div>
+        </button>
+        <button class="menu-btn" onclick="showUserOrdersPage()">
+            <div class="menu-icon">👁</div>
+            <div class="menu-text">Order View</div>
+        </button>
+        <button class="menu-btn" onclick="logout()" style="background: #dc2626;">
+            <div class="menu-icon">🚪</div>
+            <div class="menu-text">Logout</div>
+        </button>
+    </div>
+</div>
+
+<!-- USER ORDERS PAGE (FOR NORMAL USERS) -->
+<div id="user-orders-page" class="simple-order-box" style="display: none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0;">My Orders</h2>
+        <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
+    </div>
+    <div class="table-wrapper">
+        <table class="simple-product-table">
+            <thead>
+                <tr>
+                    <th>Order No</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="user-orders-tbody">
+                <tr><td colspan="4" class="text-center">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SIMPLE ORDER ENTRY PAGE (FOR NORMAL USERS) -->
+<div id="simple-order-page" class="simple-order-box" style="display: none;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+        <h2 style="margin:0;">Order Entry</h2>
+        <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
+    </div>
+    <div class="form-group">
+        <label for="simple-customer">Customer</label>
+        <input type="text" id="simple-customer" list="customerList" placeholder="🔍 Search and select customer" autocomplete="off">
+        <datalist id="customerList"></datalist>
+    </div>
+
+    <div class="simple-quick-entry">
+        <div class="quick-entry-title">Add Product / Service</div>
+        <div class="simple-entry-row">
+            <div>
+                <label for="simple-product">Product / Service</label>
+                <input type="text" id="simple-product" list="productList" placeholder="🔍 Search Product / Service" autocomplete="off">
+            </div>
+            <div>
+                <label for="simple-quantity">Qty</label>
+                <input type="number" id="simple-quantity" min="1" placeholder="Qty" autocomplete="off">
+            </div>
+            <div>
+                <button type="button" class="simple-add-btn" onclick="addSimpleProduct()">+ Add Product</button>
+            </div>
+        </div>
+    </div>
+
+    <table class="simple-product-table">
+        <thead><tr><th width="60">SL</th><th>Product / Service</th><th width="100">Qty</th><th width="100">Action</th></tr></thead>
+        <tbody id="simple-order-rows">
+            <tr><td colspan="4" class="text-center" style="color:#888; padding:20px;">No product added</td></tr>
+        </tbody>
+    </table>
+
+    <div class="form-group" style="margin-top: 20px;">
+        <label for="simple-order-no">Order No.</label>
+        <input type="text" id="simple-order-no" placeholder="Generated after Submit" readonly style="background: #f1f3f5;">
+    </div>
+
+    <button type="button" class="simple-submit-btn" onclick="submitSimpleOrder()">Submit Order</button>
+</div>
+
+<datalist id="productList"></datalist>
+
+<!-- MAIN APPLICATION (ADMIN) -->
+<div id="app-container" style="display: none;">
+
+<div id="admin-nav" class="tab-bar no-print">
+    <div class="tab-left-group">
+        <button class="tab-btn active" onclick="switchTab(event, 'tab-dashboard')">Dashboard</button>
+        <button class="tab-btn" onclick="switchTab(event, 'tab-invoice')">Invoice</button>
+        <button class="tab-btn" data-admin="true" onclick="switchTab(event, 'tab-customer')">Customer</button>
+        <button class="tab-btn" data-admin="true" onclick="switchTab(event, 'tab-product')">Products</button>
+        <button class="tab-btn" data-admin="true" onclick="switchTab(event, 'tab-mpo')">MPO & Users</button>
+        <button class="tab-btn" data-admin="true" onclick="switchTab(event, 'tab-invoice-history')">History</button>
+    </div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<!-- TAB 0: DASHBOARD -->
+<div id="tab-dashboard" class="tab-content active">
+    <h2 style="margin-top:0;">Dashboard Overview</h2>
+    <div class="dashboard-grid">
+        <div class="kpi-card" style="border-left-color: var(--primary);"><div class="kpi-title">Total Sales</div><div class="kpi-value" id="kpi-sales">0.00</div><div class="kpi-sub">Net Payable Amount</div></div>
+        <div class="kpi-card" style="border-left-color: var(--info);"><div class="kpi-title">Total Invoices</div><div class="kpi-value" id="kpi-invoices">0</div><div class="kpi-sub">All generated invoices</div></div>
+        <div class="kpi-card" style="border-left-color: var(--warning);"><div class="kpi-title">Pending Invoices</div><div class="kpi-value" id="kpi-pending">0</div><div class="kpi-sub">Awaiting Summary</div></div>
+        <div class="kpi-card" style="border-left-color: var(--success);"><div class="kpi-title">Summaries</div><div class="kpi-value" id="kpi-summaries">0</div><div class="kpi-sub">Generated Summaries</div></div>
+        <div class="kpi-card" style="border-left-color: #8b5cf6;"><div class="kpi-title">Customers</div><div class="kpi-value" id="kpi-customers">0</div><div class="kpi-sub">Registered customers</div></div>
+        <div class="kpi-card" style="border-left-color: #ec4899;"><div class="kpi-title">Products</div><div class="kpi-value" id="kpi-products">0</div><div class="kpi-sub">Active products</div></div>
+        <div class="kpi-card" style="border-left-color: #14b8a6;"><div class="kpi-title">MPOs / Users</div><div class="kpi-value" id="kpi-mpos">0</div><div class="kpi-sub">Sales Representatives</div></div>
+    </div>
+    <div class="dashboard-row">
+        <div>
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Recent Invoices</h3>
+            <div class="table-wrapper" style="box-shadow: 0 2px 4px rgba(0,0,0,0.03); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;">
+                <table class="item-table" style="margin-top: 0; border: none;">
+                    <thead><tr><th>Invoice No</th><th>Customer</th><th>Date</th><th class="text-right">Net Payable</th></tr></thead>
+                    <tbody id="dashboard-recent-invoices"><tr><td colspan="4" class="text-center">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <h3 style="margin-top:0; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Quick Actions</h3>
+            <div style="display: flex; flex-direction: column; gap: 10px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border);">
+                <button class="btn btn-primary" onclick="switchTab(event, 'tab-invoice'); resetInvoiceForm();">Create New Invoice</button>
+                <button class="btn btn-secondary" data-admin="true" onclick="switchTab(event, 'tab-customer'); resetCustomerForm(); openModal('modal-customer');">Add New Customer</button>
+                <button class="btn btn-success" data-admin="true" onclick="switchTab(event, 'tab-product'); resetProductForm(); openModal('modal-product');">Add New Product</button>
+                <button class="btn btn-warning" data-admin="true" onclick="switchTab(event, 'tab-mpo'); resetMpoForm(); openModal('modal-mpo');">Add New MPO</button>
+                <button class="btn btn-secondary" style="background: var(--info);" onclick="switchTab(event, 'tab-invoice-history');">View History & Summaries</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAB 1: INVOICE -->
+<div id="tab-invoice" class="tab-content">
+    <div class="page-container">
+        <div class="no-print" data-admin="true" style="text-align: right; margin-bottom: 15px;">
+            <button class="btn btn-warning" onclick="openModal('modal-online-orders'); loadOnlineOrders();">View Online Orders</button>
+        </div>
+
+        <div class="header-grid">
+            <div class="header-card">
+                <h4>Customer Info</h4>
+                <input type="text" id="inv-customer-code" placeholder="Enter Code & Press Next" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 4px;" class="no-print" onclick="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="autofillCustomer()">
+                <p><strong id="inv-customer-name">CUSTOMER NAME</strong></p>
+                <p id="inv-customer-address">Address Line</p><p id="inv-customer-phone">0000000000</p><p>Invoice Type: <strong>CASH</strong></p>
+            </div>
+            <div class="header-card">
+                <h4>MPO Info</h4>
+                <p><strong>MPO:</strong> <span id="inv-mpo-name">MPO NAME</span> (<span id="inv-mpo-code"></span>)</p><p><strong>DA:</strong> <span id="inv-da-name">DA NAME</span></p><p><strong>Route:</strong> <span id="inv-route">Route</span></p><p><strong>Type:</strong> <span id="inv-customer-type">N/A</span></p><p>Time: <strong>Anytime</strong></p>
+            </div>
+            <div class="header-card">
+                <h4>Invoice Info</h4>
+                <p><strong>Order No:</strong> <span id="inv-order-no"></span></p><p><strong>Invoice No:</strong> <span id="inv-no">KS000000000</span></p><p><strong>Date:</strong> <script>document.write(new Date().toLocaleDateString())</script></p><p><strong>Summary No:</strong> </p>
+            </div>
+        </div>
+        <div class="quick-entry-container no-print">
+            <div class="form-group" style="margin:0;"><label>Product Code</label><input type="text" id="quick-code" placeholder="Enter Code" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="fetchProductByCode()"></div>
+            <div class="form-group" style="margin:0;"><label>Product Name (Auto)</label><input type="text" id="quick-name" readonly style="background-color: #f8fafc;"></div>
+            <div class="form-group" style="margin:0;"><label>Quantity</label><input type="number" id="quick-qty" placeholder="Qty" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="addQuickEntryItem()"></div>
+        </div>
+        <div class="table-wrapper">
+            <table class="item-table">
+                <thead><tr><th class="text-center">S.N.</th><th>Code</th><th>Product</th><th>Pack Size</th><th class="text-center">Qty</th><th class="text-center">Bonus</th><th class="text-right">Unit TP</th><th class="text-right">Unit Vat</th><th class="text-right">Total TP</th><th class="text-right">Total Vat</th><th class="text-right">Disc %</th><th class="text-right">Disc</th><th class="text-right">Net Value</th><th class="no-print">X</th></tr></thead>
+                <tbody id="invoice-item-tbody"></tbody>
+                <tfoot><tr><td colspan="4" class="text-right"></td><td class="text-center"><strong id="foot-qty">0</strong></td><td class="text-center"><strong id="foot-bonus">0</strong></td><td colspan="2"></td><td class="text-right"><strong id="foot-tp">0.00</strong></td><td class="text-right"><strong id="foot-vat">0.00</strong></td><td></td><td class="text-right"><strong id="foot-disc">0.00</strong></td><td class="text-right"><strong id="foot-net">0.00</strong></td><td class="no-print"></td></tr></tfoot>
+            </table>
+        </div>
+        <div class="invoice-footer">
+            <div><div class="form-group"><label>Note :</label><input type="text" id="inv-note" class="print-input" placeholder="Type note here..."></div><p><strong>In Word: <span id="inv-in-word">Zero Only.</span></strong></p></div>
+            <div><table class="totals-table"><tr><td class="text-right"><strong>Total TP Sales =</strong></td><td class="text-right" style="width: 40%;"><strong id="total-tp-sales">0.00</strong></td></tr><tr><td colspan="2"><hr style="border: 0; border-top: 1px solid var(--border);"></td></tr><tr><td class="text-right"><strong>Net Payable Amount =</strong></td><td class="text-right net-payable-cell"><strong id="net-payable">0.00</strong></td></tr></table></div>
+        </div>
+        <button class="btn btn-success no-print" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 16px;" onclick="saveInvoiceToFirebase()">SAVE INVOICE TO FIREBASE</button>
+    </div>
+</div>
+
+<!-- TAB 2: CUSTOMER MANAGEMENT -->
+<div id="tab-customer" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="margin:0;">Customer Management</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+            <select id="customer-filter-mpo" data-admin="true" style="padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;" onchange="renderCustomers()"><option value="">All MPOs</option></select>
+            <button class="btn btn-secondary" onclick="printCustomerList()">Print List</button>
+            <button class="btn btn-primary" onclick="resetCustomerForm(); openModal('modal-customer');">Add New Customer</button>
+        </div>
+    </div>
+    <h3 style="margin-top: 30px; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Existing Customers</h3>
+    <div class="table-wrapper"><table class="item-table"><thead><tr><th>Code</th><th>Name</th><th>Type</th><th>Address</th><th>Phone</th><th>MPO</th><th>DA</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody id="customer-list-body"></tbody></table></div>
+</div>
+
+<!-- TAB 3: PRODUCT MANAGEMENT -->
+<div id="tab-product" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="margin:0;">Product Management</h2>
+        <div>
+            <button class="btn btn-secondary" onclick="document.getElementById('excel-file').click()">Import Excel</button>
+            <button class="btn btn-warning" onclick="printActiveProducts()">Print Active Products</button>
+            <button class="btn btn-primary" onclick="resetProductForm(); openModal('modal-product');">Add New Product</button>
+            <input type="file" id="excel-file" accept=".xlsx, .xls" style="display:none;" onchange="importExcel()">
+        </div>
+    </div>
+    <h3 style="margin-top: 30px; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Existing Products</h3>
+    <div class="table-wrapper"><table class="item-table"><thead><tr><th>Code</th><th>Name</th><th>Pack</th><th class="text-right">Original TP</th><th class="text-right">VAT</th><th class="text-right">TP+VAT</th><th class="text-right">Flat Rate</th><th>Bonus</th><th>DCC</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody id="product-list-body"></tbody></table></div>
+</div>
+
+<!-- TAB 4: MPO MANAGEMENT -->
+<div id="tab-mpo" class="tab-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="margin:0;">MPO & User Management</h2>
+        <button class="btn btn-primary" onclick="resetMpoForm(); openModal('modal-mpo');">Add New MPO</button>
+    </div>
+    <h3 style="margin-top: 30px; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Existing MPOs</h3>
+    <div class="table-wrapper"><table class="item-table"><thead><tr><th>MPO Code</th><th>MPO Name</th><th>Route</th><th>Delivery Assistant</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody id="mpo-list-body"></tbody></table></div>
+</div>
+
+<!-- TAB 5: INVOICE HISTORY & SUMMARIES -->
+<div id="tab-invoice-history" class="tab-content">
+    <h2 style="margin-top:0;">Invoice History & Summaries</h2>
+    <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--border);">
+        <h3 style="margin-top:0; color: var(--primary);">Area Wise Summary Generate</h3>
+        <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+            <div class="form-group" style="margin:0; flex:1; min-width: 150px;"><label>Delivery Date</label><input type="date" id="rep-sum-date"></div>
+            <div class="form-group" style="margin:0; flex:1; min-width: 150px;"><label>Route</label><select id="rep-sum-route"><option value="">Select Route</option></select></div>
+            <button class="btn btn-success" style="height: 42px; margin-bottom: 15px;" onclick="generateSummary()">Generate Summary</button>
+        </div>
+    </div>
+    <h3 style="margin-top: 30px; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Generated Summaries (Locked)</h3>
+    <div class="table-wrapper" style="margin-bottom: 40px;"><table class="item-table"><thead><tr><th>Summary ID</th><th>Date</th><th>Route</th><th class="text-center">Inv. Count</th><th class="text-right">Total Amount</th><th class="text-center">Action</th></tr></thead><tbody id="summary-list-body"><tr><td colspan="6" class="text-center">No summaries generated yet</td></tr></tbody></table></div>
+    <div id="all-invoices-section">
+        <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><h3 id="all-invoices-heading" style="margin:0; border-bottom: 2px solid var(--border); padding-bottom: 5px; width: 100%;">Pending Invoices for Summary</h3></div>
+        <div style="text-align: right; margin-bottom: 10px;"><button id="clear-filter-btn" class="btn btn-secondary" style="display:none;" onclick="clearSummaryFilter()">Clear Filter</button><button id="print-all-btn" class="btn btn-success" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices()">Print All Listed</button></div>
+        <div class="table-wrapper"><table class="item-table"><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th><th class="text-right">Net Amount</th><th class="text-center">Action</th></tr></thead><tbody id="history-table-body"><tr><td colspan="5" class="text-center">No pending invoices found</td></tr></tbody></table></div>
+    </div>
+</div>
+
+</div><!-- End App Container -->
+
+<datalist id="route-list"></datalist>
+
+<!-- MODALS (Popups) -->
+<div id="modal-alert" class="modal-overlay" style="z-index: 10001; align-items: center; padding-top: 0;"><div class="modal-box" style="max-width: 400px; text-align: center;"><div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border); margin-bottom: 15px;"><h3 id="alert-title">Notice</h3></div><p id="alert-message" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"></p><button id="alert-ok-btn" class="btn btn-primary" style="width: 100%;">OK</button></div></div>
+<div id="modal-customer" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Customer Details</h3><button class="modal-close-btn" onclick="closeModal('modal-customer')">&times;</button></div><form class="management-form" id="customer-form" onsubmit="handleCustomerSubmit(event)"><input type="hidden" id="c-is-edit" value="false"><div class="form-group"><label>Assign to MPO:</label><select id="c-mpo" required><option value="">Select MPO</option></select></div><div class="form-group"><label>Customer Code:</label><input type="text" id="c-code" readonly style="background-color: #f8fafc;" required></div><div class="form-group"><label>Customer Name:</label><input type="text" id="c-name" placeholder="Enter Pharmacy/Shop Name" required></div><div class="form-group"><label for="c-type">Customer Type</label><select id="c-type" required><option value="R" selected>Retailer (R)</option><option value="D">DCC (D)</option><option value="H">Hospital (H)</option><option value="C">Clinic (C)</option><option value="SP">Special (SP)</option></select></div><div class="form-group" id="c-dcc-disc-group" style="display:none;"><label>Discount % (Applied on Original Rate):</label><input type="number" id="c-dcc-disc" placeholder="e.g. 10 (Leave 0 for SP)" min="0" max="100"></div><div class="form-group"><label>Address / Location:</label><input type="text" id="c-address" placeholder="Enter Market / Area" required></div><div class="form-group"><label>Phone Number:</label><input type="text" id="c-phone" placeholder="Enter Phone Number"></div><button type="submit" class="btn btn-primary" id="c-submit-btn">Save Customer</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-customer')">Cancel</button></form></div></div>
+<div id="modal-product" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Product Details</h3><button class="modal-close-btn" onclick="closeModal('modal-product')">&times;</button></div><form class="management-form" id="product-form" onsubmit="handleProductSubmit(event)"><input type="hidden" id="p-is-edit" value="false"><div class="form-group"><label>P-Code:</label><input type="text" id="p-code" placeholder="e.g. ALD" required style="text-transform: uppercase;"></div><div class="form-group"><label>Name:</label><input type="text" id="p-name" placeholder="Enter Product Name" required></div><div class="form-group"><label>Pack Size:</label><input type="text" id="p-pack" placeholder="e.g. 200ml / 30s" required></div><div class="form-group"><label>Original TP Price (For DCC & SP):</label><input type="number" step="0.01" id="p-tp" placeholder="0.00" required></div><div class="form-group"><label>Flat TP Price (For Regular Customer):</label><input type="number" step="0.01" id="p-flat-tp" placeholder="0.00 (Leave 0 if no flat rate)"></div><div class="form-group"><label>Vat (Applicable on Original TP):</label><input type="number" step="0.01" id="p-vat" placeholder="0.00" required></div><div class="form-group"><label>Bonus Rule (X:Y format e.g. 5:1, 3:2, 1:1):</label><input type="text" id="p-bonus" placeholder="e.g. 5:1 (Leave empty if none)"></div><div class="form-group"><label>DCC Product (Gets DCC Discount):</label><select id="p-dcc"><option value="false">No</option><option value="true">Yes</option></select></div><button type="submit" class="btn btn-primary" id="p-submit-btn">Save Product</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-product')">Cancel</button></form></div></div>
+<div id="modal-mpo" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>MPO / User Details</h3><button class="modal-close-btn" onclick="closeModal('modal-mpo')">&times;</button></div><form class="management-form" id="mpo-form" onsubmit="handleMpoSubmit(event)"><input type="hidden" id="mpo-is-edit" value="false"><div class="form-group"><label>MPO Code (User ID):</label><input type="text" id="mpo-code" placeholder="e.g. KS003" required></div><div class="form-group"><label>MPO Name:</label><input type="text" id="mpo-name" placeholder="Enter MPO Name" required></div><div class="form-group"><label>Route / Area:</label><input type="text" id="mpo-route" placeholder="Select or Type Route" list="route-list" required></div><div class="form-group"><label>Delivery Assistant (DA):</label><input type="text" id="mpo-da" placeholder="Enter DA Name" required></div><div class="form-group"><label>Login Password:</label><input type="text" id="mpo-password" placeholder="Set login password" required></div><button type="submit" class="btn btn-primary" id="mpo-submit-btn">Save MPO</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-mpo')">Cancel</button></form></div></div>
+
+<!-- Modal: Online Orders (Admin Only) -->
+<div id="modal-online-orders" class="modal-overlay">
+    <div class="modal-box" style="max-width: 800px;">
+        <div class="modal-header">
+            <h3>Online Orders (From Users)</h3>
+            <button class="modal-close-btn" onclick="closeModal('modal-online-orders')">&times;</button>
+        </div>
+        <div class="form-group">
+            <input type="text" id="online-order-search" placeholder="🔍 Search by Order No, User ID or Customer" oninput="filterOnlineOrders()">
+        </div>
+        <div class="table-wrapper">
+            <table class="item-table" style="min-width: 600px;">
+                <thead>
+                    <tr>
+                        <th>Order No</th>
+                        <th>Date</th>
+                        <th>User (MPO)</th>
+                        <th>Customer</th>
+                        <th>Status</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="online-orders-tbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("simple-quantity").addEventListener("keydown", function(event) { if (event.key === "Enter") { event.preventDefault(); addSimpleProduct(); } });
+</script>
+
+</body>
+</html>

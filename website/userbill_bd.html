@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bill Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body{background:#e8eaed;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;font-size:14px}
+        .w98-desktop{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#008080;padding:15px;position:relative;overflow:hidden}
+        .w98-desktop::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px),repeating-linear-gradient(90deg,transparent,transparent 3px,rgba(0,0,0,.03) 3px,rgba(0,0,0,.03) 4px);pointer-events:none}
+        .w98-window{width:460px;max-width:100%;background:#c0c0c0;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080,1px 1px 0 #000;font-family:'MS Sans Serif','Tahoma','Segoe UI',sans-serif;font-size:12px;position:relative;z-index:1}
+        .w98-titlebar{background:linear-gradient(90deg,#000080 0%,#1084d0 3%,#1084d0 97%,#000080 100%);color:#fff;padding:3px 4px;display:flex;align-items:center;font-weight:700;font-size:12px;user-select:none;gap:4px}
+        .w98-titlebar .w98-icon{width:16px;height:16px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+        .w98-titlebar .w98-text{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:2px}
+        .w98-titlebar .w98-btns{display:flex;gap:2px}
+        .w98-menubar{background:#c0c0c0;padding:2px 0;border-bottom:1px solid #808080;display:flex;gap:0}
+        .w98-body{padding:12px 14px 8px}
+        .w98-group{border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:12px 10px 10px;margin-bottom:10px;position:relative;background:#c0c0c0}
+        .w98-group-label{position:absolute;top:-9px;left:10px;background:#c0c0c0;padding:0 4px;font-size:11px;font-weight:700}
+        .w98-login-row{display:flex;gap:14px;align-items:flex-start}
+        .w98-avatar-box{width:80px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+        .w98-avatar-frame{width:72px;height:80px;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #dfdfdf}
+        .w98-avatar-frame img{width:100%;height:100%;object-fit:cover}
+        .w98-avatar-frame i{font-size:40px;color:#808080}
+        .w98-avatar-label{font-size:10px;color:#404040;text-align:center;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+        .w98-form-area{flex:1;min-width:0}
+        .w98-field{margin-bottom:6px}
+        .w98-field label{display:block;font-size:12px;margin-bottom:2px;font-weight:700;color:#000}
+        .w98-field input{width:100%;box-sizing:border-box;background:#fff;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:3px 5px;font-size:12px;font-family:inherit;outline:none}
+        .w98-user-card{background:#fff;border:2px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:6px 8px;margin-bottom:8px;display:none;box-shadow:inset 1px 1px 0 #dfdfdf,inset -1px -1px 0 #808080}
+        .w98-user-card.show{display:block}
+        .w98-role-tag{display:inline-block;padding:0 6px;font-size:10px;font-weight:700;border:1px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;line-height:18px}
+        .w98-role-user{background:linear-gradient(90deg,#c0c0c0,#e0e0e0);color:#000;border-color:#e0e0e0 #a0a0a0 #a0a0a0 #e0e0e0}
+        .w98-login-btn{background:#c0c0c0;border:2px solid;border-color:#dfdfdf #808080 #808080 #dfdfdf;padding:4px 20px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:inset 1px 1px 0 #fff,inset -1px -1px 0 #808080;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;color:#000}
+        .w98-login-btn:active{border-color:#808080 #dfdfdf #dfdfdf #808080;box-shadow:inset 1px 1px 0 #808080,inset -1px -1px 0 #fff;padding:5px 19px 3px 21px}
+        .w98-login-btn:disabled{color:#808080;cursor:not-allowed}
+        .w98-statusbar{background:#c0c0c0;border-top:1px solid #808080;padding:2px 4px;font-size:11px;display:flex;gap:6px;align-items:center}
+        .w98-statusbar .w98-sb-section{border:1px solid;border-color:#808080 #dfdfdf #dfdfdf #808080;padding:1px 6px;flex:1;background:#c0c0c0;box-shadow:inset 1px 1px 0 #dfdfdf,inset -1px -1px 0 #808080}
+        .w98-status-text{color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .w98-status-text.err{color:#c00}
+        .w98-status-text.ok{color:#008000}
+        .w98-status-text.searching{color:#000080}
+        .w98-spinner{display:inline-block;width:12px;height:12px;border:2px solid #808080;border-top-color:#000080;border-radius:50%;animation:w98spin .6s linear infinite;vertical-align:middle;margin-right:4px}
+        @keyframes w98spin{to{transform:rotate(360deg)}}
+        @keyframes w98shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+        .hidden{display:none}
+        .card{background:#fff;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);border-radius:10px}
+        .card-header{border-radius:10px 10px 0 0 !important;font-weight:600}
+        .form-control,.form-select{border-radius:6px;border:1.5px solid #dee2e6;font-size:13px}
+        .form-control:focus,.form-select:focus{box-shadow:0 0 0 2px rgba(13,110,253,.12);border-color:#0d6efd}
+        .btn{border-radius:6px;font-size:13px}
+        .status-red{background:#fff5f5;border-left:4px solid #ef5350}
+        .status-orange{background:#fff8e1;border-left:4px solid #ffa726}
+        .online-dot{width:8px;height:8px;background:#28a745;border-radius:50%;display:inline-block;margin-right:5px;animation:pulse 2s infinite}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.3)}100%{transform:scale(1)}}
+        .scroll-box-sm{max-height:200px;overflow-y:auto}
+        .profile-img-thumb{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid #dee2e6}
+        .profile-img-lg{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #0d6efd}
+        .clickable-row{cursor:pointer}.clickable-row:hover{background:#e3f2fd}
+        .quick-entry-card{background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:12px;margin-bottom:10px}
+        .quick-entry-card label{font-size:13px;font-weight:600;color:#0d47a1}
+        .global-month-bar{background:linear-gradient(135deg,#0d6efd,#0b5ed7);color:#fff;border-radius:8px;padding:6px 12px;display:flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(13,110,253,.3)}
+        .global-month-bar .form-control{border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;max-width:170px;border-radius:6px}
+        .global-month-bar .form-control::-webkit-calendar-picker-indicator{filter:invert(1)}
+        .global-month-bar .btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px}
+        .global-month-bar .btn.active-month{background:#fff;color:#0d6efd;font-weight:700}
+        .month-badge{background:rgba(255,255,255,.2);padding:2px 8px;border-radius:12px;font-size:11px}
+        tfoot td{font-weight:700;background:#e9ecef}
+                @media print{
+            body *{visibility:hidden}
+            .no-print{display:none!important}
+            .print-container,.print-summary-container,.print-iou-container,.print-topsheet-container,.print-topsheet-final-container{display:none !important;position:relative}
+            .active-print{display:block!important;position:absolute;left:0;top:0;width:100%;visibility:visible!important}
+            .active-print *{visibility:visible!important}
+            thead{display:table-header-group}tfoot{display:table-footer-group}
+            table,th,td{border:1px solid #000!important;border-collapse:collapse}
+            th,td{padding:2px 4px;font-size:13px;line-height:1.2}
+            .sign-row td{height:80px;vertical-align:bottom}
+            .cut-text{text-decoration:line-through;color:red}
+        }
+        .user-welcome-banner{border-radius:16px;overflow:hidden;border:none;box-shadow:0 6px 24px rgba(13,110,253,.25)}
+        .user-welcome-banner .card-body{padding:20px 24px}
+        .user-stat-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:transform .25s,box-shadow .25s;overflow:hidden;position:relative}
+        .user-stat-card:hover{transform:translateY(-5px);box-shadow:0 8px 28px rgba(0,0,0,.12)}
+        .user-stat-card .stat-icon-wrap{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin:0 auto 8px;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+        .user-stat-card .stat-value{font-size:28px;font-weight:800;line-height:1;margin-bottom:2px}
+        .user-stat-card .stat-label{font-size:11px;font-weight:600;color:#6c757d;text-transform:uppercase;letter-spacing:.5px}
+        .user-iou-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+        .user-iou-card .card-header{border-radius:14px 14px 0 0!important;padding:10px 16px}
+        .user-iou-card .card-body{padding:0}
+        .user-iou-card .table{margin-bottom:0}
+        .user-iou-card .table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:8px 10px;background:#f8f9fa}
+        .user-iou-card .table td{font-size:13px;padding:8px 10px;vertical-align:middle}
+        .user-online-card{border-radius:14px;border:none;box-shadow:0 2px 12px rgba(0,0,0,.06);overflow:hidden}
+        .user-online-card .online-user-item{display:flex;align-items:center;padding:8px 12px;border-bottom:1px solid #f0f0f0;transition:background .15s}
+        .user-online-card .online-user-item:hover{background:#f0f7ff}
+        .user-online-card .online-user-item:last-child{border-bottom:none}
+        .user-online-card .online-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-right:10px;flex-shrink:0}
+        @keyframes fadeSlideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .animate-in{animation:fadeSlideUp .4s ease both}
+        .animate-in-d1{animation-delay:.05s}
+        .animate-in-d2{animation-delay:.1s}
+        .animate-in-d3{animation-delay:.15s}
+        .animate-in-d4{animation-delay:.2s}
+        .animate-in-d5{animation-delay:.25s}
+        .animate-in-d6{animation-delay:.3s}
+        
+        /* Bill History Table Fix */
+        #billTab .table { font-size: 13px; margin-bottom: 0; }
+        #billTab .table th, #billTab .table td {
+            white-space: normal;
+            word-break: break-word;
+            vertical-align: middle;
+            padding: 8px 10px;
+        }
+        #billTab .table th { white-space: nowrap; }
+        #billTab .table td:nth-child(6) { white-space: nowrap; } /* Action buttons stay in one line */
+
+        /* ====== FIX: Bill Entry Expense Table Inputs ====== */
+        #expense_table_body input, #expense_table_body select {
+            width: 100%;
+            min-width: 100px;
+            font-size: 13px;
+        }
+        #expense_table_body .exp-from, #expense_table_body .exp-to {
+            min-width: 120px;
+        }
+        #expense_table_body .exp-mode {
+            min-width: 145px; /* To fit 'Daily Allowance' properly */
+        }
+        #expense_table_body .exp-date {
+            min-width: 150px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="login_section" class="w98-desktop">
+    <div class="w98-window">
+        <div class="w98-titlebar">
+            <div class="w98-icon"><i class="bi bi-receipt-cutoff"></i></div>
+            <center><span class="w98-text">Bill Management System — Log On - DA Panel</span></center>
+        </div>
+        <div class="w98-menubar"></div>
+        <div class="w98-body">
+            <div class="w98-group">
+                <div class="w98-group-label">Enter Network Password</div>
+                <div class="w98-login-row">
+                    <div class="w98-avatar-box">
+                        <div class="w98-avatar-frame" id="w98_avatar_frame"><i class="bi bi-person-fill" id="w98_avatar_icon"></i></div>
+                        <div class="w98-avatar-label" id="w98_avatar_name">&nbsp;</div>
+                    </div>
+                    <div class="w98-form-area">
+                        <div class="w98-field"><label for="login_user_id">User ID:</label><input type="text" id="login_user_id" placeholder="Type your User ID..." autocomplete="off" spellcheck="false"></div>
+                        <div class="w98-user-card" id="w98_user_card">
+                            <div class="w98-uc-row"><span>Name:</span><span id="w98_show_name">—</span></div>
+                            <div class="w98-uc-row"><span>Role:</span><span class="w98-role-tag w98-role-user" id="w98_show_role">—</span></div>
+                            <div class="w98-uc-row"><span>Depot:</span><span id="w98_show_depot">—</span></div>
+                        </div>
+                        <div class="w98-field"><label for="login_password">Password:</label><input type="password" id="login_password" placeholder="Enter password..." disabled></div>
+                        <button class="w98-login-btn" id="w98_login_btn" disabled onclick="handleUnifiedLogin()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center" style="font-size:10px;color:#404040;margin-top:6px"><i class="bi bi-info-circle"></i> Enter your User ID (e.g. DA-001)</div>
+        </div>
+        <div class="w98-statusbar"><div class="w98-sb-section"><span class="w98-status-text" id="w98_status">Ready</span></div></div>
+    </div>
+</div>
+
+<div id="dashboard_section" class="container-fluid mt-2 hidden">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2 p-2 bg-white shadow-sm rounded no-print gap-2">
+        <h5 class="mb-0">Welcome</h5>
+        <div class="global-month-bar" id="global_month_bar">
+            <i class="bi bi-calendar3"></i>
+            <span class="month-badge">FILTER</span>
+            <input type="month" id="global_month_filter" class="form-control" onchange="setGlobalMonth(this.value)">
+            <button class="btn active-month" id="btn_month_current" onclick="setGlobalMonth(getCurrentMonth())">This Month</button>
+            <button class="btn" id="btn_month_all" onclick="setGlobalMonth('')">All</button>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-light border dropdown-toggle d-flex align-items-center" type="button" id="accountDropdownBtn" data-bs-toggle="dropdown">
+                <img id="header_profile_pic" src="https://via.placeholder.com/30" class="profile-img-thumb me-2">
+                <span id="header_user_name">User</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">My Account</h6></li>
+                <li><a class="dropdown-item" href="#" onclick="openProfileModal()"><i class="bi bi-person-circle me-2"></i>Edit Profile</a></li>
+                <li><a class="dropdown-item" href="#" onclick="openChangePassModal()"><i class="bi bi-key me-2"></i>Change Password</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#" onclick="logout()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs no-print" id="myTab" role="tablist">
+        <li class="nav-item"><button class="nav-link active" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashTab" type="button">Dashboard</button></li>
+        <li class="nav-item"><button class="nav-link" id="entry-tab" data-bs-toggle="tab" data-bs-target="#entryTab" type="button">Bill entry</button></li>
+        <li class="nav-item"><button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#billTab" type="button">History</button></li>
+    </ul>
+
+    <div class="tab-content pt-2">
+        <!-- DASHBOARD TAB -->
+        <div class="tab-pane fade show active" id="dashTab" role="tabpanel">
+            <div class="card user-welcome-banner mb-3 animate-in no-print" style="background:linear-gradient(135deg,#0d6efd 0%,#6610f2 100%)">
+                <div class="card-body text-white d-flex align-items-center">
+                    <img id="user_dash_profile" src="https://via.placeholder.com/70/0d6efd/ffffff?text=U" style="width:70px;height:70px;border-radius:50%;border:3px solid rgba(255,255,255,.35);object-fit:cover;box-shadow:0 4px 15px rgba(0,0,0,.2)" class="me-3">
+                    <div>
+                        <h4 class="mb-1 fw-bold" id="user_dash_name">Welcome!</h4>
+                        <p class="mb-0" style="opacity:.8;font-size:13px"><i class="bi bi-geo-alt-fill me-1"></i><span id="user_dash_depot">Kushtia</span> Depot &nbsp;•&nbsp; <i class="bi bi-person-fill me-1"></i>Delivery Assistant</p>
+                    </div>
+                    <div class="ms-auto text-end d-none d-md-block">
+                        <div style="font-size:14px;opacity:.75" id="user_dash_date"></div>
+                        <div style="font-size:11px;opacity:.5">MONICO PHARMA LTD</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-2 mb-3 no-print">
+                <div class="col-6 col-md">
+                    <div class="card user-stat-card animate-in animate-in-d1">
+                        <div class="card-body text-center py-3">
+                            <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f6d365,#fda085)"><i class="bi bi-cash-stack"></i></div>
+                            <div class="stat-value" style="color:#fd7e14" id="user_stat_total_iou">0</div>
+                            <div class="stat-label">Total IOUs</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card user-stat-card animate-in animate-in-d2">
+                        <div class="card-body text-center py-3">
+                            <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="bi bi-file-earmark-text"></i></div>
+                            <div class="stat-value" style="color:#667eea" id="user_stat_total">0</div>
+                            <div class="stat-label">Total Bills</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card user-stat-card animate-in animate-in-d3">
+                        <div class="card-body text-center py-3">
+                            <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f093fb,#f5576c)"><i class="bi bi-hourglass-split"></i></div>
+                            <div class="stat-value" style="color:#f5576c" id="user_stat_pending">0</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card user-stat-card animate-in animate-in-d4">
+                        <div class="card-body text-center py-3">
+                            <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#4facfe,#00f2fe)"><i class="bi bi-pencil-square"></i></div>
+                            <div class="stat-value" style="color:#0ea5e9" id="user_stat_checked">0</div>
+                            <div class="stat-label">Checked</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md">
+                    <div class="card user-stat-card animate-in animate-in-d5">
+                        <div class="card-body text-center py-3">
+                            <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="bi bi-check-circle"></i></div>
+                            <div class="stat-value" style="color:#10b981" id="user_stat_verified">0</div>
+                            <div class="stat-label">Verified</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-2 mb-3 no-print">
+                <div class="col-12">
+                    <div class="card user-iou-card animate-in animate-in-d5">
+                        <div class="card-header text-white" style="background:linear-gradient(135deg,#0d6efd,#0b5ed7)">
+                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>My Active IOU <small style="opacity:.7" id="user_active_iou_month_label"></small></span><span class="badge bg-light text-primary" id="user_active_iou_count">0</span></div>
+                        </div>
+                        <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th></th></tr></thead><tbody id="user_active_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Active IOU</td></tr></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-2 mb-3 no-print">
+                <div class="col-md-7">
+                    <div class="card user-iou-card animate-in animate-in-d5">
+                        <div class="card-header text-white" style="background:linear-gradient(135deg,#6c757d,#495057)">
+                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-archive me-2"></i>Used IOU <small style="opacity:.7" id="user_used_iou_month_label"></small></span><span class="badge bg-light text-secondary" id="user_used_iou_count">0</span></div>
+                        </div>
+                        <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th>Status</th></tr></thead><tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Used IOU</td></tr></tbody></table></div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="card user-online-card animate-in animate-in-d6" style="height:100%">
+                        <div class="card-header border-0 py-2" style="background:linear-gradient(135deg,#10b981,#059669)">
+                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online</span><span class="badge bg-light text-success" id="user_online_count_badge">0</span></div>
+                        </div>
+                        <div class="scroll-box-sm" id="user_online_list_view" style="max-height:200px"><div class="text-center text-muted p-3">Checking...</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BILL ENTRY TAB -->
+        <div class="tab-pane fade" id="entryTab" role="tabpanel">
+            <div class="bill-form-container no-print">
+                <div class="text-center mb-2"><h3>MONICO PHARMA LTD</h3><h5>Delivery Expense Bill</h5></div>
+                <input type="hidden" id="form_iou_amount" value="0">
+                <input type="hidden" id="edit_bill_year"><input type="hidden" id="edit_bill_month"><input type="hidden" id="edit_bill_daName">
+                <div class="row mb-2"><div class="col-4"><label class="fw-bold">Name Of DA:</label><input type="text" id="form_da_name" class="form-control form-control-sm" readonly></div><div class="col-4"><label class="fw-bold">Designation:</label><input type="text" value="Delivery Assistant" class="form-control form-control-sm" readonly></div><div class="col-4"><label class="fw-bold">Depot:</label><input type="text" id="form_depot" class="form-control form-control-sm" readonly></div></div>
+                <div class="row mb-2"><div class="col-4"><label class="fw-bold">Departure:</label><input type="date" id="form_dep_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label class="fw-bold">Return:</label><input type="date" id="form_ret_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label class="fw-bold">Bill Date:</label><input type="date" id="form_submit_date" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-12"><label class="fw-bold">Route:</label><input type="text" id="form_route" class="form-control form-control-sm" placeholder="Route Name" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-6"><label class="fw-bold">MPO:</label><input type="text" id="form_mpo" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-6"><label class="fw-bold">Summary No:</label><input type="text" id="form_summary" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-4"><label>Invoice Value:</label><input type="number" id="form_invoice_val" class="form-control form-control-sm" oninput="calculateSoldValue();triggerAutoSave()"></div><div class="col-4"><label>Return Value:</label><input type="number" id="form_return_val" class="form-control form-control-sm" value="0" oninput="calculateSoldValue();triggerAutoSave()"></div><div class="col-4"><label>Sold Value:</label><input type="number" id="form_sold_val" class="form-control form-control-sm" readonly></div></div>
+                <div class="row mb-2"><div class="col-4"><label>Invoice Qty:</label><input type="number" id="form_invoice_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div><div class="col-4"><label>Bundle Qty:</label><input type="number" id="form_bundle_qty" class="form-control form-control-sm" oninput="triggerAutoSave()"></div></div>
+                <div class="row mb-2"><div class="col-12"><label class="fw-bold">Remarks:</label><input type="text" id="form_remarks" class="form-control form-control-sm" placeholder="Notes..." oninput="triggerAutoSave()"></div></div>
+                <div class="quick-entry-card no-print">
+                    <div class="d-flex justify-content-between align-items-center mb-2"><h6 class="text-primary mb-0"><i class="bi bi-lightning-charge-fill"></i> Quick Entry</h6><div class="input-group input-group-sm" style="max-width:220px"><input type="file" id="user_exp_excel_input" class="form-control form-control-sm" accept=".xlsx,.xls" style="font-size:10px"><button class="btn btn-info text-white" onclick="importExpensesToTable()">Excel</button></div></div>
+                    <div class="row g-1"><div class="col-4"><label>From</label><input type="text" id="q_from" class="form-control form-control-sm" placeholder="From"></div><div class="col-4"><label>To</label><input type="text" id="q_to" class="form-control form-control-sm" placeholder="To"></div><div class="col-4"><label>Mode</label><select id="q_mode" class="form-select form-control-sm"><option>Rickshaw</option><option>Auto</option><option>Bus</option><option>CNG</option><option>Van</option><option>Motorcycle</option><option>Tempo</option><option>Pickup</option><option>Daily Allowance</option><option>Labour Bill</option></select></div><div class="col-4"><label>Amount</label><input type="number" id="q_amount" class="form-control form-control-sm" placeholder="0"></div><div class="col-4"><label>DA Exp</label><input type="number" id="q_da_expense" class="form-control form-control-sm" placeholder="0"></div><div class="col-4 d-flex align-items-end"><button onclick="addQuickEntryRow()" class="btn btn-success btn-sm w-100"><i class="bi bi-plus-lg"></i> Add</button></div></div>
+                    <small class="text-muted d-block mt-1">Excel: Date, From, To, Mode, Amount, DA</small>
+                </div>
+                <div class="table-responsive"><table class="table table-bordered table-sm"><thead class="table-light"><tr><th>Date</th><th>From</th><th>To</th><th>Mode</th><th>Amount</th><th>DA</th><th>Total</th><th>X</th></tr></thead><tbody id="expense_table_body"></tbody><tfoot><tr><td colspan="4" class="text-end fw-bold">Grand Total:</td><td colspan="3"><input type="text" id="grand_total" class="form-control form-control-sm fw-bold text-center" value="0" readonly></td></tr><tr class="table-info"><td colspan="4" class="text-end fw-bold">Cost (%):</td><td colspan="3"><span id="form_cost_percent" class="fw-bold">0%</span></td></tr></tfoot></table></div>
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-2"><span id="auto_save_status" class="text-muted align-self-center me-auto"></span><button onclick="addExpenseRow()" class="btn btn-secondary btn-sm">+ Row</button><button onclick="clearBillForm()" class="btn btn-danger btn-sm">Clear</button><button id="draft_btn" onclick="submitOrUpdateBill('draft')" class="btn btn-secondary btn-sm">Save Draft</button><button id="main_submit_btn" onclick="submitOrUpdateBill('red')" class="btn btn-success btn-sm">Submit Bill</button><button id="cancel_edit_btn" onclick="cancelEdit()" class="btn btn-warning btn-sm hidden">Cancel</button></div>
+            </div>
+        </div>
+
+        <!-- BILL HISTORY TAB -->
+        <div class="tab-pane fade" id="billTab" role="tabpanel">
+            <div class="card dash-card no-print">
+                <div class="card-body p-2">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead id="bill_table_head" class="table-dark"></thead>
+                            <tbody id="bill_table_body">
+                                <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                            </tbody>
+                            <tfoot id="bill_table_foot" class="table-success fw-bold"></tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
+<div class="modal fade no-print" id="changePassModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning py-2"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="fw-bold">Current</label><input type="password" id="cp_current" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">New</label><input type="password" id="cp_new" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Confirm</label><input type="password" id="cp_confirm" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update</button></div></div></div></div>
+
+<!-- PRINT CONTAINER -->
+<div class="print-container hidden" id="print_area"><div style="text-align:center;border-bottom:2px solid #000;margin-bottom:10px"><h2 style="margin:0;letter-spacing:2px">MONICO PHARMA LTD</h2><h4 style="margin:0">Delivery Expense Bill</h4><h5 style="margin:0">Kushtia Depot</h5><h6 style="margin:0">04-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</h6></div><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><tr><td style="width:33%;padding:3px"><strong>DA:</strong> <span id="p_da_name"></span></td><td style="width:33%;text-align:center;padding:3px"><strong>Designation:</strong> Delivery Assistant</td><td style="width:33%;text-align:right;padding:3px"><strong>Depot:</strong> <span id="p_depot"></span></td></tr><tr><td style="padding:3px"><strong>Departure:</strong> <span id="p_dep_date"></span></td><td style="text-align:center;padding:3px"><strong>Return:</strong> <span id="p_ret_date"></span></td><td style="text-align:right;padding:3px"><strong>Bill Date:</strong> <span id="p_submit_date"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>Route:</strong> <span id="p_route"></span></td></tr><tr><td colspan="3" style="padding:3px"><strong>MPO:</strong> <span id="p_mpo"></span></td></tr><tr><td style="padding:3px"><strong>Summary:</strong> <span id="p_summary"></span></td><td style="text-align:center;padding:3px"><strong>Invoice Value:</strong> <span id="p_inv_val"></span></td><td style="text-align:right;padding:3px"><strong>Bundle Qty:</strong> <span id="p_bundle_qty"></span></td></tr><tr><td style="padding:3px"><strong>Return:</strong> <span id="p_ret_val"></span></td><td style="text-align:center;padding:3px"><strong>Sold:</strong> <span id="p_sold_val"></span></td><td style="text-align:right;padding:3px"><strong>Invoice Qty:</strong> <span id="p_inv_qty"></span></td></tr></table><table style="width:100%;border-collapse:collapse;margin-bottom:10px"><thead><tr style="background:#f0f0f0"><th style="padding:2px;text-align:left">Date</th><th style="padding:2px;text-align:left">From</th><th style="padding:2px;text-align:left">To</th><th style="padding:2px;text-align:left">Mode</th><th style="padding:2px;text-align:right">Amount</th><th style="padding:2px;text-align:right">DA</th><th style="padding:2px;text-align:right">Total</th><th style="padding:2px;text-align:right">Deduction</th><th style="padding:2px;text-align:right">Net</th></tr></thead><tbody id="p_expense_body"></tbody><tfoot><tr style="font-weight:bold"><td colspan="4" style="text-align:left;padding:2px">Grand Total</td><td style="text-align:right;padding:2px" id="p_foot_amt">0</td><td style="text-align:right;padding:2px" id="p_foot_da">0</td><td style="text-align:right;padding:2px" id="p_foot_total">0</td><td style="text-align:right;padding:2px" id="p_foot_ded">0</td><td style="text-align:right;padding:2px" id="p_total_amount">0</td></tr></tfoot></table><div style="margin-top:5px;border:1px solid #000;padding:3px;margin-bottom:20px"><div style="display:flex;justify-content:space-between"><div style="width:60%"><strong>In Words:</strong> <span id="p_total_words"></span></div><div style="width:35%;text-align:right"><strong>Cost (%):</strong> <span id="p_cost_percent"></span></div></div><div style="margin-top:5px;border-top:1px dashed #ccc;padding-top:2px"><strong>Remarks:</strong> <span id="p_remarks"></span></div></div><table style="width:100%;border-collapse:collapse;margin-top:20px"><tr class="sign-row"><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_prepared_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_checked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom;font-weight:bold"><span id="p_rechecked_by"></span></td><td style="width:25%;text-align:center;vertical-align:bottom"></td></tr><tr><td style="width:25%;text-align:center">Prepared By</td><td style="width:25%;text-align:center">Checked By DIC</td><td style="width:25%;text-align:center">Rechecked By RSM/Sr RSM</td><td style="width:25%;text-align:center">Approved By</td></tr></table></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script>
+const firebaseConfig={
+  apiKey:"AIzaSyD3l-b_9jRDPC-UxjqmA6ZMiupXdP5yakQ",
+  authDomain:"smartmanager-ed5f0.firebaseapp.com",
+  databaseURL:"https://smartmanager-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"smartmanager-ed5f0",
+  storageBucket:"smartmanager-ed5f0.firebasestorage.app",
+  messagingSenderId:"886142154237",
+  appId:"1:886142154237:web:f0f838a0dcc69e1cdd1594",
+  measurementId:"G-YZ520GP66H"
+};
+firebase.initializeApp(firebaseConfig);
+const database=firebase.database();
+
+let currentUser=null,editingBillId=null,editingBillYear=null,editingBillMonth=null,editingBillDaName=null;
+let daListCache={},iouListGlobal={};
+let currentIouId=null,originalIouId=null,originalIouYear=null,originalIouMonth=null,originalIouDaName=null;
+let profilePhotoBase64=null;
+let globalFilterMonth='',iouGlobalListenerRef=null;
+let lookedUpUser=null,lookupTimeout=null;
+let _iouLoaded=false;
+
+function sanitizeKey(s){return String(s||'').replace(/[.#$\[\]\/]/g,'_');}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getCurrentMonth(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');}
+function formatMonthLabel(m){if(!m)return'All Time';var p=m.split('-');var ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return ms[parseInt(p[1])-1]+'-'+p[0];}
+function formatDate(d){if(!d)return'';if(d.indexOf('-')===2)return d;if(d.indexOf('-')!==4)return d;var p=d.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+function isNoBillIOU(t){return t==='General'||t==='Bill Payment';}
+function getDateParts(dateStr){
+    if(!dateStr)return{year:'',month:''};
+    if(dateStr.indexOf('-')===2){var p=dateStr.split('-');if(p.length===3)return{year:p[2],month:p[1]};return{year:'',month:''};}
+    if(dateStr.indexOf('-')===4){var p2=dateStr.split('-');if(p2.length===3)return{year:p2[0],month:p2[1]};}
+    var parts=dateStr.split(/[-\/\.]/);
+    if(parts.length===3){if(parts[0].length===4)return{year:parts[0],month:parts[1]};if(parts[2].length===4)return{year:parts[2],month:parts[1]};}
+    return{year:'',month:''};
+}
+function getBillDate(b){return b.submitDate||b.depDate||'';}
+function isDateInMonth(dateStr,monthVal){
+    if(!monthVal)return true;
+    if(!dateStr)return false;
+    var dp=getDateParts(dateStr);
+    if(!dp.year||!dp.month)return false;
+    var normalizedMonth=dp.month.length===1?'0'+dp.month:dp.month;
+    return dp.year+'-'+normalizedMonth===monthVal;
+}
+function collectIOUs(snap,pYear,pMonth){
+    var result={};
+    if(!snap.exists())return result;
+    snap.forEach(function(child){
+        var key=child.key;
+        if(/^\d{4}$/.test(key)&&!pYear){Object.assign(result,collectIOUs(child,key,null));}
+        else if(/^\d{2}$/.test(key)&&!pMonth){Object.assign(result,collectIOUs(child,pYear,key));}
+        else{child.forEach(function(iouSnap){result[iouSnap.key]={...iouSnap.val(),_year:pYear,_month:pMonth,_daName:key};});}
+    });
+    return result;
+}
+function collectBills(snap,pYear,pMonth){
+    var result=[];
+    if(!snap.exists())return result;
+    snap.forEach(function(child){
+        var key=child.key;
+        if(/^\d{4}$/.test(key)&&!pYear){result=result.concat(collectBills(child,key,null));}
+        else if(/^\d{2}$/.test(key)&&!pMonth){result=result.concat(collectBills(child,pYear,key));}
+        else{child.forEach(function(billSnap){result.push({id:billSnap.key,data:billSnap.val(),year:pYear,month:pMonth,daName:key});});}
+    });
+    return result;
+}
+
+// ========== LOGIN ==========
+function setStatus(text,cls){var el=document.getElementById('w98_status');el.innerText=text;el.className='w98-status-text'+(cls?' '+cls:'');}
+function resetLoginUI(){
+    lookedUpUser=null;
+    document.getElementById('w98_user_card').classList.remove('show');
+    document.getElementById('w98_show_name').innerText='—';
+    document.getElementById('w98_show_role').innerText='—';
+    document.getElementById('w98_show_depot').innerText='—';
+    document.getElementById('login_password').value='';
+    document.getElementById('login_password').disabled=true;
+    document.getElementById('w98_login_btn').disabled=true;
+    var frame=document.getElementById('w98_avatar_frame');
+    frame.innerHTML='<i class="bi bi-person-fill" id="w98_avatar_icon"></i>';
+    document.getElementById('w98_avatar_name').innerHTML='&nbsp;';
+}
+function lookupUser(){
+    clearTimeout(lookupTimeout);
+    var val=document.getElementById('login_user_id').value.trim();
+    if(!val||val.length<1){resetLoginUI();setStatus('Ready');return;}
+    setStatus('<span class="w98-spinner"></span> Searching...','searching');
+    lookupTimeout=setTimeout(function(){
+        database.ref('Users').orderByChild('userId').equalTo(val).once('value',function(snap){
+            if(snap.exists()){snap.forEach(function(c){lookedUpUser={key:c.key,data:c.val()};showLookedUpUser();});}
+            else{
+                database.ref('Users').orderByChild('username').equalTo(val).once('value',function(snap2){
+                    if(snap2.exists()){snap2.forEach(function(c){lookedUpUser={key:c.key,data:c.val()};showLookedUpUser();});}
+                    else{resetLoginUI();setStatus('User "'+escHtml(val)+'" not found','err');}
+                });
+            }
+        },function(){resetLoginUI();setStatus('Connection error','err');});
+    },400);
+}
+function showLookedUpUser(){
+    if(!lookedUpUser)return;
+    var d=lookedUpUser.data;
+    document.getElementById('w98_show_name').innerText=d.name||'—';
+    var roleEl=document.getElementById('w98_show_role');
+    var roleMap={superadmin:'Super Admin (RSM)',admin:'Admin (DIC)',user:'User (DA)'};
+    roleEl.innerText=roleMap[d.role]||d.role||'User';
+    roleEl.className='w98-role-tag w98-role-'+(d.role||'user');
+    document.getElementById('w98_show_depot').innerText=d.depot||'—';
+    document.getElementById('w98_user_card').classList.add('show');
+    document.getElementById('login_password').disabled=false;
+    document.getElementById('w98_login_btn').disabled=false;
+    var frame=document.getElementById('w98_avatar_frame');
+    if(d.photoUrl){frame.innerHTML='<img id="w98_avatar_icon" src="'+d.photoUrl+'" alt="">';}
+    else{var iconCls=d.role==='superadmin'?'bi-shield-lock-fill':d.role==='admin'?'bi-person-gear':'bi-person-fill';frame.innerHTML='<i class="bi '+iconCls+'" id="w98_avatar_icon"></i>';}
+    document.getElementById('w98_avatar_name').innerText=d.name||'';
+    setStatus('Found: '+d.name+' — Enter password','ok');
+    document.getElementById('login_password').focus();
+}
+function handleUnifiedLogin(){
+    if(!lookedUpUser){setStatus('Enter a valid User ID first','err');return;}
+    var pwd=document.getElementById('login_password').value;
+    if(!pwd){setStatus('Enter password','err');document.getElementById('login_password').focus();return;}
+    if(lookedUpUser.data.password!==pwd){
+        setStatus('Wrong password! Try again.','err');
+        document.getElementById('login_password').value='';
+        document.getElementById('login_password').focus();
+        return;
+    }
+    var d=lookedUpUser.data;
+    
+    // শুধুমাত্র ইউজার লগইন করতে পারবে
+    if(d.role !== 'user'){
+        setStatus('Access Denied! Only DAs can login here.','err');
+        return;
+    }
+
+    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};
+    localStorage.setItem('auth_user', JSON.stringify(currentUser));
+    showDashboard();
+}
+document.getElementById('login_user_id').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(!document.getElementById('login_password').disabled)document.getElementById('login_password').focus();}});
+document.getElementById('login_password').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();handleUnifiedLogin();}});
+document.getElementById('login_user_id').addEventListener('input',lookupUser);
+
+// ========== GLOBAL MONTH FILTER ==========
+function setGlobalMonth(monthVal){
+    globalFilterMonth=monthVal||'';
+    ['global_month_filter'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=globalFilterMonth;});
+    var bc=document.getElementById('btn_month_current'),ba=document.getElementById('btn_month_all');
+    if(bc&&ba){
+        if(globalFilterMonth===getCurrentMonth()){bc.classList.add('active-month');ba.classList.remove('active-month');}
+        else if(globalFilterMonth===''){ba.classList.add('active-month');bc.classList.remove('active-month');}
+        else{bc.classList.remove('active-month');ba.classList.remove('active-month');}
+    }
+    var lbl=formatMonthLabel(globalFilterMonth);
+    ['user_active_iou_month_label','user_used_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
+    localStorage.setItem('globalFilterMonth',globalFilterMonth);
+    loadIOUListGlobal(function(){reloadAllData();});
+}
+function reloadAllData(){
+    if(!currentUser)return;
+    loadUserDashboardData();
+    loadBills();
+}
+function loadIOUListGlobal(callback){
+    if(iouGlobalListenerRef){iouGlobalListenerRef.off('value');iouGlobalListenerRef=null;}
+    var ref;
+    if(globalFilterMonth){var p=globalFilterMonth.split('-');ref=database.ref('IOU_List/'+p[0]+'/'+p[1]);}
+    else{ref=database.ref('IOU_List');}
+    ref.once('value',function(snap){
+        var collected;
+        if(globalFilterMonth){var p2=globalFilterMonth.split('-');collected=collectIOUs(snap,p2[0],p2[1]);}
+        else{collected=collectIOUs(snap,null,null);}
+        iouListGlobal=collected;_iouLoaded=true;
+        if(callback)callback();
+        iouGlobalListenerRef=ref;
+        ref.on('value',function(snap2){
+            var c2;
+            if(globalFilterMonth){var p3=globalFilterMonth.split('-');c2=collectIOUs(snap2,p3[0],p3[1]);}
+            else{c2=collectIOUs(snap2,null,null);}
+            iouListGlobal=c2;
+            clearTimeout(window._iouRealtimeTimer);
+            window._iouRealtimeTimer=setTimeout(function(){if(_iouLoaded)reloadAllData();},600);
+        });
+    });
+}
+
+// ========== AUTO SAVE ==========
+let autoSaveTimeout;var AUTO_SAVE_KEY='bill_draft_data';
+function triggerAutoSave(){if(editingBillId)return;clearTimeout(autoSaveTimeout);var s=document.getElementById('auto_save_status');s.innerText="Typing...";s.className='text-muted align-self-center me-auto';autoSaveTimeout=setTimeout(function(){saveLocalDraft();s.innerText="Draft Saved";s.className='text-success align-self-center me-auto';},800);}
+function saveLocalDraft(){var d={depDate:document.getElementById('form_dep_date').value,retDate:document.getElementById('form_ret_date').value,submitDate:document.getElementById('form_submit_date').value,route:document.getElementById('form_route').value,mpo:document.getElementById('form_mpo').value,summary:document.getElementById('form_summary').value,invoiceVal:document.getElementById('form_invoice_val').value,returnVal:document.getElementById('form_return_val').value,invoiceQty:document.getElementById('form_invoice_qty').value,bundleQty:document.getElementById('form_bundle_qty').value,iouId:currentIouId,iouAmount:document.getElementById('form_iou_amount').value,remarks:document.getElementById('form_remarks').value,expenses:[]};document.querySelectorAll('#expense_table_body tr').forEach(function(r){d.expenses.push({date:r.querySelector('.exp-date').value,from:r.querySelector('.exp-from').value,to:r.querySelector('.exp-to').value,mode:r.querySelector('.exp-mode').value,amount:r.querySelector('.exp-amount').value,da:r.querySelector('.exp-da').value});});localStorage.setItem(AUTO_SAVE_KEY,JSON.stringify(d));}
+function loadLocalDraft(){var sd=localStorage.getItem(AUTO_SAVE_KEY);if(!sd)return;try{var d=JSON.parse(sd);document.getElementById('form_dep_date').value=d.depDate||'';document.getElementById('form_ret_date').value=d.retDate||'';document.getElementById('form_submit_date').value=d.submitDate||'';document.getElementById('form_route').value=d.route||'';document.getElementById('form_mpo').value=d.mpo||'';document.getElementById('form_summary').value=d.summary||'';document.getElementById('form_invoice_val').value=d.invoiceVal||'';document.getElementById('form_return_val').value=d.returnVal||0;document.getElementById('form_invoice_qty').value=d.invoiceQty||'';document.getElementById('form_bundle_qty').value=d.bundleQty||'';document.getElementById('form_iou_amount').value=d.iouAmount||0;document.getElementById('form_remarks').value=d.remarks||'';currentIouId=d.iouId||null;calculateSoldValue();var tb=document.getElementById('expense_table_body');tb.innerHTML='';if(d.expenses&&d.expenses.length>0){d.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}calculateGrandTotal();document.getElementById('auto_save_status').innerText="Draft Restored";document.getElementById('auto_save_status').className='text-success align-self-center me-auto';}catch(e){console.error(e);}}
+function clearLocalDraft(){localStorage.removeItem(AUTO_SAVE_KEY);document.getElementById('auto_save_status').innerText='';document.getElementById('auto_save_status').className='text-muted align-self-center me-auto';}
+
+/* ====== FIX: Removed '-sm' classes so inputs are standard size and fully readable ====== */
+function addExpenseRowWithData(exp){var tb=document.getElementById('expense_table_body'),row=tb.insertRow();var modeOpts=['Rickshaw','Auto','Bus','CNG','Van','Motorcycle','Tempo','Pickup','Daily Allowance','Labour Bill'];var mHtml=modeOpts.map(function(m){return'<option '+(exp.mode===m?'selected':'')+'>'+m+'</option>';}).join('');row.innerHTML='<td><input type="date" class="form-control exp-date" value="'+escHtml(exp.date)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control exp-from" value="'+escHtml(exp.from)+'" oninput="triggerAutoSave()"></td><td><input type="text" class="form-control exp-to" value="'+escHtml(exp.to)+'" oninput="triggerAutoSave()"></td><td><select class="form-select exp-mode" onchange="toggleRowInputs(this);triggerAutoSave()">'+mHtml+'</select></td><td><input type="number" class="form-control exp-amount" value="'+(exp.amount||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="number" class="form-control exp-da" value="'+(exp.da||0)+'" oninput="calculateRowTotal(this);triggerAutoSave()"></td><td><input type="text" class="form-control exp-total" value="'+((parseFloat(exp.amount)||0)+(parseFloat(exp.da)||0))+'" readonly></td><td><button class="btn btn-danger btn-sm" onclick="removeRow(this)">X</button></td>';toggleRowInputs(row.querySelector('.exp-mode'));}
+
+function clearBillForm(){if(!confirm("Clear all data?"))return;editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;currentIouId=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_iou_amount').value=0;document.getElementById('form_remarks').value='';var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';calculateSoldValue();clearLocalDraft();if(currentUser&&currentUser.role==='user'){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;}}
+
+// ========== LOGOUT ==========
+function logout(){
+    if(currentUser)database.ref('OnlineUsers/'+currentUser.id).remove();
+    localStorage.removeItem('auth_user');
+    currentUser=null;
+    location.reload();
+}
+
+// ========== PROFILE ==========
+function openProfileModal(){if(!currentUser)return;profilePhotoBase64=null;database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u){document.getElementById('prof_name').value=u.name||'';document.getElementById('prof_phone').value=u.phone||'';document.getElementById('prof_depot').value=u.depot||'Kushtia';document.getElementById('prof_username').value=u.username||'';document.getElementById('prof_prev_img').src=u.photoUrl||'https://via.placeholder.com/100';}new bootstrap.Modal(document.getElementById('profileModal')).show();});}
+function previewProfilePhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;profilePhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function saveProfile(){var n=document.getElementById('prof_name').value,ph=document.getElementById('prof_phone').value,dp=document.getElementById('prof_depot').value,un=document.getElementById('prof_username').value;if(!n||!un){alert("Name & Username required");return;}var up={name:n,phone:ph,depot:dp,username:un};if(profilePhotoBase64)up.photoUrl=profilePhotoBase64;database.ref('Users/'+currentUser.id).update(up).then(function(){alert("Updated!");currentUser.name=n;currentUser.depot=dp;if(profilePhotoBase64)currentUser.photoUrl=profilePhotoBase64;document.getElementById('header_user_name').innerText=n;if(currentUser.photoUrl)document.getElementById('header_profile_pic').src=currentUser.photoUrl;bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();}).catch(function(e){alert(e.message);});}
+function openChangePassModal(){document.getElementById('cp_current').value='';document.getElementById('cp_new').value='';document.getElementById('cp_confirm').value='';new bootstrap.Modal(document.getElementById('changePassModal')).show();}
+function changePassword(){var c=document.getElementById('cp_current').value,n=document.getElementById('cp_new').value,cf=document.getElementById('cp_confirm').value;if(!c||!n||!cf){alert("Fill all");return;}if(n!==cf){alert("Mismatch");return;}database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u.password!==c){alert("Wrong current");return;}database.ref('Users/'+currentUser.id).update({password:n}).then(function(){alert("Changed!");bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();}).catch(function(e){alert(e.message);});});}
+
+// ========== PRESENCE ==========
+function setupPresence(){if(!currentUser)return;var ref=database.ref('OnlineUsers/'+currentUser.id);ref.set({name:currentUser.name,role:currentUser.role,lastOnline:firebase.database.ServerValue.TIMESTAMP});ref.onDisconnect().remove();}
+function listenForOnlineUsers(){var uc=document.getElementById('user_online_list_view'),ub=document.getElementById('user_online_count_badge');database.ref('OnlineUsers').on('value',function(snap){var uh='',c=0;if(snap.exists()){snap.forEach(function(ch){var u=ch.val();c++;var initials=u.name?u.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase():'?';uh+='<div class="online-user-item"><div class="online-avatar">'+initials+'</div><div><div class="fw-semibold" style="font-size:13px">'+escHtml(u.name)+'</div><small class="text-muted">'+(u.role==='superadmin'?'RSM':u.role==='admin'?'DIC':'DA')+'</small></div></div>';});}if(uc){uc.innerHTML=uh||'<div class="text-center text-muted p-3">No users online</div>';ub.innerText=c;}});}
+
+// ========== DASHBOARD ==========
+function showDashboard(){
+    document.getElementById('login_section').classList.add('hidden');
+    document.getElementById('dashboard_section').classList.remove('hidden');
+    document.getElementById('header_user_name').innerText=currentUser.name;
+    var hp=document.getElementById('header_profile_pic');
+    if(currentUser.photoUrl)hp.src=currentUser.photoUrl;else hp.src="https://via.placeholder.com/30";
+    
+    document.getElementById('user_dash_name').innerText='Welcome, '+currentUser.name+'!';
+    document.getElementById('user_dash_depot').innerText=currentUser.depot;
+    var now=new Date();var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    document.getElementById('user_dash_date').innerText=days[now.getDay()]+', '+months[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+    var dp=document.getElementById('user_dash_profile');
+    if(currentUser.photoUrl)dp.src=currentUser.photoUrl;
+    else{var ini=currentUser.name.split(' ').map(function(w){return w[0]}).join('').substring(0,2).toUpperCase();dp.src='https://ui-avatars.com/api/?name='+encodeURIComponent(currentUser.name)+'&background=0d6efd&color=fff&size=140&bold=true';}
+    
+    setupPresence();listenForOnlineUsers();
+    prepareBillEntryForm();
+    
+    var savedMonth=localStorage.getItem('globalFilterMonth');
+    var targetMonth=getCurrentMonth();
+    if(savedMonth!==null&&savedMonth!==''){if(/^\d{4}-\d{2}$/.test(savedMonth))targetMonth=savedMonth;}
+    setGlobalMonth(targetMonth);
+}
+
+function loadUserDashboardData(){
+    var myName=currentUser.name;
+    var ab=document.getElementById('user_active_iou_list'),ub=document.getElementById('user_used_iou_list');
+    var abCount=0,ubCount=0;
+    ab.innerHTML='';ub.innerHTML='';
+    var totalIouCount=0;
+    
+    Object.keys(iouListGlobal).forEach(function(id){
+        var d=iouListGlobal[id];
+        if(d.daName!==myName)return;
+        if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
+        
+        var type=d.type||'Delivery';
+        
+        // No Bill টাইপের আইওইউ লিস্টে দেখানো এবং কাউন্ট করা থেকে বিরত থাকা হলো
+        if(isNoBillIOU(type)) return; 
+        
+        // Total IOU কাউন্ট করা হচ্ছে (শুধুমাত্র Bill প্রয়োজন এমন আইওইউ)
+        totalIouCount++; 
+        
+        if(d.status==='used'){
+            ubCount++;
+            var usedIcon='<i class="bi bi-check2-circle text-success"></i>';
+            ub.innerHTML+='<tr><td>'+formatDate(d.date)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-semibold">'+d.taka+'</td><td>'+usedIcon+'</td></tr>';
+        }else{
+            abCount++;
+            var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';}
+            ab.innerHTML+='<tr class="clickable-row" onclick="fillBillFromIOU(\''+id+'\')"><td>'+formatDate(d.date)+daysBadge+'</td><td><small class="badge bg-info text-dark">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td><td><i class="bi bi-arrow-right-circle text-primary"></i></td></tr>';
+        }
+    });
+    
+    document.getElementById('user_active_iou_count').innerText=abCount;
+    document.getElementById('user_used_iou_count').innerText=ubCount;
+    if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
+    if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
+    
+    var iouEl = document.getElementById('user_stat_total_iou');
+    if(iouEl) iouEl.innerText = totalIouCount;
+    
+    database.ref('Bills').once('value',function(snap){
+        var allBills=collectBills(snap,null,null);
+        var totalCount=0,pendingCount=0,checkedCount=0,verifiedCount=0;
+        allBills.forEach(function(item){
+            var b=item.data;
+            if(b.daName!==myName)return;
+            if(b.status==='draft')return;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            totalCount++;
+            if(b.status==='red')pendingCount++;
+            else if(b.status==='orange')checkedCount++;
+            else if(b.status==='green')verifiedCount++;
+        });
+        
+        var elTotal = document.getElementById('user_stat_total');
+        var elPending = document.getElementById('user_stat_pending');
+        var elChecked = document.getElementById('user_stat_checked');
+        var elVerified = document.getElementById('user_stat_verified');
+        
+        if(elTotal) elTotal.innerText = totalCount;
+        if(elPending) elPending.innerText = pendingCount;
+        if(elChecked) elChecked.innerText = checkedCount;
+        if(elVerified) elVerified.innerText = verifiedCount;
+    });
+}
+
+// ========== BILL ENTRY ==========
+function toggleRowInputs(sel){
+    var row=sel.closest('tr'),mode=sel.value,isDA=(mode==='Daily Allowance');
+    row.querySelector('.exp-from').disabled=isDA;
+    row.querySelector('.exp-to').disabled=isDA;
+    row.querySelector('.exp-amount').disabled=isDA;
+    if(isDA){row.querySelector('.exp-from').value='';row.querySelector('.exp-to').value='';row.querySelector('.exp-amount').value='';}
+    row.querySelector('.exp-da').disabled=!isDA;
+    if(!isDA)row.querySelector('.exp-da').value='';
+    calculateRowTotal(row.querySelector('.exp-amount'));
+}
+document.getElementById('q_mode').addEventListener('change',function(){
+    var isDA=this.value==='Daily Allowance';
+    document.getElementById('q_from').disabled=isDA;
+    document.getElementById('q_to').disabled=isDA;
+    document.getElementById('q_amount').disabled=isDA;
+    document.getElementById('q_da_expense').disabled=!isDA;
+    if(isDA){document.getElementById('q_from').value='';document.getElementById('q_to').value='';document.getElementById('q_amount').value='';}
+    else document.getElementById('q_da_expense').value='';
+});
+function calculateSoldValue(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,ret=parseFloat(document.getElementById('form_return_val').value)||0;document.getElementById('form_sold_val').value=inv-ret;updateEntryFormCostPercent();}
+function addQuickEntryRow(){var from=document.getElementById('q_from').value,to=document.getElementById('q_to').value,mode=document.getElementById('q_mode').value,amount=document.getElementById('q_amount').value,da=document.getElementById('q_da_expense').value,date=document.getElementById('form_dep_date').value;var modesNoRoute=['Daily Allowance','Labour Bill'];if(!modesNoRoute.includes(mode)){if(!from&&!to){alert("Enter From/To");return;}}addExpenseRowWithData({date:date,from:from,to:to,mode:mode,amount:amount,da:da});calculateGrandTotal();triggerAutoSave();document.getElementById('q_from').value='';document.getElementById('q_to').value='';document.getElementById('q_amount').value='';document.getElementById('q_da_expense').value='';document.getElementById('q_from').focus();}
+function addExpenseRow(){var today=document.getElementById('form_dep_date').value||new Date().toISOString().split('T')[0];addExpenseRowWithData({date:today,from:'',to:'',mode:'Rickshaw',amount:0,da:0});triggerAutoSave();}
+function removeRow(btn){var tb=document.getElementById('expense_table_body');if(tb.rows.length>1)btn.parentNode.parentNode.remove();else{var row=tb.rows[0];row.querySelectorAll('input').forEach(function(i){if(i.type!=='date')i.value='';else i.value=document.getElementById('form_dep_date').value;});var sel=row.querySelector('select');sel.selectedIndex=0;toggleRowInputs(sel);}calculateGrandTotal();triggerAutoSave();}
+function calculateRowTotal(input){var row=input.parentNode.parentNode;var amount=parseFloat(row.querySelector('.exp-amount').value)||0,da=parseFloat(row.querySelector('.exp-da').value)||0;row.querySelector('.exp-total').value=amount+da;calculateGrandTotal();}
+function calculateGrandTotal(){var total=0;document.querySelectorAll('.exp-total').forEach(function(t){total+=(parseFloat(t.value)||0);});document.getElementById('grand_total').value=total;updateEntryFormCostPercent();}
+function updateEntryFormCostPercent(){var inv=parseFloat(document.getElementById('form_invoice_val').value)||0,total=parseFloat(document.getElementById('grand_total').value)||0;document.getElementById('form_cost_percent').innerText=inv>0?((total/inv)*100).toFixed(2)+"%":"0%";}
+function prepareBillEntryForm(){document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';if(!editingBillId)loadLocalDraft();}
+
+function fillBillFromIOU(iouId){var iou=iouListGlobal[iouId];if(!iou){alert("Not found");return;}if(isNoBillIOU(iou.type)){alert("No bill required for "+iou.type);return;}currentIouId=iouId;originalIouId=iouId;originalIouYear=iou._year;originalIouMonth=iou._month;originalIouDaName=iou._daName;document.getElementById('form_iou_amount').value=iou.taka;document.getElementById('form_dep_date').value=iou.date;document.getElementById('form_ret_date').value=iou.date;document.getElementById('form_submit_date').value=iou.date;document.getElementById('form_route').value=iou.territory||'';document.getElementById('form_mpo').value=iou.mpo||'';document.getElementById('form_summary').value=iou.summary||'';document.getElementById('form_invoice_val').value=iou.soldVal||iou.sales||0;document.getElementById('form_return_val').value=iou.returnVal||0;document.getElementById('form_invoice_qty').value=iou.qty||0;document.getElementById('form_bundle_qty').value=iou.bundleQty||0;calculateSoldValue();document.getElementById('expense_table_body').innerHTML='';triggerAutoSave();document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});document.getElementById('entryTab').classList.add('show','active');document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.getElementById('entry-tab').classList.add('active');alert("Form filled! Add expense rows.");}
+
+function submitOrUpdateBill(statusType){
+    var targetDaName=currentUser.name,targetDepot=currentUser.depot||'Kushtia';
+    var grandTotal=parseFloat(document.getElementById('grand_total').value)||0;
+    var iouAmount=parseFloat(document.getElementById('form_iou_amount').value)||0;
+    var remarks=document.getElementById('form_remarks').value;
+    var billData={daName:targetDaName,depot:targetDepot,depDate:document.getElementById('form_dep_date').value,retDate:document.getElementById('form_ret_date').value,submitDate:document.getElementById('form_submit_date').value,route:document.getElementById('form_route').value,mpo:document.getElementById('form_mpo').value,summaryNo:document.getElementById('form_summary').value,invoiceVal:parseFloat(document.getElementById('form_invoice_val').value)||0,returnVal:parseFloat(document.getElementById('form_return_val').value)||0,soldVal:parseFloat(document.getElementById('form_sold_val').value)||0,invoiceQty:parseInt(document.getElementById('form_invoice_qty').value)||0,bundleQty:parseInt(document.getElementById('form_bundle_qty').value)||0,totalAmount:grandTotal,originalAmount:grandTotal,status:statusType,timestamp:Date.now(),iouId:currentIouId,iouAmount:iouAmount,remarks:remarks,deduction:0};
+    var expenses=[];document.querySelectorAll('#expense_table_body tr').forEach(function(r){expenses.push({date:r.querySelector('.exp-date').value,from:r.querySelector('.exp-from').value,to:r.querySelector('.exp-to').value,mode:r.querySelector('.exp-mode').value,amount:r.querySelector('.exp-amount').value,da:r.querySelector('.exp-da').value});});
+    billData.expenses=expenses;if(!billData.route){alert("Fill Route");return;}
+    var billDate=billData.submitDate||billData.depDate;var dp=getDateParts(billDate);var safeName=sanitizeKey(targetDaName);
+    var basePath='Bills/'+dp.year+'/'+dp.month+'/'+safeName;
+    var processIOU=function(){
+        if(editingBillId&&originalIouId&&originalIouYear&&originalIouMonth&&originalIouDaName&&originalIouId!==currentIouId){database.ref('IOU_List/'+originalIouYear+'/'+originalIouMonth+'/'+sanitizeKey(originalIouDaName)+'/'+originalIouId).update({status:'active'});}
+        if(currentIouId){var ciou=iouListGlobal[currentIouId];if(ciou&&ciou._year&&ciou._month&&ciou._daName){database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+currentIouId).update({status:statusType==='draft'?'active':'used'});}}
+    };
+    var afterSave=function(){
+        clearLocalDraft();
+        alert(statusType==='draft'?"Draft Saved!":"Submitted!");
+        document.getElementById('form_route').value='';document.getElementById('form_mpo').value='';document.getElementById('form_summary').value='';document.getElementById('form_invoice_val').value='';document.getElementById('form_return_val').value=0;document.getElementById('form_invoice_qty').value='';document.getElementById('form_bundle_qty').value=0;document.getElementById('form_remarks').value='';document.getElementById('grand_total').value='0';document.getElementById('form_cost_percent').innerText='0%';document.getElementById('expense_table_body').innerHTML='';document.getElementById('form_iou_amount').value=0;calculateSoldValue();currentIouId=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;
+        editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;
+        document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';
+        document.getElementById('cancel_edit_btn').classList.add('hidden');
+        prepareBillEntryForm();
+        document.getElementById('history-tab').click();
+        setTimeout(function(){loadBills();},400);
+    };
+    if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){
+        database.ref('Bills/'+editingBillYear+'/'+editingBillMonth+'/'+sanitizeKey(editingBillDaName)+'/'+editingBillId).update(billData,function(error){if(error)alert("Error");else{processIOU();alert("Updated!");cancelEdit();document.getElementById('history-tab').click();setTimeout(function(){loadBills();},400);}});
+    }else{
+        var newBillRef=database.ref(basePath).push();
+        newBillRef.set(billData,function(error){if(error)alert("Error");else{processIOU();afterSave();}});
+    }
+}
+
+function editBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        if(bill.status==='orange'||bill.status==='green'){alert("This bill is already checked/approved. Cannot edit.");return;}
+        clearLocalDraft();editingBillId=billId;editingBillYear=year;editingBillMonth=month;editingBillDaName=daName;
+        originalIouId=bill.iouId||null;currentIouId=bill.iouId||null;
+        if(currentIouId&&iouListGlobal[currentIouId]){var ciou=iouListGlobal[currentIouId];originalIouYear=ciou._year;originalIouMonth=ciou._month;originalIouDaName=ciou._daName;}
+        document.getElementById('form_da_name').value=bill.daName;document.getElementById('form_depot').value=bill.depot;
+        document.getElementById('form_dep_date').value=bill.depDate;document.getElementById('form_ret_date').value=bill.retDate;
+        document.getElementById('form_submit_date').value=bill.submitDate||bill.depDate;
+        document.getElementById('form_route').value=bill.route;document.getElementById('form_mpo').value=bill.mpo;
+        document.getElementById('form_summary').value=bill.summaryNo;document.getElementById('form_invoice_val').value=bill.invoiceVal;
+        document.getElementById('form_return_val').value=bill.returnVal;document.getElementById('form_invoice_qty').value=bill.invoiceQty;
+        document.getElementById('form_bundle_qty').value=bill.bundleQty||0;document.getElementById('form_iou_amount').value=bill.iouAmount||0;
+        document.getElementById('form_remarks').value=bill.remarks||'';
+        var tb=document.getElementById('expense_table_body');tb.innerHTML='';
+        if(bill.expenses){bill.expenses.forEach(function(exp){addExpenseRowWithData(exp);});}
+        calculateGrandTotal();calculateSoldValue();
+        document.getElementById('main_submit_btn').innerText="Update Bill";document.getElementById('main_submit_btn').className='btn btn-warning btn-sm';
+        document.getElementById('cancel_edit_btn').classList.remove('hidden');
+        document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});
+        document.getElementById('entryTab').classList.add('show','active');
+        document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});
+        document.getElementById('entry-tab').classList.add('active');
+    });
+}
+function deleteBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var billData=snapshot.val();if(!billData)return;
+        if(billData.status==='orange'||billData.status==='green'){alert("This bill is already checked/approved. Cannot delete.");return;}
+        if(!confirm("Delete?"))return;
+        database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).remove().then(function(){
+            alert("Deleted!");
+            if(billData&&billData.iouId){var ciou=iouListGlobal[billData.iouId];if(ciou&&ciou._year)database.ref('IOU_List/'+ciou._year+'/'+ciou._month+'/'+sanitizeKey(ciou._daName)+'/'+billData.iouId).update({status:'active'});}
+            loadBills();
+        }).catch(function(e){alert(e.message);});
+    });
+}
+function cancelEdit(){editingBillId=null;editingBillYear=null;editingBillMonth=null;editingBillDaName=null;originalIouId=null;originalIouYear=null;originalIouMonth=null;originalIouDaName=null;document.getElementById('main_submit_btn').innerText="Submit Bill";document.getElementById('main_submit_btn').className='btn btn-success btn-sm';document.getElementById('cancel_edit_btn').classList.add('hidden');clearLocalDraft();prepareBillEntryForm();document.getElementById('history-tab').click();}
+
+// ========== BILL HISTORY ==========
+function loadBills(){
+    var tableHead=document.getElementById('bill_table_head'),tableBody=document.getElementById('bill_table_body'),tableFoot=document.getElementById('bill_table_foot');
+    tableBody.innerHTML='<tr><td colspan="6" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Loading...</td></tr>';
+    tableHead.innerHTML='<tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">Amount</th><th>Status</th><th>Action</th></tr>';
+
+    database.ref('Bills').once('value',function(snap){
+        tableBody.innerHTML='';
+        var allBills=collectBills(snap,null,null);
+        var userBillCount=0;
+
+        if(allBills.length===0){
+            tableBody.innerHTML='<tr><td colspan="6" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            tableFoot.innerHTML='';return;
+        }
+
+        allBills.forEach(function(item){
+            var b=item.data,billId=item.id,y=item.year,m=item.month,dn=item.daName;
+            if(globalFilterMonth&&!isDateInMonth(getBillDate(b),globalFilterMonth))return;
+            if(b.daName!==currentUser.name)return;
+            if(b.status==='draft')return;
+            if(b.status==='green')return; // User doesn't see approved bills in history
+
+            userBillCount++;
+            var tr=document.createElement('tr');
+            var deduction=b.deduction||0;
+            var originalAmount=b.originalAmount||(b.totalAmount+deduction);
+
+            if(b.status==='red'){
+                tr.classList.add('status-red');
+                var statusIcon='<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i>Pending</span>';
+                var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button> '+
+                    '<button class="btn btn-warning btn-sm" onclick="editBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-pencil"></i></button> '+
+                    '<button class="btn btn-danger btn-sm" onclick="deleteBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-trash"></i></button>';
+                tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+            }else if(b.status==='orange'){
+                tr.classList.add('status-orange');
+                var statusIcon='<span class="badge bg-info text-dark"><i class="bi bi-check2-square me-1"></i>Checked</span>';
+                var userAction='<button class="btn btn-info btn-sm text-white" onclick="printBill(\''+billId+'\',\''+y+'\',\''+m+'\',\''+dn+'\')"><i class="bi bi-printer"></i></button>';
+                tr.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end fw-bold">'+originalAmount.toFixed(2)+'</td><td>'+statusIcon+'</td><td class="text-nowrap">'+userAction+'</td>';
+            }
+            tableBody.appendChild(tr);
+        });
+
+        if(userBillCount===0){
+            tableBody.innerHTML='<tr><td colspan="6" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br>No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+        }
+        
+        var uTotal=0;
+        document.querySelectorAll('#bill_table_body tr').forEach(function(r){
+            var td4=r.querySelector('td:nth-child(4)');
+            if(td4)uTotal+=parseFloat(td4.innerText.replace(/,/g,''))||0;
+        });
+        tableFoot.innerHTML=uTotal>0?'<tr><td colspan="3" class="text-end">TOTAL</td><td class="text-end">'+uTotal.toFixed(2)+'</td><td colspan="2"></td></tr>':'';
+    });
+}
+
+// ========== PRINT ==========
+function printBill(billId,year,month,daName){
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snapshot){
+        var bill=snapshot.val();if(!bill)return;
+        var costPct="0%";if(bill.invoiceVal>0)costPct=((bill.totalAmount/bill.invoiceVal)*100).toFixed(2)+"%";
+        document.getElementById('p_da_name').innerText=bill.daName;document.getElementById('p_depot').innerText=bill.depot;
+        document.getElementById('p_dep_date').innerText=formatDate(bill.depDate);document.getElementById('p_ret_date').innerText=formatDate(bill.retDate);
+        document.getElementById('p_submit_date').innerText=formatDate(bill.submitDate);document.getElementById('p_route').innerText=bill.route;
+        document.getElementById('p_mpo').innerText=bill.mpo;document.getElementById('p_summary').innerText=bill.summaryNo;
+        document.getElementById('p_inv_val').innerText=bill.invoiceVal;document.getElementById('p_ret_val').innerText=bill.returnVal;
+        document.getElementById('p_sold_val').innerText=bill.soldVal;document.getElementById('p_inv_qty').innerText=bill.invoiceQty;
+        document.getElementById('p_bundle_qty').innerText=bill.bundleQty||0;
+        document.getElementById('p_total_words').innerText=numberToEnglish(bill.totalAmount)+" Taka Only";
+        document.getElementById('p_cost_percent').innerText=costPct;document.getElementById('p_prepared_by').innerText=bill.daName;
+        document.getElementById('p_remarks').innerText=bill.remarks||'';document.getElementById('p_checked_by').innerText=bill.checkedBy||'';
+        document.getElementById('p_rechecked_by').innerText=bill.recheckedBy||bill.approvedBy||'';
+        var tbody=document.getElementById('p_expense_body');tbody.innerHTML='';
+        var tAmt=0,tDa=0,tDed=0,tNet=0,tTot=0;
+        if(bill.expenses){bill.expenses.forEach(function(exp){
+            if(!exp.date)return;var amt=parseFloat(exp.amount)||0,da=parseFloat(exp.da)||0,ded=parseFloat(exp.deduction)||0;
+            var total=amt+da,net=total-ded;tAmt+=amt;tDa+=da;tTot+=total;tDed+=ded;tNet+=net;
+            var tDisp=total;if(ded>0)tDisp='<span class="cut-text">'+total+'</span>';
+            tbody.innerHTML+='<tr><td style="padding:2px;text-align:left">'+formatDate(exp.date)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.from)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.to)+'</td><td style="padding:2px;text-align:left">'+escHtml(exp.mode)+'</td><td style="padding:2px;text-align:right">'+amt+'</td><td style="padding:2px;text-align:right">'+da+'</td><td style="padding:2px;text-align:right">'+tDisp+'</td><td style="padding:2px;text-align:right;color:red">'+(ded>0?ded:'')+'</td><td style="padding:2px;text-align:right;font-weight:bold">'+net+'</td></tr>';
+        });}
+        document.getElementById('p_foot_amt').innerText=tAmt;document.getElementById('p_foot_da').innerText=tDa;
+        document.getElementById('p_foot_total').innerText=tTot;document.getElementById('p_foot_ded').innerText=tDed;document.getElementById('p_total_amount').innerText=tNet;
+        document.getElementById('print_area').classList.add('active-print');window.print();
+    });
+}
+
+// ========== NUMBER TO ENGLISH ==========
+function numberToEnglish(num){
+    if(num===0)return"Zero";var a=['','One ','Two ','Three ','Four ','Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+    var b=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+    if((num=num.toString()).length>9)return'Overflow';var n=('000000000'+num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+    if(!n)return'';var str='';
+    str+=(n[1]!=0)?(a[Number(n[1])]||b[n[1][0]]+' '+a[n[1][1]])+'Crore ':'';
+    str+=(n[2]!=0)?(a[Number(n[2])]||b[n[2][0]]+' '+a[n[2][1]])+'Lakh ':'';
+    str+=(n[3]!=0)?(a[Number(n[3])]||b[n[3][0]]+' '+a[n[3][1]])+'Thousand ':'';
+    str+=(n[4]!=0)?(a[Number(n[4])]||b[n[4][0]]+' '+a[n[4][1]])+'Hundred ':'';
+    str+=(n[5]!=0)?((str!='')?'and ':'')+(a[Number(n[5])]||b[n[5][0]]+' '+a[n[5][1]]):'';
+    return str;
+}
+
+// ========== EXCEL IMPORT ==========
+function importExpensesToTable(){
+    if(typeof XLSX==='undefined'){alert("Excel lib not loaded.");return;}
+    var input=document.getElementById('user_exp_excel_input');if(!input.files||!input.files[0]){alert("Select file.");return;}
+    var file=input.files[0];var reader=new FileReader();
+    reader.onload=function(e){
+        try{var data=new Uint8Array(e.target.result);var wb=XLSX.read(data,{type:'array',cellDates:true});var ws=wb.Sheets[wb.SheetNames[0]];var jsonData=XLSX.utils.sheet_to_json(ws,{header:1});
+        if(jsonData.length<=1){alert("Empty.");return;}var depDate=document.getElementById('form_dep_date').value;var importCount=0,startIdx=0;
+        if(jsonData.length>0&&typeof jsonData[0][0]==='string'&&jsonData[0][0].toLowerCase().includes('date'))startIdx=1;
+        for(var i=startIdx;i<jsonData.length;i++){var row=jsonData[i];if(!row||row.length===0)continue;
+            var dateVal=depDate;if(row[0]){if(row[0] instanceof Date)dateVal=row[0].toISOString().split('T')[0];else if(typeof row[0]==='number'){var d=new Date((row[0]-(25567+2))*86400*1000);dateVal=d.toISOString().split('T')[0];}else{var d2=new Date(row[0]);if(!isNaN(d2.getTime()))dateVal=d2.toISOString().split('T')[0];else dateVal=String(row[0]);}}
+            var from=row[1]||'',to=row[2]||'',mode=row[3]||'Rickshaw',amount=parseFloat(row[4])||0,daExp=parseFloat(row[5])||0;
+            if(mode==='Daily Allowance'){if(amount>0&&daExp===0){daExp=amount;amount=0;}if(!from)from='-';if(!to)to='-';}
+            addExpenseRowWithData({date:dateVal,from:from,to:to,mode:mode,amount:amount,da:daExp});importCount++;
+        }
+        calculateGrandTotal();triggerAutoSave();alert('Imported '+importCount+' rows!');input.value='';
+        }catch(ex){console.error(ex);alert("Error reading file.\nColumns: Date, From, To, Mode, Amount, DA");}
+    };reader.readAsArrayBuffer(file);
+}
+
+// ========== Tab change listeners & Init ==========
+document.addEventListener('DOMContentLoaded',function(){
+    var savedUser = localStorage.getItem('auth_user');
+    if(savedUser){
+        try {
+            currentUser = JSON.parse(savedUser);
+            if(currentUser.role === 'user') {
+                showDashboard();
+            } else {
+                localStorage.removeItem('auth_user');
+            }
+        } catch(e){
+            localStorage.removeItem('auth_user');
+        }
+    }
+
+    var billTabEl=document.getElementById('billTab');
+    if(billTabEl){billTabEl.addEventListener('shown.bs.tab',function(){if(currentUser)loadBills();});}
+    
+    var userExpInput=document.getElementById('user_exp_excel_input');
+    if(userExpInput){userExpInput.addEventListener('change',function(){if(this.files&&this.files[0])importExpensesToTable();});}
+});
+</script>
+</body>
+</html>

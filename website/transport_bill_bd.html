@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transport Bill Manager</title>
+    <style>
+        /* --- CSS Styles --- */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 20px auto; padding: 0 20px; background-color: #f4f7f6; }
+        
+        /* Tabs */
+        .tab { overflow: hidden; border: 1px solid #ccc; background-color: #fff; border-radius: 8px 8px 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .tab button { background-color: inherit; float: left; border: none; outline: none; cursor: pointer; padding: 15px 25px; transition: 0.3s; font-size: 16px; font-weight: 600; color: #555; }
+        .tab button:hover { background-color: #f1f1f1; color: #000; }
+        .tab button.active { background-color: #2ecc71; color: white; border-bottom: 3px solid #27ae60; }
+        
+        /* Tab Content */
+        .tabcontent { display: none; padding: 25px; border: 1px solid #ddd; border-top: none; background-color: white; border-radius: 0 0 8px 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+        .tabcontent.active { display: block; }
+
+        /* Form */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group.full-width { grid-column: span 2; }
+        label { display: block; margin-bottom: 6px; font-weight: 600; color: #333; font-size: 14px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; transition: border 0.3s; }
+        input:focus { border-color: #2ecc71; outline: none; }
+        input[readonly] { background-color: #e8e8e8; color: #666; cursor: not-allowed; }
+        
+        button.btn-submit { background-color: #2ecc71; color: white; padding: 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; margin-top: 10px; transition: background 0.3s; }
+        button.btn-submit:hover { background-color: #27ae60; }
+
+        /* Table */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f8f9fa; color: #333; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+        tr:hover { background-color: #f1f1f1; }
+        
+        .btn-print { background-color: #3498db; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.3s; }
+        .btn-print:hover { background-color: #2980b9; }
+
+        /* Messages */
+        #message { margin-top: 15px; padding: 12px; border-radius: 6px; display: none; text-align: center; font-weight: 500; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Print Area */
+        #printArea { display: none; }
+    </style>
+</head>
+<body>
+
+    <div style="text-align: center; margin-bottom: 25px;">
+        <h2 style="color: #2c3e50; margin: 0;">MONICO PHARMA LIMITED</h2>
+        <p style="color: #7f8c8d; margin: 5px 0;">Transport Bill Management System</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab">
+        <button class="tablinks active" onclick="openTab(event, 'NewBill')">New Bill</button>
+        <button class="tablinks" onclick="openTab(event, 'BillHistory')">Bill History</button>
+    </div>
+
+    <!-- Tab 1: New Bill -->
+    <div id="NewBill" class="tabcontent active">
+        <h3 style="margin-top: 0;">Create New Bill</h3>
+        <form id="transportBillForm">
+            <div class="form-group full-width">
+                <label>Bill No (Auto Generated):</label>
+                <input type="text" id="billNo" readonly placeholder="System will generate after save...">
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="billDate">Bill Date:</label>
+                    <input type="date" id="billDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="transporter">Transporter Name:</label>
+                    <input type="text" id="transporter" placeholder="Enter transporter name">
+                </div>
+                <div class="form-group">
+                    <label for="vehicleNo">Vehicle No:</label>
+                    <input type="text" id="vehicleNo" placeholder="Ex: Dhaka Metro N-12-0920">
+                </div>
+                <div class="form-group">
+                    <label for="amount">Amount (Tk):</label>
+                    <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                </div>
+                <div class="form-group">
+                    <label for="fromLocation">From:</label>
+                    <input type="text" id="fromLocation" placeholder="Ex: Mawna">
+                </div>
+                <div class="form-group">
+                    <label for="toLocation">To:</label>
+                    <input type="text" id="toLocation" placeholder="Ex: Kushtia">
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Save to Database</button>
+        </form>
+        <div id="message"></div>
+    </div>
+
+    <!-- Tab 2: Bill History -->
+    <div id="BillHistory" class="tabcontent">
+        <h3 style="margin-top: 0;">Bill History</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Bill No</th>
+                        <th>Date</th>
+                        <th>Transporter</th>
+                        <th>Vehicle</th>
+                        <th>Route</th>
+                        <th>Amount</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="billsTableBody">
+                    <!-- Data loads here -->
+                </tbody>
+            </table>
+        </div>
+        <p id="loadingMessage" style="text-align:center; padding: 20px; color: #777;">Loading bills...</p>
+        <p id="noDataMessage" style="display:none; text-align:center; padding: 20px; color: #777;">No bills found in history.</p>
+    </div>
+
+    <!-- Print Layout (Hidden) -->
+    <div id="printArea"></div>
+
+    <!-- Firebase Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue, runTransaction, get } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3l-b_9jRDPC-UxjqmA6ZMiupXdP5yakQ",
+            authDomain: "smartmanager-ed5f0.firebaseapp.com",
+            databaseURL: "https://smartmanager-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "smartmanager-ed5f0",
+            storageBucket: "smartmanager-ed5f0.firebasestorage.app",
+            messagingSenderId: "886142154237",
+            appId: "1:886142154237:web:f0f838a0dcc69e1cdd1594",
+            measurementId: "G-YZ520GP66H"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // DOM Elements
+        const form = document.getElementById('transportBillForm');
+        const messageDiv = document.getElementById('message');
+        const billsTableBody = document.getElementById('billsTableBody');
+        const loadingMsg = document.getElementById('loadingMessage');
+        const noDataMsg = document.getElementById('noDataMessage');
+
+        // Set default date to today
+        document.getElementById('billDate').valueAsDate = new Date();
+
+        // --- HELPER: Number to Words Converter for Taka ---
+        function convertAmountToWords(amount) {
+            if (!amount || isNaN(amount)) return "Zero Taka Only";
+
+            // Split into Taka and Paisa
+            const amountStr = parseFloat(amount).toFixed(2);
+            const parts = amountStr.split('.');
+            const takaPart = parseInt(parts[0], 10);
+            const paisaPart = parseInt(parts[1], 10);
+
+            const takaWords = convertNumber(takaPart);
+            let result = `${takaWords} Taka`;
+
+            if (paisaPart > 0) {
+                const paisaWords = convertNumber(paisaPart);
+                result += ` and ${paisaWords} Paisa`;
+            }
+
+            result += " Only";
+            return result;
+        }
+
+        function convertNumber(num) {
+            if (num === 0) return "Zero";
+
+            const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+            if (num < 20) {
+                return ones[num];
+            } else if (num < 100) {
+                return tens[Math.floor(num / 10)] + (num % 10 !== 0 ? ' ' + ones[num % 10] : '');
+            } else if (num < 1000) {
+                return ones[Math.floor(num / 100)] + ' Hundred' + (num % 100 !== 0 ? ' ' + convertNumber(num % 100) : '');
+            } else if (num < 100000) {
+                return convertNumber(Math.floor(num / 1000)) + ' Thousand' + (num % 1000 !== 0 ? ' ' + convertNumber(num % 1000) : '');
+            } else if (num < 10000000) {
+                return convertNumber(Math.floor(num / 100000)) + ' Lakh' + (num % 100000 !== 0 ? ' ' + convertNumber(num % 100000) : '');
+            } else {
+                return convertNumber(Math.floor(num / 10000000)) + ' Crore' + (num % 10000000 !== 0 ? ' ' + convertNumber(num % 10000000) : '');
+            }
+        }
+
+        // --- 1. Function to Generate Bill No ---
+        async function getNextBillNumber(dateString) {
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            
+            const counterRef = ref(db, `bill_counter/${year}/${month}`);
+
+            const snapshot = await runTransaction(counterRef, (currentCount) => {
+                return (currentCount || 0) + 1;
+            });
+
+            if (snapshot.committed) {
+                const newCount = snapshot.snapshot.val();
+                const paddedCount = String(newCount).padStart(3, '0');
+                return `TB${year}${month}${paddedCount}`;
+            } else {
+                throw new Error("Could not generate Bill Number. Try again.");
+            }
+        }
+
+        // --- 2. Handle Form Submit ---
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            showMessage('Saving...', 'success'); // Temporary message
+
+            try {
+                const billDate = document.getElementById('billDate').value;
+                const billNo = await getNextBillNumber(billDate);
+
+                const billData = {
+                    billNo: billNo,
+                    billDate: billDate,
+                    transporter: document.getElementById('transporter').value || "N/A",
+                    vehicleNo: document.getElementById('vehicleNo').value || "N/A",
+                    fromLocation: document.getElementById('fromLocation').value || "N/A",
+                    toLocation: document.getElementById('toLocation').value || "N/A",
+                    amount: parseFloat(document.getElementById('amount').value),
+                    createdAt: new Date().toISOString()
+                };
+
+                // Save to DB
+                await set(ref(db, 'transport_bills/' + billNo), billData);
+
+                showMessage(`Bill Saved Successfully! No: ${billNo}`, 'success');
+                form.reset();
+                document.getElementById('billDate').valueAsDate = new Date();
+
+            } catch (error) {
+                console.error(error);
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        });
+
+        // --- 3. Load Bills ---
+        function loadBills() {
+            const billsRef = ref(db, 'transport_bills');
+            
+            onValue(billsRef, (snapshot) => {
+                loadingMsg.style.display = 'none';
+                billsTableBody.innerHTML = '';
+                
+                if (snapshot.exists()) {
+                    const bills = snapshot.val();
+                    const billsArray = Object.values(bills);
+
+                    // Sort by date descending
+                    billsArray.sort((a, b) => new Date(b.billDate) - new Date(a.billDate));
+
+                    billsArray.forEach((bill) => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${bill.billNo}</strong></td>
+                            <td>${bill.billDate}</td>
+                            <td>${bill.transporter}</td>
+                            <td>${bill.vehicleNo}</td>
+                            <td>${bill.fromLocation} ➝ ${bill.toLocation}</td>
+                            <td>${bill.amount.toFixed(2)}</td>
+                            <td>
+                                <button class="btn-print" onclick="window.printBill('${bill.billNo}')">Print</button>
+                            </td>
+                        `;
+                        billsTableBody.appendChild(row);
+                    });
+                } else {
+                    noDataMsg.style.display = 'block';
+                }
+            }, (error) => {
+                console.error("Listener Error:", error);
+                loadingMsg.style.display = 'none';
+                noDataMsg.innerHTML = `<span style="color:red">Error: ${error.message}</span>`;
+                noDataMsg.style.display = 'block';
+            });
+        }
+
+        // Start loading bills
+        loadBills();
+
+        // --- 4. Print Function ---
+        window.printBill = function(billNo) {
+            get(ref(db, `transport_bills/${billNo}`)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    const bill = snapshot.val();
+                    renderPrintView(bill);
+                } else {
+                    alert("Bill data not found!");
+                }
+            }).catch((error) => {
+                alert("Error fetching bill: " + error.message);
+            });
+        };
+
+        function renderPrintView(bill) {
+            const printArea = document.getElementById('printArea');
+            
+            // 1. Date Formatting: YYYY-MM-DD to DD-MM-YYYY
+            const formattedDate = bill.billDate.split('-').reverse().join('-');
+
+            // 2. Amount in Words
+            const amountInWords = convertAmountToWords(bill.amount);
+
+            // 3. Formatted Amount with Taka Symbol
+            const formattedAmount = `৳ ${bill.amount.toFixed(2)}`;
+
+            printArea.innerHTML = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #000; max-width: 800px; margin: 0 auto; background: white;">
+                    <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px;">
+                        <h2 style="margin:0; font-size: 24px; text-transform:uppercase;">MONICO PHARMA LIMITED</h2>
+                        <h3 style="margin:10px 0 0 0; color: #555;">TRANSPORT BILL</h3>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 14px;">
+                        <div>
+                            <strong>Bill No:</strong> ${bill.billNo}<br>
+                            <!-- Formatted Date Here -->
+                            <strong>Date:</strong> ${formattedDate}
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>Transporter:</strong> ${bill.transporter}<br>
+                            <strong>Vehicle No:</strong> ${bill.vehicleNo}
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 10px;">
+                        <tr style="background-color: #eee; font-weight: bold; text-align: left;">
+                            <th style="border: 1px solid #000; padding: 10px;">Particular</th>
+                            <th style="border: 1px solid #000; padding: 10px;">Route / Remarks</th>
+                            <th style="border: 1px solid #000; padding: 10px; text-align: right;">Amount</th>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #000; padding: 10px;">Transport Charge</td>
+                            <td style="border: 1px solid #000; padding: 10px;">From: ${bill.fromLocation} To: ${bill.toLocation}</td>
+                            <!-- Amount with Symbol Here -->
+                            <td style="border: 1px solid #000; padding: 10px; text-align: right;">${formattedAmount}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="border: 1px solid #000; padding: 10px; text-align: right; font-weight: bold;">Total</td>
+                            <!-- Total with Symbol Here -->
+                            <td style="border: 1px solid #000; padding: 10px; text-align: right; font-weight: bold;">${formattedAmount}</td>
+                        </tr>
+                    </table>
+
+                    <div style="margin-bottom: 40px; font-size: 14px;">
+                        <strong>In Words:</strong> ${amountInWords}
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 50px; font-size: 14px;">
+                        <div style="text-align: center;">
+                            <br>_________________<br>Prepared By
+                        </div>
+                        <div style="text-align: center;">
+                            <br>_________________<br>Checked By
+                        </div>
+                        <div style="text-align: center;">
+                            <br>_________________<br>Approved By
+                        </div>
+                    </div>
+                </div>
+            `;
+            window.print();
+        }
+
+        // Helper for messages
+        function showMessage(text, type) {
+            messageDiv.textContent = text;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            setTimeout(() => { messageDiv.style.display = 'none'; }, 4000);
+        }
+
+    </script>
+
+    <!-- Tab Switching Script -->
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.className += " active";
+        }
+    </script>
+
+    <!-- Print CSS -->
+    <style media="print">
+        @page { size: A4; margin: 10mm; }
+        body * { visibility: hidden; }
+        #printArea, #printArea * { visibility: visible; }
+        #printArea { position: absolute; left: 0; top: 0; width: 100%; display: block !important; }
+    </style>
+</body>
+</html>

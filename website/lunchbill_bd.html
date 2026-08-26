@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monico Pharma - Bill Management</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"MS Sans Serif","Tahoma","Arial",sans-serif;font-size:11px;background:#008080;overflow:hidden;height:100vh}
+.w98-window{position:fixed;top:4px;left:4px;right:4px;bottom:34px;background:#c0c0c0;border-top:2px solid #dfdfdf;border-left:2px solid #dfdfdf;border-right:2px solid #404040;border-bottom:2px solid #404040;display:flex;flex-direction:column}
+.w98-titlebar{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:2px 3px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:20px}
+.w98-titlebar-left{display:flex;align-items:center;gap:3px;font-weight:bold;font-size:11px}
+.w98-tb-btn{width:16px;height:14px;background:#c0c0c0;border-top:1px solid #fff;border-left:1px solid #fff;border-right:1px solid #404040;border-bottom:1px solid #404040;font-size:9px;line-height:12px;text-align:center;cursor:pointer;padding:0;color:#000;font-weight:bold}
+.w98-tb-btn:active{border-top:1px solid #404040;border-left:1px solid #404040;border-right:1px solid #fff;border-bottom:1px solid #fff}
+.w98-tb-close{margin-left:2px}
+.w98-menubar{display:flex;gap:0;padding:1px 0;flex-shrink:0;border-bottom:1px solid #808080}
+.w98-menu-item{padding:2px 8px;cursor:pointer;user-select:none}
+.w98-menu-item:hover{background:#000080;color:#fff}
+.w98-body{display:flex;flex:1;overflow:hidden}
+.w98-tree{width:190px;background:#fff;border-right:2px solid #808080;overflow-y:auto;flex-shrink:0;padding:4px 0}
+.tree-item,.tree-parent{padding:2px 4px;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none;white-space:nowrap}
+.tree-item:hover,.tree-parent:hover,.tree-child:hover{background:#000080;color:#fff}
+.tree-item.active,.tree-child.active{background:#000080;color:#fff}
+.tree-toggle{width:11px;height:11px;border:1px solid #808080;background:#c0c0c0;font-size:9px;font-weight:bold;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:9px}
+.tree-children{display:none;padding-left:16px}
+.tree-children.open{display:block}
+.tree-icon{font-size:13px;flex-shrink:0;width:16px;text-align:center}
+.tree-child{padding:1px 4px 1px 20px;cursor:pointer;display:flex;align-items:center;gap:3px;user-select:none;white-space:nowrap;position:relative}
+.tree-child::before{content:'';position:absolute;left:10px;top:0;bottom:50%;width:1px;background:#808080}
+.tree-child::after{content:'';position:absolute;left:10px;top:50%;width:6px;height:1px;background:#808080}
+.tree-sep{height:1px;background:#808080;margin:4px 8px}
+.w98-content{flex:1;overflow-y:auto;background:#c0c0c0;padding:8px}
+.page{display:none}.page.active{display:block}
+.w98-statusbar{display:flex;flex-shrink:0;border-top:2px solid #808080;height:20px}
+.w98-status-section{border-right:1px solid #808080;border-top:1px solid #fff;padding:1px 6px;display:flex;align-items:center;gap:4px;font-size:11px;flex-shrink:0}
+.w98-taskbar{position:fixed;bottom:0;left:0;right:0;height:30px;background:#c0c0c0;border-top:2px solid #fff;display:flex;align-items:center;padding:2px 4px;gap:4px;z-index:999}
+.w98-start{display:flex;align-items:center;gap:3px;padding:2px 6px;background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;font-weight:bold;font-size:11px;cursor:pointer;font-family:inherit;gap:4px}
+.w98-start:active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff}
+.w98-task-sep{width:2px;height:24px;border-left:1px solid #808080;border-right:1px solid #fff}
+.w98-task-item{padding:2px 8px;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer;max-width:160px;overflow:hidden;white-space:nowrap}
+.w98-task-item.active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff;background:#c0c0c0}
+.w98-tray{margin-left:auto;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:1px 8px;height:22px;display:flex;align-items:center;font-size:11px}
+.w98-btn{background:#c0c0c0;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;padding:2px 12px;font-family:inherit;font-size:11px;cursor:pointer;white-space:nowrap}
+.w98-btn:active{border-top:2px solid #404040;border-left:2px solid #404040;border-right:2px solid #fff;border-bottom:2px solid #fff}
+.w98-btn-primary{background:#c0c0c0;font-weight:bold}
+.w98-btn-danger{color:#c00}
+.w98-btn-sm{padding:1px 8px;font-size:11px}
+.w98-btn-edit{color:#000080}
+.w98-field{background:#fff;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:2px 4px;font-family:inherit;font-size:11px;outline:none;width:100%}
+.w98-field[readonly]{background:#c0c0c0;color:#404040}
+.w98-select{background:#fff;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:2px 2px;font-family:inherit;font-size:11px;outline:none;width:100%}
+.w98-textarea{background:#fff;border-top:2px solid #808080;border-left:2px solid #808080;border-right:2px solid #fff;border-bottom:2px solid #fff;padding:2px 4px;font-family:inherit;font-size:11px;outline:none;width:100%;resize:vertical;min-height:50px}
+.w98-groupbox{border:2px groove #c0c0c0;padding:10px;margin:6px 0}
+.w98-groupbox legend{background:#c0c0c0;padding:0 4px;font-size:11px;font-weight:bold}
+.w98-table{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+.w98-table th{background:#c0c0c0;border:1px solid #808080;padding:3px 6px;font-weight:bold;text-align:left;white-space:nowrap}
+.w98-table td{border:1px solid #c0c0c0;padding:3px 6px}
+.w98-table tr:hover td{background:#e0e0ff}
+.w98-formtable{width:100%;border-collapse:collapse;font-size:11px;background:#fff}
+.w98-formtable th{background:#c0c0c0;border:1px solid #808080;padding:3px 6px;font-weight:bold;text-align:center;white-space:nowrap}
+.w98-formtable td{border:1px solid #c0c0c0;padding:2px 4px}
+.w98-formtable .label-cell{background:#c0c0c0;font-weight:bold;width:120px;white-space:nowrap;text-align:right;padding-right:6px}
+.w98-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px;margin-bottom:12px}
+.w98-stat{border:2px groove #c0c0c0;padding:8px;background:#fff}
+.w98-stat .val{font-size:18px;font-weight:bold;color:#000080;margin:4px 0 2px}
+.w98-stat .val.red{color:#800000}
+.w98-stat .lbl{font-size:10px;color:#404040}
+.w98-section{font-size:11px;font-weight:bold;color:#000080;margin:10px 0 6px;padding-bottom:2px;border-bottom:1px solid #808080;display:flex;align-items:center;gap:4px}
+.w98-section.red{color:#800000}
+.w98-section.amber{color:#b45309}
+.toast-box{position:fixed;top:40px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:6px}
+.w98-toast{border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #404040;border-bottom:2px solid #404040;background:#c0c0c0;padding:6px 12px;font-size:11px;display:flex;align-items:center;gap:6px;transform:translateX(120%);transition:transform .3s;min-width:220px}
+.w98-toast.show{transform:translateX(0)}
+.w98-toast-ok{border-left:3px solid #008000}
+.w98-toast-err{border-left:3px solid #c00}
+.w98-toast-info{border-left:3px solid #000080}
+.w98-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .15s}
+.w98-modal-bg.active{opacity:1;pointer-events:auto}
+.w98-dialog{background:#c0c0c0;border-top:2px solid #dfdfdf;border-left:2px solid #dfdfdf;border-right:2px solid #404040;border-bottom:2px solid #404040;padding:0;min-width:320px;box-shadow:2px 2px 6px rgba(0,0,0,.3)}
+.w98-dialog-title{background:linear-gradient(90deg,#000080,#1084d0);color:#fff;padding:2px 4px;font-weight:bold;font-size:11px;display:flex;align-items:center;justify-content:space-between}
+.w98-dialog-body{padding:16px 20px;font-size:11px}
+.w98-dialog-btns{padding:0 20px 14px;display:flex;gap:8px;justify-content:center}
+.w98-info{border:2px groove #c0c0c0;padding:6px 8px;margin:4px 0;background:#ffffcc;font-size:11px}
+.w98-info b{color:#000080}
+.w98-info.amber{background:#fffbeb}
+.w98-info.amber b{color:#b45309}
+.w98-edit-badge{display:inline-flex;align-items:center;gap:4px;background:#ffffcc;border:1px solid #808080;font-size:10px;font-weight:bold;padding:2px 8px;margin-bottom:6px;color:#800000}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;vertical-align:middle}
+.sync-dot.online{background:#008000}
+.sync-dot.offline{background:#c00}
+.sync-dot.checking{background:#c0c000;animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.print-lunch{width:900px;margin:auto;border:2px solid #000}
+.print-lunch table{width:100%;border-collapse:collapse;font-size:14px;font-family:Arial,sans-serif}
+.print-lunch td,.print-lunch th{border:1px solid #000;padding:6px}
+.print-lunch .center{text-align:center}.print-lunch .right{text-align:right}
+.print-lunch .bold{font-weight:bold;white-space:nowrap}
+.print-lunch .header{font-size:26px;font-weight:bold}
+.print-lunch .sub-header{font-size:16px}
+.print-lunch .sig td{height:70px;vertical-align:bottom;text-align:center;font-weight:bold}
+.print-clean{width:800px;margin:auto;border:2px solid #000;padding:15px;font-family:Arial,sans-serif}
+.print-clean h1,.print-clean h2{text-align:center;margin:5px}
+.print-clean h2{text-decoration:underline}
+.print-clean table{width:100%;border-collapse:collapse;font-size:14px}
+.print-clean td,.print-clean th{border:1px solid #000;padding:6px}
+.print-clean .rl{text-align:right;font-weight:bold;width:20%}
+.print-clean .rv{text-align:right;width:30%}
+.print-clean .lb{width:20%}
+.print-clean .vl{width:30%}
+.print-clean .am{text-align:right}
+.print-clean .sig-row{margin-top:50px;display:flex;justify-content:space-between;text-align:center}
+.print-clean .sig-row div{width:30%}
+.print-dinner{width:780px;margin:auto;border:2px solid #000}
+.print-dinner table{width:100%;border-collapse:collapse;font-size:14px;font-family:Arial,sans-serif}
+.print-dinner td,.print-dinner th{border:1px solid #000;padding:7px 10px}
+.print-dinner .c{text-align:center}
+.print-dinner .r{text-align:right}
+.print-dinner .b{font-weight:bold;white-space:nowrap}
+.print-dinner .hdr{font-size:24px;font-weight:bold;text-align:center}
+.print-dinner .sub{font-size:15px;font-weight:bold;text-align:center}
+.print-dinner .addr{text-align:center;font-size:13px}
+.print-dinner .sig td{height:120px;vertical-align:bottom;text-align:center;font-weight:bold;font-size:13px}
+.dinner-total-bar{background:linear-gradient(90deg,#fffbeb,#fef3c7);border:2px groove #c0c0c0;padding:8px 10px;margin-top:8px;display:flex;align-items:center;justify-content:space-between}
+.dinner-total-bar .lbl{font-size:11px;font-weight:bold;color:#b45309}
+.dinner-total-bar .amt{font-size:20px;font-weight:bold;color:#b45309}
+@media print{
+  body{background:#fff!important;overflow:visible!important;height:auto!important}
+  .w98-taskbar,.w98-tree,.w98-menubar,.w98-titlebar,.w98-statusbar,.toast-box,.w98-modal-bg,.no-print{display:none!important}
+  .w98-window{position:static!important;border:none!important;top:0!important;left:0!important;right:0!important;bottom:0!important;background:#fff!important}
+  .w98-body{overflow:visible!important;display:block!important}
+  .w98-content{overflow:visible!important;padding:0!important;background:#fff!important}
+  .page{display:none!important}
+  .page.active{display:block!important}
+  @page{size:A4 portrait;margin:8mm}
+  .print-lunch,.print-clean,.print-dinner{border:2px solid #000;width:100%!important;margin:0!important;max-width:100%!important}
+}
+::-webkit-scrollbar{width:16px}
+::-webkit-scrollbar-track{background:#c0c0c0;border:1px inset #808080}
+::-webkit-scrollbar-thumb{background:#c0c0c0;border:2px outset #dfdfdf}
+::-webkit-scrollbar-button{background:#c0c0c0;border:2px outset #dfdfdf;height:16px}
+</style>
+</head>
+<body>
+
+<div class="w98-window">
+  <div class="w98-titlebar">
+    <div class="w98-titlebar-left">
+      <i class="fas fa-capsules" style="color:#0f8;font-size:13px"></i>
+      <span>Monico Pharma — Bill Management</span>
+    </div>
+    <div style="display:flex;gap:2px">
+      <button class="w98-tb-btn">_</button>
+      <button class="w98-tb-btn">□</button>
+      <button class="w98-tb-btn w98-tb-close">X</button>
+    </div>
+  </div>
+  <div class="w98-menubar">
+    <div class="w98-menu-item">File</div>
+    <div class="w98-menu-item">Edit</div>
+    <div class="w98-menu-item">View</div>
+    <div class="w98-menu-item">Help</div>
+  </div>
+  <div class="w98-body">
+    <div class="w98-tree">
+      <div class="tree-item active" id="treeDash" onclick="showPage('dashboard',this)">
+        <span class="tree-icon"><i class="fas fa-chart-pie" style="color:#000080;font-size:12px"></i></span>
+        <span>Dashboard</span>
+      </div>
+      <div class="tree-sep"></div>
+      <div class="tree-parent" id="entryTreeParent" onclick="toggleTree('entryTree',this)">
+        <span class="tree-toggle">+</span>
+        <span class="tree-icon"><i class="fas fa-folder" style="color:#c0a000;font-size:12px"></i></span>
+        <span>Bill Entry</span>
+      </div>
+      <div class="tree-children" id="entryTree">
+        <div class="tree-child" id="treeLunchEntry" onclick="showPage('lunchEntry',this)">
+          <span class="tree-icon"><i class="fas fa-utensils" style="color:#000080;font-size:11px"></i></span>
+          <span>Lunch Entry</span>
+        </div>
+        <div class="tree-child" id="treeCleanEntry" onclick="showPage('cleanEntry',this)">
+          <span class="tree-icon"><i class="fas fa-broom" style="color:#c06000;font-size:11px"></i></span>
+          <span>Office Cleaning Entry</span>
+        </div>
+        <div class="tree-child" id="treeDinnerEntry" onclick="showPage('dinnerEntry',this)">
+          <span class="tree-icon"><i class="fas fa-moon" style="color:#b45309;font-size:11px"></i></span>
+          <span>Dinner Entry</span>
+        </div>
+      </div>
+      <div class="tree-parent" id="historyTreeParent" onclick="toggleTree('historyTree',this)">
+        <span class="tree-toggle">+</span>
+        <span class="tree-icon"><i class="fas fa-folder" style="color:#c0a000;font-size:12px"></i></span>
+        <span>History</span>
+      </div>
+      <div class="tree-children" id="historyTree">
+        <div class="tree-child" id="treeLunchHist" onclick="showPage('lunchHistory',this)">
+          <span class="tree-icon"><i class="fas fa-file-lines" style="color:#000080;font-size:11px"></i></span>
+          <span>Lunch Bill History</span>
+        </div>
+        <div class="tree-child" id="treeCleanHist" onclick="showPage('cleanHistory',this)">
+          <span class="tree-icon"><i class="fas fa-file-lines" style="color:#c06000;font-size:11px"></i></span>
+          <span>Cleaning Bill History</span>
+        </div>
+        <div class="tree-child" id="treeDinnerHist" onclick="showPage('dinnerHistory',this)">
+          <span class="tree-icon"><i class="fas fa-file-lines" style="color:#b45309;font-size:11px"></i></span>
+          <span>Dinner Bill History</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="w98-content">
+
+<!-- ========== DASHBOARD ========== -->
+<div class="page active" id="dashboard">
+  <div class="w98-section"><i class="fas fa-utensils"></i> LUNCH BILL SUMMARY</div>
+  <div class="w98-stats">
+    <div class="w98-stat"><div class="val" id="sLunchTotal">0</div><div class="lbl">Total Lunch Bills</div></div>
+    <div class="w98-stat"><div class="val" id="sLunchAmt">0</div><div class="lbl">Total Amount (Tk)</div></div>
+    <div class="w98-stat"><div class="val" id="sLunchMonth">0</div><div class="lbl">This Month</div></div>
+  </div>
+  <div class="w98-section red"><i class="fas fa-broom"></i> OFFICE CLEANING SUMMARY</div>
+  <div class="w98-stats">
+    <div class="w98-stat"><div class="val red" id="sCleanTotal">0</div><div class="lbl">Total Cleaning Bills</div></div>
+    <div class="w98-stat"><div class="val red" id="sCleanAmt">0</div><div class="lbl">Total Amount (Tk)</div></div>
+    <div class="w98-stat"><div class="val red" id="sCleanMonth">0</div><div class="lbl">This Month</div></div>
+  </div>
+  <div class="w98-section amber"><i class="fas fa-moon"></i> DINNER BILL SUMMARY</div>
+  <div class="w98-stats">
+    <div class="w98-stat"><div class="val" id="sDinnerTotal" style="color:#b45309">0</div><div class="lbl">Total Dinner Bills</div></div>
+    <div class="w98-stat"><div class="val" id="sDinnerAmt" style="color:#b45309">0</div><div class="lbl">Total Amount (Tk)</div></div>
+    <div class="w98-stat"><div class="val" id="sDinnerMonth" style="color:#b45309">0</div><div class="lbl">This Month</div></div>
+  </div>
+  <div class="w98-section"><i class="fas fa-list"></i> RECENT BILLS</div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table"><thead><tr><th>Type</th><th>Name</th><th>Month/Details</th><th>Info</th><th>Amount (Tk)</th><th>Date</th></tr></thead><tbody id="recentBills"></tbody></table>
+    <div id="noBillsMsg" style="padding:24px;text-align:center;color:#808080;font-size:11px"><i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px"></i>No bills recorded yet.</div>
+  </div>
+</div>
+
+<!-- ========== LUNCH ENTRY ========== -->
+<div class="page" id="lunchEntry">
+  <div class="w98-section"><i class="fas fa-utensils"></i> Lunch Entry</div>
+  <fieldset class="w98-groupbox"><legend>Employee Info</legend>
+    <table class="w98-formtable">
+      <tr><td class="label-cell">Name</td><td><select class="w98-select" id="empName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Bill Month</td><td><input type="month" class="w98-field" id="billMonth" onchange="calcMonth()"></td></tr>
+      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="billDate"></td></tr>
+    </table>
+  </fieldset>
+  <fieldset class="w98-groupbox"><legend>Bill Calculation</legend>
+    <div style="overflow-x:auto">
+    <table class="w98-formtable">
+      <tr><th>Bill Month</th><th>Total Days</th><th>Friday</th><th>Govt Holiday</th><th>Others</th><th>Leave</th><th>Working Days</th><th>Rate/Day</th><th>Amount(Tk)</th><th>Remarks</th></tr>
+      <tr>
+        <td id="showMonth" style="text-align:center;font-weight:bold;background:#fff"></td>
+        <td><input class="w98-field" id="totalDays" readonly></td>
+        <td><input class="w98-field" id="friday" readonly></td>
+        <td><input class="w98-field" id="govtHoliday" value="0" onchange="calcWork()"></td>
+        <td><input class="w98-field" id="othersHoliday" value="0" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="leave" value="0" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="working" readonly style="font-weight:bold;color:#000080"></td>
+        <td><input class="w98-field" id="rate" value="60" onchange="calcWork()" type="number" min="0"></td>
+        <td><input class="w98-field" id="amount" readonly style="font-weight:bold;color:#000080"></td>
+        <td><input class="w98-field" id="remarks" placeholder="Optional"></td>
+      </tr>
+    </table>
+    </div>
+  </fieldset>
+  <div class="w98-info no-print"><b>Formula:</b> Working Days = Total − Friday − Govt Holiday − Others − Leave &nbsp;|&nbsp; Amount = Working Days × Rate</div>
+  <div id="holidayBanner" class="w98-info no-print" style="display:none"><b><i class="fas fa-calendar-day"></i> Holidays:</b> <span id="holidayChips"></span></div>
+  <div style="margin-top:8px" class="no-print">
+    <button class="w98-btn w98-btn-primary" onclick="saveLunchBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
+    <button class="w98-btn" onclick="resetLunchEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
+  </div>
+</div>
+
+<!-- ========== CLEANING ENTRY ========== -->
+<div class="page" id="cleanEntry">
+  <div class="w98-section red"><i class="fas fa-broom"></i> Office Cleaning Entry</div>
+  <fieldset class="w98-groupbox"><legend>Bill Info</legend>
+    <table class="w98-formtable">
+      <tr><td class="label-cell">Name</td><td><select class="w98-select" id="cleanName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Designation</td><td><select class="w98-select" id="cleanDesig"><option value="Depot In-charge">Depot In-charge</option><option value="SR">SR</option><option value="DSR">DSR</option></select></td></tr>
+      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="cleanDate"></td></tr>
+      <tr><td class="label-cell">Bill No</td><td><input class="w98-field" id="cleanBillNo" readonly style="color:#800000;font-weight:bold;font-size:10px"></td><td class="label-cell">Month</td><td><select class="w98-select" id="cleanMonth" onchange="updateCleanBillNo()"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></td></tr>
+    </table>
+  </fieldset>
+  <fieldset class="w98-groupbox"><legend>Amount</legend>
+    <table class="w98-formtable">
+      <tr><th>Particular</th><th style="text-align:right">Amount (Tk)</th><th>Remarks</th></tr>
+      <tr><td>Office Cleaning Bill</td><td><input class="w98-field" type="number" id="cleanAmount" value="1000" min="0" onchange="updateCleanWords()" style="text-align:right;font-weight:bold;color:#800000"></td><td><input class="w98-field" id="cleanRemarks" placeholder="Optional"></td></tr>
+    </table>
+  </fieldset>
+  <div class="w98-info"><b>In Words:</b> <span id="cleanWords" style="font-weight:bold">Taka One Thousand Only</span></div>
+  <div style="margin-top:8px" class="no-print">
+    <button class="w98-btn w98-btn-primary" style="color:#800000" onclick="saveCleanBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
+    <button class="w98-btn" onclick="resetCleanEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
+  </div>
+</div>
+
+<!-- ========== DINNER ENTRY ========== -->
+<div class="page" id="dinnerEntry">
+  <div class="w98-section amber"><i class="fas fa-moon"></i> Dinner Entry</div>
+  <div id="dinnerEditBadge" class="w98-edit-badge" style="display:none"><i class="fas fa-pen"></i> Editing Bill — <span id="dinnerEditId"></span></div>
+  <fieldset class="w98-groupbox"><legend>Bill Info</legend>
+    <table class="w98-formtable">
+      <tr><td class="label-cell">Name</td><td><select class="w98-select" id="dName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="dDate"></td></tr>
+      <tr><td class="label-cell">Location / Venue</td><td colspan="3"><input class="w98-field" id="dLocation" placeholder="Restaurant name or venue..."></td></tr>
+      <tr><td class="label-cell">Purpose</td><td colspan="3"><input class="w98-field" id="dPurpose" placeholder="e.g. RSM Meeting, Conference..."></td></tr>
+      <tr><td class="label-cell">No of Persons</td><td><input class="w98-field" type="number" id="dPersons" min="0" value="0" oninput="calcDinner()"></td><td class="label-cell">Per Person Cost (Tk)</td><td><input class="w98-field" type="number" id="dCost" min="0" value="0" oninput="calcDinner()"></td></tr>
+      <tr><td class="label-cell">Remarks</td><td colspan="3"><textarea class="w98-textarea" id="dRemarks" placeholder="Additional notes if any..."></textarea></td>
+    </table>
+  </fieldset>
+  <div class="dinner-total-bar">
+    <span class="lbl"><i class="fas fa-calculator"></i> Total Amount</span>
+    <span class="amt" id="dTotalDisplay">Tk 0.00</span>
+  </div>
+  <div class="w98-info amber no-print"><b>Formula:</b> Total Amount = No of Persons × Per Person Cost</div>
+  <div style="margin-top:8px" class="no-print" id="dinnerEntryBtns">
+    <button class="w98-btn w98-btn-primary" style="color:#b45309" id="dBtnSave" onclick="saveDinnerBill()"><i class="fas fa-floppy-disk"></i> Save Bill</button>
+    <button class="w98-btn" id="dBtnUpdate" onclick="updateDinnerBill()" style="display:none;color:#008000"><i class="fas fa-check"></i> Update Bill</button>
+    <button class="w98-btn w98-btn-danger" id="dBtnCancel" onclick="cancelDinnerEdit()" style="display:none"><i class="fas fa-xmark"></i> Cancel</button>
+    <button class="w98-btn" id="dBtnReset" onclick="resetDinnerEntry()"><i class="fas fa-rotate-left"></i> Reset</button>
+  </div>
+</div>
+
+<!-- ========== LUNCH HISTORY ========== -->
+<div class="page" id="lunchHistory">
+  <div class="w98-section"><i class="fas fa-utensils"></i> Lunch Bill History</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" class="no-print">
+    <input class="w98-field" type="text" id="lunchSearch" placeholder="Search name..." style="width:160px" oninput="loadLH()">
+    <select class="w98-select" id="lunchFilter" onchange="loadLH()" style="width:140px"><option value="">All Months</option></select>
+    <button class="w98-btn w98-btn-danger" onclick="confirmClear('lunch')"><i class="fas fa-trash"></i> Clear All</button>
+  </div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table" style="min-width:750px"><thead><tr><th>#</th><th>Name</th><th>Month</th><th>Working</th><th>Rate</th><th>Amount (Tk)</th><th>Date</th><th>Actions</th></tr></thead><tbody id="lunchHistBody"></tbody></table>
+    <div id="noLunchHist" style="padding:24px;text-align:center;color:#808080;display:none"><i class="fas fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px"></i>No lunch bills found.</div>
+  </div>
+</div>
+
+<!-- ========== CLEANING HISTORY ========== -->
+<div class="page" id="cleanHistory">
+  <div class="w98-section red"><i class="fas fa-broom"></i> Cleaning Bill History</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" class="no-print">
+    <input class="w98-field" type="text" id="cleanSearch" placeholder="Search name..." style="width:160px" oninput="loadCH()">
+    <select class="w98-select" id="cleanFilter" onchange="loadCH()" style="width:140px"><option value="">All Months</option></select>
+    <button class="w98-btn w98-btn-danger" onclick="confirmClear('clean')"><i class="fas fa-trash"></i> Clear All</button>
+  </div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table" style="min-width:820px"><thead><tr><th>#</th><th>Bill No</th><th>Name</th><th>Designation</th><th>Month</th><th>Amount (Tk)</th><th>Date</th><th>Actions</th></tr></thead><tbody id="cleanHistBody"></tbody></table>
+    <div id="noCleanHist" style="padding:24px;text-align:center;color:#808080;display:none"><i class="fas fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px"></i>No cleaning bills found.</div>
+  </div>
+</div>
+
+<!-- ========== DINNER HISTORY ========== -->
+<div class="page" id="dinnerHistory">
+  <div class="w98-section amber"><i class="fas fa-moon"></i> Dinner Bill History</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" class="no-print">
+    <input class="w98-field" type="text" id="dinnerSearch" placeholder="Search name, location..." style="width:180px" oninput="loadDH()">
+    <button class="w98-btn w98-btn-danger" onclick="confirmClear('dinner')"><i class="fas fa-trash"></i> Clear All</button>
+  </div>
+  <div style="border:2px groove #c0c0c0;background:#fff;overflow-x:auto">
+    <table class="w98-table" style="min-width:900px"><thead><tr><th>#</th><th>Date</th><th>Name</th><th>Location</th><th>Persons</th><th>Per Person</th><th>Total (Tk)</th><th>Purpose</th><th>Actions</th></tr></thead><tbody id="dinnerHistBody"></tbody></table>
+    <div id="noDinnerHist" style="padding:24px;text-align:center;color:#808080;display:none"><i class="fas fa-folder-open" style="font-size:24px;display:block;margin-bottom:8px"></i>No dinner bills found.</div>
+  </div>
+</div>
+
+<!-- ========== PRINT — LUNCH ========== -->
+<div class="page" id="printLunch">
+  <div class="print-lunch">
+    <table>
+      <tr><td colspan="10" class="center header">Lunch Bill</td></tr>
+      <tr><td colspan="10" class="center sub-header">Kushtia Depot</td></tr>
+      <tr><td colspan="10" class="center">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</td></tr>
+      <tr><td class="bold">Name</td><td colspan="4" id="pName"></td><td class="bold">Bill Month</td><td colspan="4" id="pMonth"></td></tr>
+      <tr><td class="bold">Department</td><td colspan="4">Distribution</td><td class="bold">Bill Date</td><td colspan="4" id="pDate"></td></tr>
+      <tr class="center bold"><td>Bill Month</td><td>Total Days</td><td>Friday</td><td>Govt Holyday</td><td>Others Holyday</td><td>Leave</td><td>Total Working Days</td><td>Per Day Allounch</td><td>Amount(Tk)</td><td>Remarks</td></tr>
+      <tr class="center"><td id="pm"></td><td id="ptd"></td><td id="pf"></td><td id="pgh"></td><td id="poh"></td><td id="pl"></td><td id="pw"></td><td id="pr"></td><td id="pa"></td><td id="prem"></td></tr>
+      <tr><td colspan="10" style="height:80px"></td></tr><tr><td colspan="10" style="height:20px"></td></tr>
+      <tr><td class="bold">In Words:</td><td colspan="7" id="pWords"></td><td class="right bold">Total =</td><td class="center bold" id="pta"></td></tr>
+      <tr><td colspan="10" style="height:120px"></td></tr>
+      <tr class="sig"><td colspan="3">Prepared By</td><td colspan="4">Chacked By RSM</td><td colspan="3">Approved By</td></tr>
+    </table>
+  </div>
+  <div style="margin-top:12px;text-align:center" class="no-print"><button class="w98-btn" onclick="showPage('lunchHistory',document.getElementById('treeLunchHist'))"><i class="fas fa-arrow-left"></i> Back</button></div>
+</div>
+
+<!-- ========== PRINT — CLEANING ========== -->
+<div class="page" id="printClean">
+  <div class="print-clean">
+    <h1>Monico Pharma Ltd</h1><h2>Office Cleaning Bill</h2>
+    <table>
+      <tr><td class="lb"><b>Name</b></td><td class="vl" id="pcName"></td><td class="rl">Bill No</td><td class="rv" id="pcBillNo"></td></tr>
+      <tr><td class="lb"><b>Designation</b></td><td class="vl" id="pcDesig"></td><td class="rl">Bill Date</td><td class="rv" id="pcDate"></td></tr>
+      <tr><td class="lb"><b>Department</b></td><td class="vl">Distribution</td><td class="rl">Month</td><td class="rv" id="pcMonth"></td></tr>
+    </table><br>
+    <table>
+      <tr><th>Particular</th><th class="am">Amount (Tk)</th><th>Remarks</th></tr>
+      <tr><td>Office Cleaning Bill</td><td class="am" id="pcAmt"></td><td id="pcRem"></td></tr>
+      <tr><td class="am"><b>Total =</b></td><td class="am"><b id="pcTotal"></b></td><td></td></tr>
+    </table><br>
+    <p><b>In Words:</b> <span id="pcWords"></span></p>
+    <div class="sig-row"><div>___________________<br>Prepared By</div><div>___________________<br>Checked By RSM</div><div>___________________<br>Approved By</div></div>
+  </div>
+  <div style="margin-top:12px;text-align:center" class="no-print"><button class="w98-btn" onclick="showPage('cleanHistory',document.getElementById('treeCleanHist'))"><i class="fas fa-arrow-left"></i> Back</button></div>
+</div>
+
+<!-- ========== PRINT — DINNER ========== -->
+<div class="page" id="printDinner">
+  <div class="print-dinner">
+    <table>
+      <tr><td colspan="5" class="hdr">Dinner Bill</td></tr>
+      <tr><td colspan="5" class="sub">Kushtia Depot</td></tr>
+      <tr><td colspan="5" class="addr">0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</td></tr>
+      <tr>
+        <td class="b" style="width:12%">Name</td>
+        <td id="dpName" style="width:30%"></td>
+        <td style="width:6%"></td>
+        <td class="b" style="width:14%">Bill Date</td>
+        <td id="dpDate" style="width:38%"></td>
+      </tr>
+      <tr>
+        <td class="b">Purpose</td>
+        <td id="dpPurpose" colspan="4"></td>
+      </tr>
+      <tr class="c b">
+        <td style="width:6%">#</td>
+        <td style="width:20%">No Of Persons</td>
+        <td style="width:24%">Per Person Cost(TK)</td>
+        <td style="width:24%">Total Amount (TK)</td>
+        <td style="width:26%">Remarks</td>
+      </tr>
+      <tr class="c">
+        <td>1</td>
+        <td id="dpPersons"></td>
+        <td id="dpCost"></td>
+        <td id="dpTotal"></td>
+        <td id="dpRemarks"></td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <td class="b">Grand Total:</td>
+        <td class="c b" id="dpTotalBottom"></td>
+      </tr>
+      <tr>
+        <td class="b">In Words:</td>
+        <td id="dpWords" colspan="4"></td>
+      </tr>
+      <tr class="sig">
+        <td colspan="2">Prepared By</td>
+        <td colspan="1">Chacked By RSM</td>
+        <td colspan="2">Approved By</td>
+      </tr>
+    </table>
+  </div>
+  <div style="margin-top:12px;text-align:center" class="no-print"><button class="w98-btn" onclick="showPage('dinnerHistory',document.getElementById('treeDinnerHist'))"><i class="fas fa-arrow-left"></i> Back</button></div>
+</div>
+
+    </div>
+  </div>
+
+  <div class="w98-statusbar">
+    <div class="w98-status-section" style="min-width:160px">
+      <span class="sync-dot checking" id="syncDot"></span>
+      <span id="syncText">Checking connection...</span>
+    </div>
+    <div class="w98-status-section" style="flex:1"><span id="statusMsg">Ready</span></div>
+  </div>
+</div>
+
+<div class="w98-taskbar">
+  <button class="w98-start"><i class="fab fa-windows" style="font-size:16px;color:#008080"></i><b>Start</b></button>
+  <div class="w98-task-sep"></div>
+  <div class="w98-task-item active"><i class="fas fa-capsules" style="color:#000080;font-size:11px"></i> Monico Pharma</div>
+  <div class="w98-tray"><span id="trayClock"></span></div>
+</div>
+
+<div class="toast-box" id="toastBox"></div>
+
+<div class="w98-modal-bg" id="confirmModal">
+  <div class="w98-dialog">
+    <div class="w98-dialog-title"><span id="modalTitle">Confirm</span></div>
+    <div class="w98-dialog-body"><span id="modalMsg">Are you sure?</span></div>
+    <div class="w98-dialog-btns">
+      <button class="w98-btn" onclick="closeModal()">Cancel</button>
+      <button class="w98-btn w98-btn-danger" id="modalConfirmBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== CLOCK ===== */
+function updateClock(){var d=new Date(),h=d.getHours(),m=d.getMinutes(),ap=h>=12?'PM':'AM';h=h%12;if(!h)h=12;document.getElementById('trayClock').textContent=h+':'+String(m).padStart(2,'0')+' '+ap}
+setInterval(updateClock,1000);updateClock();
+
+/* ===== FIREBASE ===== */
+var firebaseConfig={apiKey:"AIzaSyDeC8Bd3DH0wqC-Rfx-yAmyk2zeu5hgec4",authDomain:"whatapp-8d8ed.firebaseapp.com",databaseURL:"https://whatapp-8d8ed-default-rtdb.europe-west1.firebasedatabase.app",projectId:"whatapp-8d8ed",storageBucket:"whatapp-8d8ed.firebasestorage.app",messagingSenderId:"618833956157",appId:"1:618833956157:web:ca46eb47b16b86bda7c954"};
+var firebaseDB=null,isOnline=false,dinnerEditingId=null;
+var syncTimeout=setTimeout(function(){if(!isOnline){setSyncUI(false,'Offline (timeout)');refreshAll()}},5000);
+function setSyncUI(on,txt){var d=document.getElementById('syncDot'),t=document.getElementById('syncText');d.className='sync-dot '+(on?'online':'offline');t.textContent=txt;document.getElementById('statusMsg').textContent=txt}
+try{firebase.initializeApp(firebaseConfig);firebaseDB=firebase.database();firebaseDB.ref('.info/connected').on('value',function(s){clearTimeout(syncTimeout);isOnline=s.val()===true;setSyncUI(isOnline,isOnline?'Cloud synced':'Offline mode');if(isOnline)syncFromCloud()})}catch(e){clearTimeout(syncTimeout);isOnline=false;setSyncUI(false,'Offline mode');refreshAll()}
+function syncFromCloud(){if(!firebaseDB)return;['lunchBills','cleanBills','dinnerBills'].forEach(function(p){firebaseDB.ref(p).once('value',function(s){var c=s.val();if(!c)return;var ca=Object.values(c),la=getLocal(p),ci=new Set(ca.map(function(b){return b.id})),m=ca.slice();la.forEach(function(b){if(!ci.has(b.id))m.push(b)});m.sort(function(a,b){return(b.timestamp||0)-(a.timestamp||0)});localStorage.setItem(p,JSON.stringify(m));refreshAll()}).catch(function(){})})}
+function pushCloud(p,b){if(!firebaseDB||!isOnline)return;firebaseDB.ref(p+'/'+b.id).set(b).catch(function(){})}
+function delCloud(p,id){if(!firebaseDB||!isOnline)return;firebaseDB.ref(p+'/'+id).remove().catch(function(){})}
+function getLocal(p){try{return JSON.parse(localStorage.getItem(p)||'[]')}catch(e){return[]}}
+function setLocal(p,a){localStorage.setItem(p,JSON.stringify(a))}
+
+/* ===== TREE ===== */
+function toggleTree(id,el){var tree=document.getElementById(id),tog=el.querySelector('.tree-toggle'),ico=el.querySelector('.tree-icon i');if(tree.classList.contains('open')){tree.classList.remove('open');tog.textContent='+';ico.className='fas fa-folder';ico.style.color='#c0a000'}else{tree.classList.add('open');tog.textContent='−';ico.className='fas fa-folder-open';ico.style.color='#c0a000'}}
+function clearTreeActive(){document.querySelectorAll('.tree-item,.tree-child').forEach(function(e){e.classList.remove('active')})}
+
+/* ===== CLEANING BILL NO ===== */
+var currentCleanBillNo='';
+function genBillNo(mn){var y=new Date().getFullYear(),mi=mnameToNum(mn),pre='KSOCB'+y+String(mi).padStart(2,'0');var ex=getLocal('cleanBills'),ss=new Set();ex.forEach(function(b){if(b.billNo){b.billNo.slice(pre.length).split('+').forEach(function(s){var n=parseInt(s,10);if(!isNaN(n))ss.add(n)})}});var nx=1;while(ss.has(nx))nx++;var all=[...ss].sort(function(a,b){return a-b});all.push(nx);return{display:pre+all.map(function(s){return String(s).padStart(2,'0')}).join('+'),individual:pre+String(nx).padStart(2,'0')}}
+function mnameToNum(n){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];return m.indexOf(n)>=0?m.indexOf(n)+1:1}
+function updateCleanBillNo(){var r=genBillNo(document.getElementById('cleanMonth').value);document.getElementById('cleanBillNo').value=r.display;currentCleanBillNo=r.individual}
+
+/* ===== HOLIDAYS ===== */
+var hCache={};
+async function fetchHol(yr){if(hCache[yr])return hCache[yr];var c=localStorage.getItem('bdH_'+yr);if(c){hCache[yr]=JSON.parse(c);return hCache[yr]}try{var r=await fetch('https://date.nager.at/api/v3/PublicHolidays/'+yr+'/BD');if(!r.ok)throw 0;var d=await r.json();hCache[yr]=d;localStorage.setItem('bdH_'+yr,JSON.stringify(d));return d}catch(e){var f=fbHol(yr);hCache[yr]=f;return f}}
+function fbHol(yr){var fx=[{m:2,d:21,n:"Mother Language Day"},{m:3,d:26,n:"Independence Day"},{m:4,d:14,n:"Bengali New Year"},{m:5,d:1,n:"May Day"},{m:12,d:16,n:"Victory Day"}];var v={2025:[{m:2,d:28,n:"Shab-e-Meraj"},{m:3,d:1,n:"Eid-e-Miladunnabi"},{m:3,d:30,n:"Shab-e-Qadr"},{m:3,d:31,n:"Eid ul-Fitr"},{m:4,d:1,n:"Eid ul-Fitr (Day 2)"},{m:4,d:2,n:"Eid ul-Fitr (Day 3)"},{m:5,d:12,n:"Buddha Purnima"},{m:6,d:7,n:"Eid ul-Adha"},{m:6,d:8,n:"Eid ul-Adha (Day 2)"},{m:6,d:9,n:"Eid ul-Adha (Day 3)"},{m:6,d:27,n:"Hijri New Year"},{m:6,d:28,n:"Shab-e-Barat"},{m:7,d:6,n:"Ashura"},{m:10,d:3,n:"Durga Puja"},{m:11,d:7,n:"Revolution Day"}]};return[...fx,...(v[yr]||[])].map(function(h){return{date:yr+'-'+String(h.m).padStart(2,'0')+'-'+String(h.d).padStart(2,'0'),name:h.n}})}
+
+/* ===== LUNCH CALC ===== */
+async function calcMonth(){
+  var mv=document.getElementById('billMonth').value;if(!mv)return;
+  var p=mv.split('-'),yr=+p[0],mo=+p[1],tot=new Date(yr,mo,0).getDate(),fr=0;
+  for(var d=1;d<=tot;d++){if(new Date(yr,mo-1,d).getDay()===5)fr++}
+  document.getElementById('totalDays').value=tot;document.getElementById('friday').value=fr;
+  document.getElementById('showMonth').textContent=fmtMonth(yr,mo);
+  var hols=await fetchHol(yr);var mh=hols.filter(function(h){var hd=new Date(h.date);return hd.getFullYear()===yr&&hd.getMonth()===mo-1});
+  var nf=mh.filter(function(h){return new Date(h.date).getDay()!==5});
+  document.getElementById('govtHoliday').value=nf.length;
+  var ban=document.getElementById('holidayBanner'),chips=document.getElementById('holidayChips');
+  if(mh.length>0){ban.style.display='block';chips.innerHTML=mh.map(function(h){var dn=new Date(h.date).toLocaleString('en-US',{weekday:'short'});var of=new Date(h.date).getDay()===5;return'<span style="margin-right:8px;font-size:10px;color:'+(of?'#808080':'#000')+'">'+(of?'<s>':'')+h.date.slice(5)+' '+h.name+' ('+dn+')'+(of?'</s>':'')+'</span>'}).join('')}else{ban.style.display='none'}
+  calcWork();
+}
+function fmtMonth(y,m){var ms=['January','February','March','April','May','June','July','August','September','October','November','December'];return ms[m-1]+'-'+String(y).slice(-2)}
+function calcWork(){
+  var t=parseInt(document.getElementById('totalDays').value)||0,f=parseInt(document.getElementById('friday').value)||0,
+  g=parseInt(document.getElementById('govtHoliday').value)||0,o=parseInt(document.getElementById('othersHoliday').value)||0,
+  l=parseInt(document.getElementById('leave').value)||0,r=parseFloat(document.getElementById('rate').value)||0;
+  var w=t-f-g-o-l;if(w<0)w=0;document.getElementById('working').value=w;document.getElementById('amount').value=(w*r).toFixed(2);
+}
+function updateCleanWords(){document.getElementById('cleanWords').textContent=numWords(parseFloat(document.getElementById('cleanAmount').value)||0)}
+function fmtDate(ds){if(!ds)return'-';var d=new Date(ds),ms=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return d.getDate()+'-'+ms[d.getMonth()]+'-'+d.getFullYear()}
+
+/* ===== DINNER CALC ===== */
+function calcDinner(){
+  var p=parseFloat(document.getElementById('dPersons').value)||0,c=parseFloat(document.getElementById('dCost').value)||0;
+  document.getElementById('dTotalDisplay').textContent='Tk '+(p*c).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+/* ===== SAVE LUNCH ===== */
+function saveLunchBill(){
+  var nm=document.getElementById('empName').value,mo=document.getElementById('showMonth').textContent,dt=document.getElementById('billDate').value;
+  if(!dt){toast('Select bill date','err');return}if(!mo){toast('Select bill month','err');return}
+  var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'lunch',name:nm,month:mo,date:dt,
+    total:document.getElementById('totalDays').value,friday:document.getElementById('friday').value,
+    govtHoliday:document.getElementById('govtHoliday').value,othersHoliday:document.getElementById('othersHoliday').value,
+    leave:document.getElementById('leave').value,working:document.getElementById('working').value,
+    rate:document.getElementById('rate').value,amount:document.getElementById('amount').value,
+    remarks:document.getElementById('remarks').value,timestamp:Date.now()};
+  var bl=getLocal('lunchBills');bl.unshift(b);setLocal('lunchBills',bl);pushCloud('lunchBills',b);refreshAll();resetLunchEntry();toast('Lunch bill saved')
+}
+
+/* ===== SAVE CLEANING ===== */
+function saveCleanBill(){
+  var nm=document.getElementById('cleanName').value,moSel=document.getElementById('cleanMonth').value,dt=document.getElementById('cleanDate').value,amt=parseFloat(document.getElementById('cleanAmount').value)||0;
+  if(!dt){toast('Select bill date','err');return}if(amt<=0){toast('Enter valid amount','err');return}
+  var yrSuf=String(new Date(dt).getFullYear()).slice(-2);var mo=moSel+'-'+yrSuf;
+  var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'clean',name:nm,month:mo,date:dt,
+    billNo:currentCleanBillNo,designation:document.getElementById('cleanDesig').value,
+    amount:amt.toFixed(2),remarks:document.getElementById('cleanRemarks').value,timestamp:Date.now()};
+  var bl=getLocal('cleanBills');bl.unshift(b);setLocal('cleanBills',bl);pushCloud('cleanBills',b);refreshAll();resetCleanEntry();toast('Cleaning bill saved — '+currentCleanBillNo)
+}
+
+/* ===== SAVE DINNER ===== */
+function saveDinnerBill(){
+  var nm=document.getElementById('dName').value,dt=document.getElementById('dDate').value,loc=document.getElementById('dLocation').value.trim(),
+  ps=parseFloat(document.getElementById('dPersons').value)||0,cst=parseFloat(document.getElementById('dCost').value)||0;
+  if(!dt){toast('Select bill date','err');return}
+  if(!loc){toast('Enter location','err');return}
+  if(!ps||ps<=0){toast('Enter valid number of persons','err');return}
+  if(!cst||cst<=0){toast('Enter per person cost','err');return}
+  var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'dinner',name:nm,date:dt,
+    location:loc,purpose:document.getElementById('dPurpose').value.trim(),
+    persons:document.getElementById('dPersons').value,cost:document.getElementById('dCost').value,
+    total:(ps*cst).toFixed(2),remarks:document.getElementById('dRemarks').value.trim(),timestamp:Date.now()};
+  var bl=getLocal('dinnerBills');bl.unshift(b);setLocal('dinnerBills',bl);pushCloud('dinnerBills',b);refreshAll();resetDinnerEntry();toast('Dinner bill saved')
+}
+
+/* ===== DINNER EDIT ===== */
+function editDinnerBill(id){
+  var b=getLocal('dinnerBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  dinnerEditingId=id;
+  document.getElementById('dName').value=b.name;document.getElementById('dDate').value=b.date;
+  document.getElementById('dLocation').value=b.location;document.getElementById('dPurpose').value=b.purpose||'';
+  document.getElementById('dPersons').value=b.persons;document.getElementById('dCost').value=b.cost;
+  document.getElementById('dRemarks').value=b.remarks||'';
+  document.getElementById('dinnerEditId').textContent=fmtDate(b.date)+' — '+b.name;
+  calcDinner();setDinnerEditUI(true);
+  showPage('dinnerEntry',document.getElementById('treeDinnerEntry'));
+}
+function updateDinnerBill(){
+  if(!dinnerEditingId){toast('No bill selected','err');return}
+  var nm=document.getElementById('dName').value,dt=document.getElementById('dDate').value,loc=document.getElementById('dLocation').value.trim(),
+  ps=parseFloat(document.getElementById('dPersons').value)||0,cst=parseFloat(document.getElementById('dCost').value)||0;
+  if(!dt||!loc||!ps||ps<=0||!cst||cst<=0){toast('Fill all required fields','err');return}
+  var bl=getLocal('dinnerBills'),idx=bl.findIndex(function(b){return b.id===dinnerEditingId});
+  if(idx===-1){toast('Not found','err');cancelDinnerEdit();return}
+  bl[idx]={...bl[idx],name:nm,date:dt,location:loc,purpose:document.getElementById('dPurpose').value.trim(),
+    persons:document.getElementById('dPersons').value,cost:document.getElementById('dCost').value,
+    total:(ps*cst).toFixed(2),remarks:document.getElementById('dRemarks').value.trim()};
+  setLocal('dinnerBills',bl);pushCloud('dinnerBills',bl[idx]);refreshAll();cancelDinnerEdit();toast('Dinner bill updated')
+}
+function cancelDinnerEdit(){dinnerEditingId=null;resetDinnerEntry();setDinnerEditUI(false)}
+function setDinnerEditUI(on){
+  document.getElementById('dinnerEditBadge').style.display=on?'inline-flex':'none';
+  document.getElementById('dBtnSave').style.display=on?'none':'inline-flex';
+  document.getElementById('dBtnUpdate').style.display=on?'inline-flex':'none';
+  document.getElementById('dBtnCancel').style.display=on?'inline-flex':'none';
+  document.getElementById('dBtnReset').style.display=on?'none':'inline-flex';
+}
+
+/* ===== DELETE / CLEAR ===== */
+function delBill(tp,id){
+  var pn=tp==='lunch'?'lunchBills':tp==='clean'?'cleanBills':'dinnerBills';
+  var lb=tp==='lunch'?'lunch':tp==='clean'?'cleaning':'dinner';
+  document.getElementById('modalTitle').textContent='Delete';
+  document.getElementById('modalMsg').textContent='Delete this '+lb+' bill?';
+  var btn=document.getElementById('modalConfirmBtn');btn.textContent='OK';btn.className='w98-btn w98-btn-danger';
+  btn.onclick=function(){setLocal(pn,getLocal(pn).filter(function(b){return b.id!==id}));delCloud(pn,id);if(dinnerEditingId===id)cancelDinnerEdit();refreshAll();closeModal();toast(lb+' bill deleted','info')};
+  document.getElementById('confirmModal').classList.add('active')
+}
+function confirmClear(tp){
+  var pn=tp==='lunch'?'lunchBills':tp==='clean'?'cleanBills':'dinnerBills';
+  var lb=tp==='lunch'?'lunch':tp==='clean'?'cleaning':'dinner';
+  var bl=getLocal(pn);if(!bl.length){toast('Nothing to clear','info');return}
+  document.getElementById('modalTitle').textContent='Clear All';
+  document.getElementById('modalMsg').textContent='Delete all '+bl.length+' '+lb+' bills?';
+  var btn=document.getElementById('modalConfirmBtn');btn.textContent='OK';btn.className='w98-btn w98-btn-danger';
+  btn.onclick=function(){setLocal(pn,[]);if(firebaseDB&&isOnline)firebaseDB.ref(pn).remove().catch(function(){});if(dinnerEditingId)cancelDinnerEdit();refreshAll();closeModal();toast('All cleared','info')};
+  document.getElementById('confirmModal').classList.add('active')
+}
+function closeModal(){document.getElementById('confirmModal').classList.remove('active')}
+
+/* ===== DASHBOARD ===== */
+function refreshAll(){loadDash();loadLH();loadCH();loadDH();loadFilters()}
+function loadDash(){
+  var lb=getLocal('lunchBills'),cb=getLocal('cleanBills'),db=getLocal('dinnerBills');
+  var la=lb.reduce(function(s,b){return s+parseFloat(b.amount||0)},0);
+  var ca=cb.reduce(function(s,b){return s+parseFloat(b.amount||0)},0);
+  var da=db.reduce(function(s,b){return s+parseFloat(b.total||0)},0);
+  var cm=new Date().toLocaleString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('sLunchTotal').textContent=lb.length;
+  document.getElementById('sLunchAmt').textContent=la.toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('sLunchMonth').textContent=lb.filter(function(b){return b.month===cm}).length;
+  document.getElementById('sCleanTotal').textContent=cb.length;
+  document.getElementById('sCleanAmt').textContent=ca.toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('sCleanMonth').textContent=cb.filter(function(b){return b.month===cm}).length;
+  document.getElementById('sDinnerTotal').textContent=db.length;
+  document.getElementById('sDinnerAmt').textContent=da.toLocaleString('en-IN',{maximumFractionDigits:0});
+  document.getElementById('sDinnerMonth').textContent=db.filter(function(b){if(!b.date)return false;return new Date(b.date).toLocaleString('en-US',{month:'long',year:'numeric'})===cm}).length;
+  var all=[].concat(
+    lb.map(function(b){return{tp:'Lunch',nm:b.name,mo:b.month,dt:b.working+'d × Tk'+b.rate,am:b.amount,da:b.date,ts:b.timestamp,clr:'#000080'}}),
+    cb.map(function(b){return{tp:'Clean',nm:b.name,mo:b.month,dt:'Cleaning',am:b.amount,da:b.date,ts:b.timestamp,clr:'#800000'}}),
+    db.map(function(b){return{tp:'Dinner',nm:b.name,mo:b.location,dt:b.persons+'p × Tk'+b.cost,am:b.total,da:b.date,ts:b.timestamp,clr:'#b45309'}})
+  );
+  all.sort(function(a,b){return(b.ts||0)-(a.ts||0)});
+  var tb=document.getElementById('recentBills'),nm=document.getElementById('noBillsMsg');
+  if(!all.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=all.slice(0,20).map(function(b){return'<tr><td style="font-weight:bold;color:'+b.clr+'">'+b.tp+'</td><td>'+b.nm+'</td><td>'+b.mo+'</td><td style="color:#808080">'+b.dt+'</td><td style="font-weight:bold">Tk '+parseFloat(b.am).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.da)+'</td></tr>'}).join('')}
+}
+
+/* ===== LUNCH HISTORY ===== */
+function loadLH(){
+  var bl=getLocal('lunchBills'),s=(document.getElementById('lunchSearch')?.value||'').toLowerCase(),fm=document.getElementById('lunchFilter')?.value||'';
+  if(s)bl=bl.filter(function(b){return b.name.toLowerCase().includes(s)});if(fm)bl=bl.filter(function(b){return b.month===fm});
+  var tb=document.getElementById('lunchHistBody'),nm=document.getElementById('noLunchHist');
+  if(!bl.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=bl.map(function(b,i){return'<tr><td>'+(i+1)+'</td><td>'+b.name+'</td><td>'+b.month+'</td><td>'+b.working+'d</td><td>Tk'+b.rate+'</td><td style="font-weight:bold">Tk'+parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.date)+'</td><td><button class="w98-btn w98-btn-sm" onclick="printLunch(\''+b.id+'\')" style="margin-right:2px"><i class="fas fa-print"></i></button><button class="w98-btn w98-btn-sm w98-btn-danger" onclick="delBill(\'lunch\',\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>'}).join('')}
+}
+
+/* ===== CLEANING HISTORY ===== */
+function loadCH(){
+  var bl=getLocal('cleanBills'),s=(document.getElementById('cleanSearch')?.value||'').toLowerCase(),fm=document.getElementById('cleanFilter')?.value||'';
+  if(s)bl=bl.filter(function(b){return b.name.toLowerCase().includes(s)});if(fm)bl=bl.filter(function(b){return b.month===fm});
+  var tb=document.getElementById('cleanHistBody'),nm=document.getElementById('noCleanHist');
+  if(!bl.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=bl.map(function(b,i){return'<tr><td>'+(i+1)+'</td><td style="font-weight:bold;color:#800000;font-size:10px">'+(b.billNo||'-')+'</td><td>'+b.name+'</td><td>'+(b.designation||'-')+'</td><td>'+b.month+'</td><td style="font-weight:bold">Tk'+parseFloat(b.amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="color:#808080">'+fmtDate(b.date)+'</td><td><button class="w98-btn w98-btn-sm" onclick="printClean(\''+b.id+'\')" style="margin-right:2px"><i class="fas fa-print"></i></button><button class="w98-btn w98-btn-sm w98-btn-danger" onclick="delBill(\'clean\',\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>'}).join('')}
+}
+
+/* ===== DINNER HISTORY ===== */
+function loadDH(){
+  var bl=getLocal('dinnerBills'),s=(document.getElementById('dinnerSearch')?.value||'').toLowerCase();
+  if(s)bl=bl.filter(function(b){return b.name.toLowerCase().includes(s)||b.location.toLowerCase().includes(s)||(b.purpose||'').toLowerCase().includes(s)||(b.remarks||'').toLowerCase().includes(s)});
+  var tb=document.getElementById('dinnerHistBody'),nm=document.getElementById('noDinnerHist');
+  if(!bl.length){tb.innerHTML='';nm.style.display='block'}
+  else{nm.style.display='none';tb.innerHTML=bl.map(function(b,i){return'<tr><td>'+(i+1)+'</td><td style="color:#808080">'+fmtDate(b.date)+'</td><td>'+b.name+'</td><td>'+b.location+'</td><td>'+b.persons+'</td><td>Tk'+parseFloat(b.cost).toFixed(0)+'</td><td style="font-weight:bold;color:#b45309">Tk'+parseFloat(b.total).toLocaleString('en-IN',{minimumFractionDigits:2})+'</td><td style="font-size:10px">'+(b.purpose||'-')+'</td><td><button class="w98-btn w98-btn-sm w98-btn-edit" onclick="editDinnerBill(\''+b.id+'\')" title="Edit" style="margin-right:2px"><i class="fas fa-pen"></i></button><button class="w98-btn w98-btn-sm" onclick="printDinner(\''+b.id+'\')" style="margin-right:2px"><i class="fas fa-print"></i></button><button class="w98-btn w98-btn-sm w98-btn-danger" onclick="delBill(\'dinner\',\''+b.id+'\')"><i class="fas fa-trash"></i></button></td></tr>'}).join('')}
+}
+
+/* ===== FILTERS ===== */
+function loadFilters(){
+  [{p:'lunchBills',s:'lunchFilter'},{p:'cleanBills',s:'cleanFilter'}].forEach(function(o){
+    var sel=document.getElementById(o.s),cv=sel.value,ms=[...new Set(getLocal(o.p).map(function(b){return b.month}))];
+    sel.innerHTML='<option value="">All Months</option>'+ms.map(function(m){return'<option value="'+m+'"'+(m===cv?' selected':'')+'>'+m+'</option>'}).join('')
+  })
+}
+
+/* ===== PRINT — LUNCH ===== */
+function printLunch(id){
+  var b=getLocal('lunchBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  document.getElementById('pName').textContent=b.name;document.getElementById('pMonth').textContent=b.month;
+  document.getElementById('pDate').textContent=fmtDate(b.date);document.getElementById('pm').textContent=b.month;
+  document.getElementById('ptd').textContent=b.total;document.getElementById('pf').textContent=b.friday;
+  document.getElementById('pgh').textContent=b.govtHoliday||0;document.getElementById('poh').textContent=b.othersHoliday||0;
+  document.getElementById('pl').textContent=(b.leave==='0'||b.leave===0)?'':b.leave;
+  document.getElementById('pw').textContent=b.working;document.getElementById('pr').textContent=b.rate;
+  document.getElementById('pa').textContent=parseFloat(b.amount).toFixed(2);document.getElementById('pta').textContent=parseFloat(b.amount).toFixed(2);
+  document.getElementById('prem').textContent=b.remarks||'';document.getElementById('pWords').textContent=numWords(parseFloat(b.amount));
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('printLunch').classList.add('active');
+  setTimeout(function(){window.print()},400)
+}
+
+/* ===== PRINT — CLEANING ===== */
+function printClean(id){
+  var b=getLocal('cleanBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  document.getElementById('pcName').textContent=b.name;document.getElementById('pcDesig').textContent=b.designation||'-';
+  document.getElementById('pcBillNo').textContent=b.billNo||'-';document.getElementById('pcDate').textContent=fmtDate(b.date);
+  document.getElementById('pcMonth').textContent=b.month;document.getElementById('pcAmt').textContent=parseFloat(b.amount).toFixed(2);
+  document.getElementById('pcTotal').textContent=parseFloat(b.amount).toFixed(2);document.getElementById('pcRem').textContent=b.remarks||'';
+  document.getElementById('pcWords').textContent=numWords(parseFloat(b.amount));
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('printClean').classList.add('active');
+  setTimeout(function(){window.print()},400)
+}
+
+/* ===== PRINT — DINNER ===== */
+function printDinner(id){
+  var b=getLocal('dinnerBills').find(function(x){return x.id===id});if(!b){toast('Not found','err');return}
+  document.getElementById('dpName').textContent=b.name;
+  document.getElementById('dpDate').textContent=fmtDate(b.date);
+  document.getElementById('dpPurpose').textContent=b.purpose||'-';
+  document.getElementById('dpPersons').textContent=b.persons;
+  document.getElementById('dpCost').textContent=parseFloat(b.cost).toFixed(2);
+  document.getElementById('dpTotal').textContent=parseFloat(b.total).toFixed(2);
+  document.getElementById('dpTotalBottom').textContent=parseFloat(b.total).toFixed(2);
+  document.getElementById('dpRemarks').textContent=b.remarks||'-';
+  document.getElementById('dpWords').textContent=numWords(parseFloat(b.total));
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('printDinner').classList.add('active');
+  setTimeout(function(){window.print()},400)
+}
+
+/* ===== NUMBER TO WORDS ===== */
+function ctw(n){
+  if(n===0)return'Zero';if(n<0)return'Minus '+ctw(-n);
+  var o=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  var t=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  if(n<20)return o[n];if(n<100)return t[Math.floor(n/10)]+(n%10?' '+o[n%10]:'');
+  if(n<1000)return o[Math.floor(n/100)]+' Hundred'+(n%100?' and '+ctw(n%100):'');
+  if(n<100000)return ctw(Math.floor(n/1000))+' Thousand'+(n%1000?' '+ctw(n%1000):'');
+  if(n<10000000)return ctw(Math.floor(n/100000))+' Lakh'+(n%100000?' '+ctw(n%100000):'');
+  if(n<1000000000)return ctw(Math.floor(n/10000000))+' Crore'+(n%10000000?' '+ctw(n%10000000):'');
+  return ctw(Math.floor(n/1000000000))+' Arab'+(n%1000000000?' '+ctw(n%10000000):'')
+}
+function numWords(n){if(!n||n===0)return'Zero Taka Only';var p=n.toFixed(2).split('.'),tk=parseInt(p[0]),ps=parseInt(p[1]);var r=ctw(tk)+' Taka';if(ps>0)r+=' and '+ctw(ps)+' Paisa';return r+' Only'}
+
+/* ===== NAVIGATION ===== */
+var pageTreeMap={dashboard:'treeDash',lunchEntry:'treeLunchEntry',cleanEntry:'treeCleanEntry',dinnerEntry:'treeDinnerEntry',lunchHistory:'treeLunchHist',cleanHistory:'treeCleanHist',dinnerHistory:'treeDinnerHist'};
+var pageSubMap={lunchEntry:'entryTree',cleanEntry:'entryTree',dinnerEntry:'entryTree',lunchHistory:'historyTree',cleanHistory:'historyTree',dinnerHistory:'historyTree'};
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  clearTreeActive();
+  if(el){el.classList.add('active')}
+  else if(id==='dashboard'){document.getElementById('treeDash').classList.add('active')}
+  else{var te=document.getElementById(pageTreeMap[id]);if(te)te.classList.add('active')}
+  var sid=pageSubMap[id];
+  if(sid){document.getElementById(sid).classList.add('open');var pid=sid==='entryTree'?'entryTreeParent':'historyTreeParent';var pe=document.getElementById(pid);if(pe){pe.querySelector('.tree-toggle').textContent='−';pe.querySelector('.tree-icon i').className='fas fa-folder-open'}}
+  if(id==='dashboard')loadDash();if(id==='lunchHistory'){loadFilters();loadLH()}if(id==='cleanHistory'){loadFilters();loadCH()}if(id==='dinnerHistory')loadDH();
+}
+
+/* ===== RESET ===== */
+function resetLunchEntry(){
+  ['billMonth','showMonth','totalDays','friday','amount','remarks'].forEach(function(id){document.getElementById(id).value=''});
+  document.getElementById('govtHoliday').value='0';document.getElementById('othersHoliday').value='0';
+  document.getElementById('leave').value='0';document.getElementById('rate').value='60';
+  document.getElementById('working').value='';document.getElementById('holidayBanner').style.display='none';
+  document.getElementById('billDate').value=new Date().toISOString().split('T')[0];
+  var n=new Date();document.getElementById('billMonth').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');calcMonth();
+}
+function resetCleanEntry(){
+  document.getElementById('cleanAmount').value='1000';document.getElementById('cleanRemarks').value='';
+  document.getElementById('cleanDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('cleanMonth').selectedIndex=new Date().getMonth();updateCleanBillNo();updateCleanWords();
+}
+function resetDinnerEntry(){
+  document.getElementById('dName').selectedIndex=0;
+  document.getElementById('dDate').value=new Date().toISOString().split('T')[0];
+  document.getElementById('dLocation').value='';document.getElementById('dPurpose').value='';
+  document.getElementById('dPersons').value='0';document.getElementById('dCost').value='0';
+  document.getElementById('dTotalDisplay').textContent='Tk 0.00';document.getElementById('dRemarks').value='';
+}
+
+/* ===== TOAST ===== */
+function toast(msg,tp){
+  tp=tp||'ok';var c=document.getElementById('toastBox'),t=document.createElement('div');
+  t.className='w98-toast w98-toast-'+tp;
+  var ic={ok:'check-circle',err:'exclamation-circle',info:'info-circle'};
+  t.innerHTML='<i class="fas fa-'+(ic[tp]||'info-circle')+'"></i> '+msg;
+  c.appendChild(t);requestAnimationFrame(function(){t.classList.add('show')});
+  setTimeout(function(){t.classList.remove('show');setTimeout(function(){t.remove()},300)},2800)
+}
+
+/* ===== INIT ===== */
+var now=new Date();
+document.getElementById('billDate').value=now.toISOString().split('T')[0];
+document.getElementById('billMonth').value=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+document.getElementById('cleanDate').value=now.toISOString().split('T')[0];
+document.getElementById('cleanMonth').selectedIndex=now.getMonth();
+document.getElementById('dDate').value=now.toISOString().split('T')[0];
+updateCleanBillNo();updateCleanWords();calcMonth();refreshAll();
+fetchHol(now.getFullYear());fetchHol(now.getFullYear()+1);
+</script>
+</body>
+</html>
