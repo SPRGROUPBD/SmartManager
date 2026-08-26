@@ -222,6 +222,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '' };
+    let editingRow = null; // Tracks the row being edited on double click
     let activeCustomerType = null; 
     let activeCustomerDccDisc = 0; 
     let currentUser = null; 
@@ -574,7 +575,6 @@
         if (!tbody) return;
         let html = '';
         
-        // Filter out 'invoiced' orders so admin doesn't see them again
         let filtered = onlineOrdersCache.filter(o => o.status !== 'invoiced');
         
         if (filterText) {
@@ -691,7 +691,7 @@
         
         calculateTotals();
 
-        currentProcessingOrderNo = order.orderNo; // Set tracking variable
+        currentProcessingOrderNo = order.orderNo;
 
         closeModal('modal-online-orders');
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove("active"));
@@ -716,7 +716,7 @@
         const tbody = document.getElementById('invoice-item-tbody');
         const sn = tbody.rows.length + 1;
 
-        return `<tr data-original-tp="${item.originalTp}" data-flat-tp="${item.flatTp || 0}" data-original-vat="${item.vat || 0}" data-bonus-rule="${item.bonusRule || ''}">
+        return `<tr data-original-tp="${item.originalTp}" data-flat-tp="${item.flatTp || 0}" data-original-vat="${item.vat || 0}" data-bonus-rule="${item.bonusRule || ''}" ondblclick="editQuickEntryItem(this)">
             <td class="text-center">${sn}</td>
             <td>${item.code}</td>
             <td>${item.name}</td>
@@ -730,7 +730,7 @@
             <td class="text-right">${actualDiscPct}%</td>
             <td class="text-right">${disc.toFixed(2)}</td>
             <td class="text-right">${netValue.toFixed(2)}</td>
-            <td class="center no-print"><button class="action-btn btn-danger" onclick="this.parentElement.parentElement.remove(); calculateTotals();">X</button></td>
+            <td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>
         </tr>`;
     }
 
@@ -841,13 +841,10 @@
         };
         db.ref('INVOICE/invoices/' + invNo).set(invoiceData).then(() => {
             showAlert('Invoice saved successfully!');
-            
-            // If this invoice came from an online order, update the order status to 'invoiced'
             if (currentProcessingOrderNo) {
                 db.ref('INVOICE/simple_orders/' + currentProcessingOrderNo + '/status').set('invoiced');
-                currentProcessingOrderNo = null; // Reset tracker
+                currentProcessingOrderNo = null;
             }
-            
             resetInvoiceForm();
             generateInvoiceNo(); loadInvoiceHistory();
         }).catch(error => showAlert('Save failed: ' + error.message));
@@ -892,12 +889,99 @@
         });
     }
 
+    // --- NEW: EDIT INVOICE ROW FEATURE ---
+    async function editQuickEntryItem(row) {
+        editingRow = row;
+        row.style.backgroundColor = '#fff3cd'; // Highlight row being edited
+        
+        const code = row.cells[1].innerText;
+        const name = row.cells[2].innerText;
+        const pack = row.cells[3].innerText;
+        const qty = parseInt(row.cells[4].innerText) || 0;
+        
+        document.getElementById('quick-code').value = code;
+        document.getElementById('quick-name').value = name + ' (' + pack + ')';
+        document.getElementById('quick-qty').value = qty;
+        
+        if (row.dataset.originalTp) {
+            quickEntryState = {
+                code: code, name: name, pack: pack,
+                originalTp: parseFloat(row.dataset.originalTp) || 0,
+                flatTp: parseFloat(row.dataset.flatTp) || 0,
+                vat: parseFloat(row.dataset.originalVat) || 0,
+                qty: qty, bonusRule: row.dataset.bonusRule || ''
+            };
+        } else {
+            const snap = await db.ref('INVOICE/products/' + code).once('value');
+            if (snap.exists()) {
+                const p = snap.val();
+                quickEntryState = {
+                    code: p.code, name: p.name, pack: p.pack,
+                    originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0),
+                    vat: Number(p.vat || 0), qty: qty, bonusRule: p.bonus || ''
+                };
+                row.dataset.originalTp = quickEntryState.originalTp;
+                row.dataset.flatTp = quickEntryState.flatTp;
+                row.dataset.originalVat = quickEntryState.vat;
+                row.dataset.bonusRule = quickEntryState.bonusRule;
+            } else {
+                showAlert('Could not fetch product details for editing!');
+                row.style.backgroundColor = '';
+                editingRow = null;
+                return;
+            }
+        }
+        document.getElementById('quick-qty').focus();
+        document.getElementById('quick-qty').select();
+    }
+
+    function updateInvoiceRow(row, item) {
+        const { tp: actualTp, vat: actualVat } = getActualTpAndVat(item, activeCustomerType);
+        const totalTp = actualTp * item.qty;
+        const totalVat = actualVat * item.qty;
+        let bonusQty = 0;
+        if(activeCustomerType !== 'D' && activeCustomerType !== 'SP') { 
+            bonusQty = calculateBonusQty(item.qty, item.bonusRule); 
+        }
+        let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
+        let disc = (totalTp * actualDiscPct) / 100;
+        const netValue = totalTp + totalVat - disc;
+
+        row.dataset.originalTp = item.originalTp;
+        row.dataset.flatTp = item.flatTp || 0;
+        row.dataset.originalVat = item.vat || 0;
+        row.dataset.bonusRule = item.bonusRule || '';
+        row.style.backgroundColor = ''; // Remove highlight
+
+        row.cells[4].innerText = item.qty;
+        row.cells[5].innerText = bonusQty;
+        row.cells[6].innerText = actualTp.toFixed(2);
+        row.cells[7].innerText = actualVat.toFixed(2);
+        row.cells[8].innerText = totalTp.toFixed(2);
+        row.cells[9].innerText = totalVat.toFixed(2);
+        row.cells[10].innerText = actualDiscPct + '%';
+        row.cells[11].innerText = disc.toFixed(2);
+        row.cells[12].innerText = netValue.toFixed(2);
+
+        calculateTotals();
+    }
+
     function addQuickEntryItem() {
         if(quickEntryState.code) {
             const qtyVal = parseInt(document.getElementById('quick-qty').value) || 0;
             if (qtyVal > 0) {
-                quickEntryState.qty = qtyVal; addInvoiceRow(quickEntryState);
-                document.getElementById('quick-code').value = ''; document.getElementById('quick-name').value = ''; document.getElementById('quick-qty').value = '';
+                quickEntryState.qty = qtyVal; 
+                
+                if (editingRow) {
+                    updateInvoiceRow(editingRow, quickEntryState);
+                    editingRow = null;
+                } else {
+                    addInvoiceRow(quickEntryState);
+                }
+                
+                document.getElementById('quick-code').value = ''; 
+                document.getElementById('quick-name').value = ''; 
+                document.getElementById('quick-qty').value = '';
                 document.getElementById('quick-code').focus(); 
             }
         }
@@ -950,8 +1034,9 @@
         let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
         let disc = (totalTp * actualDiscPct) / 100; const netValue = totalTp + totalVat - disc;
         const row = tbody.insertRow();
+        row.ondblclick = function() { editQuickEntryItem(this); }; // Double click to edit
         row.dataset.originalTp = item.originalTp; row.dataset.flatTp = item.flatTp || 0; row.dataset.originalVat = item.vat || 0; row.dataset.bonusRule = item.bonusRule || '';
-        row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td><td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="this.parentElement.parentElement.remove(); calculateTotals();">X</button></td>`;
+        row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td><td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>`;
         calculateTotals();
     }
 
@@ -1031,7 +1116,7 @@
             let items = inv.items || []; items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
             let html = '';
             items.forEach((item, index) => {
-                html += `<tr><td class="text-center">${index + 1}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${item.bonus}</td><td class="text-right">${item.tp}</td><td class="text-right">${item.vat}</td><td class="text-right">${item.totalTp}</td><td class="text-right">${item.totalVat}</td><td class="text-right">${item.discPct}</td><td class="text-right">${item.disc}</td><td class="text-right">${item.net}</td><td class="text-center no-print"><button class="action-btn btn-danger" onclick="this.parentElement.parentElement.remove(); calculateTotals();">X</button></td></tr>`;
+                html += `<tr ondblclick="editQuickEntryItem(this)"><td class="text-center">${index + 1}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${item.bonus}</td><td class="text-right">${item.tp}</td><td class="text-right">${item.vat}</td><td class="text-right">${item.totalTp}</td><td class="text-right">${item.totalVat}</td><td class="text-right">${item.discPct}</td><td class="text-right">${item.disc}</td><td class="text-right">${item.net}</td><td class="text-center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null;} calculateTotals();">X</button></td></tr>`;
             });
             tbody.innerHTML = html; calculateTotals(); window.scrollTo(0, 0);
         });
