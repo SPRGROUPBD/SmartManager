@@ -281,8 +281,8 @@ body{font-family:"MS Sans Serif","Tahoma","Arial",sans-serif;font-size:11px;back
   <fieldset class="w98-groupbox"><legend>Bill Info</legend>
     <table class="w98-formtable">
       <tr><td class="label-cell">Name</td><td><select class="w98-select" id="cleanName"><option value="Md Sajjad Ahmed">Md Sajjad Ahmed</option><option value="Md Shihab Hasan">Md Shihab Hasan</option></select></td><td class="label-cell">Designation</td><td><select class="w98-select" id="cleanDesig"><option value="Depot In-charge">Depot In-charge</option><option value="SR">SR</option><option value="DSR">DSR</option></select></td></tr>
-      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="cleanDate"></td></tr>
-      <tr><td class="label-cell">Bill No</td><td><input class="w98-field" id="cleanBillNo" readonly style="color:#800000;font-weight:bold;font-size:10px"></td><td class="label-cell">Month</td><td><select class="w98-select" id="cleanMonth" onchange="updateCleanBillNo()"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></td></tr>
+      <tr><td class="label-cell">Department</td><td>Distribution</td><td class="label-cell">Bill Date</td><td><input type="date" class="w98-field" id="cleanDate" onchange="updateCleanBillNo()"></td></tr>
+      <tr><td class="label-cell">Bill No</td><td><input class="w98-field" id="cleanBillNo" readonly style="color:#800000;font-weight:bold;font-size:10px"></td><td class="label-cell">Month</td><td><select class="w98-select" id="cleanMonth"><option>January</option><option>February</option><option>March</option><option>April</option><option>May</option><option>June</option><option>July</option><option>August</option><option>September</option><option>October</option><option>November</option><option>December</option></select></td></tr>
     </table>
   </fieldset>
   <fieldset class="w98-groupbox"><legend>Amount</legend>
@@ -509,11 +509,77 @@ function setLocal(p,a){localStorage.setItem(p,JSON.stringify(a))}
 function toggleTree(id,el){var tree=document.getElementById(id),tog=el.querySelector('.tree-toggle'),ico=el.querySelector('.tree-icon i');if(tree.classList.contains('open')){tree.classList.remove('open');tog.textContent='+';ico.className='fas fa-folder';ico.style.color='#c0a000'}else{tree.classList.add('open');tog.textContent='−';ico.className='fas fa-folder-open';ico.style.color='#c0a000'}}
 function clearTreeActive(){document.querySelectorAll('.tree-item,.tree-child').forEach(function(e){e.classList.remove('active')})}
 
-/* ===== CLEANING BILL NO ===== */
+/* ===== CLEANING BILL NO — AUTO GENERATION =====
+ * Format: KSOCBYYYYMMSS
+ *   KSOCB = Fixed Prefix
+ *   YYYY  = Year (from Bill Date)
+ *   MM    = Month 01-12 (from Bill Date)
+ *   SS    = Serial Number 01, 02, 03... (per year, resets on new year)
+ *
+ * Rules:
+ *   1. Year & Month come from Bill Date (auto-change)
+ *   2. Serial does NOT reset on month change (continues within same year)
+ *   3. New Year → Serial resets to 01
+ *   4. No duplicate Bill Numbers
+ *   5. Next serial = (max serial for that year) + 1
+ */
 var currentCleanBillNo='';
-function genBillNo(mn){var y=new Date().getFullYear(),mi=mnameToNum(mn),pre='KSOCB'+y+String(mi).padStart(2,'0');var ex=getLocal('cleanBills'),ss=new Set();ex.forEach(function(b){if(b.billNo){b.billNo.slice(pre.length).split('+').forEach(function(s){var n=parseInt(s,10);if(!isNaN(n))ss.add(n)})}});var nx=1;while(ss.has(nx))nx++;var all=[...ss].sort(function(a,b){return a-b});all.push(nx);return{display:pre+all.map(function(s){return String(s).padStart(2,'0')}).join('+'),individual:pre+String(nx).padStart(2,'0')}}
-function mnameToNum(n){var m=['January','February','March','April','May','June','July','August','September','October','November','December'];return m.indexOf(n)>=0?m.indexOf(n)+1:1}
-function updateCleanBillNo(){var r=genBillNo(document.getElementById('cleanMonth').value);document.getElementById('cleanBillNo').value=r.display;currentCleanBillNo=r.individual}
+
+function genBillNo(billDateStr){
+  /* Use Bill Date (not system date) for YYYY and MM */
+  var d = billDateStr ? new Date(billDateStr) : new Date();
+  var y = d.getFullYear();
+  var m = d.getMonth() + 1; /* 1-12 */
+  var pre = 'KSOCB' + y + String(m).padStart(2,'0');
+
+  /* Find max serial number for this year across ALL existing bills */
+  var ex = getLocal('cleanBills');
+  var maxSerial = 0;
+
+  ex.forEach(function(b){
+    if(b.billNo && typeof b.billNo === 'string' && b.billNo.indexOf('KSOCB') === 0){
+      /* Extract year from bill no: KSOCBYYYYMMSS (position 5-8) */
+      if(b.billNo.length >= 13){
+        var billYear = parseInt(b.billNo.substring(5,9),10);
+        if(billYear === y){
+          /* Extract serial part (everything after KSOCBYYYYMM = position 11+) */
+          var serialPart = b.billNo.substring(11);
+          /* Handle old format with + signs (backward compatibility) */
+          var parts = serialPart.split('+');
+          parts.forEach(function(p){
+            var s = parseInt(p,10);
+            if(!isNaN(s) && s > maxSerial){
+              maxSerial = s;
+            }
+          });
+        }
+      }
+    }
+  });
+
+  /* Next serial = max + 1 (continues across months, resets on new year) */
+  var nextSerial = maxSerial + 1;
+
+  /* padStart(2,'0') gives 01, 02... 99, then naturally 100, 101... */
+  return pre + String(nextSerial).padStart(2,'0');
+}
+
+function updateCleanBillNo(){
+  var dt = document.getElementById('cleanDate').value;
+  if(!dt){
+    dt = new Date().toISOString().split('T')[0];
+    document.getElementById('cleanDate').value = dt;
+  }
+
+  /* Auto-sync Month dropdown with Bill Date */
+  var d = new Date(dt);
+  document.getElementById('cleanMonth').selectedIndex = d.getMonth();
+
+  /* Generate Bill No based on Bill Date */
+  var billNo = genBillNo(dt);
+  document.getElementById('cleanBillNo').value = billNo;
+  currentCleanBillNo = billNo;
+}
 
 /* ===== HOLIDAYS ===== */
 var hCache={};
@@ -567,11 +633,15 @@ function saveLunchBill(){
 function saveCleanBill(){
   var nm=document.getElementById('cleanName').value,moSel=document.getElementById('cleanMonth').value,dt=document.getElementById('cleanDate').value,amt=parseFloat(document.getElementById('cleanAmount').value)||0;
   if(!dt){toast('Select bill date','err');return}if(amt<=0){toast('Enter valid amount','err');return}
+
+  /* Regenerate Bill No at save time to ensure uniqueness (prevents duplicate) */
+  var billNo = genBillNo(dt);
+
   var yrSuf=String(new Date(dt).getFullYear()).slice(-2);var mo=moSel+'-'+yrSuf;
   var b={id:Date.now().toString(36)+Math.random().toString(36).substr(2,6),type:'clean',name:nm,month:mo,date:dt,
-    billNo:currentCleanBillNo,designation:document.getElementById('cleanDesig').value,
+    billNo:billNo,designation:document.getElementById('cleanDesig').value,
     amount:amt.toFixed(2),remarks:document.getElementById('cleanRemarks').value,timestamp:Date.now()};
-  var bl=getLocal('cleanBills');bl.unshift(b);setLocal('cleanBills',bl);pushCloud('cleanBills',b);refreshAll();resetCleanEntry();toast('Cleaning bill saved — '+currentCleanBillNo)
+  var bl=getLocal('cleanBills');bl.unshift(b);setLocal('cleanBills',bl);pushCloud('cleanBills',b);refreshAll();resetCleanEntry();toast('Cleaning bill saved — '+billNo)
 }
 
 /* ===== SAVE DINNER ===== */
