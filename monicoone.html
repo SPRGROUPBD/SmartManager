@@ -110,6 +110,10 @@
             <header class="glass-header sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 shrink-0">
                 <div class="px-4 py-2.5 flex items-center justify-between gap-2">
                     <div class="flex-1 flex items-center space-x-2.5 min-w-0">
+                        <!-- Hamburger Menu Button -->
+                        <button onclick="toggleSidebar()" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition shrink-0" title="Menu">
+                            <i class="fa-solid fa-bars text-base"></i>
+                        </button>
                         <div class="w-9 h-9 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center p-1 shadow-xs shrink-0">
                             <img src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565" class="w-full h-full object-contain rounded-lg">
                         </div>
@@ -132,6 +136,36 @@
                     </div>
                 </div>
             </header>
+
+            <!-- SIDEBAR OVERLAY -->
+            <div id="sidebarOverlay" onclick="closeSidebar()" class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm z-[45] hidden"></div>
+
+            <!-- SIDEBAR -->
+            <div id="sidebarContainer" class="absolute top-0 left-0 h-full w-72 bg-white dark:bg-slate-800 shadow-2xl z-[46] flex flex-col transition-transform duration-300 -translate-x-full">
+                <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                    <div class="flex items-center space-x-2">
+                        <img src="https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565" class="w-8 h-8 rounded-lg">
+                        <h3 class="font-bold text-sm">Monico Menu</h3>
+                    </div>
+                    <button onclick="closeSidebar()" class="p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <div id="sidebarMenuList" class="flex-1 overflow-y-auto p-3 space-y-2">
+                    <p class="text-xs text-slate-400 text-center mt-4">লোড হচ্ছে...</p>
+                </div>
+            </div>
+
+            <!-- CONTENT VIEWER (IFRAME) -->
+            <div id="contentViewer" class="absolute inset-0 bg-white dark:bg-slate-900 z-[60] hidden flex flex-col">
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-xs">
+                    <h3 id="contentViewerTitle" class="font-bold text-sm text-slate-800 dark:text-white">Content Viewer</h3>
+                    <button onclick="closeContentViewer()" class="p-2 text-slate-500 hover:text-danger rounded-full">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <iframe id="contentIframe" src="" class="flex-1 w-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            </div>
 
             <main class="flex-1 overflow-y-auto p-4 space-y-4">
                 <div class="relative w-full h-[170px] md:h-[350px] rounded-m3 overflow-hidden shadow-md group bg-slate-200 dark:bg-slate-800 shrink-0">
@@ -241,7 +275,7 @@
                     </div>
                 </div>
             </main>
-            <footer class="py-2 text-center text-[10px] text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 shrink-0">&copy; 2026 Monico One Mobile Edition. Design & Devolpe : Md Sajjad Ahmed Mob: 01756144900</footer>
+            <footer class="py-2 text-center text-[10px] text-slate-400 border-t border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 shrink-0">&copy; 2026 Monico One Mobile Edition.</footer>
         </div>
     </div>
 
@@ -326,9 +360,10 @@
             </div>
             
             <!-- Admin Tab Layout -->
-            <div class="grid grid-cols-4 md:grid-cols-8 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl text-[10px] sm:text-xs font-semibold text-center mt-4 shrink-0">
+            <div class="grid grid-cols-3 md:grid-cols-9 gap-2 bg-slate-100 dark:bg-slate-900 p-1.5 rounded-xl text-[10px] sm:text-xs font-semibold text-center mt-4 shrink-0">
                 <button onclick="switchAdminTab('slider')" id="tabBtnSlider" class="py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition">স্লাইডার</button>
                 <button onclick="switchAdminTab('menu')" id="tabBtnMenu" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">মেনু ফাইল</button>
+                <button onclick="switchAdminTab('sidebarMenu')" id="tabBtnSidebarMenu" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">Sidebar মেনু</button>
                 <button onclick="switchAdminTab('notice')" id="tabBtnNotice" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">নোটিশ</button>
                 <button onclick="switchAdminTab('popup')" id="tabBtnPopup" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">পপআপ</button>
                 <button onclick="switchAdminTab('productCard')" id="tabBtnProductCard" class="py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition">প্রোডাক্ট</button>
@@ -428,6 +463,44 @@
                             <input type="text" id="adminSearchMenu" oninput="filterAdminList('menu', this.value)" placeholder="মেনু ফাইল খুঁজুন..." class="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none shadow-xs">
                         </div>
                         <div id="adminMenuList" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- SIDEBAR MENU TAB -->
+                <div id="tabContentSidebarMenu" class="space-y-4 hidden pb-8">
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i class="fa-solid fa-magnifying-glass text-xs"></i></span>
+                        <input type="text" id="adminSearchSidebarMenu" oninput="filterAdminList('sidebarMenu', this.value)" placeholder="সাইডবার মেনু খুঁজুন..." class="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none shadow-xs mb-2">
+                    </div>
+                    <div id="adminSidebarMenuList" class="space-y-2 max-h-64 overflow-y-auto pr-2"></div>
+                    <div class="border-t border-slate-100 dark:border-slate-700 pt-4 space-y-3">
+                        <h5 id="sidebarMenuFormTitle" class="text-sm font-bold text-primary">নতুন সাইডবার মেনু যুক্ত করুন</h5>
+                        <input type="hidden" id="editSidebarMenuKey" value="">
+                        <input type="text" id="sidebarMenuNameInput" placeholder="মেনুর নাম (Menu Name)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none mb-2">
+                        <div class="grid grid-cols-2 gap-3 mb-2">
+                            <input type="text" id="sidebarMenuIconInput" placeholder="আইকন (যেমন: fa-home)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+                            <input type="text" id="sidebarMenuUrlInput" placeholder="লিংক URL (Link URL)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">স্ট্যাটাস:</label>
+                                <select id="sidebarMenuStatusInput" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none">
+                                    <option value="active">Active</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500 mb-1">রোল পারমিশন (Multiple):</label>
+                                <select id="sidebarMenuRoleInput" multiple class="w-full h-20 px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold outline-none">
+                                    <option value="SUPER_ADMIN">Super Admin</option>
+                                    <option value="DIC">DIC</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button onclick="saveSidebarMenuItem()" id="sidebarMenuSaveBtn" class="flex-1 py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-xs flex items-center justify-center space-x-1"><i class="fa-solid fa-plus text-[10px]"></i><span id="sidebarMenuSaveBtnText">সেভ করুন</span></button>
+                            <button onclick="resetSidebarMenuForm()" id="sidebarMenuCancelBtn" class="hidden px-4 py-2.5 bg-slate-200 dark:bg-slate-700 text-xs font-bold rounded-xl">বাতিল</button>
+                        </div>
                     </div>
                 </div>
 
@@ -691,7 +764,9 @@
         let adminGlobalTrainingCards = {};
         let adminGlobalTargetSheets = {};
         let adminGlobalUsers = {};
+        let adminGlobalSidebarMenus = {};
         let adminActiveGrid = 'grid1';
+        let dynamicSidebarMenus = [];
 
         const monthFullMap = {"January":0, "February":1, "March":2, "April":3, "May":4, "June":5, "July":6, "August":7, "September":8, "October":9, "November":10, "December":11};
         const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -733,6 +808,13 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            // Menu & Vibration Feature
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('button, a, .ripple, [onclick]')) {
+                    if (navigator.vibrate) navigator.vibrate(30);
+                }
+            }, true);
+
             document.getElementById('employeeId').value = '';
             document.getElementById('password').value = '';
             const todayStr = new Date().toISOString().split('T')[0];
@@ -829,22 +911,22 @@
             
             const userRole = (user.role || '').trim().toUpperCase();
             const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN';
+            const isDIC = userRole === 'DIC';
             const adminBtn = document.getElementById('adminPanelBtn');
-            if (isSuperAdmin) adminBtn.classList.remove('hidden'); else adminBtn.classList.add('hidden');
+            if (isSuperAdmin || isDIC) adminBtn.classList.remove('hidden'); else adminBtn.classList.add('hidden');
             
             checkPopupNotice(); 
             initMenuListener(); 
             initProductCardListener(); 
             initTrainingCardListener(); 
             initTargetSheetListener(); 
+            initSidebarMenuListener(); 
             loadSliders(); 
             loadNotices();  
             loadProductNotices(); 
 
-            // সবার অনলাইন স্ট্যাটাস ফায়ারবেসে সেভ হবে
             trackUserPresence(user); 
             
-            // শুধুমাত্র SUPER_ADMIN অনলাইন ইউজারদের লিস্ট দেখতে পাবে
             const onlineUsersSection = document.getElementById('onlineUsersSection');
             if (isSuperAdmin) {
                 onlineUsersSection.classList.remove('hidden');
@@ -854,7 +936,6 @@
             }
         }
 
-        // ১. ইউজারের অনলাইন স্ট্যাটাস ফায়ারবেসে সেভ করার ফাংশন
         function trackUserPresence(user) {
             if (!user || !user.employeeId) return;
             const userStatusRef = db.child('onlineUsers/' + user.employeeId);
@@ -873,7 +954,6 @@
             });
         }
 
-        // ২. রিয়েল-টাইমে অনলাইন ইউজারদের লিস্ট ড্যাশবোর্ডে শো করার ফাংশন
         function listenOnlineUsers() {
             db.child('onlineUsers').on('value', (snapshot) => {
                 const onlineUsers = snapshot.val() || {};
@@ -881,7 +961,6 @@
             });
         }
 
-        // ৩. অনলাইন ইউজারদের UI তে রেন্ডার করার ফাংশন
         function renderOnlineUsers(users) {
             const container = document.getElementById('onlineUsersList');
             if (!container) return;
@@ -1234,6 +1313,71 @@
             }); 
         }
 
+        function initSidebarMenuListener() {
+            db.child('sidebarMenus').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                adminGlobalSidebarMenus = data;
+                dynamicSidebarMenus = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+                renderSidebarMenus();
+                filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : '');
+            });
+        }
+
+        function renderSidebarMenus() {
+            const container = document.getElementById('sidebarMenuList');
+            if (!container) return;
+            
+            const userRole = currentUserData ? (currentUserData.role || '').trim().toUpperCase() : '';
+            const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN';
+            const isDIC = userRole === 'DIC';
+            
+            let html = '';
+            
+            // Admin Menu Button
+            if (isSuperAdmin || isDIC) {
+                html += `<button onclick="closeSidebar(); openAdminPanel()" class="w-full flex items-center space-x-3 p-3 bg-primary/10 text-primary rounded-xl font-bold text-xs hover:bg-primary/20 transition">
+                    <i class="fa-solid fa-sliders text-sm"></i>
+                    <span>Admin Menu</span>
+                </button>`;
+            }
+            
+            // Dynamic Menus
+            dynamicSidebarMenus.forEach(m => {
+                if (m.status === 'inactive') return;
+                const allowedRoles = (m.allowedRole || 'SUPER_ADMIN,DIC').split(',').map(r => r.trim().toUpperCase());
+                let hasAccess = false;
+                if (isSuperAdmin && allowedRoles.includes('SUPER_ADMIN')) hasAccess = true;
+                if (isDIC && allowedRoles.includes('DIC')) hasAccess = true;
+                
+                if (hasAccess) {
+                    // Determine icon class
+                    let menuIcon = m.icon || 'fa-link';
+                    // If user typed only "fa-something", make it "fa-solid fa-something"
+                    if (menuIcon.startsWith('fa-') && menuIcon.split(' ').length === 1) {
+                        menuIcon = `fa-solid ${menuIcon}`;
+                    }
+                    
+                    html += `<button onclick="openContentViewer('${m.url}', '${m.name}')" class="w-full flex items-center space-x-3 p-3 bg-slate-100 dark:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+                        <i class="${menuIcon} text-primary text-sm w-4 text-center"></i>
+                        <span class="truncate text-left flex-1">${m.name}</span>
+                    </button>`;
+                }
+            });
+            
+            container.innerHTML = html || '<p class="text-xs text-slate-400 text-center mt-4">কোনো মেনু নেই।</p>';
+        }
+
+        window.openContentViewer = function(url, title) {
+            closeSidebar();
+            document.getElementById('contentViewerTitle').innerText = title || 'Content Viewer';
+            document.getElementById('contentIframe').src = url;
+            document.getElementById('contentViewer').classList.remove('hidden');
+        };
+        window.closeContentViewer = function() {
+            document.getElementById('contentViewer').classList.add('hidden');
+            document.getElementById('contentIframe').src = 'about:blank';
+        };
+
         function renderProductCards() {
             if (!isProductCardsLoaded) return;
             const container = document.getElementById('productLaunchContainer');
@@ -1505,9 +1649,26 @@
             if (url.startsWith('go:')) { const pageName = url.substring(3); const link = document.createElement('a'); link.href = `go:${pageName}`; document.body.appendChild(link); link.click(); document.body.removeChild(link); } else { window.open(url, '_blank'); }
         }
         window.filterMenus = function(keyword) { currentSearchKeyword = keyword.toLowerCase(); renderMenus(); }
+        
+        // Sidebar Toggle Functions
+        window.toggleSidebar = function() {
+            const sb = document.getElementById('sidebarContainer');
+            const ov = document.getElementById('sidebarOverlay');
+            if (sb.classList.contains('-translate-x-full')) {
+                sb.classList.remove('-translate-x-full');
+                ov.classList.remove('hidden');
+            } else {
+                closeSidebar();
+            }
+        };
+        window.closeSidebar = function() {
+            document.getElementById('sidebarContainer').classList.add('-translate-x-full');
+            document.getElementById('sidebarOverlay').classList.add('hidden');
+        };
+
         window.openAdminPanel = function() { 
-            const userRole = (currentUserData && currentUserData.role) ? currentUserData.role.trim().toLowerCase() : ''; 
-            if (userRole !== 'super_admin' && userRole !== 'super admin') { showToast('অনুমতি নেই!'); return; } 
+            const userRole = (currentUserData && currentUserData.role) ? currentUserData.role.trim().toUpperCase() : ''; 
+            if (userRole !== 'SUPER_ADMIN' && userRole !== 'SUPER ADMIN' && userRole !== 'DIC') { showToast('অনুমতি নেই!'); return; } 
             document.getElementById('adminModal').classList.remove('hidden'); 
             renderAdminSliders(); 
             renderAdminMenus(); 
@@ -1522,12 +1683,14 @@
         window.closeAdminPanel = function() { document.getElementById('adminModal').classList.add('hidden'); }
         
         window.switchAdminTab = function(tabName) { 
-            ['slider', 'menu', 'notice', 'popup', 'productCard', 'trainingCard', 'targetSheet', 'user'].forEach(t => { 
-                const capitalizedT = t.charAt(0).toUpperCase() + t.slice(1);
+            ['slider', 'menu', 'sidebarMenu', 'notice', 'popup', 'productCard', 'trainingCard', 'targetSheet', 'user'].forEach(t => { 
+                let capitalizedT = t.charAt(0).toUpperCase() + t.slice(1);
+                if (t === 'sidebarMenu') capitalizedT = 'SidebarMenu';
                 document.getElementById(`tabContent${capitalizedT}`).classList.add('hidden'); 
                 document.getElementById(`tabBtn${capitalizedT}`).className = "py-2.5 rounded-lg text-slate-600 dark:text-slate-400 transition"; 
             }); 
-            const capitalizedTabName = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            let capitalizedTabName = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            if (tabName === 'sidebarMenu') capitalizedTabName = 'SidebarMenu';
             document.getElementById(`tabContent${capitalizedTabName}`).classList.remove('hidden'); 
             document.getElementById(`tabBtn${capitalizedTabName}`).className = "py-2.5 rounded-lg bg-white dark:bg-slate-800 text-primary shadow-xs transition"; 
         }
@@ -1607,6 +1770,83 @@
         window.resetMenuForm = function() { document.getElementById('editMenuKey').value = ''; document.getElementById('menuTitleInput').value = ''; document.getElementById('menuIconInput').value = ''; document.getElementById('menuUrlInput').value = ''; document.getElementById('menuFileInput').value = ''; const roleSelect = document.getElementById('menuAllowedRoleInput'); Array.from(roleSelect.options).forEach(option => { option.selected = (option.value === 'PALL'); }); document.getElementById('menuMonthInput').value = getCurrentMonthName(); document.getElementById('menuDateInput').value = new Date().toISOString().split('T')[0]; document.getElementById('menuPinInput').checked = false; document.getElementById('menuGroupInput').value = 'grid1'; onAdminGroupChange('grid1'); document.getElementById('menuFormTitle').innerText = 'নতুন মেনু/ফাইল যোগ করুন'; document.getElementById('menuSaveBtnText').innerText = 'মেনু সংরক্ষণ করুন'; document.getElementById('menuCancelBtn').classList.add('hidden'); }
         window.deleteMenu = function(key) { if (confirm('আপনি কি নিশ্চিত এই ফাইল বা মেনুটি ডিলিট করতে চান?')) { db.child('menus/' + key).remove().then(() => { renderAdminMenus(); showToast('সফলভাবে মুছে ফেলা হয়েছে!'); }); } }
 
+        // New Sidebar Menu Admin Functions
+        window.saveSidebarMenuItem = function() {
+            const editKey = document.getElementById('editSidebarMenuKey').value;
+            const name = document.getElementById('sidebarMenuNameInput').value.trim();
+            const url = document.getElementById('sidebarMenuUrlInput').value.trim();
+            const icon = document.getElementById('sidebarMenuIconInput').value.trim() || 'fa-link';
+            const status = document.getElementById('sidebarMenuStatusInput').value;
+            const roleSelect = document.getElementById('sidebarMenuRoleInput');
+            const selectedRoles = Array.from(roleSelect.selectedOptions).map(opt => opt.value);
+            const allowedRole = selectedRoles.length > 0 ? selectedRoles.join(',') : 'SUPER_ADMIN,DIC';
+            
+            if (!name || !url) { showToast('নাম এবং লিংক দিন'); return; }
+            
+            const data = { name, url, icon, status, allowedRole };
+            const btn = document.getElementById('sidebarMenuSaveBtn');
+            const btnText = document.getElementById('sidebarMenuSaveBtnText');
+            
+            btn.disabled = true;
+            if (editKey) {
+                db.child('sidebarMenus/' + editKey).update(data).then(() => {
+                    showToast('মেনু আপডেট হয়েছে!');
+                    resetSidebarMenuForm();
+                    btn.disabled = false;
+                }).catch(err => { showToast('Error!'); btn.disabled = false; });
+            } else {
+                db.child('sidebarMenus').push(data).then(() => {
+                    showToast('নতুন মেনু যোগ হয়েছে!');
+                    resetSidebarMenuForm();
+                    btn.disabled = false;
+                }).catch(err => { showToast('Error!'); btn.disabled = false; });
+            }
+        };
+
+        window.editSidebarMenuItem = function(key) {
+            db.child('sidebarMenus/' + key).once('value', (snap) => {
+                const m = snap.val();
+                if (m) {
+                    document.getElementById('editSidebarMenuKey').value = key;
+                    document.getElementById('sidebarMenuNameInput').value = m.name || '';
+                    document.getElementById('sidebarMenuIconInput').value = m.icon || '';
+                    document.getElementById('sidebarMenuUrlInput').value = m.url || '';
+                    document.getElementById('sidebarMenuStatusInput').value = m.status || 'active';
+                    
+                    const roleSelect = document.getElementById('sidebarMenuRoleInput');
+                    const roles = (m.allowedRole || 'SUPER_ADMIN,DIC').split(',').map(r => r.trim());
+                    Array.from(roleSelect.options).forEach(option => {
+                        option.selected = roles.includes(option.value.trim());
+                    });
+                    
+                    document.getElementById('sidebarMenuFormTitle').innerText = 'সাইডবার মেনু এডিট করুন';
+                    document.getElementById('sidebarMenuSaveBtnText').innerText = 'আপডেট করুন';
+                    document.getElementById('sidebarMenuCancelBtn').classList.remove('hidden');
+                }
+            });
+        };
+
+        window.deleteSidebarMenuItem = function(key) {
+            if (confirm('সাইডবার মেনুটি ডিলিট করতে চান?')) {
+                db.child('sidebarMenus/' + key).remove().then(() => {
+                    showToast('মেনু মুছে ফেলা হয়েছে!');
+                });
+            }
+        };
+
+        window.resetSidebarMenuForm = function() {
+            document.getElementById('editSidebarMenuKey').value = '';
+            document.getElementById('sidebarMenuNameInput').value = '';
+            document.getElementById('sidebarMenuIconInput').value = '';
+            document.getElementById('sidebarMenuUrlInput').value = '';
+            document.getElementById('sidebarMenuStatusInput').value = 'active';
+            const roleSelect = document.getElementById('sidebarMenuRoleInput');
+            Array.from(roleSelect.options).forEach(opt => opt.selected = true);
+            document.getElementById('sidebarMenuFormTitle').innerText = 'নতুন সাইডবার মেনু যুক্ত করুন';
+            document.getElementById('sidebarMenuSaveBtnText').innerText = 'সেভ করুন';
+            document.getElementById('sidebarMenuCancelBtn').classList.add('hidden');
+        };
+
         function renderAdminNotices() { 
             db.child('notices').once('value', (snapshot) => { 
                 adminGlobalNotices = snapshot.val() || {}; 
@@ -1663,7 +1903,7 @@
                 }).catch(err => { showToast('Error!'); btn.disabled = false; });
             } else {
                 db.child('popupNotice').push(popupData).then(() => {
-                    showToast('নতুন পপআপ যোগ হয়েছে!');
+                    showToast('নতুন পপআপ যোগ হয়েছে!');
                     resetPopupForm();
                     renderAdminPopups();
                     btn.disabled = false;
@@ -1761,7 +2001,7 @@
                 }).catch(err => { showToast('Error!'); btn.disabled = false; });
             } else {
                 db.child('productLaunchCards').push(cardData).then(() => {
-                    showToast('নতুন কার্ড যোগ হয়েছে!');
+                    showToast('নতুন কার্ড যোগ হয়েছে!');
                     resetProductCardForm();
                     renderAdminProductCards();
                     btn.disabled = false;
@@ -1854,7 +2094,7 @@
                 }).catch(err => { showToast('Error!'); btn.disabled = false; });
             } else {
                 db.child('productTrainingCards').push(cardData).then(() => {
-                    showToast('নতুন ট্রেনিং কার্ড যোগ হয়েছে!');
+                    showToast('নতুন ট্রেনিং কার্ড যোগ হয়েছে!');
                     resetTrainingCardForm();
                     renderAdminTrainingCards();
                     btn.disabled = false;
@@ -1947,7 +2187,7 @@
                 }).catch(err => { showToast('Error!'); btn.disabled = false; });
             } else {
                 db.child('productTargetSheets').push(cardData).then(() => {
-                    showToast('নতুন টার্গেট শিট যোগ হয়েছে!');
+                    showToast('নতুন টার্গেট শিট যোগ হয়েছে!');
                     resetTargetSheetForm();
                     renderAdminTargetSheets();
                     btn.disabled = false;
@@ -2066,6 +2306,34 @@
                     }
                 });
                 if (list.innerHTML === '') list.innerHTML = '<p class="text-xs text-slate-400 text-center py-4">কোনো ফাইল পাওয়া যায়নি।</p>';
+            }
+            else if (type === 'sidebarMenu') {
+                const list = document.getElementById('adminSidebarMenuList');
+                list.innerHTML = '';
+                Object.keys(adminGlobalSidebarMenus).forEach(key => {
+                    const m = adminGlobalSidebarMenus[key];
+                    const nameStr = m.name ? m.name.toLowerCase() : '';
+                    if (!k || nameStr.includes(k)) {
+                        const status = m.status === 'inactive' ? 'inactive' : 'active';
+                        const statusBtnClass = status === 'active' ? 'bg-success/10 text-success' : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400';
+                        const statusText = status === 'active' ? 'Active' : 'Inactive';
+                        const iconClass = m.icon ? (m.icon.split(' ').length === 1 ? `fa-solid ${m.icon}` : m.icon) : 'fa-solid fa-link';
+                        list.innerHTML += `
+                            <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                                <div class="truncate max-w-[55%]">
+                                    <span class="font-bold flex items-center gap-1"><i class="${iconClass} text-primary"></i> ${m.name}</span>
+                                    <span class="text-[9px] text-primary block">(${m.allowedRole})</span>
+                                    <span class="text-[9px] text-slate-400 block truncate">${m.url}</span>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="px-2 py-1 rounded-md text-[9px] font-bold ${statusBtnClass} mr-1 pointer-events-none">${statusText}</span>
+                                    <button onclick="editSidebarMenuItem('${key}')" class="p-1 text-primary hover:bg-primary/10 rounded" title="এডিট করুন"><i class="fa-solid fa-pen-to-square"></i></button>
+                                    <button onclick="deleteSidebarMenuItem('${key}')" class="p-1 text-danger hover:bg-danger/10 rounded" title="ডিলিট করুন"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>`;
+                    }
+                });
+                if (list.innerHTML === '') list.innerHTML = '<p class="text-xs text-slate-400 text-center py-2">কোনো সাইডবার মেনু পাওয়া যায়নি।</p>';
             }
             else if (type === 'notice') {
                 const list = document.getElementById('adminNoticeList');
