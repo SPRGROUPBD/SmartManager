@@ -696,7 +696,7 @@
         closeModal('modal-online-orders');
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove("active"));
         document.getElementById('tab-invoice').classList.add('active');
-        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove("active"));
         const invBtn = document.querySelector("[onclick*='tab-invoice']");
         if(invBtn) invBtn.classList.add('active');
     }
@@ -1080,20 +1080,20 @@
                 if (filteredInvoices.length === 0) { html = `<tr><td colspan="5" class="text-center">No invoices found!</td></tr>`; } 
                 else {
                     filteredInvoices.forEach(inv => {
-                        html += `<tr><td>${inv.invoiceNo}</td><td>${inv.date}</td><td>${inv.customerName}</td><td class="text-right">${inv.netPayable}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editInvoice('${inv.invoiceNo}')">Edit</button><button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}')">Print</button><button class="action-btn btn-danger" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</button></td></tr>`;
+                        html += `<tr><td>${inv.invoiceNo}</td><td>${inv.date}</td><td>${inv.customerName}</td><td class="text-right">${inv.netPayable}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editInvoice('${inv.invoiceNo}')">Edit</button><button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}', 1)">V1</button><button class="action-btn btn-success" onclick="printInvoiceDirectly('${inv.invoiceNo}', 2)">V2</button><button class="action-btn btn-danger" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</button></td></tr>`;
                     });
                 }
             }
             tbody.innerHTML = html;
-            const clearBtn = document.getElementById('clear-filter-btn'); const printAllBtn = document.getElementById('print-all-btn');
-            if (currentSummaryFilter) { if(clearBtn) clearBtn.style.display = 'inline-block'; if(printAllBtn) printAllBtn.style.display = 'inline-block'; } 
-            else { if(clearBtn) clearBtn.style.display = 'none'; if(printAllBtn) printAllBtn.style.display = 'none'; }
+            const clearBtn = document.getElementById('clear-filter-btn'); const printV1Btn = document.getElementById('print-v1-btn'); const printV2Btn = document.getElementById('print-v2-btn');
+            if (currentSummaryFilter) { if(clearBtn) clearBtn.style.display = 'inline-block'; if(printV1Btn) printV1Btn.style.display = 'inline-block'; if(printV2Btn) printV2Btn.style.display = 'inline-block'; } 
+            else { if(clearBtn) clearBtn.style.display = 'none'; if(printV1Btn) printV1Btn.style.display = 'none'; if(printV2Btn) printV2Btn.style.display = 'none'; }
         });
     }
 
     function filterInvoicesBySummary(summaryId) { currentSummaryFilter = summaryId; loadInvoiceHistory(); document.getElementById('all-invoices-section').scrollIntoView({ behavior: 'smooth' }); }
     function clearSummaryFilter() { currentSummaryFilter = null; loadInvoiceHistory(); }
-    function printAllFilteredInvoices() { if (currentSummaryFilter) { printSummary(currentSummaryFilter); } else { showAlert('Please select a summary to print.'); } }
+    function printAllFilteredInvoices(version = 1) { if (currentSummaryFilter) { printSummary(currentSummaryFilter, version); } else { showAlert('Please select a summary to print.'); } }
 
     function editInvoice(invNo) {
         db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
@@ -1122,6 +1122,7 @@
         });
     }
 
+    // VERSION 1 PRINT - EXISTING FORMAT
     function getInvoiceHTMLString(inv, roleIsAdmin) {
         let printItems = [...(inv.items || [])];
         printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -1135,14 +1136,179 @@
                 itemsHtml += `<tr><td>${index + 1}</td><td>${item.code || ''}</td><td class="text-left">${item.name || ''}</td><td>${item.pack || ''}</td><td>${item.qty || ''}</td><td>${item.bonus || ''}</td><td>${item.tp || '0.00'}</td><td>${item.vat || '0.00'}</td><td>${item.totalTp || '0.00'}</td><td>${item.totalVat || '0.00'}</td><td>${item.discPct || ''}</td><td>${item.disc || '0.00'}</td><td>${item.net || '0.00'}</td></tr>`;
             });
             const inWordText = numberToWords(parseFloat(inv.netPayable)); const invDate = inv.date || new Date().toLocaleDateString(); const delivDate = invDate;
-            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sales Invoice - Monico Pharma LTD</title><style>@page { size: A4; margin: 10mm; }body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }.invoice-box { width: 190mm; min-height: 277mm; margin: auto; padding: 5mm; box-sizing: border-box; background: #fff; position: relative; padding-bottom: 50mm; }.header { text-align: center; margin-bottom: 15px; position: relative; min-height: 45px; }.company-logo { position: absolute; left: 0; top: 0; }.company-logo img { height: 40px; }.company-details { text-align: center; }.invoice-title { font-weight: bold; text-decoration: underline; margin-top: 5px; font-size: 13px; }.info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }.info-table td { padding: 2px 4px; vertical-align: top; font-size: 11px; }.items-table th, .items-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; }.items-table th { background-color: #f2f2f2; }.text-left { text-align: left !important; }.text-right { text-align: right !important; }.totals-box { float: right; width: 320px; }.totals-box table { width: 100%; border-collapse: collapse; }.totals-box td { border: 1px solid #000; padding: 4px; font-size: 11px; }.clear { clear: both; }.amount-in-words { border: 1px solid #000; padding: 5px; margin-top: 10px; font-size: 11px; }.bottom-section { position: absolute; bottom: 15mm; left: 5mm; right: 5mm; }.page-number { position: absolute; bottom: 2mm; right: 0; font-size: 24px; font-weight: bold; color: #ccc; text-align: right; }.signatures { width: 100%; margin-top: 15px; }.signatures td { text-align: center; width: 33%; vertical-align: bottom; padding-top: 40px; font-size: 11px; }.sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; }</style></head><body><div class="invoice-box"><div class="header"><div class="company-logo"><img src="https://monicopharma.com/_next/static/media/Mpl_logo.1178c536.png" alt="Monico Pharma Logo" crossorigin="anonymous"></div><div class="company-details"><strong>Monico Pharma LTD</strong><br>Kushtia Depot<br>0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000<br><div class="invoice-title">Sales Invoice</div></div></div><div class="clear"></div><table class="info-table"><tr><td style="width: 45%;"><strong>Customer:</strong> ${inv.customerCode || ''}<br><strong>${inv.customerName || ''}</strong><br>${inv.address || ''}<br>${inv.phone || '0000000000'}<br><strong>Invoice Type:</strong> CASH</td><td style="width: 25%;"><strong>MPO:</strong> ${inv.mpoCode || ''}<br><strong>${inv.mpo || ''}</strong><br>${inv.route || ''}<br><strong>${inv.da || ''}</strong><br><strong>Type:</strong> ${inv.customerType || 'N/A'}<br><strong>Invoice Time :</strong> Anytime</td><td style="width: 30%;"><strong>Order No.:</strong> ${inv.orderNo || ''}<br><strong>Invoice No.:</strong> ${inv.invoiceNo || ''}<br><strong>Invoice Date.</strong> ${invDate}<br><strong>Deliv. Date</strong> ${delivDate}<br><strong>Route</strong> ${inv.route || ''}<br>Summary No. ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><thead><tr><th>S.N.</th><th>Code</th><th class="text-left">Product</th><th>Pack Size</th><th>Qty</th><th>Bonus</th><th>Unit TP</th><th>Unit Vat</th><th>Total TP</th><th>Total Vat</th><th>Disc %</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}<tr style="font-weight: bold;"><td colspan="4" class="text-right"></td><td>${inv.totalQty || ''}</td><td>${inv.totalBonus || ''}</td><td></td><td></td><td>${inv.totalTp || '0.00'}</td><td>${inv.totalVat || '0.00'}</td><td></td><td>${inv.totalDisc || '0.00'}</td><td>${inv.netPayable || '0.00'}</td></tr></tbody></table><div style="margin-top: 10px;"><div class="totals-box"><table><tr><td><strong>Total TP Sales =</strong></td><td class="text-right"><strong>${inv.totalTpSales || '0.00'}</strong></td></tr><tr><td><strong>Net Payable Amount =</strong></td><td class="text-right"><strong>${inv.netPayable || '0.00'}</strong></td></tr></table></div><div class="clear"></div></div><div class="amount-in-words"><strong>In Word:</strong> ${inWordText}</div>${inv.note ? `<div class="amount-in-words" style="margin-top:5px;"><strong>Note:</strong> ${inv.note}</div>` : ''}<div class="bottom-section"><div class="page-number">Page 1</div><table class="signatures"><tr><td><div class="sig-line"></div><strong>Customer Sign</strong></td><td><div class="sig-line"></div><strong>MPO Sign</strong></td><td><div class="sig-line"></div><strong>DIC Sign</strong></td></tr></table></div></div></body></html>`;
+            return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Sales Invoice - Monico Pharma LTD</title><style>@page { size: A4; margin: 10mm; }body { font-family: Arial, sans-serif; font-size: 11px; color: #000; margin: 0; padding: 0; background: #fff; }.invoice-box { width: 190mm; min-height: 277mm; margin: auto; padding: 5mm; box-sizing: border-box; background: #fff; position: relative; padding-bottom: 50mm; }.header { text-align: center; margin-bottom: 15px; position: relative; min-height: 45px; }.company-logo { position: absolute; left: 0; top: 0; }.company-logo img { height: 40px; }.company-details { text-align: center; }.invoice-title { font-weight: bold; text-decoration: underline; margin-top: 5px; font-size: 13px; }.info-table, .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }.info-table td { padding: 2px 4px; vertical-align: top; font-size: 11px; }.items-table th, .items-table td { border: 1px solid #000; padding: 4px; text-align: center; font-size: 10px; }.items-table th { background-color: #f2f2f2; }.text-left { text-align: left !important; }.text-right { text-align: right !important; }.totals-box { float: right; width: 320px; }.totals-box table { width: 100%; border-collapse: collapse; }.totals-box td { border: 1px solid #000; padding: 4px; font-size: 11px; }.clear { clear: both; }.amount-in-words { border: 1px solid #000; padding: 5px; margin-top: 10px; font-size: 11px; }.bottom-section { position: absolute; bottom: 15mm; left: 5mm; right: 5mm; }.page-number { position: absolute; bottom: 2mm; right: 0; font-size: 24px; font-weight: bold; color: #ccc; text-align: right; }.signatures { width: 100%; margin-top: 15px; }.signatures td { text-align: center; width: 33%; vertical-align: bottom; padding-top: 40px; font-size: 11px; }.sig-line { border-top: 1px solid #000; width: 80%; margin: 0 auto; }</style></head><body><div class="invoice-box"><div class="header"><div class="company-logo"><img src="https://sprgroupbd.github.io/SmartManager/logo.webp" alt="Monico Pharma Logo" crossorigin="anonymous"></div><div class="company-details"><strong>Monico Pharma LTD</strong><br>Kushtia Depot<br>0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000<br><div class="invoice-title">Sales Invoice</div></div></div><div class="clear"></div><table class="info-table"><tr><td style="width: 45%;"><strong>Customer:</strong> ${inv.customerCode || ''}<br><strong>${inv.customerName || ''}</strong><br>${inv.address || ''}<br>${inv.phone || '0000000000'}<br><strong>Invoice Type:</strong> CASH</td><td style="width: 25%;"><strong>MPO:</strong> ${inv.mpoCode || ''}<br><strong>${inv.mpo || ''}</strong><br>${inv.route || ''}<br><strong>${inv.da || ''}</strong><br><strong>Type:</strong> ${inv.customerType || 'N/A'}<br><strong>Invoice Time :</strong> Anytime</td><td style="width: 30%;"><strong>Order No.:</strong> ${inv.orderNo || ''}<br><strong>Invoice No.:</strong> ${inv.invoiceNo || ''}<br><strong>Invoice Date.</strong> ${invDate}<br><strong>Deliv. Date</strong> ${delivDate}<br><strong>Route</strong> ${inv.route || ''}<br>Summary No. ${inv.summaryNo || ''}</td></tr></table><table class="items-table"><thead><tr><th>S.N.</th><th>Code</th><th class="text-left">Product</th><th>Pack Size</th><th>Qty</th><th>Bonus</th><th>Unit TP</th><th>Unit Vat</th><th>Total TP</th><th>Total Vat</th><th>Disc %</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}<tr style="font-weight: bold;"><td colspan="4" class="text-right"></td><td>${inv.totalQty || ''}</td><td>${inv.totalBonus || ''}</td><td></td><td></td><td>${inv.totalTp || '0.00'}</td><td>${inv.totalVat || '0.00'}</td><td></td><td>${inv.totalDisc || '0.00'}</td><td>${inv.netPayable || '0.00'}</td></tr></tbody></table><div style="margin-top: 10px;"><div class="totals-box"><table><tr><td><strong>Total TP Sales =</strong></td><td class="text-right"><strong>${inv.totalTpSales || '0.00'}</strong></td></tr><tr><td><strong>Net Payable Amount =</strong></td><td class="text-right"><strong>${inv.netPayable || '0.00'}</strong></td></tr></table></div><div class="clear"></div></div><div class="amount-in-words"><strong>In Word:</strong> ${inWordText}</div>${inv.note ? `<div class="amount-in-words" style="margin-top:5px;"><strong>Note:</strong> ${inv.note}</div>` : ''}<div class="bottom-section"><div class="page-number">Page 1</div><table class="signatures"><tr><td><div class="sig-line"></div><strong>Customer Sign</strong></td><td><div class="sig-line"></div><strong>MPO Sign</strong></td><td><div class="sig-line"></div><strong>DIC Sign</strong></td></tr></table></div></div></body></html>`;
         }
     }
 
-    function printInvoiceDirectly(invNo) {
+    // VERSION 2 PRINT - NEW FORMAT PROVIDED BY USER
+    function getInvoiceHTMLStringV2(inv) {
+        let printItems = [...(inv.items || [])];
+        printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+        
+        let itemsHtml = '';
+        printItems.forEach((item, index) => {
+            itemsHtml += `<tr>
+                <td>${index + 1}</td>
+                <td>${item.code || ''}</td>
+                <td class="left">${item.name || ''}</td>
+                <td>${item.pack || ''}</td>
+                <td>${item.qty || ''}</td>
+                <td>${item.bonus || ''}</td>
+                <td>${item.tp || '0.00'}</td>
+                <td>${item.vat || '0.00'}</td>
+                <td>${item.totalTp || '0.00'}</td>
+                <td>${item.totalVat || '0.00'}</td>
+                <td>${item.discPct || ''}</td>
+                <td>${item.disc || '0.00'}</td>
+                <td>${item.net || '0.00'}</td>
+            </tr>`;
+        });
+        
+        const inWordText = numberToWords(parseFloat(inv.netPayable));
+        const invDate = inv.date || new Date().toLocaleDateString();
+        
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sales Invoice - Monico Pharma LTD</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
+  .page-container { width: 800px; border: none; padding: 10px; position: relative; box-sizing: border-box; min-height: 980px; margin: 0 auto; }
+  .header { text-align: center; position: relative; margin-bottom: 10px; min-height: 60px; }
+  .header .logo { position: absolute; left: 0; top: 0; width: 170px; height: auto; }
+  .header h2 { margin: 0; font-size: 18px; font-weight: normal; }
+  .header p { margin: 2px 0; }
+  .header h3 { margin: 4px 0 2px 0; font-size: 14px; text-decoration: underline; font-weight: bold; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .info-table td { padding: 2px 4px; vertical-align: top; }
+  .info-table { border-bottom: 1px solid #000; }
+  .items-table, .items-table th, .items-table td { border: 1px solid #000; }
+  .items-table th { background-color: #f0f0f0; font-weight: normal; padding: 3px; text-align: center; }
+  .items-table td { padding: 3px; text-align: center; }
+  .items-table td.left { text-align: left; }
+  .summary-table td { border: 1px solid #000; padding: 3px; }
+  .watermark { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; color: rgba(0, 0, 0, 0.15); font-weight: bold; pointer-events: none; z-index: 10; }
+  .signature-section { position: absolute; bottom: 20px; left: 10px; right: 10px; display: flex; justify-content: space-between; text-align: center; }
+  .sig-box { width: 25%; border-top: 1px solid #000; padding-top: 4px; font-size: 11px; font-weight: bold; }
+  @media print { body { margin: 0; } }
+</style>
+</head>
+<body>
+<div class="page-container">
+    <div class="header">
+    <img class="logo" src="https://sprgroupbd.github.io/SmartManager/logo.webp" alt="Monico Pharma Limited Logo" crossorigin="anonymous">
+    
+    <h2>Monico Pharma LTD</h2>
+    <p>Kushtia Depot</p>
+    <p>0004-01, Dr Anowarul Korim Sarok, Kanabiler More, Jugiya, Kushtia-7000</p>
+    <h3>Sales Invoice</h3>
+  </div>
+  <div style="clear: both;"></div>
+  <table class="info-table" style="border-top: 1px solid #000;">
+    <tr>
+      <td style="width: 35%;">
+        <strong>Customer</strong><br>
+        <strong>${inv.customerCode || ''}</strong><br>
+        <strong>${inv.customerName || ''}</strong><br>
+        <strong>${inv.address || ''}</strong><br>
+        <strong>${inv.phone || ''}</strong><br>
+        <strong>Invoice Type: CASH</strong>
+      </td>
+      <td style="width: 30%;">
+        <strong>MPO</strong><br>
+        <strong>${inv.mpoCode || ''}</strong><br>
+        <strong>${inv.mpo || ''}</strong><br>
+        <strong>${inv.route || ''}</strong><br>
+        <strong>${inv.da || ''}</strong><br>
+        Invoice Time : <span style="margin-left: 30px;">Anytime</span>
+      </td>
+      <td style="width: 35%;">
+        <table style="width: 100%; margin: 0;">
+          <tr><td><strong>Order No.</strong></td><td>${inv.orderNo || ''}</td></tr>
+          <tr><td><strong>Invoice No.</strong></td><td>${inv.invoiceNo || ''}</td></tr>
+          <tr><td><strong>Invoice Date.</strong></td><td>${invDate}</td></tr>
+          <tr><td><strong>Deliv. Date</strong></td><td>${invDate}</td></tr>
+          <tr><td><strong>Route</strong></td><td>${inv.route || ''}</td></tr>
+          <tr><td>Summary No.</td><td>${inv.summaryNo || ''}</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width: 4%;">S.N.</th>
+        <th style="width: 8%;">Code</th>
+        <th style="width: 28%;">Product</th>
+        <th style="width: 8%;">Pack Size</th>
+        <th style="width: 5%;">Qty</th>
+        <th style="width: 5%;">Bonus</th>
+        <th style="width: 8%;">Unit TP</th>
+        <th style="width: 8%;">Unit Vat</th>
+        <th style="width: 9%;">Total TP</th>
+        <th style="width: 9%;">Total Vat</th>
+        <th style="width: 5%;">Disc %</th>
+        <th style="width: 8%;">Disc</th>
+        <th style="width: 9%;">Net Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemsHtml}
+      <tr>
+        <td colspan="4"></td>
+        <td>${inv.totalQty || ''}</td>
+        <td>${inv.totalBonus || ''}</td>
+        <td colspan="2"></td>
+        <td>${inv.totalTp || '0.00'}</td>
+        <td>${inv.totalVat || '0.00'}</td>
+        <td></td>
+        <td>${inv.totalDisc || '0.00'}</td>
+        <td>${inv.netPayable || '0.00'}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+    <div style="width: 55%;">
+      <table style="border: 1px solid #000;">
+        <tr>
+          <td style="height: 30px; vertical-align: top;">Note : ${inv.note || ''}</td>
+        </tr>
+      </table>
+    </div>
+    <div style="width: 40%;">
+      <table class="summary-table">
+        <tr>
+          <td style="text-align: right; font-weight: bold; width: 50%;">Total TP Sales =</td>
+          <td style="text-align: right; width: 50%;">${inv.totalTpSales || '0.00'}</td>
+        </tr>
+        <tr>
+          <td style="text-align: right; font-weight: bold; background-color: #f9f9f9;">Net Payable Amount =</td>
+          <td style="text-align: right; font-weight: bold; background-color: #f9f9f9;">${inv.netPayable || '0.00'}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  <table style="border: 1px solid #000; margin-top: 10px;">
+    <tr>
+      <td style="width: 12%; border-right: 1px solid #000; padding: 3px;">In Word:</td>
+      <td style="padding: 3px; font-family: 'Times New Roman', serif;">${inWordText}</td>
+    </tr>
+  </table>
+  <div class="signature-section">
+    <div class="sig-box">Customer Sign</div>
+    <div class="sig-box">MPO Sign</div>
+    <div class="sig-box">DIC Sign</div>
+  </div>
+</div>
+</body>
+</html>`;
+    }
+
+    function printInvoiceDirectly(invNo, version = 1) {
         db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
             const inv = snap.val(); if(!inv) return showAlert('Invoice not found');
-            const html = getInvoiceHTMLString(inv, isAdmin);
+            const html = version === 2 ? getInvoiceHTMLStringV2(inv) : getInvoiceHTMLString(inv, isAdmin);
             const iframe = document.createElement('iframe');
             iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none';
             document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(html); iframe.contentWindow.document.close();
@@ -1162,7 +1328,7 @@
         db.ref('INVOICE/summaries').once('value').then(snap => {
             let maxSeq = 0;
             snap.forEach(child => { if(child.key && child.key.startsWith(prefix)) { const seq = parseInt(child.key.substring(prefix.length)); if(!isNaN(seq) && seq > maxSeq) maxSeq = seq; } });
-            const nextSeq = maxSeq + 1; const summaryNo = prefix + String(nextSeq).padStart(2, '0'); 
+            const nextSeq = maxSeq + 1; const summaryNo = prefix + String(nextSeq).padStart(02, '0'); 
             let query = db.ref('INVOICE/invoices'); if (!isAdmin) query = query.orderByChild('createdBy').equalTo(currentUser);
             query.once('value').then(snap => {
                 const matchingInvoices = [];
@@ -1199,30 +1365,57 @@
         });
     }
 
-    function printSummary(summaryId) {
+    function printSummary(summaryId, version = 1) {
         db.ref('INVOICE/summaries/' + summaryId).once('value').then(snap => {
             const sum = snap.val(); if(!sum) return showAlert('Summary not found');
             const promises = sum.invoices.map(invNo => db.ref('INVOICE/invoices/' + invNo).once('value'));
             Promise.all(promises).then(snaps => {
                 let combinedHtml = ''; let grandTotal = 0;
-                if (isAdmin) {
-                    snaps.forEach((s, idx) => {
-                        const inv = s.val(); if(!inv) return;
-                        grandTotal += parseFloat(inv.netPayable) || 0;
+                
+                snaps.forEach((s, idx) => {
+                    const inv = s.val(); if(!inv) return;
+                    grandTotal += parseFloat(inv.netPayable) || 0;
+                    
+                    if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                    
+                    if (version === 2) {
+                        let v2Html = getInvoiceHTMLStringV2(inv);
+                        let bodyMatch = v2Html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                        let bodyContent = bodyMatch ? bodyMatch[1] : v2Html;
+                        combinedHtml += bodyContent;
+                    } else {
                         let itemsHtml = '';
-                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => { itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`; });
-                        if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => { 
+                            itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`; 
+                        });
                         combinedHtml += `<div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width: 35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width: 35%;"><u>MPO</u><br><strong>${inv.mpoCode || ''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width: 30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.orderNo || ''}<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${sum.summaryId}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable || '0.00'}</td></tr><tr><td colspan="12" style="padding-top: 10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales || '0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top: 25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable || '0.00'}</td></tr></table><div class="in-word">In word : ${numberToWords(parseFloat(inv.netPayable))}</div>${inv.note ? `<div style="margin-top: 15px; text-align: left; font-size: 11px;"><strong>Note:</strong> ${inv.note}</div>` : ''}</div>`;
-                    });
-                    combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: monospace; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
-                    sum.invoices.forEach((invNo, i) => { const invData = snaps[i].val(); if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`; });
-                    combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
-                    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}.invoice-container{max-width:800px;margin:auto;}.top-header{text-align:right;margin-bottom:10px;}.info-grid{width:100%;margin-bottom:5px;}.info-grid td{vertical-align:top;padding:2px 0;}.dashed-line{border-top:1px dashed #000;margin:8px 0;}.items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}.items-table th, .items-table td{padding:4px 2px;text-align:right;font-size:11px;}.items-table th:nth-child(1), .items-table td:nth-child(1), .items-table th:nth-child(2), .items-table td:nth-child(2), .items-table th:nth-child(3), .items-table td:nth-child(3){text-align:left;}.items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}.items-table tbody tr td{border-bottom:none;}.table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}.totals-section{width:100%;margin-top:5px;}.totals-section td{padding:3px 2px;text-align:right;}.net-payable-row{font-weight:bold;font-size:12px;}.in-word{margin-top:15px;}</style></head><body>${combinedHtml}</body></html>`;
-                    const iframe = document.createElement('iframe'); iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; document.body.appendChild(iframe); iframe.contentWindow.document.open(); iframe.contentWindow.document.write(html); iframe.contentWindow.document.close();
-                    let hasPrinted = false;
-                    const triggerPrint = () => { if (hasPrinted) return; hasPrinted = true; iframe.contentWindow.focus(); iframe.contentWindow.print(); setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); };
-                    iframe.onload = triggerPrint; if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
-                }
+                    }
+                });
+                
+                combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: ${version === 2 ? 'Arial' : 'monospace'}; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
+                sum.invoices.forEach((invNo, i) => { const invData = snaps[i].val(); if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`; });
+                combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
+                
+                const baseStyle = version === 2 
+                    ? `body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:20px;background:#fff;}.page-container{width:800px;border:none;padding:10px;position:relative;box-sizing:border-box;min-height:980px;margin:0 auto;page-break-after:always;}.header{text-align:center;position:relative;margin-bottom:10px;min-height:60px;}.header .logo{position:absolute;left:0;top:0;width:170px;height:auto;}.header h2{margin:0;font-size:18px;font-weight:normal;}.header p{margin:2px 0;}.header h3{margin:4px 0 2px 0;font-size:14px;text-decoration:underline;font-weight:bold;}table{width:100%;border-collapse:collapse;margin-bottom:5px;}.info-table td{padding:2px 4px;vertical-align:top;}.info-table{border-bottom:1px solid #000;}.items-table,.items-table th,.items-table td{border:1px solid #000;}.items-table th{background-color:#f0f0f0;font-weight:normal;padding:3px;text-align:center;}.items-table td{padding:3px;text-align:center;}.items-table td.left{text-align:left;}.summary-table td{border:1px solid #000;padding:3px;}.watermark{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);font-size:80px;color:rgba(0,0,0,0.15);font-weight:bold;pointer-events:none;z-index:10;}.signature-section{position:absolute;bottom:20px;left:10px;right:10px;display:flex;justify-content:space-between;text-align:center;}.sig-box{width:25%;border-top:1px solid #000;padding-top:4px;font-size:11px;font-weight:bold;}@media print{body{margin:0;}}`
+                    : `body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}.invoice-container{max-width:800px;margin:auto;}.top-header{text-align:right;margin-bottom:10px;}.info-grid{width:100%;margin-bottom:5px;}.info-grid td{vertical-align:top;padding:2px 0;}.dashed-line{border-top:1px dashed #000;margin:8px 0;}.items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}.items-table th,.items-table td{padding:4px 2px;text-align:right;font-size:11px;}.items-table th:nth-child(1),.items-table td:nth-child(1),.items-table th:nth-child(2),.items-table td:nth-child(2),.items-table th:nth-child(3),.items-table td:nth-child(3){text-align:left;}.items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}.items-table tbody tr td{border-bottom:none;}.table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}.totals-section{width:100%;margin-top:5px;}.totals-section td{padding:3px 2px;text-align:right;}.net-payable-row{font-weight:bold;font-size:12px;}.in-word{margin-top:15px;}`;
+                
+                const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>${baseStyle}</style></head><body>${combinedHtml}</body></html>`;
+                
+                const iframe = document.createElement('iframe'); 
+                iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; 
+                document.body.appendChild(iframe); 
+                iframe.contentWindow.document.open(); 
+                iframe.contentWindow.document.write(html); 
+                iframe.contentWindow.document.close();
+                let hasPrinted = false;
+                const triggerPrint = () => { 
+                    if (hasPrinted) return; hasPrinted = true; 
+                    iframe.contentWindow.focus(); iframe.contentWindow.print(); 
+                    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); 
+                };
+                iframe.onload = triggerPrint; 
+                if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
             });
         });
     }
@@ -1674,7 +1867,11 @@
     <div class="table-wrapper" style="margin-bottom: 40px;"><table class="item-table"><thead><tr><th>Summary ID</th><th>Date</th><th>Route</th><th class="text-center">Inv. Count</th><th class="text-right">Total Amount</th><th class="text-center">Action</th></tr></thead><tbody id="summary-list-body"><tr><td colspan="6" class="text-center">No summaries generated yet</td></tr></tbody></table></div>
     <div id="all-invoices-section">
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><h3 id="all-invoices-heading" style="margin:0; border-bottom: 2px solid var(--border); padding-bottom: 5px; width: 100%;">Pending Invoices for Summary</h3></div>
-        <div style="text-align: right; margin-bottom: 10px;"><button id="clear-filter-btn" class="btn btn-secondary" style="display:none;" onclick="clearSummaryFilter()">Clear Filter</button><button id="print-all-btn" class="btn btn-success" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices()">Print All Listed</button></div>
+        <div style="text-align: right; margin-bottom: 10px;">
+            <button id="clear-filter-btn" class="btn btn-secondary" style="display:none;" onclick="clearSummaryFilter()">Clear Filter</button>
+            <button id="print-v1-btn" class="btn btn-secondary" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices(1)">Print V1 (Old)</button>
+            <button id="print-v2-btn" class="btn btn-success" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices(2)">Print V2 (New)</button>
+        </div>
         <div class="table-wrapper"><table class="item-table"><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th><th class="text-right">Net Amount</th><th class="text-center">Action</th></tr></thead><tbody id="history-table-body"><tr><td colspan="5" class="text-center">No pending invoices found</td></tr></tbody></table></div>
     </div>
 </div>
