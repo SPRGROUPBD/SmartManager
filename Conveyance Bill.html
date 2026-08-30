@@ -638,7 +638,21 @@
         function deleteLocation(k){if(confirm("Delete this location?"))db.ref('locations/'+k).remove().then(()=>showToast("Deleted!"));}
         function editLocation(k){db.ref('locations/'+k).once('value',(s)=>{const d=s.val();if(d){document.getElementById('locationKey').value=k;document.getElementById('locationName').value=d.name;}});}
 
-        locationsRef.on('value',(snapshot)=>{const tb=document.getElementById('locationListBody');tb.innerHTML='';locationOptionsHTML='<option value="">Select Location</option>';if(snapshot.exists()){const d=snapshot.val();const ls=Object.entries(d).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.timestamp-a.timestamp);ls.forEach(l=>{tb.innerHTML+=`<tr><td>${l.name}</td><td><button class="btn" onclick="editLocation('${l.key}')">Edit</button> <button class="btn btn-delete" onclick="deleteLocation('${l.key}')">Del</button></td></tr>`;locationOptionsHTML+=`<option value="${l.name}">${l.name}</option>`;});}refreshAllDropdowns();});
+        // ---- MODIFIED SORTING LOGIC HERE (A to Z) ----
+        locationsRef.on('value',(snapshot)=>{
+            const tb=document.getElementById('locationListBody');
+            tb.innerHTML='';
+            locationOptionsHTML='<option value="">Select Location</option>';
+            if(snapshot.exists()){
+                const d=snapshot.val();
+                const ls=Object.entries(d).map(([k,v])=>({key:k,...v})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+                ls.forEach(l=>{
+                    tb.innerHTML+=`<tr><td>${l.name}</td><td><button class="btn" onclick="editLocation('${l.key}')">Edit</button> <button class="btn btn-delete" onclick="deleteLocation('${l.key}')">Del</button></td></tr>`;
+                    locationOptionsHTML+=`<option value="${l.name}">${l.name}</option>`;
+                });
+            }
+            refreshAllDropdowns();
+        });
 
         async function generateIOUNo(){const now=new Date(),yr=now.getFullYear(),mo=String(now.getMonth()+1).padStart(2,'0'),prefix=`IOU-${yr}${mo}`;try{const s=await iousRef.once('value');let mx=0;if(s.exists()){Object.values(s.val()).forEach(i=>{if(i.iouNo&&i.iouNo.startsWith(prefix)){const sq=parseInt(i.iouNo.slice(-3),10);if(!isNaN(sq)&&sq>mx)mx=sq;}});}document.getElementById('iouNo').value=`${prefix}${String(mx+1).padStart(3,'0')}`;}catch(e){document.getElementById('iouNo').value=`${prefix}Err`;}}
 
