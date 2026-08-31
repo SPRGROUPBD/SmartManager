@@ -234,14 +234,16 @@
     let onlineOrdersCache = [];
     let currentProcessingOrderNo = null;
 
-    // --- AUTHENTICATION ---
+    // --- AUTHENTICATION (Case-Insensitive) ---
     function doLogin() {
-        const userId = document.getElementById('login-user').value.trim();
-        const password = document.getElementById('login-pass').value;
+        const userIdInput = document.getElementById('login-user').value.trim();
+        const userId = userIdInput.toUpperCase(); // Force uppercase for User ID match
+        const passwordInput = document.getElementById('login-pass').value;
+        const password = passwordInput.toLowerCase(); // Force lowercase for Password match
         const errorEl = document.getElementById('login-error');
         errorEl.style.display = 'none';
 
-        if (userId === 'KS' && password === 'Monico@Ku007') {
+        if (userId === 'KS' && password === 'monico@ku007') {
             currentUser = 'KS';
             isAdmin = true;
             loginSuccess();
@@ -251,7 +253,8 @@
         db.ref('INVOICE/mpos/' + userId).once('value').then((snap) => {
             if (snap.exists()) {
                 const mpoData = snap.val();
-                if (mpoData.password === password && mpoData.status !== 'inactive') {
+                // Case-Insensitive Password check
+                if (mpoData.password && mpoData.password.toLowerCase() === password && mpoData.status !== 'inactive') {
                     currentUser = userId;
                     isAdmin = false;
                     loginSuccess();
@@ -281,6 +284,7 @@
             document.getElementById('user-orders-page').style.display = 'none';
             switchTab(event, 'tab-dashboard');
         } else {
+            // Hiding Admin Dashboard elements from Normal Users
             document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = 'none');
             document.getElementById('admin-nav').style.display = 'none';
             document.getElementById('user-dashboard').style.display = 'block';
@@ -1080,7 +1084,6 @@
                 if (filteredInvoices.length === 0) { html = `<tr><td colspan="5" class="text-center">No invoices found!</td></tr>`; } 
                 else {
                     filteredInvoices.forEach(inv => {
-                        // LOCK EDIT & DELETE IF SUMMARY EXISTS
                         let actionBtns = '';
                         if (inv.summaryNo) {
                             actionBtns = `<button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}', 1)">V1</button><button class="action-btn btn-success" onclick="printInvoiceDirectly('${inv.invoiceNo}', 2)">V2</button>`;
@@ -1123,7 +1126,6 @@
         } 
     }
 
-    // NEW: Print All Invoices Belonging to a Summary
     function printSummaryInvoices(version = 1) {
         if (!currentSummaryFilter) return showAlert('Please select a summary first.');
         closeModal('modal-print-invoices');
@@ -1409,7 +1411,6 @@
                 const matchingInvoices = [];
                 snap.forEach(child => { 
                     const inv = child.val(); 
-                    // STRICTLY ENSURE IT DOES NOT HAVE A SUMMARY ALREADY
                     if (inv.date === formattedDate && inv.route === route && !inv.summaryNo) { matchingInvoices.push(inv); } 
                 });
                 if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route (or they are already in another summary)!'); }
@@ -1444,7 +1445,6 @@
         });
     }
 
-    // PRINT SUMMARY WITH NEW QTY RULES AND NEW OVERVIEW FORMAT
     function printSummary(summaryId, version = 1) {
         db.ref('INVOICE/summaries/' + summaryId).once('value').then(snap => {
             const sum = snap.val(); if(!sum) return showAlert('Summary not found');
@@ -1462,14 +1462,12 @@
                 let totalInvoiceCount = 0;
                 let firstInvType = 'Credit';
                 
-                // Build overview items and aggregate product data
                 snaps.forEach(s => {
                     const inv = s.val(); if(!inv) return;
                     if(!firstMpo) firstMpo = inv.mpo || '';
                     grandTotal += parseFloat(inv.netPayable) || 0;
                     totalInvoices++;
                     
-                    // For Overview Table
                     const invNet = parseFloat(inv.netPayable) || 0;
                     totalNet += invNet;
                     totalCollection += invNet;
@@ -1490,7 +1488,6 @@
                         </tr>
                     `;
                     
-                    // For Product Summary
                     const area = inv.route || 'Unknown Area';
                     if(!productsByArea[area]) {
                         productsByArea[area] = {
@@ -1511,7 +1508,7 @@
                     (inv.items || []).forEach(item => {
                         const baseQty = parseInt(item.qty) || 0;
                         const bonusQty = parseInt(item.bonus) || 0;
-                        const totalInvQty = baseQty + bonusQty; // Qty + Bonus rule
+                        const totalInvQty = baseQty + bonusQty; 
                         const net = parseFloat(item.net) || 0;
                         const tpVal = parseFloat(item.totalTp) || 0;
                         const pCode = item.code || '';
@@ -1535,7 +1532,6 @@
                     });
                 });
                 
-                // Generate combined HTML for all areas
                 let combinedHtml = '';
                 Object.keys(productsByArea).forEach((area, idx) => {
                     const data = productsByArea[area];
@@ -1544,8 +1540,8 @@
                     let itemsHtml = '';
                     let totalQty = 0; let totalReturn = 0; let totalSold = 0; let totalTpValue = 0;
                     Object.values(data.items).forEach((item, index) => {
-                        const returnQty = 0; // Default 0 as no return data is present
-                        const soldQty = item.qty - returnQty; // Sold = Qty - Return
+                        const returnQty = 0; 
+                        const soldQty = item.qty - returnQty; 
                         itemsHtml += `<tr>
                             <td class="text-center">${index + 1}</td>
                             <td>${item.code}</td>
@@ -1665,7 +1661,6 @@
 </div>`;
                 });
 
-                // Add Area Wise Customer Summary Page
                 combinedHtml += `<div style="page-break-after: always;"></div>
                 <div class="ow-page">
                     <div class="ow-header">
@@ -1734,7 +1729,6 @@
                     .cash-return { margin-top: 30px; padding: 10px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 10px; color: #334155; }
                     .cash-line { display: inline-block; width: 120px; border-bottom: 1px solid #64748b; margin: 0 8px; }
                     
-                    /* Overview Page CSS */
                     .ow-page { width: 812px; min-height: 351px; margin: 0 auto; padding: 72px 73px 30px 91px; box-sizing: border-box; background: #fff; }
                     .ow-header { display: grid; grid-template-columns: 1fr 190px; column-gap: 35px; margin-bottom: 17px; }
                     .ow-title { font-size: 12px; margin-bottom: 10px; }
@@ -1789,10 +1783,20 @@
         });
     }
 
-    // ---------------- MPO & USER MANAGEMENT ----------------
+    // ---------------- MPO & USER MANAGEMENT (Added Joining Date) ----------------
     function handleMpoSubmit(event) {
-        event.preventDefault(); const isEdit = document.getElementById('mpo-is-edit').value === 'true'; const code = document.getElementById('mpo-code').value; const name = document.getElementById('mpo-name').value; const route = document.getElementById('mpo-route').value; const da = document.getElementById('mpo-da').value; const password = document.getElementById('mpo-password').value; const status = isEdit ? document.getElementById('mpo-status-hidden').value : 'active';
-        db.ref('INVOICE/mpos/' + code).set({ code, name, route, da, password, status }).then(() => { showAlert(isEdit ? 'MPO/User updated successfully!' : 'MPO/User saved successfully!'); closeModal('modal-mpo'); resetMpoForm(); loadRoutes(); }).catch((error) => showAlert('Error: ' + error.message));
+        event.preventDefault(); 
+        const isEdit = document.getElementById('mpo-is-edit').value === 'true'; 
+        const code = document.getElementById('mpo-code').value.toUpperCase(); 
+        const name = document.getElementById('mpo-name').value; 
+        const route = document.getElementById('mpo-route').value; 
+        const da = document.getElementById('mpo-da').value; 
+        const password = document.getElementById('mpo-password').value; 
+        const joiningDate = document.getElementById('mpo-joining-date').value; 
+        const status = isEdit ? document.getElementById('mpo-status-hidden').value : 'active';
+        db.ref('INVOICE/mpos/' + code).set({ code, name, route, da, password, status, joiningDate }).then(() => { 
+            showAlert(isEdit ? 'MPO/User updated successfully!' : 'MPO/User saved successfully!'); closeModal('modal-mpo'); resetMpoForm(); loadRoutes(); 
+        }).catch((error) => showAlert('Error: ' + error.message));
     }
 
     function loadMpos() {
@@ -1804,7 +1808,7 @@
                     if(m.status !== 'inactive') { mpoSelect.innerHTML += `<option value="${m.code}" data-route="${m.route}" data-da="${m.da || ''}">${m.name} (${m.code})</option>`; }
                     if(filterMpoSelect) filterMpoSelect.innerHTML += `<option value="${m.code}">${m.name} (${m.code})</option>`;
                     const statusColor = m.status === 'inactive' ? 'red' : 'green'; const toggleBtnText = m.status === 'inactive' ? 'Activate' : 'Deactivate'; const toggleBtnColor = m.status === 'inactive' ? '#16a34a' : '#f1f5f9'; const toggleBtnTextColor = m.status === 'inactive' ? '#fff' : '#000';
-                    tbody.innerHTML += `<tr><td>${m.code}</td><td>${m.name}</td><td>${m.route}</td><td>${m.da || 'N/A'}</td><td style="color: ${statusColor}; font-weight: 600;">${m.status ? m.status.toUpperCase() : 'ACTIVE'}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editMpo('${m.code}')">Edit</button><button class="action-btn" style="background:${toggleBtnColor};color:${toggleBtnTextColor};" onclick="toggleMpoStatus('${m.code}', '${m.status}')">${toggleBtnText}</button><button class="action-btn btn-danger" onclick="deleteMpo('${m.code}')">Delete</button></td></tr>`;
+                    tbody.innerHTML += `<tr><td>${m.code}</td><td>${m.name}</td><td>${m.route}</td><td>${m.da || 'N/A'}</td><td>${m.joiningDate || 'N/A'}</td><td style="color: ${statusColor}; font-weight: 600;">${m.status ? m.status.toUpperCase() : 'ACTIVE'}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editMpo('${m.code}')">Edit</button><button class="action-btn" style="background:${toggleBtnColor};color:${toggleBtnTextColor};" onclick="toggleMpoStatus('${m.code}', '${m.status}')">${toggleBtnText}</button><button class="action-btn btn-danger" onclick="deleteMpo('${m.code}')">Delete</button></td></tr>`;
                 });
             }
         });
@@ -1813,7 +1817,7 @@
     function editMpo(code) {
         db.ref('INVOICE/mpos/' + code).once('value').then((snap) => {
             const m = snap.val();
-            document.getElementById('mpo-is-edit').value = 'true'; document.getElementById('mpo-code').value = m.code; document.getElementById('mpo-code').readOnly = true; document.getElementById('mpo-name').value = m.name; document.getElementById('mpo-route').value = m.route; document.getElementById('mpo-da').value = m.da || ''; document.getElementById('mpo-password').value = m.password || ''; 
+            document.getElementById('mpo-is-edit').value = 'true'; document.getElementById('mpo-code').value = m.code; document.getElementById('mpo-code').readOnly = true; document.getElementById('mpo-name').value = m.name; document.getElementById('mpo-route').value = m.route; document.getElementById('mpo-da').value = m.da || ''; document.getElementById('mpo-password').value = m.password || ''; document.getElementById('mpo-joining-date').value = m.joiningDate || '';
             if (!document.getElementById('mpo-status-hidden')) { let h = document.createElement('input'); h.type = 'hidden'; h.id = 'mpo-status-hidden'; document.getElementById('mpo-form').appendChild(h); }
             document.getElementById('mpo-status-hidden').value = m.status || 'active'; document.getElementById('mpo-submit-btn').innerText = 'Update MPO'; openModal('modal-mpo');
         });
@@ -1952,7 +1956,7 @@
     // F5 Save Invoice Listener
     document.addEventListener('keydown', function(e) {
         if (e.key === 'F5' || e.keyCode === 116) {
-            e.preventDefault(); // Prevent browser refresh
+            e.preventDefault(); 
             if (document.getElementById('tab-invoice').classList.contains('active')) {
                 saveInvoiceToFirebase();
             }
@@ -2034,7 +2038,10 @@
 <div id="user-orders-page" class="simple-order-box" style="display: none;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
         <h2 style="margin:0;">My Orders</h2>
-        <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" onclick="resetCustomerForm(); openModal('modal-customer');">Add Cust</button>
+            <button class="btn btn-secondary" onclick="showUserDashboard()">Back to Dashboard</button>
+        </div>
     </div>
     <div class="table-wrapper">
         <table class="simple-product-table">
@@ -2228,7 +2235,7 @@
         <button class="btn btn-primary" onclick="resetMpoForm(); openModal('modal-mpo');">Add New MPO</button>
     </div>
     <h3 style="margin-top: 30px; border-bottom: 2px solid var(--border); padding-bottom: 5px;">Existing MPOs</h3>
-    <div class="table-wrapper"><table class="item-table"><thead><tr><th>MPO Code</th><th>MPO Name</th><th>Route</th><th>Delivery Assistant</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody id="mpo-list-body"></tbody></table></div>
+    <div class="table-wrapper"><table class="item-table"><thead><tr><th>MPO Code</th><th>MPO Name</th><th>Route</th><th>Delivery Assistant</th><th>Joining Date</th><th>Status</th><th class="text-center">Action</th></tr></thead><tbody id="mpo-list-body"></tbody></table></div>
 </div>
 
 <!-- TAB 5: INVOICE HISTORY & SUMMARIES -->
@@ -2290,7 +2297,9 @@
 
 <div id="modal-customer" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Customer Details</h3><button class="modal-close-btn" onclick="closeModal('modal-customer')">&times;</button></div><form class="management-form" id="customer-form" onsubmit="handleCustomerSubmit(event)"><input type="hidden" id="c-is-edit" value="false"><div class="form-group"><label>Assign to MPO:</label><select id="c-mpo" required><option value="">Select MPO</option></select></div><div class="form-group"><label>Customer Code:</label><input type="text" id="c-code" readonly style="background-color: #f8fafc;" required></div><div class="form-group"><label>Customer Name:</label><input type="text" id="c-name" placeholder="Enter Pharmacy/Shop Name" required></div><div class="form-group"><label for="c-type">Customer Type</label><select id="c-type" required><option value="R" selected>Retailer (R)</option><option value="D">DCC (D)</option><option value="H">Hospital (H)</option><option value="C">Clinic (C)</option><option value="SP">Special (SP)</option></select></div><div class="form-group" id="c-dcc-disc-group" style="display:none;"><label>Discount % (Applied on Original Rate):</label><input type="number" id="c-dcc-disc" placeholder="e.g. 10 (Leave 0 for SP)" min="0" max="100"></div><div class="form-group"><label>Address / Location:</label><input type="text" id="c-address" placeholder="Enter Market / Area" required></div><div class="form-group"><label>Phone Number:</label><input type="text" id="c-phone" placeholder="Enter Phone Number"></div><button type="submit" class="btn btn-primary" id="c-submit-btn">Save Customer</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-customer')">Cancel</button></form></div></div>
 <div id="modal-product" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Product Details</h3><button class="modal-close-btn" onclick="closeModal('modal-product')">&times;</button></div><form class="management-form" id="product-form" onsubmit="handleProductSubmit(event)"><input type="hidden" id="p-is-edit" value="false"><div class="form-group"><label>P-Code:</label><input type="text" id="p-code" placeholder="e.g. ALD" required style="text-transform: uppercase;"></div><div class="form-group"><label>Name:</label><input type="text" id="p-name" placeholder="Enter Product Name" required></div><div class="form-group"><label>Pack Size:</label><input type="text" id="p-pack" placeholder="e.g. 200ml / 30s" required></div><div class="form-group"><label>Original TP Price (For DCC & SP):</label><input type="number" step="0.01" id="p-tp" placeholder="0.00" required></div><div class="form-group"><label>Flat TP Price (For Regular Customer):</label><input type="number" step="0.01" id="p-flat-tp" placeholder="0.00 (Leave 0 if no flat rate)"></div><div class="form-group"><label>Vat (Applicable on Original TP):</label><input type="number" step="0.01" id="p-vat" placeholder="0.00" required></div><div class="form-group"><label>Bonus Rule (X:Y format e.g. 5:1, 3:2, 1:1):</label><input type="text" id="p-bonus" placeholder="e.g. 5:1 (Leave empty if none)"></div><div class="form-group"><label>DCC Product (Gets DCC Discount):</label><select id="p-dcc"><option value="false">No</option><option value="true">Yes</option></select></div><button type="submit" class="btn btn-primary" id="p-submit-btn">Save Product</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-product')">Cancel</button></form></div></div>
-<div id="modal-mpo" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>MPO / User Details</h3><button class="modal-close-btn" onclick="closeModal('modal-mpo')">&times;</button></div><form class="management-form" id="mpo-form" onsubmit="handleMpoSubmit(event)"><input type="hidden" id="mpo-is-edit" value="false"><div class="form-group"><label>MPO Code (User ID):</label><input type="text" id="mpo-code" placeholder="e.g. KS003" required></div><div class="form-group"><label>MPO Name:</label><input type="text" id="mpo-name" placeholder="Enter MPO Name" required></div><div class="form-group"><label>Route / Area:</label><input type="text" id="mpo-route" placeholder="Select or Type Route" list="route-list" required></div><div class="form-group"><label>Delivery Assistant (DA):</label><input type="text" id="mpo-da" placeholder="Enter DA Name" required></div><div class="form-group"><label>Login Password:</label><input type="text" id="mpo-password" placeholder="Set login password" required></div><button type="submit" class="btn btn-primary" id="mpo-submit-btn">Save MPO</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-mpo')">Cancel</button></form></div></div>
+
+<!-- MPO Modal with Joining Date Field -->
+<div id="modal-mpo" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>MPO / User Details</h3><button class="modal-close-btn" onclick="closeModal('modal-mpo')">&times;</button></div><form class="management-form" id="mpo-form" onsubmit="handleMpoSubmit(event)"><input type="hidden" id="mpo-is-edit" value="false"><div class="form-group"><label>MPO Code (User ID):</label><input type="text" id="mpo-code" placeholder="e.g. KS003" required style="text-transform: uppercase;"></div><div class="form-group"><label>MPO Name:</label><input type="text" id="mpo-name" placeholder="Enter MPO Name" required></div><div class="form-group"><label>Route / Area:</label><input type="text" id="mpo-route" placeholder="Select or Type Route" list="route-list" required></div><div class="form-group"><label>Delivery Assistant (DA):</label><input type="text" id="mpo-da" placeholder="Enter DA Name" required></div><div class="form-group"><label>Joining Date:</label><input type="date" id="mpo-joining-date" required></div><div class="form-group"><label>Login Password:</label><input type="text" id="mpo-password" placeholder="Set login password" required></div><button type="submit" class="btn btn-primary" id="mpo-submit-btn">Save MPO</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-mpo')">Cancel</button></form></div></div>
 
 <!-- Modal: Online Orders (Admin Only) -->
 <div id="modal-online-orders" class="modal-overlay">
