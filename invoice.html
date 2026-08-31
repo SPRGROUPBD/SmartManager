@@ -222,7 +222,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '' };
-    let editingRow = null; // Tracks the row being edited on double click
+    let editingRow = null;
     let activeCustomerType = null; 
     let activeCustomerDccDisc = 0; 
     let currentUser = null; 
@@ -232,7 +232,7 @@
     let customerCache = []; 
     let simpleProducts = [];
     let onlineOrdersCache = [];
-    let currentProcessingOrderNo = null; // Tracks order when admin creates invoice
+    let currentProcessingOrderNo = null;
 
     // --- AUTHENTICATION ---
     function doLogin() {
@@ -889,10 +889,10 @@
         });
     }
 
-    // --- NEW: EDIT INVOICE ROW FEATURE ---
+    // --- EDIT INVOICE ROW FEATURE ---
     async function editQuickEntryItem(row) {
         editingRow = row;
-        row.style.backgroundColor = '#fff3cd'; // Highlight row being edited
+        row.style.backgroundColor = '#fff3cd';
         
         const code = row.cells[1].innerText;
         const name = row.cells[2].innerText;
@@ -951,7 +951,7 @@
         row.dataset.flatTp = item.flatTp || 0;
         row.dataset.originalVat = item.vat || 0;
         row.dataset.bonusRule = item.bonusRule || '';
-        row.style.backgroundColor = ''; // Remove highlight
+        row.style.backgroundColor = '';
 
         row.cells[4].innerText = item.qty;
         row.cells[5].innerText = bonusQty;
@@ -987,7 +987,7 @@
         }
     }
 
-    // --- NEW RATE & DISCOUNT LOGIC ---
+    // --- RATE & DISCOUNT LOGIC ---
     function getActualTpAndVat(item, custType) {
         let tp = item.originalTp; let vat = item.vat;
         if (custType === 'SP' || custType === 'D') { return { tp: item.originalTp, vat: item.vat }; }
@@ -1034,7 +1034,7 @@
         let actualDiscPct = getDiscountPercentage(item, activeCustomerType, activeCustomerDccDisc, actualTp);
         let disc = (totalTp * actualDiscPct) / 100; const netValue = totalTp + totalVat - disc;
         const row = tbody.insertRow();
-        row.ondblclick = function() { editQuickEntryItem(this); }; // Double click to edit
+        row.ondblclick = function() { editQuickEntryItem(this); };
         row.dataset.originalTp = item.originalTp; row.dataset.flatTp = item.flatTp || 0; row.dataset.originalVat = item.vat || 0; row.dataset.bonusRule = item.bonusRule || '';
         row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td><td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>`;
         calculateTotals();
@@ -1080,20 +1080,95 @@
                 if (filteredInvoices.length === 0) { html = `<tr><td colspan="5" class="text-center">No invoices found!</td></tr>`; } 
                 else {
                     filteredInvoices.forEach(inv => {
-                        html += `<tr><td>${inv.invoiceNo}</td><td>${inv.date}</td><td>${inv.customerName}</td><td class="text-right">${inv.netPayable}</td><td class="text-center"><button class="action-btn btn-primary" onclick="editInvoice('${inv.invoiceNo}')">Edit</button><button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}', 1)">V1</button><button class="action-btn btn-success" onclick="printInvoiceDirectly('${inv.invoiceNo}', 2)">V2</button><button class="action-btn btn-danger" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</button></td></tr>`;
+                        // LOCK EDIT & DELETE IF SUMMARY EXISTS
+                        let actionBtns = '';
+                        if (inv.summaryNo) {
+                            actionBtns = `<button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}', 1)">V1</button><button class="action-btn btn-success" onclick="printInvoiceDirectly('${inv.invoiceNo}', 2)">V2</button>`;
+                        } else {
+                            actionBtns = `<button class="action-btn btn-primary" onclick="editInvoice('${inv.invoiceNo}')">Edit</button><button class="action-btn btn-secondary" onclick="printInvoiceDirectly('${inv.invoiceNo}', 1)">V1</button><button class="action-btn btn-success" onclick="printInvoiceDirectly('${inv.invoiceNo}', 2)">V2</button><button class="action-btn btn-danger" onclick="deleteInvoice('${inv.invoiceNo}')">Delete</button>`;
+                        }
+                        html += `<tr><td>${inv.invoiceNo}</td><td>${inv.date}</td><td>${inv.customerName}</td><td class="text-right">${inv.netPayable}</td><td class="text-center">${actionBtns}</td></tr>`;
                     });
                 }
             }
             tbody.innerHTML = html;
-            const clearBtn = document.getElementById('clear-filter-btn'); const printV1Btn = document.getElementById('print-v1-btn'); const printV2Btn = document.getElementById('print-v2-btn');
-            if (currentSummaryFilter) { if(clearBtn) clearBtn.style.display = 'inline-block'; if(printV1Btn) printV1Btn.style.display = 'inline-block'; if(printV2Btn) printV2Btn.style.display = 'inline-block'; } 
-            else { if(clearBtn) clearBtn.style.display = 'none'; if(printV1Btn) printV1Btn.style.display = 'none'; if(printV2Btn) printV2Btn.style.display = 'none'; }
+            const clearBtn = document.getElementById('clear-filter-btn'); 
+            const printSummaryBtn = document.getElementById('print-summary-btn'); 
+            const printInvoicesBtn = document.getElementById('print-invoices-btn');
+            if (currentSummaryFilter) { 
+                if(clearBtn) clearBtn.style.display = 'inline-block'; 
+                if(printSummaryBtn) printSummaryBtn.style.display = 'inline-block'; 
+                if(printInvoicesBtn) printInvoicesBtn.style.display = 'inline-block'; 
+            } else { 
+                if(clearBtn) clearBtn.style.display = 'none'; 
+                if(printSummaryBtn) printSummaryBtn.style.display = 'none'; 
+                if(printInvoicesBtn) printInvoicesBtn.style.display = 'none'; 
+            }
         });
     }
 
-    function filterInvoicesBySummary(summaryId) { currentSummaryFilter = summaryId; loadInvoiceHistory(); document.getElementById('all-invoices-section').scrollIntoView({ behavior: 'smooth' }); }
+    function filterInvoicesBySummary(summaryId) { 
+        currentSummaryFilter = summaryId; 
+        loadInvoiceHistory(); 
+        document.getElementById('all-invoices-section').scrollIntoView({ behavior: 'smooth' }); 
+    }
     function clearSummaryFilter() { currentSummaryFilter = null; loadInvoiceHistory(); }
-    function printAllFilteredInvoices(version = 1) { if (currentSummaryFilter) { printSummary(currentSummaryFilter, version); } else { showAlert('Please select a summary to print.'); } }
+    
+    function printAllFilteredInvoices(version = 1) { 
+        if (currentSummaryFilter) { 
+            closeModal('modal-print-version');
+            printSummary(currentSummaryFilter, version); 
+        } else { 
+            showAlert('Please select a summary to print.'); 
+        } 
+    }
+
+    // NEW: Print All Invoices Belonging to a Summary
+    function printSummaryInvoices(version = 1) {
+        if (!currentSummaryFilter) return showAlert('Please select a summary first.');
+        closeModal('modal-print-invoices');
+        
+        db.ref('INVOICE/summaries/' + currentSummaryFilter).once('value').then(snap => {
+            const sum = snap.val();
+            if (!sum || !sum.invoices || sum.invoices.length === 0) return showAlert('No invoices found in this summary.');
+            
+            const promises = sum.invoices.map(invNo => db.ref('INVOICE/invoices/' + invNo).once('value'));
+            Promise.all(promises).then(snaps => {
+                let combinedHtml = '';
+                
+                snaps.forEach((s, idx) => {
+                    const inv = s.val(); if(!inv) return;
+                    let fullHtml = version === 2 ? getInvoiceHTMLStringV2(inv) : getInvoiceHTMLString(inv, isAdmin);
+                    
+                    let bodyMatch = fullHtml.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+                    if (bodyMatch && bodyMatch[1]) {
+                        if (idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                        combinedHtml += bodyMatch[1];
+                    }
+                });
+                
+                let styleMatch = (version === 2 ? getInvoiceHTMLStringV2({}) : getInvoiceHTMLString({}, isAdmin)).match(/<style[^>]*>([\s\S]*)<\/style>/i);
+                let styles = styleMatch ? styleMatch[1] : '';
+                
+                const finalHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Print Invoices - ${currentSummaryFilter}</title><style>${styles}</style></head><body>${combinedHtml}</body></html>`;
+                
+                const iframe = document.createElement('iframe'); 
+                iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; 
+                document.body.appendChild(iframe); 
+                iframe.contentWindow.document.open(); 
+                iframe.contentWindow.document.write(finalHtml); 
+                iframe.contentWindow.document.close();
+                let hasPrinted = false;
+                const triggerPrint = () => { 
+                    if (hasPrinted) return; hasPrinted = true; 
+                    iframe.contentWindow.focus(); iframe.contentWindow.print(); 
+                    setTimeout(() => { if (document.body.contains(iframe)) document.body.removeChild(iframe); }, 500); 
+                };
+                iframe.onload = triggerPrint; 
+                if (iframe.contentWindow.document.readyState === 'complete') triggerPrint();
+            });
+        });
+    }
 
     function editInvoice(invNo) {
         db.ref('INVOICE/invoices/' + invNo).once('value').then(snap => {
@@ -1122,7 +1197,7 @@
         });
     }
 
-    // VERSION 1 PRINT - EXISTING FORMAT
+    // VERSION 1 PRINT
     function getInvoiceHTMLString(inv, roleIsAdmin) {
         let printItems = [...(inv.items || [])];
         printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -1140,7 +1215,7 @@
         }
     }
 
-    // VERSION 2 PRINT - NEW FORMAT PROVIDED BY USER
+    // VERSION 2 PRINT
     function getInvoiceHTMLStringV2(inv) {
         let printItems = [...(inv.items || [])];
         printItems.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -1332,8 +1407,12 @@
             let query = db.ref('INVOICE/invoices'); if (!isAdmin) query = query.orderByChild('createdBy').equalTo(currentUser);
             query.once('value').then(snap => {
                 const matchingInvoices = [];
-                snap.forEach(child => { const inv = child.val(); if (inv.date === formattedDate && inv.route === route) { matchingInvoices.push(inv); } });
-                if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route!'); }
+                snap.forEach(child => { 
+                    const inv = child.val(); 
+                    // STRICTLY ENSURE IT DOES NOT HAVE A SUMMARY ALREADY
+                    if (inv.date === formattedDate && inv.route === route && !inv.summaryNo) { matchingInvoices.push(inv); } 
+                });
+                if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route (or they are already in another summary)!'); }
                 let totalAmount = 0; const invNos = []; const updates = {};
                 matchingInvoices.forEach(inv => { totalAmount += parseFloat(inv.netPayable) || 0; invNos.push(inv.invoiceNo); updates[`INVOICE/invoices/${inv.invoiceNo}/summaryNo`] = summaryNo; });
                 updates[`INVOICE/summaries/${summaryNo}`] = { summaryId: summaryNo, date: formattedDate, route: route, invoiceCount: matchingInvoices.length, totalAmount: totalAmount.toFixed(2), invoices: invNos, generatedBy: currentUser, generatedAt: new Date().toISOString() };
@@ -1355,7 +1434,7 @@
                 const summaries = [];
                 snap.forEach(child => { summaries.push({ key: child.key, ...child.val() }); });
                 summaries.sort((a, b) => (b.summaryId || "").localeCompare(a.summaryId || ""));
-                summaries.forEach(s => { html += `<tr><td>${s.summaryId || ''}</td><td>${s.date || ''}</td><td>${s.route || ''}</td><td class="text-center">${s.invoiceCount || 0}</td><td class="text-right">${s.totalAmount || 0}</td><td class="text-center"><button class="action-btn btn-primary" onclick="filterInvoicesBySummary('${s.summaryId}')">View / Print</button></td></tr>`; });
+                summaries.forEach(s => { html += `<tr><td>${s.summaryId || ''}</td><td>${s.date || ''}</td><td>${s.route || ''}</td><td class="text-center">${s.invoiceCount || 0}</td><td class="text-right">${s.totalAmount || 0}</td><td class="text-center"><button class="action-btn btn-primary" onclick="filterInvoicesBySummary('${s.summaryId}')">View</button></td></tr>`; });
             }
             tbody.innerHTML = html;
         }, error => {
@@ -1365,42 +1444,332 @@
         });
     }
 
+    // PRINT SUMMARY WITH NEW QTY RULES AND NEW OVERVIEW FORMAT
     function printSummary(summaryId, version = 1) {
         db.ref('INVOICE/summaries/' + summaryId).once('value').then(snap => {
             const sum = snap.val(); if(!sum) return showAlert('Summary not found');
             const promises = sum.invoices.map(invNo => db.ref('INVOICE/invoices/' + invNo).once('value'));
             Promise.all(promises).then(snaps => {
-                let combinedHtml = ''; let grandTotal = 0;
                 
-                snaps.forEach((s, idx) => {
+                let firstMpo = '';
+                let grandTotal = 0;
+                let totalInvoices = 0;
+                let productsByArea = {};
+                let overviewItemsHtml = '';
+                let totalNet = 0;
+                let totalReturn = 0;
+                let totalCollection = 0;
+                let totalInvoiceCount = 0;
+                let firstInvType = 'Credit';
+                
+                // Build overview items and aggregate product data
+                snaps.forEach(s => {
                     const inv = s.val(); if(!inv) return;
+                    if(!firstMpo) firstMpo = inv.mpo || '';
                     grandTotal += parseFloat(inv.netPayable) || 0;
+                    totalInvoices++;
                     
-                    if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                    // For Overview Table
+                    const invNet = parseFloat(inv.netPayable) || 0;
+                    totalNet += invNet;
+                    totalCollection += invNet;
+                    totalInvoiceCount++;
                     
-                    if (version === 2) {
-                        let v2Html = getInvoiceHTMLStringV2(inv);
-                        let bodyMatch = v2Html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-                        let bodyContent = bodyMatch ? bodyMatch[1] : v2Html;
-                        combinedHtml += bodyContent;
-                    } else {
-                        let itemsHtml = '';
-                        (inv.items || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).forEach((item, index) => { 
-                            itemsHtml += `<tr><td>${index + 1}</td><td>${item.name}</td><td>${item.pack}</td><td>${item.qty}</td><td>${item.bonus}</td><td>${item.tp}</td><td>${item.vat}</td><td>${item.totalTp}</td><td>${item.totalVat}</td><td>${item.discPct}</td><td>${item.disc}</td><td>${item.net}</td></tr>`; 
-                        });
-                        combinedHtml += `<div class="invoice-container"><div class="top-header">Invoice Time : Anytime</div><table class="info-grid"><tr><td style="width: 35%;"><u>Customer</u><br><strong>${inv.customerCode}</strong><br>${inv.customerName}<br>${inv.address}<br>${inv.phone}</td><td style="width: 35%;"><u>MPO</u><br><strong>${inv.mpoCode || ''}</strong><br>${inv.mpo}<br>${inv.route}<br>Type : ${inv.customerType || 'N/A'}</td><td style="width: 30%;">Order No. &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.orderNo || ''}<br>Invoice No. &nbsp;&nbsp;&nbsp;: ${inv.invoiceNo}<br>Invoice Date &nbsp; : ${inv.date}<br>Deliv. Date &nbsp;&nbsp;&nbsp;: ${inv.date}<br>Route &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${inv.route}<br>Summary No. &nbsp;&nbsp;&nbsp;: ${sum.summaryId}</td></tr></table><table class="items-table"><colgroup><col style="width:5%"><col style="width:22%"><col style="width:10%"><col style="width:5%"><col style="width:6%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:9%"><col style="width:5%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th>S.N.</th><th>Product</th><th>Pack Size</th><th>Qty.</th><th>Bonus</th><th>Unit<br>TP</th><th>Unit<br>VAT</th><th>Total<br>TP</th><th>Total<br>VAT</th><th>Disc.<br>%</th><th>Disc</th><th>Net Value</th></tr></thead><tbody>${itemsHtml}</tbody></table><div class="table-bottom-line"></div><table class="totals-section"><tr><td colspan="12">${inv.totalTp || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalVat || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ${inv.totalDisc || '0.00'} &nbsp;&nbsp;&nbsp;&nbsp; ${inv.netPayable || '0.00'}</td></tr><tr><td colspan="12" style="padding-top: 10px;"><strong>Total TP Sales =</strong> &nbsp;&nbsp;&nbsp;<strong>${inv.totalTpSales || '0.00'}</strong></td></tr></table><div class="dashed-line" style="margin-top: 25px;"></div><table class="totals-section"><tr class="net-payable-row"><td>Net Payable Amount = &nbsp;&nbsp;&nbsp;${inv.netPayable || '0.00'}</td></tr></table><div class="in-word">In word : ${numberToWords(parseFloat(inv.netPayable))}</div>${inv.note ? `<div style="margin-top: 15px; text-align: left; font-size: 11px;"><strong>Note:</strong> ${inv.note}</div>` : ''}</div>`;
+                    overviewItemsHtml += `
+                        <tr class="ow-customer-row">
+                            <td>${inv.customerCode || ''}</td>
+                            <td>${inv.customerName || ''}</td>
+                            <td>${inv.invoiceNo || ''}</td>
+                            <td class="ow-col-net">${invNet.toFixed(2)}</td>
+                            <td class="ow-col-return"></td>
+                            <td class="ow-col-collection">${invNet.toFixed(2)}</td>
+                        </tr>
+                        <tr class="ow-address-row">
+                            <td></td>
+                            <td colspan="5">Addr : ${inv.address || ''}</td>
+                        </tr>
+                    `;
+                    
+                    // For Product Summary
+                    const area = inv.route || 'Unknown Area';
+                    if(!productsByArea[area]) {
+                        productsByArea[area] = {
+                            mpo: inv.mpo || '',
+                            mpoCode: inv.mpoCode || '',
+                            depot: 'Kushtia',
+                            date: inv.date || '',
+                            invoiceType: 'Credit',
+                            invoices: [],
+                            totalTp: 0,
+                            totalNet: 0,
+                            totalUnits: 0,
+                            items: {}
+                        };
                     }
+                    productsByArea[area].invoices.push(inv.invoiceNo);
+                    
+                    (inv.items || []).forEach(item => {
+                        const baseQty = parseInt(item.qty) || 0;
+                        const bonusQty = parseInt(item.bonus) || 0;
+                        const totalInvQty = baseQty + bonusQty; // Qty + Bonus rule
+                        const net = parseFloat(item.net) || 0;
+                        const tpVal = parseFloat(item.totalTp) || 0;
+                        const pCode = item.code || '';
+                        
+                        if(!productsByArea[area].items[pCode]) {
+                            productsByArea[area].items[pCode] = {
+                                code: pCode,
+                                name: item.name || '',
+                                pack: item.pack || '',
+                                qty: 0,
+                                returnQty: 0,
+                                tpValue: 0
+                            };
+                        }
+                        productsByArea[area].items[pCode].qty += totalInvQty;
+                        productsByArea[area].items[pCode].tpValue += tpVal;
+                        
+                        productsByArea[area].totalTp += tpVal;
+                        productsByArea[area].totalNet += net;
+                        productsByArea[area].totalUnits += totalInvQty;
+                    });
                 });
                 
-                combinedHtml += `<div style="page-break-after: always;"></div><div class="invoice-container" style="text-align:center; margin-top: 50px;"><h2 style="font-family: ${version === 2 ? 'Arial' : 'monospace'}; text-decoration: underline;">Summary Sheet</h2><p><strong>Summary ID:</strong> ${sum.summaryId}</p><p><strong>Date:</strong> ${sum.date} | <strong>Route:</strong> ${sum.route}</p><hr style="border-top: 1px dashed #000; margin: 20px 0;"><table class="items-table" style="width: 80%; margin: auto;"><thead><tr><th>Invoice No</th><th>Customer</th><th>Net Payable</th></tr></thead><tbody>`;
-                sum.invoices.forEach((invNo, i) => { const invData = snaps[i].val(); if(invData) combinedHtml += `<tr><td>${invData.invoiceNo}</td><td>${invData.customerName}</td><td style="text-align:right;">${invData.netPayable}</td></tr>`; });
-                combinedHtml += `</tbody><tfoot><tr><td colspan="2" style="text-align:right;"><strong>Grand Total:</strong></td><td style="text-align:right;"><strong>${grandTotal.toFixed(2)}</strong></td></tr></tfoot></table></div>`;
+                // Generate combined HTML for all areas
+                let combinedHtml = '';
+                Object.keys(productsByArea).forEach((area, idx) => {
+                    const data = productsByArea[area];
+                    if(idx > 0) combinedHtml += `<div style="page-break-after: always;"></div>`;
+                    
+                    let itemsHtml = '';
+                    let totalQty = 0; let totalReturn = 0; let totalSold = 0; let totalTpValue = 0;
+                    Object.values(data.items).forEach((item, index) => {
+                        const returnQty = 0; // Default 0 as no return data is present
+                        const soldQty = item.qty - returnQty; // Sold = Qty - Return
+                        itemsHtml += `<tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td>${item.code}</td>
+                            <td><strong>${item.name}</strong></td>
+                            <td class="text-center">${item.pack}</td>
+                            <td class="text-center">${item.qty}</td>
+                            <td class="text-center">${returnQty}</td>
+                            <td class="text-center">${soldQty}</td>
+                            <td class="text-right">${item.tpValue.toFixed(2)}</td>
+                        </tr>`;
+                        totalQty += item.qty;
+                        totalReturn += returnQty;
+                        totalSold += soldQty;
+                        totalTpValue += item.tpValue;
+                    });
+                    
+                    const invoicesStr = data.invoices.join(', ');
+                    
+                    combinedHtml += `
+<div class="report-container">
+    <div class="header-title">Area Wise Product Summary</div>
+    <table class="info-table">
+        <tr>
+            <td class="label">MPO</td>
+            <td class="colon">:</td>
+            <td class="value">${data.mpo}</td>
+            <td class="label" style="padding-left: 20px;">Invoice Type</td>
+            <td class="colon">:</td>
+            <td class="value">${data.invoiceType}</td>
+        </tr>
+        <tr>
+            <td class="label">Delivery Date</td>
+            <td class="colon">:</td>
+            <td class="value">${data.date}</td>
+            <td class="label" style="padding-left: 20px;">Summary No.</td>
+            <td class="colon">:</td>
+            <td class="value">${summaryId}</td>
+        </tr>
+        <tr>
+            <td class="label">Area</td>
+            <td class="colon">:</td>
+            <td class="value">${area}</td>
+            <td class="label" style="padding-left: 20px;">Depot</td>
+            <td class="colon">:</td>
+            <td class="value">${data.depot}</td>
+        </tr>
+        <tr>
+            <td class="label"></td><td></td><td></td>
+            <td class="label" style="padding-left: 20px;">Invoice Time</td>
+            <td class="colon">:</td>
+            <td class="value">Anytime</td>
+        </tr>
+    </table>
+    <div class="summary-line">Summary of the Invoice : ${invoicesStr}</div>
+    <table class="product-table">
+        <thead>
+            <tr>
+                <th class="text-center" style="width: 40px;">S.No.</th>
+                <th style="width: 60px;">Code</th>
+                <th>Product Name</th>
+                <th class="text-center" style="width: 70px;">Pack Size</th>
+                <th class="text-center" style="width: 50px;">Qty.</th>
+                <th class="text-center" style="width: 70px;">Return Qty.</th>
+                <th class="text-center" style="width: 60px;">Sold Qty.</th>
+                <th class="text-right" style="width: 90px;">TP Value</th>
+            </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+    </table>
+    <div class="totals-container">
+        <div class="totals-box">
+            <div class="totals-row">
+                <span>Total Sale Value:</span>
+                <span>${data.totalNet.toFixed(2)}</span>
+            </div>
+            <div class="totals-row">
+                <span>Total Return Value:</span>
+                <span>0.00</span>
+            </div>
+            <div class="totals-row highlight">
+                <span>Total Net Value:</span>
+                <span>${data.totalNet.toFixed(2)}</span>
+            </div>
+        </div>
+        <div class="totals-box">
+            <div class="totals-row">
+                <span>Total Invoice:</span>
+                <span>${data.invoices.length}</span>
+            </div>
+            <div class="totals-row">
+                <span>Total Unit:</span>
+                <span>${data.totalUnits}</span>
+            </div>
+            <div class="totals-row highlight">
+                <span>Total TP Sales:</span>
+                <span>${data.totalTp.toFixed(2)}</span>
+            </div>
+        </div>
+    </div>
+    <div class="dcc-section">DCC Invoice :</div>
+    <div class="sign-area">
+        <div class="sign-box">
+            <div class="sign-line"></div>
+            <div class="sign-label">Issued By</div>
+        </div>
+        <div class="sign-box">
+            <div class="sign-line"></div>
+            <div class="sign-label">Received By</div>
+        </div>
+    </div>
+    <div class="cash-return">
+        <strong>Cash Settled &amp; Return Received on Dated</strong>
+        <span class="cash-line"></span>
+        <strong>By</strong>
+        <span class="cash-line"></span>
+    </div>
+</div>`;
+                });
+
+                // Add Area Wise Customer Summary Page
+                combinedHtml += `<div style="page-break-after: always;"></div>
+                <div class="ow-page">
+                    <div class="ow-header">
+                        <div class="ow-left-info">
+                            <div class="ow-title">Area Wise Customer Summary</div>
+                            <div class="ow-info-row"><div class="ow-label">MPO</div><div class="ow-colon">:</div><div class="ow-value">${firstMpo}</div></div>
+                            <div class="ow-info-row"><div class="ow-label">Delivery Date</div><div class="ow-colon">:</div><div class="ow-value">${sum.date}</div></div>
+                            <div class="ow-info-row"><div class="ow-label">Area</div><div class="ow-colon">:</div><div class="ow-value">${sum.route}</div></div>
+                        </div>
+                        <div class="ow-right-info">
+                            <div class="ow-right-row"><div class="ow-right-label">Invoice Type</div><div class="ow-right-colon">:</div><div class="ow-right-value">${firstInvType}</div></div>
+                            <div class="ow-right-row"><div class="ow-right-label">Summary No.</div><div class="ow-right-colon">:</div><div class="ow-right-value normal">${summaryId}</div></div>
+                            <div class="ow-right-row"><div class="ow-right-label">Depot</div><div class="ow-right-colon">:</div><div class="ow-right-value normal">Kushtia</div></div>
+                        </div>
+                    </div>
+                    <div class="ow-line"></div>
+                    <table class="ow-table">
+                        <thead>
+                            <tr>
+                                <th class="ow-col-code">Code</th>
+                                <th class="ow-col-name">Customer Name</th>
+                                <th class="ow-col-invoice">Invoice No.</th>
+                                <th class="ow-col-net">Net Amount</th>
+                                <th class="ow-col-return">Return Amount</th>
+                                <th class="ow-col-collection">Collection</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${overviewItemsHtml}
+                            <tr class="ow-total-line ow-total-row">
+                                <td colspan="2" class="ow-total-label">Total Invoice : ${totalInvoiceCount}</td>
+                                <td></td>
+                                <td class="ow-amount">${totalNet.toFixed(2)}</td>
+                                <td class="ow-amount">${totalReturn.toFixed(2)}</td>
+                                <td class="ow-amount">${totalCollection.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>`;
+
+                const summaryStyle = `
+                    * { box-sizing: border-box; }
+                    body { margin: 0; padding: 20px; background-color: #f4f6f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 11px; color: #333; }
+                    .report-container { max-width: 750px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+                    .header-title { font-size: 18px; font-weight: 700; color: #1e293b; text-transform: uppercase; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 20px; letter-spacing: 0.5px; }
+                    .info-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+                    .info-table td { padding: 4px 0; vertical-align: top; }
+                    .info-table .label { font-weight: 600; color: #475569; width: 85px; }
+                    .info-table .colon { width: 15px; text-align: center; color: #64748b; }
+                    .info-table .value { color: #0f172a; font-weight: 500; }
+                    .summary-line { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 8px 12px; margin: 15px 0; font-size: 11px; font-weight: 600; color: #1e40af; border-radius: 0 4px 4px 0; }
+                    .product-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    .product-table th { background-color: #f8fafc; color: #334155; font-weight: 600; text-align: left; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #cbd5e1; padding: 8px; font-size: 10px; text-transform: uppercase; }
+                    .product-table td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+                    .product-table tbody tr:nth-child(even) { background-color: #fafafa; }
+                    .product-table .text-center { text-align: center; } .product-table .text-right { text-align: right; }
+                    .totals-container { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
+                    .totals-box { width: 48%; }
+                    .totals-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; }
+                    .totals-row.highlight { font-weight: 700; color: #0f172a; border-top: 1px solid #cbd5e1; margin-top: 4px; padding-top: 6px; }
+                    .dcc-section { margin-top: 25px; font-weight: 600; color: #475569; }
+                    .sign-area { display: flex; justify-content: space-between; margin-top: 50px; }
+                    .sign-box { width: 180px; text-align: center; }
+                    .sign-line { border-top: 1px solid #94a3b8; margin-bottom: 5px; }
+                    .sign-label { font-size: 10px; color: #64748b; font-weight: 500; }
+                    .cash-return { margin-top: 30px; padding: 10px 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px; font-size: 10px; color: #334155; }
+                    .cash-line { display: inline-block; width: 120px; border-bottom: 1px solid #64748b; margin: 0 8px; }
+                    
+                    /* Overview Page CSS */
+                    .ow-page { width: 812px; min-height: 351px; margin: 0 auto; padding: 72px 73px 30px 91px; box-sizing: border-box; background: #fff; }
+                    .ow-header { display: grid; grid-template-columns: 1fr 190px; column-gap: 35px; margin-bottom: 17px; }
+                    .ow-title { font-size: 12px; margin-bottom: 10px; }
+                    .ow-info-row { display: flex; line-height: 18px; }
+                    .ow-label { width: 70px; }
+                    .ow-colon { width: 12px; }
+                    .ow-value { font-weight: normal; }
+                    .ow-right-info { padding-top: 0; }
+                    .ow-right-row { display: flex; line-height: 20px; }
+                    .ow-right-label { width: 77px; }
+                    .ow-right-colon { width: 12px; }
+                    .ow-right-value { font-weight: bold; }
+                    .ow-right-value.normal { font-weight: normal; }
+                    .ow-line { border-top: 1px dashed #222; height: 1px; }
+                    .ow-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 4px; }
+                    .ow-table th { font-weight: normal; text-align: left; padding: 3px 0 5px 0; font-size: 11px; }
+                    .ow-table td { padding: 4px 0; font-size: 11px; vertical-align: top; }
+                    .ow-col-code { width: 55px; }
+                    .ow-col-name { width: 175px; }
+                    .ow-col-invoice { width: 118px; }
+                    .ow-col-net { width: 150px; text-align: right; padding-right: 45px; }
+                    .ow-col-return { width: 145px; text-align: right; padding-right: 28px; }
+                    .ow-col-collection { width: 110px; text-align: right; }
+                    .ow-customer-row { border-top: 1px dashed #222; }
+                    .ow-address-row td { padding-top: 1px; padding-bottom: 8px; }
+                    .ow-address { padding-left: 0; }
+                    .ow-total-line { border-top: 1px dashed #222; }
+                    .ow-total-row td { padding-top: 7px; font-size: 11px; }
+                    .ow-total-label { font-weight: normal; }
+                    .ow-amount { text-align: right; }
+                    
+                    @media print { body { background: #fff; padding: 0; } .report-container { box-shadow: none; padding: 0; width: 100%; } .ow-page { padding: 0; margin: 0; } @page { size: A4 portrait; margin: 12mm; } }
+                `;
                 
-                const baseStyle = version === 2 
-                    ? `body{font-family:Arial,sans-serif;font-size:12px;color:#000;margin:0;padding:20px;background:#fff;}.page-container{width:800px;border:none;padding:10px;position:relative;box-sizing:border-box;min-height:980px;margin:0 auto;page-break-after:always;}.header{text-align:center;position:relative;margin-bottom:10px;min-height:60px;}.header .logo{position:absolute;left:0;top:0;width:170px;height:auto;}.header h2{margin:0;font-size:18px;font-weight:normal;}.header p{margin:2px 0;}.header h3{margin:4px 0 2px 0;font-size:14px;text-decoration:underline;font-weight:bold;}table{width:100%;border-collapse:collapse;margin-bottom:5px;}.info-table td{padding:2px 4px;vertical-align:top;}.info-table{border-bottom:1px solid #000;}.items-table,.items-table th,.items-table td{border:1px solid #000;}.items-table th{background-color:#f0f0f0;font-weight:normal;padding:3px;text-align:center;}.items-table td{padding:3px;text-align:center;}.items-table td.left{text-align:left;}.summary-table td{border:1px solid #000;padding:3px;}.watermark{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);font-size:80px;color:rgba(0,0,0,0.15);font-weight:bold;pointer-events:none;z-index:10;}.signature-section{position:absolute;bottom:20px;left:10px;right:10px;display:flex;justify-content:space-between;text-align:center;}.sig-box{width:25%;border-top:1px solid #000;padding-top:4px;font-size:11px;font-weight:bold;}@media print{body{margin:0;}}`
-                    : `body{font-family:monospace;font-size:11px;color:#000;margin:0;padding:20px;background:#fff;}.invoice-container{max-width:800px;margin:auto;}.top-header{text-align:right;margin-bottom:10px;}.info-grid{width:100%;margin-bottom:5px;}.info-grid td{vertical-align:top;padding:2px 0;}.dashed-line{border-top:1px dashed #000;margin:8px 0;}.items-table{width:100%;border-collapse:collapse;margin-top:5px;table-layout:fixed;}.items-table th,.items-table td{padding:4px 2px;text-align:right;font-size:11px;}.items-table th:nth-child(1),.items-table td:nth-child(1),.items-table th:nth-child(2),.items-table td:nth-child(2),.items-table th:nth-child(3),.items-table td:nth-child(3){text-align:left;}.items-table th{border-top:1px dashed #000;border-bottom:1px dashed #000;}.items-table tbody tr td{border-bottom:none;}.table-bottom-line{border-top:1px dashed #000;margin-top:2px;margin-bottom:8px;}.totals-section{width:100%;margin-top:5px;}.totals-section td{padding:3px 2px;text-align:right;}.net-payable-row{font-weight:bold;font-size:12px;}.in-word{margin-top:15px;}`;
-                
-                const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${sum.summaryId}</title><style>${baseStyle}</style></head><body>${combinedHtml}</body></html>`;
+                const html = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Summary - ${summaryId}</title><style>${summaryStyle}</style></head><body>${combinedHtml}</body></html>`;
                 
                 const iframe = document.createElement('iframe'); 
                 iframe.style.position = 'absolute'; iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = 'none'; 
@@ -1579,6 +1948,16 @@
         const invOrderNoEl = document.getElementById('inv-order-no'); if(invOrderNoEl) invOrderNoEl.innerText = ''; 
         activeCustomerType = null; activeCustomerDccDisc = 0; calculateTotals(); generateInvoiceNo(); 
     }
+
+    // F5 Save Invoice Listener
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'F5' || e.keyCode === 116) {
+            e.preventDefault(); // Prevent browser refresh
+            if (document.getElementById('tab-invoice').classList.contains('active')) {
+                saveInvoiceToFirebase();
+            }
+        }
+    });
 </script>
 </head>
 <body>
@@ -1809,7 +2188,7 @@
             <div><div class="form-group"><label>Note :</label><input type="text" id="inv-note" class="print-input" placeholder="Type note here..."></div><p><strong>In Word: <span id="inv-in-word">Zero Only.</span></strong></p></div>
             <div><table class="totals-table"><tr><td class="text-right"><strong>Total TP Sales =</strong></td><td class="text-right" style="width: 40%;"><strong id="total-tp-sales">0.00</strong></td></tr><tr><td colspan="2"><hr style="border: 0; border-top: 1px solid var(--border);"></td></tr><tr><td class="text-right"><strong>Net Payable Amount =</strong></td><td class="text-right net-payable-cell"><strong id="net-payable">0.00</strong></td></tr></table></div>
         </div>
-        <button class="btn btn-success no-print" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 16px;" onclick="saveInvoiceToFirebase()">SAVE INVOICE TO FIREBASE</button>
+        <button class="btn btn-success no-print" style="width: 100%; margin-top: 20px; padding: 15px; font-size: 16px;" onclick="saveInvoiceToFirebase()">SAVE INVOICE TO FIREBASE (F5)</button>
     </div>
 </div>
 
@@ -1869,8 +2248,8 @@
         <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 5px;"><h3 id="all-invoices-heading" style="margin:0; border-bottom: 2px solid var(--border); padding-bottom: 5px; width: 100%;">Pending Invoices for Summary</h3></div>
         <div style="text-align: right; margin-bottom: 10px;">
             <button id="clear-filter-btn" class="btn btn-secondary" style="display:none;" onclick="clearSummaryFilter()">Clear Filter</button>
-            <button id="print-v1-btn" class="btn btn-secondary" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices(1)">Print V1 (Old)</button>
-            <button id="print-v2-btn" class="btn btn-success" style="display:none; margin-left: 10px;" onclick="printAllFilteredInvoices(2)">Print V2 (New)</button>
+            <button id="print-summary-btn" class="btn btn-success" style="display:none; margin-left: 10px;" onclick="openModal('modal-print-version')">Print Summary</button>
+            <button id="print-invoices-btn" class="btn btn-warning" style="display:none; margin-left: 10px;" onclick="openModal('modal-print-invoices')">Print Invoices</button>
         </div>
         <div class="table-wrapper"><table class="item-table"><thead><tr><th>Invoice No</th><th>Date</th><th>Customer</th><th class="text-right">Net Amount</th><th class="text-center">Action</th></tr></thead><tbody id="history-table-body"><tr><td colspan="5" class="text-center">No pending invoices found</td></tr></tbody></table></div>
     </div>
@@ -1882,6 +2261,33 @@
 
 <!-- MODALS (Popups) -->
 <div id="modal-alert" class="modal-overlay" style="z-index: 10001; align-items: center; padding-top: 0;"><div class="modal-box" style="max-width: 400px; text-align: center;"><div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border); margin-bottom: 15px;"><h3 id="alert-title">Notice</h3></div><p id="alert-message" style="margin-bottom: 20px; font-size: 14px; line-height: 1.5; white-space: pre-wrap;"></p><button id="alert-ok-btn" class="btn btn-primary" style="width: 100%;">OK</button></div></div>
+
+<!-- Print Summary Version Dialog -->
+<div id="modal-print-version" class="modal-overlay" style="z-index: 10002; align-items: center; padding-top: 0;">
+    <div class="modal-box" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+            <h3>Select Print Version</h3>
+        </div>
+        <p style="margin-bottom: 20px; font-size: 14px;">Select which format you want to print for this Summary:</p>
+        <button class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;" onclick="printAllFilteredInvoices(1)">Print Version 1 (Old)</button>
+        <button class="btn btn-success" style="width: 100%; margin-bottom: 10px;" onclick="printAllFilteredInvoices(2)">Print Version 2 (New)</button>
+        <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="closeModal('modal-print-version')">Cancel</button>
+    </div>
+</div>
+
+<!-- Print Invoices Version Dialog -->
+<div id="modal-print-invoices" class="modal-overlay" style="z-index: 10002; align-items: center; padding-top: 0;">
+    <div class="modal-box" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: 1px solid var(--border); margin-bottom: 15px;">
+            <h3>Select Invoices Print Version</h3>
+        </div>
+        <p style="margin-bottom: 20px; font-size: 14px;">Select which format you want to print for the Invoices in this Summary:</p>
+        <button class="btn btn-secondary" style="width: 100%; margin-bottom: 10px;" onclick="printSummaryInvoices(1)">Print Version 1 (Old)</button>
+        <button class="btn btn-success" style="width: 100%; margin-bottom: 10px;" onclick="printSummaryInvoices(2)">Print Version 2 (New)</button>
+        <button class="btn btn-danger" style="width: 100%; margin-top: 10px;" onclick="closeModal('modal-print-invoices')">Cancel</button>
+    </div>
+</div>
+
 <div id="modal-customer" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Customer Details</h3><button class="modal-close-btn" onclick="closeModal('modal-customer')">&times;</button></div><form class="management-form" id="customer-form" onsubmit="handleCustomerSubmit(event)"><input type="hidden" id="c-is-edit" value="false"><div class="form-group"><label>Assign to MPO:</label><select id="c-mpo" required><option value="">Select MPO</option></select></div><div class="form-group"><label>Customer Code:</label><input type="text" id="c-code" readonly style="background-color: #f8fafc;" required></div><div class="form-group"><label>Customer Name:</label><input type="text" id="c-name" placeholder="Enter Pharmacy/Shop Name" required></div><div class="form-group"><label for="c-type">Customer Type</label><select id="c-type" required><option value="R" selected>Retailer (R)</option><option value="D">DCC (D)</option><option value="H">Hospital (H)</option><option value="C">Clinic (C)</option><option value="SP">Special (SP)</option></select></div><div class="form-group" id="c-dcc-disc-group" style="display:none;"><label>Discount % (Applied on Original Rate):</label><input type="number" id="c-dcc-disc" placeholder="e.g. 10 (Leave 0 for SP)" min="0" max="100"></div><div class="form-group"><label>Address / Location:</label><input type="text" id="c-address" placeholder="Enter Market / Area" required></div><div class="form-group"><label>Phone Number:</label><input type="text" id="c-phone" placeholder="Enter Phone Number"></div><button type="submit" class="btn btn-primary" id="c-submit-btn">Save Customer</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-customer')">Cancel</button></form></div></div>
 <div id="modal-product" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Product Details</h3><button class="modal-close-btn" onclick="closeModal('modal-product')">&times;</button></div><form class="management-form" id="product-form" onsubmit="handleProductSubmit(event)"><input type="hidden" id="p-is-edit" value="false"><div class="form-group"><label>P-Code:</label><input type="text" id="p-code" placeholder="e.g. ALD" required style="text-transform: uppercase;"></div><div class="form-group"><label>Name:</label><input type="text" id="p-name" placeholder="Enter Product Name" required></div><div class="form-group"><label>Pack Size:</label><input type="text" id="p-pack" placeholder="e.g. 200ml / 30s" required></div><div class="form-group"><label>Original TP Price (For DCC & SP):</label><input type="number" step="0.01" id="p-tp" placeholder="0.00" required></div><div class="form-group"><label>Flat TP Price (For Regular Customer):</label><input type="number" step="0.01" id="p-flat-tp" placeholder="0.00 (Leave 0 if no flat rate)"></div><div class="form-group"><label>Vat (Applicable on Original TP):</label><input type="number" step="0.01" id="p-vat" placeholder="0.00" required></div><div class="form-group"><label>Bonus Rule (X:Y format e.g. 5:1, 3:2, 1:1):</label><input type="text" id="p-bonus" placeholder="e.g. 5:1 (Leave empty if none)"></div><div class="form-group"><label>DCC Product (Gets DCC Discount):</label><select id="p-dcc"><option value="false">No</option><option value="true">Yes</option></select></div><button type="submit" class="btn btn-primary" id="p-submit-btn">Save Product</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-product')">Cancel</button></form></div></div>
 <div id="modal-mpo" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>MPO / User Details</h3><button class="modal-close-btn" onclick="closeModal('modal-mpo')">&times;</button></div><form class="management-form" id="mpo-form" onsubmit="handleMpoSubmit(event)"><input type="hidden" id="mpo-is-edit" value="false"><div class="form-group"><label>MPO Code (User ID):</label><input type="text" id="mpo-code" placeholder="e.g. KS003" required></div><div class="form-group"><label>MPO Name:</label><input type="text" id="mpo-name" placeholder="Enter MPO Name" required></div><div class="form-group"><label>Route / Area:</label><input type="text" id="mpo-route" placeholder="Select or Type Route" list="route-list" required></div><div class="form-group"><label>Delivery Assistant (DA):</label><input type="text" id="mpo-da" placeholder="Enter DA Name" required></div><div class="form-group"><label>Login Password:</label><input type="text" id="mpo-password" placeholder="Set login password" required></div><button type="submit" class="btn btn-primary" id="mpo-submit-btn">Save MPO</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-mpo')">Cancel</button></form></div></div>
