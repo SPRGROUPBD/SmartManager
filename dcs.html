@@ -52,8 +52,9 @@
 
         .header-info {
             display: flex;
-            justify-content: center; /* Centered Date */
+            justify-content: center;
             align-items: center;
+            gap: 10px;
             margin-bottom: 10px;
             padding: 5px;
             border-bottom: 1px solid #808080;
@@ -61,6 +62,12 @@
             border-top: 1px solid #ffffff;
             border-left: 1px solid #808080;
             background-color: #c0c0c0;
+        }
+
+        #reportDate {
+            border: 2px inset #808080 #ffffff #ffffff #808080;
+            padding: 2px 4px; font-family: Tahoma, 'MS Sans Serif', sans-serif;
+            font-size: 11px; background-color: #fff; color: #000;
         }
 
         #status-bar {
@@ -210,12 +217,12 @@
         }
         .month-block-title { font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #808080; padding-bottom: 3px;}
 
-        /* ==========================================
-           PRINT FORMAT: 100% FIXED & CENTERED
-           ========================================== */
+        /* Control Screen vs Print Visibility */
+        .print-only { display: none; }
+
+        /* Print Format */
         @media print {
             @page { size: A4; margin: 10mm; }
-
             * {
                 color: #000 !important; 
                 -webkit-print-color-adjust: exact !important;
@@ -223,83 +230,30 @@
                 text-shadow: none !important;
                 box-shadow: none !important;
             }
-            
             body, .form-header, .header-sub, .field-name, .field-value, .section-label, .win98-textarea { 
-                font-size: 12px !important;
-                line-height: 1.4 !important;
+                font-size: 12px !important; line-height: 1.4 !important;
             }
-            
-            body { 
-                margin: 0; padding: 0; background-color: #fff !important;
-                display: flex !important; 
-                justify-content: center !important; 
-            }
-            
+            body { margin: 0; padding: 0; background-color: #fff !important; display: flex !important; justify-content: center !important; }
             .container { 
-                border: 2px solid #000 !important; 
-                padding: 10px !important; 
-                background-color: #fff !important;
-                width: 100% !important; 
-                transform: scale(0.92) !important; 
-                transform-origin: top center !important;
+                border: 2px solid #000 !important; padding: 10px !important; background-color: #fff !important;
+                width: 100% !important; transform: scale(0.92) !important; transform-origin: top center !important;
             }
+            
+            /* Hide screen-only elements */
+            .screen-only { display: none !important; }
+            /* Show print-only elements */
+            .print-only { display: inline !important; }
 
             .system-status, #status-bar, .action-bar, .modal-overlay, .util-link { display: none !important; }
-            
             .data-table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
-            .data-table td { 
-                padding: 3px 5px !important; 
-                border: 1px solid #000 !important; 
-                background-color: #fff !important;
-                height: auto !important; 
-                white-space: nowrap; 
-            }
-            
-            .field-name, .field-value { 
-                border: 1px solid #000 !important; 
-                font-weight: normal !important; 
-                width: auto !important; 
-                height: auto !important;
-                background-color: #fff !important;
-            }
-            
-            .section-frame { 
-                border: 1px solid #000 !important; 
-                margin-bottom: 10px !important; 
-                page-break-inside: avoid !important; 
-                cursor: default !important;
-                background-color: #fff !important;
-            }
-            .section-label { 
-                border: 1px solid #000 !important; 
-                text-align: left !important; 
-                margin: -6px -6px 5px -6px !important;
-                padding: 2px 5px !important;
-                font-weight: bold !important;
-                background-color: #e0e0e0 !important; 
-            }
+            .data-table td { padding: 3px 5px !important; border: 1px solid #000 !important; background-color: #fff !important; height: auto !important; white-space: nowrap; }
+            .field-name, .field-value { border: 1px solid #000 !important; font-weight: normal !important; width: auto !important; height: auto !important; background-color: #fff !important; }
+            .section-frame { border: 1px solid #000 !important; margin-bottom: 10px !important; page-break-inside: avoid !important; cursor: default !important; background-color: #fff !important; }
+            .section-label { border: 1px solid #000 !important; text-align: left !important; margin: -6px -6px 5px -6px !important; padding: 2px 5px !important; font-weight: bold !important; background-color: #e0e0e0 !important; }
             .dashboard-grid { gap: 15px !important; }
-            
-            .form-header { 
-                padding: 2px 5px !important; 
-                margin: 0 0 3px 0 !important; 
-                text-align: center !important;
-                border: 1px solid #000 !important;
-                background-color: #e0e0e0 !important;
-            }
-            .header-sub, .header-info { 
-                border: 1px solid #000 !important;
-                background-color: #fff !important;
-            }
-            
-            .win98-textarea { 
-                height: auto !important; 
-                min-height: 30px !important;
-                resize: none !important; 
-                overflow: hidden !important; 
-                border: 1px solid #000 !important;
-                background-color: #fff !important;
-            }
+            .form-header { padding: 2px 5px !important; margin: 0 0 3px 0 !important; text-align: center !important; border: 1px solid #000 !important; background-color: #e0e0e0 !important; }
+            .header-sub, .header-info { border: 1px solid #000 !important; background-color: #fff !important; }
+            .win98-textarea { height: auto !important; min-height: 30px !important; resize: none !important; overflow: hidden !important; border: 1px solid #000 !important; background-color: #fff !important; }
         }
     </style>
 </head>
@@ -312,7 +266,13 @@
     <div class="header-sub">Kushtia Depot</div>
     
     <div class="header-info">
-        <span><strong>Date:</strong> <span id="currentDate"></span></span>
+        <!-- Screen Only Elements (Will NOT Print) -->
+        <span class="screen-only"><strong>Select Date:</strong></span>
+        <input type="date" id="reportDate" class="screen-only">
+        <button class="win98-btn screen-only" onclick="loadData(document.getElementById('reportDate').value)">Load</button>
+        
+        <!-- Print Only Elements (Will Print, but hidden on screen) -->
+        <span class="print-only"><strong>Date:</strong> <span id="printDate"></span></span>
     </div>
 
     <div class="dashboard-grid">
@@ -321,9 +281,9 @@
             <div class="section-label">Manpower Status</div>
             <table class="data-table">
                 <tr><td class="field-name">Today Open MPO</td><td class="field-value" id="d-mpo-today">0</td></tr>
-                <tr><td class="field-name">Total Open MPO</td><td class="field-value" id="d-mpo-total">29</td></tr>
-                <tr><td class="field-name">AM Total</td><td class="field-value" id="d-am-total">6</td></tr>
-                <tr><td class="field-name">RSM</td><td class="field-value" id="d-rsm">1</td></tr>
+                <tr><td class="field-name">Total Open MPO</td><td class="field-value" id="d-mpo-total">0</td></tr>
+                <tr><td class="field-name">AM Total</td><td class="field-value" id="d-am-total">0</td></tr>
+                <tr><td class="field-name">RSM</td><td class="field-value" id="d-rsm">0</td></tr>
             </table>
         </div>
 
@@ -407,16 +367,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2. Set Current Date & Firebase Path (Monthly Path so data persists all month)
-    const d = new Date();
+    // 2. Set Current Date & Initialize Global Variables
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    document.getElementById('currentDate').innerText = `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
     
-    // Monthly path: "reports/2023-10"
-    const dateKey = `reports/${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    let currentSection = '';
+    // Default Date Input to Today
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    document.getElementById('reportDate').value = todayStr;
 
-    let prevMonthsData = [{ name: 'May-26', sales: 0, today: 0, total: 0 }];
+    let currentSection = '';
+    let prevMonthsData = [];
 
     function formatTk(num) {
         if(isNaN(num) || num === '') return "Tk. 0";
@@ -427,6 +387,22 @@
         if(!str) return 0;
         let cleanedStr = str.toString().replace(/Tk\.\s/g, '').replace(/,/g, '');
         return parseFloat(cleanedStr) || 0;
+    }
+
+    function resetFormToZero() {
+        document.getElementById('d-mpo-today').innerText = '0';
+        document.getElementById('d-mpo-total').innerText = '0';
+        document.getElementById('d-am-total').innerText = '0';
+        document.getElementById('d-rsm').innerText = '0';
+        document.getElementById('d-sales-today').innerText = 'Tk. 0';
+        document.getElementById('d-sales-vat').innerText = 'Tk. 0';
+        document.getElementById('d-sales-month').innerText = 'Tk. 0';
+        document.getElementById('d-sales-month-vat').innerText = 'Tk. 0';
+        document.getElementById('d-coll-today').innerText = 'Tk. 0';
+        document.getElementById('d-coll-current-total').innerText = 'Tk. 0';
+        document.getElementById('d-coll-current-outstanding').innerText = 'Tk. 0';
+        document.getElementById('remarks-box').value = '';
+        prevMonthsData = [];
     }
 
     function renderPrevMonthsTable() {
@@ -448,11 +424,21 @@
         });
     }
 
-    // 3. Load Data from Firebase
-    async function loadData() {
+    // 3. Load Data from Firebase Day-Wise
+    async function loadData(selectedDateStr) {
+        if (!selectedDateStr) return;
+        
+        // Update Print Date Text
+        const [y, m, dd] = selectedDateStr.split('-').map(Number);
+        document.getElementById('printDate').innerText = `${dd}-${months[m - 1]}-${y}`;
+        
+        const dateKey = `reports/${selectedDateStr}`;
+        
         try {
             const snapshot = await db.ref(dateKey).once('value');
+            
             if (snapshot.exists()) {
+                // Data exists for this exact date
                 const data = snapshot.val();
                 
                 document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
@@ -467,29 +453,79 @@
                 
                 document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
                 document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
-                document.getElementById('d-coll-current-outstanding').innerText = data.coll_current_outstanding || 'Tk. 0';
                 
-                // Handle Firebase converting Array to Object issue
                 if (data.prevMonths) {
-                    if (Array.isArray(data.prevMonths)) {
-                        prevMonthsData = data.prevMonths;
-                    } else {
-                        prevMonthsData = Object.values(data.prevMonths);
-                    }
+                    prevMonthsData = Array.isArray(data.prevMonths) ? data.prevMonths : Object.values(data.prevMonths);
+                } else {
+                    prevMonthsData = [];
                 }
                 
                 document.getElementById('remarks-box').value = data.remarks || '';
+            } 
+            else {
+                // Data does NOT exist for this date. 
+                // Reset everything to 0
+                resetFormToZero();
                 
-                calculateProductivity(); // Calculate productivity on load
+                // Now handle Previous Months Outstanding for this empty date
+                const dateObj = new Date(y, m - 1, dd);
+                
+                if (dd === 1) {
+                    // It is the 1st of a new month! We need last month's total outstanding.
+                    let prevDay = new Date(y, m - 1, 0); // Last day of previous month
+                    let prevDateStr = `${prevDay.getFullYear()}-${String(prevDay.getMonth()+1).padStart(2,'0')}-${String(prevDay.getDate()).padStart(2,'0')}`;
+                    
+                    // Search backward up to 5 days to find the last active day of the previous month
+                    for(let i=0; i<5; i++) {
+                        const prevSnap = await db.ref(`reports/${prevDateStr}`).once('value');
+                        if (prevSnap.exists()) {
+                            const prevData = prevSnap.val();
+                            const prevMonthName = `${months[prevDay.getMonth()]}-${String(prevDay.getFullYear()).slice(-2)}`;
+                            prevMonthsData = [{
+                                name: prevMonthName,
+                                sales: extractNum(prevData.sales_month_vat || 0),
+                                today: 0,
+                                total: extractNum(prevData.coll_current_total || 0)
+                            }];
+                            break;
+                        }
+                        // Go one day back
+                        prevDay.setDate(prevDay.getDate() - 1);
+                        prevDateStr = `${prevDay.getFullYear()}-${String(prevDay.getMonth()+1).padStart(2,'0')}-${String(prevDay.getDate()).padStart(2,'0')}`;
+                    }
+                } else {
+                    // It is NOT the 1st of the month. Just get the prevMonthsData from the 1st of THIS month.
+                    const firstOfThisMonthStr = `${y}-${String(m).padStart(2,'0')}-01`;
+                    const firstSnap = await db.ref(`reports/${firstOfThisMonthStr}`).once('value');
+                    if (firstSnap.exists()) {
+                        const firstData = firstSnap.val();
+                        if (firstData.prevMonths) {
+                            prevMonthsData = Array.isArray(firstData.prevMonths) ? firstData.prevMonths : Object.values(firstData.prevMonths);
+                        }
+                    }
+                }
             }
+            
+            // Calculate derived fields and render tables
+            calculateCurrentOutstanding();
             renderPrevMonthsTable();
+            calculateProductivity();
+            
         } catch (error) {
             console.error("Error loading data: ", error);
         }
     }
 
-    // 4. Save Data to Firebase
+    // 4. Save Data to Firebase Day-Wise
     function saveToFirebase() {
+        const selectedDate = document.getElementById('reportDate').value;
+        if (!selectedDate) {
+            alert("Please select a date first!");
+            return;
+        }
+        
+        const dateKey = `reports/${selectedDate}`;
+        
         const dataToSave = {
             mpo_today: document.getElementById('d-mpo-today').innerText,
             mpo_total: document.getElementById('d-mpo-total').innerText,
@@ -528,28 +564,22 @@
 
     // Custom Print Function to dynamically set PDF/File Name
     function printReport() {
-        const today = new Date();
-        const dd = String(today.getDate()).padStart(2, '0');
-        const mm = String(today.getMonth() + 1).padStart(2, '0'); // January is 0!
-        const yy = String(today.getFullYear()).slice(-2); // Get last 2 digits of year
+        const selectedDate = document.getElementById('reportDate').value || todayStr;
+        const [y, m, dd] = selectedDate.split('-');
         
-        const dynamicTitle = `Collection Report-${dd}-${mm}-${yy}`;
+        const dynamicTitle = `Collection Report-${dd}-${m}-${y.slice(-2)}`;
         const originalTitle = document.title;
         
-        // Temporarily change the document title
         document.title = dynamicTitle;
-        
-        // Trigger print
         window.print();
         
-        // Restore original title after printing
         setTimeout(() => {
             document.title = originalTitle;
         }, 500);
     }
 
-    // Auto load data on startup
-    loadData();
+    // Auto load data for today on startup
+    loadData(todayStr);
 
     function calculateCurrentOutstanding() {
         let salesVat = extractNum(document.getElementById('d-sales-month-vat').innerText);
@@ -557,7 +587,6 @@
         document.getElementById('d-coll-current-outstanding').innerText = formatTk(salesVat - collTotal);
     }
 
-    // Calculate Productivity: Month Total (TP) / Total Open MPO
     function calculateProductivity() {
         let monthTotalTP = extractNum(document.getElementById('d-sales-month').innerText);
         let totalOpenMPO = extractNum(document.getElementById('d-mpo-total').innerText);
@@ -567,7 +596,6 @@
             productivity = monthTotalTP / totalOpenMPO;
         }
         
-        // Format to 2 decimal places
         let formattedProductivity = Number(productivity.toFixed(2)).toLocaleString('en-IN');
         document.getElementById('d-productivity').innerText = "Tk. " + formattedProductivity;
     }
@@ -632,7 +660,7 @@
 
     function renderPrevMonthsModal() {
         const modalBody = document.getElementById('modal-body');
-        modalBody.innerHTML = ''; // Clear entirely for fresh render
+        modalBody.innerHTML = '';
 
         let html = '';
         if(prevMonthsData.length === 0) {
@@ -676,13 +704,12 @@
         document.getElementById('modal-overlay').style.display = 'none';
     }
 
-    // Save logic strictly separated
     function saveDataUI() {
         if (currentSection === 'manpower') {
             ['d-mpo-today', 'd-mpo-total', 'd-am-total', 'd-rsm'].forEach(id => {
                 document.getElementById(id).innerText = document.getElementById(`input-${id}`).value;
             });
-            calculateProductivity(); // Update productivity when MPO changes
+            calculateProductivity();
         } 
         else if (currentSection === 'sales') {
             ['d-sales-today', 'd-sales-vat', 'd-sales-month', 'd-sales-month-vat'].forEach(id => {
@@ -690,7 +717,7 @@
                 document.getElementById(id).innerText = formatTk(val);
             });
             calculateCurrentOutstanding();
-            calculateProductivity(); // Update productivity when Sales change
+            calculateProductivity();
         } 
         else if (currentSection === 'coll_current') {
             let todayVal = parseFloat(document.getElementById('input-d-coll-today').value) || 0;
@@ -711,11 +738,10 @@
                     total: parseFloat(block.querySelector('.prev-total').value) || 0
                 });
             });
-            prevMonthsData = newData; // Assign DOM data to global variable only on OK
+            prevMonthsData = newData;
             renderPrevMonthsTable(); 
         }
 
-        // Call the Firebase save function
         saveToFirebase();
         closeModal();
     }
