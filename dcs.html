@@ -405,6 +405,49 @@
         prevMonthsData = [];
     }
 
+    // Filters out previous month entries where outstanding is exactly 0
+    function getFilteredPrevMonths(data) {
+        let pmArray = [];
+        if (data && data.prevMonths) {
+            let originalPm = Array.isArray(data.prevMonths) ? data.prevMonths : Object.values(data.prevMonths);
+            pmArray = originalPm.filter(m => (extractNum(m.sales) - extractNum(m.total)) !== 0);
+        }
+        return pmArray;
+    }
+
+    function applyDataToForm(data, isExactDate) {
+        document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
+        document.getElementById('d-mpo-total').innerText = data.mpo_total || '0';
+        document.getElementById('d-am-total').innerText = data.am_total || '0';
+        document.getElementById('d-rsm').innerText = data.rsm || '0';
+        
+        document.getElementById('d-sales-today').innerText = data.sales_today || 'Tk. 0';
+        document.getElementById('d-sales-vat').innerText = data.sales_vat || 'Tk. 0';
+        document.getElementById('d-sales-month').innerText = data.sales_month || 'Tk. 0';
+        document.getElementById('d-sales-month-vat').innerText = data.sales_month_vat || 'Tk. 0';
+        
+        document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
+        document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
+        
+        if (isExactDate) {
+            // If loading the exact date saved in DB, keep data as it was saved (even if outstanding is 0)
+            if (data.prevMonths) {
+                prevMonthsData = Array.isArray(data.prevMonths) ? data.prevMonths : Object.values(data.prevMonths);
+            } else {
+                prevMonthsData = [];
+            }
+        } else {
+            // If copying from last entry to a new date, filter out the 0 outstanding months
+            prevMonthsData = getFilteredPrevMonths(data);
+        }
+        
+        document.getElementById('remarks-box').value = data.remarks || '';
+        
+        calculateCurrentOutstanding();
+        renderPrevMonthsTable();
+        calculateProductivity();
+    }
+
     function renderPrevMonthsTable() {
         const table = document.getElementById('prev-months-table');
         table.innerHTML = ''; 
@@ -424,93 +467,70 @@
         });
     }
 
-    // 3. Load Data from Firebase Day-Wise
+    // 3. Load Data from Firebase
     async function loadData(selectedDateStr) {
         if (!selectedDateStr) return;
         
-        // Update Print Date Text
         const [y, m, dd] = selectedDateStr.split('-').map(Number);
+        const dateObj = new Date(y, m - 1, dd);
+        
         document.getElementById('printDate').innerText = `${dd}-${months[m - 1]}-${y}`;
         
-        const dateKey = `reports/${selectedDateStr}`;
-        
         try {
-            const snapshot = await db.ref(dateKey).once('value');
+            const query = db.ref('reports').orderByKey().endAt(selectedDateStr).limitToLast(1);
+            const querySnap = await query.once('value');
             
-            if (snapshot.exists()) {
-                // Data exists for this exact date
-                const data = snapshot.val();
+            let lastKey = null;
+            let lastData = null;
+            
+            querySnap.forEach(child => {
+                lastKey = child.key;
+                lastData = child.val();
+            });
+            
+            if (lastKey === selectedDateStr) {
+                // Exact data found for the selected date
+                applyDataToForm(lastData, true);
+            } else if (lastData) {
+                // Data for selected date NOT found, but we found the LAST ENTRY
+                const [ly, lm, ldd] = lastKey.split('-').map(Number);
+                const lastDateObj = new Date(ly, lm - 1, ldd);
                 
-                document.getElementById('d-mpo-today').innerText = data.mpo_today || '0';
-                document.getElementById('d-mpo-total').innerText = data.mpo_total || '0';
-                document.getElementById('d-am-total').innerText = data.am_total || '0';
-                document.getElementById('d-rsm').innerText = data.rsm || '0';
-                
-                document.getElementById('d-sales-today').innerText = data.sales_today || 'Tk. 0';
-                document.getElementById('d-sales-vat').innerText = data.sales_vat || 'Tk. 0';
-                document.getElementById('d-sales-month').innerText = data.sales_month || 'Tk. 0';
-                document.getElementById('d-sales-month-vat').innerText = data.sales_month_vat || 'Tk. 0';
-                
-                document.getElementById('d-coll-today').innerText = data.coll_today || 'Tk. 0';
-                document.getElementById('d-coll-current-total').innerText = data.coll_current_total || 'Tk. 0';
-                
-                if (data.prevMonths) {
-                    prevMonthsData = Array.isArray(data.prevMonths) ? data.prevMonths : Object.values(data.prevMonths);
-                } else {
-                    prevMonthsData = [];
-                }
-                
-                document.getElementById('remarks-box').value = data.remarks || '';
-            } 
-            else {
-                // Data does NOT exist for this date. 
-                // Reset everything to 0
-                resetFormToZero();
-                
-                // Now handle Previous Months Outstanding for this empty date
-                const dateObj = new Date(y, m - 1, dd);
-                
-                if (dd === 1) {
-                    // It is the 1st of a new month! We need last month's total outstanding.
-                    let prevDay = new Date(y, m - 1, 0); // Last day of previous month
-                    let prevDateStr = `${prevDay.getFullYear()}-${String(prevDay.getMonth()+1).padStart(2,'0')}-${String(prevDay.getDate()).padStart(2,'0')}`;
+                if (lastDateObj.getMonth() !== dateObj.getMonth()) {
+                    // NEW MONTH SCENARIO
+                    resetFormToZero();
                     
-                    // Search backward up to 5 days to find the last active day of the previous month
-                    for(let i=0; i<5; i++) {
-                        const prevSnap = await db.ref(`reports/${prevDateStr}`).once('value');
-                        if (prevSnap.exists()) {
-                            const prevData = prevSnap.val();
-                            const prevMonthName = `${months[prevDay.getMonth()]}-${String(prevDay.getFullYear()).slice(-2)}`;
-                            prevMonthsData = [{
-                                name: prevMonthName,
-                                sales: extractNum(prevData.sales_month_vat || 0),
-                                today: 0,
-                                total: extractNum(prevData.coll_current_total || 0)
-                            }];
-                            break;
-                        }
-                        // Go one day back
-                        prevDay.setDate(prevDay.getDate() - 1);
-                        prevDateStr = `${prevDay.getFullYear()}-${String(prevDay.getMonth()+1).padStart(2,'0')}-${String(prevDay.getDate()).padStart(2,'0')}`;
+                    let carriedOverPrevMonths = getFilteredPrevMonths(lastData);
+                    
+                    // Add last entry's month ONLY IF its outstanding is NOT 0
+                    const lastMonthName = `${months[lastDateObj.getMonth()]}-${String(lastDateObj.getFullYear()).slice(-2)}`;
+                    let lastMonthSales = extractNum(lastData.sales_month_vat || 0);
+                    let lastMonthTotal = extractNum(lastData.coll_current_total || 0);
+                    
+                    if (lastMonthSales - lastMonthTotal !== 0) {
+                        carriedOverPrevMonths.push({
+                            name: lastMonthName,
+                            sales: lastMonthSales,
+                            today: 0,
+                            total: lastMonthTotal
+                        });
                     }
+                    
+                    prevMonthsData = carriedOverPrevMonths;
+                    renderPrevMonthsTable();
+                    calculateCurrentOutstanding();
+                    calculateProductivity();
                 } else {
-                    // It is NOT the 1st of the month. Just get the prevMonthsData from the 1st of THIS month.
-                    const firstOfThisMonthStr = `${y}-${String(m).padStart(2,'0')}-01`;
-                    const firstSnap = await db.ref(`reports/${firstOfThisMonthStr}`).once('value');
-                    if (firstSnap.exists()) {
-                        const firstData = firstSnap.val();
-                        if (firstData.prevMonths) {
-                            prevMonthsData = Array.isArray(firstData.prevMonths) ? firstData.prevMonths : Object.values(firstData.prevMonths);
-                        }
-                    }
+                    // SAME MONTH SCENARIO: Load the last entry's data (e.g., show 1/09 data on 2/09)
+                    // Passing 'false' so it filters out 0-outstanding previous months
+                    applyDataToForm(lastData, false);
                 }
+            } else {
+                resetFormToZero();
+                renderPrevMonthsTable();
+                calculateCurrentOutstanding();
+                calculateProductivity();
             }
-            
-            // Calculate derived fields and render tables
-            calculateCurrentOutstanding();
-            renderPrevMonthsTable();
-            calculateProductivity();
-            
         } catch (error) {
             console.error("Error loading data: ", error);
         }
@@ -562,7 +582,7 @@
             });
     }
 
-    // Custom Print Function to dynamically set PDF/File Name
+    // Custom Print Function
     function printReport() {
         const selectedDate = document.getElementById('reportDate').value || todayStr;
         const [y, m, dd] = selectedDate.split('-');
