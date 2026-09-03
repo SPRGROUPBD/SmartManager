@@ -221,7 +221,7 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '' };
+    let quickEntryState = { code: '', name: '', pack: '', originalTp: 0, flatTp: 0, vat: 0, qty: 0, bonusRule: '', bbl2Disc: 0 };
     let editingRow = null;
     let activeCustomerType = null; 
     let activeCustomerDccDisc = 0; 
@@ -305,7 +305,14 @@
             document.getElementById('user-dashboard').style.display = 'none';
             document.getElementById('simple-order-page').style.display = 'none';
             document.getElementById('user-orders-page').style.display = 'none';
-            switchTab(event, 'tab-dashboard');
+            
+            // Safe Tab Switch for Admin
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-dashboard').classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            const dashBtn = document.querySelector(".tab-btn[onclick*='tab-dashboard']");
+            if (dashBtn) dashBtn.classList.add('active');
+            
             loadDashboardData(); // Load only for Admin
         } else {
             document.querySelectorAll('[data-admin="true"]').forEach(el => el.style.display = 'none');
@@ -328,7 +335,7 @@
         const cTypeEl = document.getElementById('c-type');
         if(cTypeEl) {
             cTypeEl.addEventListener('change', function() {
-                document.getElementById('c-dcc-disc-group').style.display = (this.value === 'D') ? 'block' : 'none';
+                document.getElementById('c-dcc-disc-group').style.display = (this.value === 'D' || this.value === 'SP') ? 'block' : 'none';
             });
         }
     }
@@ -446,7 +453,7 @@
 
     // --- HELPERS ---
     function getCustomerTypeLabel(code) {
-        const map = { 'R': 'Retailer (R)', 'D': 'DCC (D)', 'H': 'Hospital (H)', 'C': 'Clinic (C)', 'SP': 'Special (SP)' };
+        const map = { 'R': 'Retailer (R)', 'D': 'DCC (D)', 'H': 'Hospital (H)', 'C': 'Clinic (C)', 'SP': 'Special (SP)', 'BBL_1': 'BBL 1', 'BBL_2': 'BBL 2' };
         return map[code] || 'N/A';
     }
 
@@ -697,7 +704,8 @@
                         flatTp: Number(p.flatTp || 0), 
                         vat: Number(p.vat || 0), 
                         qty: Number(item.qty) || 0, 
-                        bonusRule: p.bonus || '' 
+                        bonusRule: p.bonus || '',
+                        bbl2Disc: 0 
                     };
                     itemsHtml += getInvoiceRowHtml(quickEntryState);
                 }
@@ -757,11 +765,29 @@
             <td class="text-right">${actualVat.toFixed(2)}</td>
             <td class="text-right">${totalTp.toFixed(2)}</td>
             <td class="text-right">${totalVat.toFixed(2)}</td>
-            <td class="text-right">${actualDiscPct}%</td>
+            <td class="text-right" ${activeCustomerType === 'BBL_2' ? `contenteditable="true" style="background: #fffbeb;" onblur="updateBbl2Discount(this)" onkeydown="if(event.key==='Enter') { event.preventDefault(); this.blur(); }"` : ''}>${actualDiscPct}%</td>
             <td class="text-right">${disc.toFixed(2)}</td>
             <td class="text-right">${netValue.toFixed(2)}</td>
             <td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>
         </tr>`;
+    }
+    
+    function updateBbl2Discount(cellElement) {
+        let pctText = (cellElement.innerText || '0').replace('%', '').trim();
+        let pctNum = parseFloat(pctText) || 0;
+        if (pctNum < 0) pctNum = 0;
+        if (pctNum > 100) pctNum = 100;
+        cellElement.innerText = pctNum + '%';
+        
+        let row = cellElement.parentElement;
+        let totalTp = parseFloat(row.cells[8].innerText) || 0;
+        let totalVat = parseFloat(row.cells[9].innerText) || 0;
+        let disc = (totalTp * pctNum) / 100;
+        let netValue = totalTp + totalVat - disc;
+        
+        row.cells[11].innerText = disc.toFixed(2);
+        row.cells[12].innerText = netValue.toFixed(2);
+        calculateTotals();
     }
 
     // ---------------- DASHBOARD LOGIC ----------------
@@ -831,6 +857,110 @@
         reader.readAsArrayBuffer(file);
     }
 
+    // --- UPDATED: CUSTOMER EXCEL IMPORT (Auto-generates Code & Fixes Type Mapping) ---
+    function importCustomerExcel() {
+        if (!isAdmin) return;
+        const fileInput = document.getElementById('excel-customer-file');
+        if (!fileInput.files.length) return showAlert('Please select an Excel file first.');
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            const json = XLSX.utils.sheet_to_json(worksheet);
+            
+            if (json.length === 0) return showAlert('No data found in the Excel file.');
+            
+            let updates = {};
+            let count = 0;
+            
+            // Efficiently get Last Customer Code
+            const lastCustSnap = await db.ref('INVOICE/customers').orderByKey().limitToLast(1).once('value');
+            let maxNum = 0;
+            lastCustSnap.forEach(child => { 
+                const numPart = parseInt(child.key.replace('KS', '')); 
+                if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart; 
+            });
+            let nextNum = maxNum;
+
+            // Fetch MPOs to map route, da, mpoName
+            const mpoSnap = await db.ref('INVOICE/mpos').once('value');
+            const mpos = mpoSnap.val() || {};
+            
+            // Loop through excel rows
+            json.forEach(row => {
+                const name = row.Name || row.name || row.CUSTOMER_NAME || '';
+                if (!name) return; // Skip if no name provided
+                
+                // Auto-generate code
+                nextNum++;
+                const finalCode = 'KS' + String(nextNum).padStart(5, '0');
+                
+                // FIX: Robust Customer Type Mapping
+                let rawType = String(row.Type || row.type || 'R').trim();
+                let type = 'R'; // Default to Retailer
+                let upperType = rawType.toUpperCase();
+                if (upperType === 'BBL_1' || upperType === 'BBL 1' || upperType === 'BBL1') {
+                    type = 'BBL_1';
+                } else if (upperType === 'BBL_2' || upperType === 'BBL 2' || upperType === 'BBL2') {
+                    type = 'BBL_2';
+                } else if (upperType.startsWith('D') || upperType.includes('DCC')) {
+                    type = 'D';
+                } else if (upperType.startsWith('H') || upperType.includes('HOSPITAL')) {
+                    type = 'H';
+                } else if (upperType.startsWith('C') || upperType.includes('CLINIC')) {
+                    type = 'C';
+                } else if (upperType.startsWith('SP') || upperType.includes('SPECIAL')) {
+                    type = 'SP';
+                } else if (upperType.startsWith('R') || upperType.includes('RETAILER')) {
+                    type = 'R';
+                } else {
+                    type = rawType.toUpperCase(); // Fallback
+                }
+                
+                const address = row.Address || row.address || row.ADDRESS || '';
+                const phone = String(row.Phone || row.phone || row.PHONE || '');
+                const mpoCode = String(row.MPOCode || row.mpoCode || row.MPO || '').trim().toUpperCase();
+                const dccDisc = parseFloat(row.DccDisc || row.dccDisc || 0) || 0;
+                
+                let mpoName = '', route = '', da = '';
+                if (mpoCode && mpos[mpoCode]) {
+                    mpoName = mpos[mpoCode].name || '';
+                    route = mpos[mpoCode].route || '';
+                    da = mpos[mpoCode].da || '';
+                }
+                
+                updates['INVOICE/customers/' + finalCode] = {
+                    code: finalCode,
+                    name: name,
+                    type: type, // Properly mapped type
+                    dccDisc: dccDisc,
+                    address: address,
+                    phone: phone,
+                    mpoCode: mpoCode,
+                    mpoName: mpoName,
+                    route: route,
+                    da: da,
+                    status: 'active'
+                };
+                count++;
+            });
+            
+            if (count === 0) return showAlert('No valid customers found in the Excel file. Ensure "Name" column exists.');
+            
+            db.ref().update(updates).then(() => {
+                showAlert(count + ' customers imported successfully! Codes generated starting from KS' + String(maxNum + 1).padStart(5, '0'));
+                fileInput.value = '';
+                loadCustomers(); // Refresh list
+            }).catch(err => showAlert('Import failed: ' + err.message));
+        };
+        
+        reader.readAsArrayBuffer(file);
+    }
+
     // ---------------- INVOICE AUTO GENERATE & SAVE ----------------
     function generateInvoiceNo() {
         const now = new Date(); const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -866,7 +996,7 @@
             totalBonus: document.getElementById('foot-bonus').innerText, totalTp: document.getElementById('foot-tp').innerText,
             totalVat: document.getElementById('foot-vat').innerText, totalDisc: document.getElementById('foot-disc').innerText,
             totalTpSales: document.getElementById('total-tp-sales').innerText, netPayable: document.getElementById('foot-net').innerText,
-            createdBy: currentUser 
+            createdBy: currentUser // Saves MPO wise
         };
         db.ref('INVOICE/invoices/' + invNo).set(invoiceData).then(() => {
             showAlert('Invoice saved successfully!');
@@ -912,7 +1042,7 @@
             if(snap.exists()) {
                 const p = snap.val();
                 if(p.status === 'inactive') { return showAlert('Product is inactive!'); }
-                quickEntryState = { code: p.code, name: p.name, pack: p.pack, originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0), vat: Number(p.vat || 0), qty: 0, bonusRule: p.bonus || '' };
+                quickEntryState = { code: p.code, name: p.name, pack: p.pack, originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0), vat: Number(p.vat || 0), qty: 0, bonusRule: p.bonus || '', bbl2Disc: 0 };
                 nameInput.value = p.name + ' (' + p.pack + ')'; document.getElementById('quick-qty').focus(); 
             } else { showAlert('Product code not found!', 'Error', function() { nameInput.value = ''; codeInput.focus(); }); }
         });
@@ -938,7 +1068,8 @@
                 originalTp: parseFloat(row.dataset.originalTp) || 0,
                 flatTp: parseFloat(row.dataset.flatTp) || 0,
                 vat: parseFloat(row.dataset.originalVat) || 0,
-                qty: qty, bonusRule: row.dataset.bonusRule || ''
+                qty: qty, bonusRule: row.dataset.bonusRule || '',
+                bbl2Disc: 0
             };
         } else {
             const snap = await db.ref('INVOICE/products/' + code).once('value');
@@ -947,7 +1078,8 @@
                 quickEntryState = {
                     code: p.code, name: p.name, pack: p.pack,
                     originalTp: Number(p.tp || 0), flatTp: Number(p.flatTp || 0),
-                    vat: Number(p.vat || 0), qty: qty, bonusRule: p.bonus || ''
+                    vat: Number(p.vat || 0), qty: qty, bonusRule: p.bonus || '',
+                    bbl2Disc: 0
                 };
                 row.dataset.originalTp = quickEntryState.originalTp;
                 row.dataset.flatTp = quickEntryState.flatTp;
@@ -1019,7 +1151,7 @@
     // --- RATE & DISCOUNT LOGIC ---
     function getActualTpAndVat(item, custType) {
         let tp = item.originalTp; let vat = item.vat;
-        if (custType === 'SP' || custType === 'D') { return { tp: item.originalTp, vat: item.vat }; }
+        if (custType === 'SP' || custType === 'D' || custType === 'BBL_2') { return { tp: item.originalTp, vat: item.vat }; }
         if (item.flatTp > 0) { return { tp: item.flatTp, vat: 0 }; }
         return { tp: item.originalTp, vat: item.vat };
     }
@@ -1027,6 +1159,8 @@
     function getDiscountPercentage(item, custType, custDccDisc, actualTp) {
         if (custType === 'SP') return custDccDisc || 0;
         if (custType === 'D') return custDccDisc;
+        if (custType === 'BBL_2') return item.bbl2Disc || 0;
+        if (custType === 'BBL_1') return 0;
         if (item.flatTp > 0) return 0;
         let bonusQty = calculateBonusQty(item.qty, item.bonusRule);
         if (bonusQty > 0) return 0;
@@ -1065,7 +1199,13 @@
         const row = tbody.insertRow();
         row.ondblclick = function() { editQuickEntryItem(this); };
         row.dataset.originalTp = item.originalTp; row.dataset.flatTp = item.flatTp || 0; row.dataset.originalVat = item.vat || 0; row.dataset.bonusRule = item.bonusRule || '';
-        row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td><td class="text-right">${actualDiscPct}%</td><td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>`;
+        
+        let discCellHtml = `<td class="text-right">${actualDiscPct}%</td>`;
+        if (activeCustomerType === 'BBL_2') {
+            discCellHtml = `<td class="text-right" contenteditable="true" style="background: #fffbeb;" onblur="updateBbl2Discount(this)" onkeydown="if(event.key==='Enter') { event.preventDefault(); this.blur(); }">${actualDiscPct}%</td>`;
+        }
+        
+        row.innerHTML = `<td class="text-center">${sn}</td><td>${item.code}</td><td>${item.name}</td><td>${item.pack}</td><td class="text-center">${item.qty}</td><td class="text-center">${bonusQty}</td><td class="text-right">${actualTp.toFixed(2)}</td><td class="text-right">${actualVat.toFixed(2)}</td><td class="text-right">${totalTp.toFixed(2)}</td><td class="text-right">${totalVat.toFixed(2)}</td>${discCellHtml}<td class="text-right">${disc.toFixed(2)}</td><td class="text-right">${netValue.toFixed(2)}</td><td class="center no-print"><button class="action-btn btn-danger" onclick="var r=this.parentElement.parentElement; r.remove(); if(editingRow===r){editingRow=null; document.getElementById('quick-code').value=''; document.getElementById('quick-name').value=''; document.getElementById('quick-qty').value='';} calculateTotals();">X</button></td>`;
         calculateTotals();
     }
 
@@ -1089,7 +1229,7 @@
     // ---------------- INVOICE HISTORY & SUMMARY ----------------
     function loadInvoiceHistory() {
         let query = db.ref('INVOICE/invoices');
-        if (!isAdmin) { query = query.orderByChild('createdBy').equalTo(currentUser); }
+        if (!isAdmin) { query = query.orderByChild('createdBy').equalTo(currentUser); } // MPO wise filter
         query.on('value', (snapshot) => {
             const tbody = document.getElementById('history-table-body');
             let html = ''; const headingEl = document.getElementById('all-invoices-heading');
@@ -1441,7 +1581,7 @@
                 if(matchingInvoices.length === 0) { return showAlert('No invoices found for this Date and Route (or they are already in another summary)!'); }
                 let totalAmount = 0; const invNos = []; const updates = {};
                 matchingInvoices.forEach(inv => { totalAmount += parseFloat(inv.netPayable) || 0; invNos.push(inv.invoiceNo); updates[`INVOICE/invoices/${inv.invoiceNo}/summaryNo`] = summaryNo; });
-                updates[`INVOICE/summaries/${summaryNo}`] = { summaryId: summaryNo, date: formattedDate, route: route, invoiceCount: matchingInvoices.length, totalAmount: totalAmount.toFixed(2), invoices: invNos, generatedBy: currentUser, generatedAt: new Date().toISOString() };
+                updates[`INVOICE/summaries/${summaryNo}`] = { summaryId: summaryNo, date: formattedDate, route: route, invoiceCount: matchingInvoices.length, totalAmount: totalAmount.toFixed(2), invoices: invNos, generatedBy: currentUser, generatedAt: new Date().toISOString() }; // Saves MPO wise
                 db.ref().update(updates).then(() => {
                     showAlert(`Summary generated successfully!\nSummary No: ${summaryNo}`); document.getElementById('rep-sum-date').value = ''; document.getElementById('rep-sum-route').value = '';
                     loadSummaries(); loadInvoiceHistory(); 
@@ -1452,7 +1592,7 @@
 
     function loadSummaries() {
         let query = db.ref('INVOICE/summaries');
-        if (!isAdmin) { query = query.orderByChild('generatedBy').equalTo(currentUser); }
+        if (!isAdmin) { query = query.orderByChild('generatedBy').equalTo(currentUser); } // MPO wise filter
         query.on('value', snap => {
             const tbody = document.getElementById('summary-list-body'); let html = '';
             if (!snap.exists()) { html = '<tr><td colspan="6" class="text-center">No summaries generated yet</td></tr>'; } 
@@ -1853,7 +1993,7 @@
 
     // ---------------- CUSTOMER MANAGEMENT ----------------
     function generateCustomerCode() {
-        db.ref('INVOICE/customers').once('value').then((snapshot) => {
+        db.ref('INVOICE/customers').orderByKey().limitToLast(1).once('value').then((snapshot) => {
             let maxNum = 0;
             snapshot.forEach(child => { const numPart = parseInt(child.key.replace('KS', '')); if (!isNaN(numPart) && numPart > maxNum) maxNum = numPart; });
             const nextNum = maxNum + 1;
@@ -1872,7 +2012,7 @@
 
     function loadCustomers() {
         let query = db.ref('INVOICE/customers');
-        if (!isAdmin) { query = query.orderByChild('mpoCode').equalTo(currentUser); }
+        if (!isAdmin) { query = query.orderByChild('mpoCode').equalTo(currentUser); } // MPO wise filter
         query.on('value', (snapshot) => {
             customerCache = [];
             if (snapshot.exists()) { snapshot.forEach((child) => { customerCache.push(child.val()); }); }
@@ -2239,6 +2379,8 @@
         <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
             <select id="customer-filter-mpo" data-admin="true" style="padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;" onchange="renderCustomers()"><option value="">All MPOs</option></select>
             <button class="btn btn-secondary" onclick="printCustomerList()">Print List</button>
+            <button class="btn btn-secondary" data-admin="true" onclick="document.getElementById('excel-customer-file').click()">Import Excel</button>
+            <input type="file" id="excel-customer-file" accept=".xlsx, .xls" style="display:none;" onchange="importCustomerExcel()">
             <button class="btn btn-primary" onclick="resetCustomerForm(); openModal('modal-customer');">Add New Customer</button>
         </div>
     </div>
@@ -2328,7 +2470,7 @@
     </div>
 </div>
 
-<div id="modal-customer" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Customer Details</h3><button class="modal-close-btn" onclick="closeModal('modal-customer')">&times;</button></div><form class="management-form" id="customer-form" onsubmit="handleCustomerSubmit(event)"><input type="hidden" id="c-is-edit" value="false"><div class="form-group"><label>Assign to MPO:</label><select id="c-mpo" required><option value="">Select MPO</option></select></div><div class="form-group"><label>Customer Code:</label><input type="text" id="c-code" readonly style="background-color: #f8fafc;" required></div><div class="form-group"><label>Customer Name:</label><input type="text" id="c-name" placeholder="Enter Pharmacy/Shop Name" required></div><div class="form-group"><label for="c-type">Customer Type</label><select id="c-type" required><option value="R" selected>Retailer (R)</option><option value="D">DCC (D)</option><option value="H">Hospital (H)</option><option value="C">Clinic (C)</option><option value="SP">Special (SP)</option></select></div><div class="form-group" id="c-dcc-disc-group" style="display:none;"><label>Discount % (Applied on Original Rate):</label><input type="number" id="c-dcc-disc" placeholder="e.g. 10 (Leave 0 for SP)" min="0" max="100"></div><div class="form-group"><label>Address / Location:</label><input type="text" id="c-address" placeholder="Enter Market / Area" required></div><div class="form-group"><label>Phone Number:</label><input type="text" id="c-phone" placeholder="Enter Phone Number"></div><button type="submit" class="btn btn-primary" id="c-submit-btn">Save Customer</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-customer')">Cancel</button></form></div></div>
+<div id="modal-customer" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Customer Details</h3><button class="modal-close-btn" onclick="closeModal('modal-customer')">&times;</button></div><form class="management-form" id="customer-form" onsubmit="handleCustomerSubmit(event)"><input type="hidden" id="c-is-edit" value="false"><div class="form-group"><label>Assign to MPO:</label><select id="c-mpo" required><option value="">Select MPO</option></select></div><div class="form-group"><label>Customer Code:</label><input type="text" id="c-code" readonly style="background-color: #f8fafc;" required></div><div class="form-group"><label>Customer Name:</label><input type="text" id="c-name" placeholder="Enter Pharmacy/Shop Name" required></div><div class="form-group"><label for="c-type">Customer Type</label><select id="c-type" required><option value="R" selected>Retailer (R)</option><option value="D">DCC (D)</option><option value="H">Hospital (H)</option><option value="C">Clinic (C)</option><option value="SP">Special (SP)</option><option value="BBL_1">BBL 1</option><option value="BBL_2">BBL 2</option></select></div><div class="form-group" id="c-dcc-disc-group" style="display:none;"><label>Discount % (Applied on Original Rate):</label><input type="number" id="c-dcc-disc" placeholder="e.g. 10 (Leave 0 for SP)" min="0" max="100"></div><div class="form-group"><label>Address / Location:</label><input type="text" id="c-address" placeholder="Enter Market / Area" required></div><div class="form-group"><label>Phone Number:</label><input type="text" id="c-phone" placeholder="Enter Phone Number"></div><button type="submit" class="btn btn-primary" id="c-submit-btn">Save Customer</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-customer')">Cancel</button></form></div></div>
 <div id="modal-product" class="modal-overlay"><div class="modal-box"><div class="modal-header"><h3>Product Details</h3><button class="modal-close-btn" onclick="closeModal('modal-product')">&times;</button></div><form class="management-form" id="product-form" onsubmit="handleProductSubmit(event)"><input type="hidden" id="p-is-edit" value="false"><div class="form-group"><label>P-Code:</label><input type="text" id="p-code" placeholder="e.g. ALD" required style="text-transform: uppercase;"></div><div class="form-group"><label>Name:</label><input type="text" id="p-name" placeholder="Enter Product Name" required></div><div class="form-group"><label>Pack Size:</label><input type="text" id="p-pack" placeholder="e.g. 200ml / 30s" required></div><div class="form-group"><label>Original TP Price (For DCC & SP):</label><input type="number" step="0.01" id="p-tp" placeholder="0.00" required></div><div class="form-group"><label>Flat TP Price (For Regular Customer):</label><input type="number" step="0.01" id="p-flat-tp" placeholder="0.00 (Leave 0 if no flat rate)"></div><div class="form-group"><label>Vat (Applicable on Original TP):</label><input type="number" step="0.01" id="p-vat" placeholder="0.00" required></div><div class="form-group"><label>Bonus Rule (X:Y format e.g. 5:1, 3:2, 1:1):</label><input type="text" id="p-bonus" placeholder="e.g. 5:1 (Leave empty if none)"></div><div class="form-group"><label>DCC Product (Gets DCC Discount):</label><select id="p-dcc"><option value="false">No</option><option value="true">Yes</option></select></div><button type="submit" class="btn btn-primary" id="p-submit-btn">Save Product</button><button type="button" class="btn btn-secondary" style="margin-left: 10px;" onclick="closeModal('modal-product')">Cancel</button></form></div></div>
 
 <!-- MPO Modal with Joining Date Field -->
