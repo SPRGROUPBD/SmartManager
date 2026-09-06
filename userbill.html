@@ -277,19 +277,13 @@
                     </div>
                 </div>
             </div>
+            
+            <!-- Used IOU লিস্টটি এখান থেকে সরানো হয়েছে এবং Online Users কে Full Width করা হয়েছে -->
             <div class="row g-2 mb-3 no-print">
-                <div class="col-md-7">
-                    <div class="card user-iou-card animate-in animate-in-d5">
-                        <div class="card-header text-white" style="background:linear-gradient(135deg,#6c757d,#495057)">
-                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0"><i class="bi bi-archive me-2"></i>Used IOU <small style="opacity:.7" id="user_used_iou_month_label"></small></span><span class="badge bg-light text-secondary" id="user_used_iou_count">0</span></div>
-                        </div>
-                        <div class="scroll-box-sm"><table class="table table-hover mb-0"><thead><tr><th>Date</th><th>Type</th><th>Route</th><th class="text-end">Taka</th><th>Status</th></tr></thead><tbody id="user_used_iou_list"><tr><td colspan="5" class="text-center text-muted p-3">No Used IOU</td></tr></tbody></table></div>
-                    </div>
-                </div>
-                <div class="col-md-5">
+                <div class="col-12">
                     <div class="card user-online-card animate-in animate-in-d6" style="height:100%">
                         <div class="card-header border-0 py-2" style="background:linear-gradient(135deg,#10b981,#059669)">
-                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online</span><span class="badge bg-light text-success" id="user_online_count_badge">0</span></div>
+                            <div class="d-flex justify-content-between align-items-center"><span class="fw-bold mb-0 text-white"><i class="bi bi-broadcast me-2"></i>Online Users</span><span class="badge bg-light text-success" id="user_online_count_badge">0</span></div>
                         </div>
                         <div class="scroll-box-sm" id="user_online_list_view" style="max-height:200px"><div class="text-center text-muted p-3">Checking...</div></div>
                     </div>
@@ -505,7 +499,8 @@ function setGlobalMonth(monthVal){
         else{bc.classList.remove('active-month');ba.classList.remove('active-month');}
     }
     var lbl=formatMonthLabel(globalFilterMonth);
-    ['user_active_iou_month_label','user_used_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
+    // Used IOU লেবেল রিমুভ করা হয়েছে
+    ['user_active_iou_month_label'].forEach(function(id){var el=document.getElementById(id);if(el)el.innerText='('+lbl+')';});
     localStorage.setItem('globalFilterMonth',globalFilterMonth);
     loadIOUListGlobal(function(){reloadAllData();});
 }
@@ -593,11 +588,12 @@ function showDashboard(){
     setGlobalMonth(targetMonth);
 }
 
+// Used IOU এর সকল ভ্যারিয়েবল এবং লজিক এই ফাংশন থেকে রিমুভ করা হয়েছে
 function loadUserDashboardData(){
     var myName=currentUser.name;
-    var ab=document.getElementById('user_active_iou_list'),ub=document.getElementById('user_used_iou_list');
-    var abCount=0,ubCount=0;
-    ab.innerHTML='';ub.innerHTML='';
+    var ab=document.getElementById('user_active_iou_list');
+    var abCount=0;
+    ab.innerHTML='';
     var totalIouCount=0;
     
     Object.keys(iouListGlobal).forEach(function(id){
@@ -614,9 +610,7 @@ function loadUserDashboardData(){
         totalIouCount++; 
         
         if(d.status==='used'){
-            ubCount++;
-            var usedIcon='<i class="bi bi-check2-circle text-success"></i>';
-            ub.innerHTML+='<tr><td>'+formatDate(d.date)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-semibold">'+d.taka+'</td><td>'+usedIcon+'</td></tr>';
+            // Used IOU ড্যাশবোর্ডে দেখানো হচ্ছে না
         }else{
             abCount++;
             var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';}
@@ -625,9 +619,7 @@ function loadUserDashboardData(){
     });
     
     document.getElementById('user_active_iou_count').innerText=abCount;
-    document.getElementById('user_used_iou_count').innerText=ubCount;
     if(!abCount)ab.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-inbox text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Active IOU</div></div></td></tr>';
-    if(!ubCount)ub.innerHTML='<tr><td colspan="5" class="text-center p-3"><div><i class="bi bi-archive text-muted" style="font-size:24px"></i><div class="text-muted mt-1" style="font-size:12px">No Used IOU</div></div></td></tr>';
     
     var iouEl = document.getElementById('user_stat_total_iou');
     if(iouEl) iouEl.innerText = totalIouCount;
