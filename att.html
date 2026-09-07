@@ -334,12 +334,23 @@ function getTimeUntilCheckout(){var now=new Date(),target=new Date();var p=CHECK
 function getCountdownStr(){var t=getTimeUntilCheckout();if(!t)return'';return String(t.hours).padStart(2,'0')+':'+String(t.minutes).padStart(2,'0')+':'+String(t.seconds).padStart(2,'0')}
 
 /* Attendance status logic */
-function getAttStatus(ds,uid,att){if(att&&att.status)return att.status;if(isHoliday(ds))return'H';if(ds<=todayStr())return'A';return''}
+function getAttStatus(ds,uid,att){
+  var u=allUsers[uid]||currentUser;
+  if(u && u.joinDate && ds<u.joinDate) return ''; // Before joining date: blank
+  if(att&&att.status)return att.status;
+  if(isHoliday(ds))return'H';
+  if(ds<=todayStr())return'A';
+  return'';
+}
 function isFullPresent(att){if(!att||!att.approved)return false;if(att.status==='L'||att.status==='H')return false;return !!(att.inTime&&att.outTime)}
 function hasIn(att){return !!(att&&att.inTime)}
 function hasOut(att){return !!(att&&att.outTime)}
 function isCompleteAttendance(att){if(!att)return false;if(att.status==='L'||att.status==='H')return true;return !!(att.inTime&&att.outTime)}
-function isAutoAbsent(ds,uid,att){return(!att||!att.status)&&!isHoliday(ds)&&ds<=todayStr()}
+function isAutoAbsent(ds,uid,att){
+  var u=allUsers[uid]||currentUser;
+  if(u && u.joinDate && ds<u.joinDate) return false; // Before joining date: no auto-absent
+  return(!att||!att.status)&&!isHoliday(ds)&&ds<=todayStr()
+}
 
 /* Entry window status */
 function getEntryWindowStatus(){var now=getCurrentTime();if(now<START_TIME)return{cls:'entry-window-closed',icon:'fa-lock',color:'#dc2626',title:'Entry Not Yet Open',msg:'Check-IN starts at '+formatTime12(START_TIME)+'. Current: '+formatTime12(now),canIn:false,canOut:false};if(now<=LATE_TIME)return{cls:'entry-window-open',icon:'fa-lock-open',color:'#0d6e3f',title:'Normal Entry Window',msg:'Check-IN window: '+formatTime12(START_TIME)+' - '+formatTime12(LATE_TIME)+' | After '+formatTime12(LATE_TIME)+' = LET',canIn:true,canOut:false};if(now<CHECKOUT_UNLOCK_TIME)return{cls:'entry-window-late',icon:'fa-triangle-exclamation',color:'#d97706',title:'Late Entry Window (LET)',msg:'After '+formatTime12(LATE_TIME)+' = Late Entry. Check-OUT unlocks at '+formatTime12(CHECKOUT_UNLOCK_TIME),canIn:true,canOut:false};return{cls:'entry-window-open',icon:'fa-lock-open',color:'#0d6e3f',title:'Checkout Available',msg:'Check-OUT is now available. Office end: '+formatTime12(END_TIME),canIn:true,canOut:true}}
@@ -615,21 +626,25 @@ async function loadMonthlyEntryGrid(){
   if(!uid){showToast('Select user','error');return}
   var days=getDaysInMonth(y,m);
   var allAtt=await loadMonthAttendance(y,m);
+  var userObj=allUsers[uid]||{};
+  var joinDate=userObj.joinDate;
   var gridHTML='<div style="overflow-y:auto;max-height:50vh;border:1px solid var(--border);border-radius:10px"><table class="data-table bulk-table" style="width:100%"><thead><tr><th>Day</th><th>Date</th><th>Status</th><th>IN Time</th><th>OUT Time</th></tr></thead><tbody>';
   for(var d=1;d<=days;d++){
     var ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var attData=allAtt[ds]?allAtt[ds][uid]:null;
     var hol=isHoliday(ds),fri=isFriday(ds);
     var dayName=new Date(ds+'T00:00:00').toLocaleDateString('en',{weekday:'short'});
-    var status=attData?attData.status:(hol?'H':'P');
+    var beforeJoin = joinDate && ds < joinDate;
+    var status=attData?attData.status:(hol?'H':(beforeJoin?'N/A':'P'));
     var inTime=attData&&attData.inTime&&!hol?attData.inTime:'';
     var outTime=attData&&attData.outTime&&!hol?attData.outTime:'';
-    var options=hol?['H']:['P','A','T','L','H'];
+    var options=hol?['H']:(beforeJoin?[]:['P','A','T','L','H']);
     var statOpts='';
     for(var i=0;i<options.length;i++)statOpts+='<option value="'+options[i]+'"'+(options[i]===status?' selected':'')+'>'+options[i]+' - '+statusLabel(options[i])+'</option>';
-    var rowStyle=(fri?'background:rgba(217,119,6,0.03)':(hol?'background:rgba(147,51,234,0.03)':''));
-    var isDisabled=hol;
-    gridHTML+='<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:700">'+d+'</td><td style="font-size:11px">'+dayName+'<br>'+formatBD(ds)+'</td><td><select class="form-select" id="mn_'+d+'_s" style="padding:4px 6px;font-size:11px;min-width:100px;border-radius:6px" onchange="onMonthlyStatusChange('+d+')">'+statOpts+'</select></td><td><input type="time" class="form-input" id="mn_'+d+'_in" value="'+inTime+'" style="padding:4px 6px;font-size:11px;width:110px;border-radius:6px" '+(isDisabled?'disabled':'')+'></td><td><input type="time" class="form-input" id="mn_'+d+'_out" value="'+outTime+'" style="padding:4px 6px;font-size:11px;width:110px;border-radius:6px" '+(isDisabled?'disabled':'')+'></td></tr>';
+    if(beforeJoin) statOpts='<option value="N/A" selected>N/A - Before Join</option>';
+    var rowStyle=(beforeJoin?'background:rgba(107,114,128,0.05)':fri?'background:rgba(217,119,6,0.03)':hol?'background:rgba(147,51,234,0.03)':'');
+    var isDisabled=hol||beforeJoin;
+    gridHTML+='<tr style="'+rowStyle+'"><td style="text-align:center;font-weight:700">'+d+'</td><td style="font-size:11px">'+dayName+'<br>'+formatBD(ds)+(beforeJoin?'<br><span style="color:#dc2626;font-size:9px">Before Join</span>':'')+'</td><td><select class="form-select" id="mn_'+d+'_s" style="padding:4px 6px;font-size:11px;min-width:100px;border-radius:6px" '+(isDisabled?'disabled':'')+' onchange="onMonthlyStatusChange('+d+')">'+statOpts+'</select></td><td><input type="time" class="form-input" id="mn_'+d+'_in" value="'+inTime+'" style="padding:4px 6px;font-size:11px;width:110px;border-radius:6px" '+(isDisabled?'disabled':'')+'></td><td><input type="time" class="form-input" id="mn_'+d+'_out" value="'+outTime+'" style="padding:4px 6px;font-size:11px;width:110px;border-radius:6px" '+(isDisabled?'disabled':'')+'></td></tr>';
   }
   gridHTML+='</tbody></table></div>';
   document.getElementById('monthlyGridArea').innerHTML=gridHTML;
@@ -660,6 +675,7 @@ async function submitMonthlyEntry(){
     var oEl=document.getElementById('mn_'+d+'_out');
     if(!sEl)continue;
     var status=sEl.value;
+    if(status==='N/A') continue; // Skip before joining dates
     var inTime=iEl.value||'';
     var outTime=oEl.value||'';
     if(status==='A'||status==='H'){inTime='';outTime=''}
