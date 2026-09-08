@@ -711,14 +711,15 @@
 <script src="https://cdn.jsdelivr.net/npm/appwrite@16.0.0"></script>
 <script>
 // ================= APPWRITE INIT =================
-const { Client, Databases, ID, Query } = Appwrite;
+const { Client, Databases, ID, Query, Storage } = Appwrite;
 
 const client = new Client();
-// Updated Project ID
 client.setEndpoint('https://cloud.appwrite.io/v1').setProject('6a9f887400057103bffa'); 
 const databases = new Databases(client);
-// Updated Database ID
+const storage = new Storage(client);
+
 const DB_ID = '6a9f8886000df2712b06'; 
+const BUCKET_ID = '6a9fad9d002763b4feff'; 
 const COL = {
     USERS: '6a9f914e0016a8050dab',           
     BILLS: '6a9f8b6b003049933ed4',           
@@ -733,7 +734,7 @@ let editingIouId=null,editingIouYear=null,editingIouMonth=null,editingIouDaName=
 let editingUserId=null;
 let daListCache={},daNameToIdCache={},iouListGlobal={};
 let currentIouId=null,originalIouId=null,originalIouYear=null,originalIouMonth=null,originalIouDaName=null;
-let userPhotoBase64=null,profilePhotoBase64=null,currentSummaryData=[],iouPrintCache=[];
+let userPhotoFile=null, profilePhotoFile=null, currentSummaryData=[],iouPrintCache=[];
 let modalSales=0,modalUserBill=0,modalIou=0;
 let globalFilterMonth='';
 let lookedUpUser=null,lookupTimeout=null;
@@ -935,7 +936,6 @@ async function setupPresence(){
     try {
         await databases.createDocument(DB_ID, COL.ONLINE, currentUser.id, presenceData);
     } catch(e) {
-        // Document might already exist if logged in twice
         try { await databases.updateDocument(DB_ID, COL.ONLINE, currentUser.id, presenceData); } catch(err){}
     }
 
@@ -955,7 +955,6 @@ async function setupPresence(){
         if(currentUser) {
             fetch(`https://cloud.appwrite.io/v1/databases/${DB_ID}/collections/${COL.ONLINE}/documents/${currentUser.id}`, {
                 method: 'DELETE',
-                // Updated Project ID here too
                 headers: { 'X-Appwrite-Project': '6a9f887400057103bffa' }, 
                 keepalive: true
             });
@@ -1273,7 +1272,7 @@ function clearUserForm(){
     document.getElementById('new_user_photo').value='';
     document.getElementById('photo_preview').src='';
     document.getElementById('photo_preview').classList.add('hidden');
-    userPhotoBase64=null;
+    userPhotoFile=null;
     editingUserId=null;
     document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-save"></i> Save Record';
     document.getElementById('cancelEditUserBtn').classList.add('hidden');
@@ -1297,7 +1296,7 @@ async function editUser(id){
         } else {
             document.getElementById('photo_preview').classList.add('hidden');
         }
-        userPhotoBase64 = null;
+        userPhotoFile = null;
 
         document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-pencil-square"></i> Update Record';
         document.getElementById('cancelEditUserBtn').classList.remove('hidden');
@@ -1541,8 +1540,8 @@ async function loadBills(){
             queries.push(Query.equal('year', p[0]));
             queries.push(Query.equal('month', p[1]));
         }
-        queries.push(Query.notEqual('status', 'draft')); // Exclude drafts for normal view
-        queries.push(Query.orderDesc("$createdAt")); // Or by date if preferred
+        queries.push(Query.notEqual('status', 'draft'));
+        queries.push(Query.orderDesc("$createdAt"));
         
         const snap = await databases.listDocuments(DB_ID, COL.BILLS, queries);
         tableBody.innerHTML='';appBody.innerHTML='';
@@ -2299,7 +2298,7 @@ function clearLocalDraft(){ localStorage.removeItem(AUTO_SAVE_KEY); }
 
 // ================= PROFILE =================
 function openProfileModal(){
-    if(!currentUser||currentUser.id==='admin_001'){alert("Cannot edit.");return;}profilePhotoBase64=null;
+    if(!currentUser||currentUser.id==='admin_001'){alert("Cannot edit.");return;}profilePhotoFile=null;
     databases.getDocument(DB_ID, COL.USERS, currentUser.id).then(function(u){
         if(u){
             document.getElementById('prof_name').value=u.name||'';document.getElementById('prof_phone').value=u.phone||'';document.getElementById('prof_depot').value=u.depot||'Kushtia';document.getElementById('prof_username').value=u.username||'';document.getElementById('prof_prev_img').src=u.photoUrl||'https://via.placeholder.com/100';
@@ -2307,17 +2306,28 @@ function openProfileModal(){
         new bootstrap.Modal(document.getElementById('profileModal')).show();
     }).catch(function(e){alert(e.message);});
 }
-function previewProfilePhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;profilePhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function previewProfilePhoto(input){ 
+    if(input.files && input.files[0]){ 
+        profilePhotoFile = input.files[0];
+        var r=new FileReader(); 
+        r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;}; 
+        r.readAsDataURL(input.files[0]); 
+    } 
+}
 async function saveProfile(){
     var n=document.getElementById('prof_name').value,ph=document.getElementById('prof_phone').value,dp=document.getElementById('prof_depot').value,un=document.getElementById('prof_username').value;
     if(!n||!un){alert("Name & Username required");return;}
     var up={name:n,phone:ph,depot:dp,username:un};
-    if(profilePhotoBase64)up.photoUrl=profilePhotoBase64;
     try {
+        if(profilePhotoFile){
+            const fileRes = await storage.createFile(BUCKET_ID, ID.unique(), profilePhotoFile);
+            up.photoUrl = `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${fileRes.$id}/view?project=6a9f887400057103bffa`;
+        }
+        
         await databases.updateDocument(DB_ID, COL.USERS, currentUser.id, up);
         alert("Updated!");
         currentUser.name=n;currentUser.depot=dp;
-        if(profilePhotoBase64)currentUser.photoUrl=profilePhotoBase64;
+        if(up.photoUrl)currentUser.photoUrl=up.photoUrl;
         document.getElementById('header_user_name').innerText=n;
         if(currentUser.photoUrl)document.getElementById('header_profile_pic').src=currentUser.photoUrl;
         bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
@@ -2340,7 +2350,14 @@ async function changePassword(){
         bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();
     } catch(e) { alert(e.message); }
 }
-function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');userPhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function previewUserPhoto(input){
+    if(input.files&&input.files[0]){
+        userPhotoFile = input.files[0];
+        var r=new FileReader();
+        r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');};
+        r.readAsDataURL(input.files[0]);
+    }
+}
 
 // ================= NEW USER =================
 async function saveNewUser(){
@@ -2349,10 +2366,15 @@ async function saveNewUser(){
     var username=document.getElementById('new_user_username').value.trim();var password=document.getElementById('new_user_pass').value.trim();
     var role=document.getElementById('new_user_role').value;
     if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
-    var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
-    if(userPhotoBase64)userData.photoUrl=userPhotoBase64;
     
     try {
+        var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
+        
+        if(userPhotoFile){
+            const fileRes = await storage.createFile(BUCKET_ID, ID.unique(), userPhotoFile);
+            userData.photoUrl = `https://cloud.appwrite.io/v1/storage/buckets/${BUCKET_ID}/files/${fileRes.$id}/view?project=6a9f887400057103bffa`;
+        }
+        
         if(editingUserId){
             await databases.updateDocument(DB_ID, COL.USERS, editingUserId, userData);
             alert("User Updated Successfully!");
