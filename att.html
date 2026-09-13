@@ -203,6 +203,160 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 </style>
 </head>
 <body>
+
+<!-- ===== BASIC UI PROTECTION =====
+     Note: Browser DevTools cannot be made impossible to access by client-side HTML/JS.
+     This layer blocks common shortcuts/right-click/text-copy actions for ordinary users.
+-->
+<style>
+  html, body, body * {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+  }
+  input, textarea, select, [contenteditable="true"] {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+  }
+</style>
+<script>
+(function(){
+  'use strict';
+
+  // Block right-click context menu.
+  document.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    return false;
+  }, true);
+
+  // Block common copy/cut/select/drag actions.
+  ['copy','cut','dragstart'].forEach(function(evt){
+    document.addEventListener(evt, function(e){
+      var t = e.target;
+      var editable = t && (
+        t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable
+      );
+      if(!editable){
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+  });
+
+  document.addEventListener('selectstart', function(e){
+    var t = e.target;
+    var editable = t && (
+      t.tagName === 'INPUT' ||
+      t.tagName === 'TEXTAREA' ||
+      t.tagName === 'SELECT' ||
+      t.isContentEditable
+    );
+    if(!editable){
+      e.preventDefault();
+    }
+  }, true);
+
+  // Block common browser source / DevTools shortcuts.
+  document.addEventListener('keydown', function(e){
+    var key = String(e.key || '').toLowerCase();
+    var ctrl = e.ctrlKey || e.metaKey;
+    var shift = e.shiftKey;
+
+    // F12
+    if(key === 'f12'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }
+
+    // Ctrl/Cmd + U = View Source
+    if(ctrl && key === 'u'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }
+
+    // Ctrl/Cmd + Shift + I/J/C = common DevTools shortcuts
+    if(ctrl && shift && (key === 'i' || key === 'j' || key === 'c')){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }
+
+    // Ctrl/Cmd + S = Save page
+    if(ctrl && key === 's'){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }
+
+    // Ctrl/Cmd + A/C/X when not editing a form field
+    if(ctrl && (key === 'a' || key === 'c' || key === 'x')){
+      var t = e.target;
+      var editable = t && (
+        t.tagName === 'INPUT' ||
+        t.tagName === 'TEXTAREA' ||
+        t.tagName === 'SELECT' ||
+        t.isContentEditable
+      );
+      if(!editable){
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+      }
+    }
+  }, true);
+
+  // Block common mouse-based developer/context actions.
+  document.addEventListener('mousedown', function(e){
+    if(e.button === 2){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  }, true);
+
+  // Best-effort DevTools detection. It does NOT provide real security.
+  var devtoolsWarned = false;
+  function checkDevTools(){
+    var threshold = 160;
+    var widthGap = window.outerWidth - window.innerWidth;
+    var heightGap = window.outerHeight - window.innerHeight;
+
+    if(widthGap > threshold || heightGap > threshold){
+      if(!devtoolsWarned){
+        devtoolsWarned = true;
+        try{
+          document.title = 'Attendance System';
+          if(typeof showToast === 'function'){
+            showToast('Developer Tools detected. Please close it.', 'error');
+          }
+        }catch(err){}
+      }
+    }else{
+      devtoolsWarned = false;
+    }
+  }
+  setInterval(checkDevTools, 1500);
+  window.addEventListener('resize', checkDevTools);
+
+  // Disable the legacy "javascript:" paste prompt only where supported.
+  try{
+    window.addEventListener('paste', function(e){
+      var t=e.target;
+      if(!(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))){
+        e.preventDefault();
+      }
+    }, true);
+  }catch(err){}
+})();
+</script>
+
 <div class="bg-blobs"><div class="blob"></div><div class="blob"></div><div class="blob"></div></div>
 <div class="toast-container" id="toastBox"></div>
 <div id="modalOverlay" style="display:none"></div>
