@@ -411,7 +411,56 @@ function collectBills(snap,pYear,pMonth){
     return result;
 }
 
-\nfunction isUserActiveForLogin(u){\n    return !!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);\n}\nfunction blockIfDeactivatedUser(){\n    if(currentUser && currentUser.role==='user' && !isUserActiveForLogin(currentUser)){\n        alert('এই DA ID Deactive করা হয়েছে। নতুন Bill/Entry দেওয়া যাবে না।');\n        return true;\n    }\n    return false;\n}\nfunction startDAStatusWatcher(){\n    if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}\n    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;\n    window.__daStatusWatcher=database.ref('Users/'+currentUser.id);\n    window.__daStatusWatcher.on('value',function(snap){\n        var u=snap.val(),active=isUserActiveForLogin(u);\n        currentUser.active=active;\n        currentUser.status=active?'active':'deactivated';\n        if(!active){\n            localStorage.removeItem('auth_user');\n            if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}\n            currentUser=null;\n            document.getElementById('dashboard_section').classList.add('hidden');\n            document.getElementById('login_section').classList.remove('hidden');\n            resetLoginUI();\n            setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');\n            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Bill/Entry বন্ধ।');\n        }else{\n            localStorage.setItem('auth_user',JSON.stringify(currentUser));\n        }\n    });\n}\nfunction validateSavedDA(){\n    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;\n    database.ref('Users/'+currentUser.id).once('value',function(s){\n        if(!isUserActiveForLogin(s.val())){\n            localStorage.removeItem('auth_user');\n            currentUser=null;\n            document.getElementById('dashboard_section').classList.add('hidden');\n            document.getElementById('login_section').classList.remove('hidden');\n            resetLoginUI();\n            setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');\n        }else{\n            startDAStatusWatcher();\n            showDashboard();\n        }\n    });\n}\n
+\nfunction isUserActiveForLogin(u){
+    return !!u && u.active!==false && u.deactivated!==true;
+}
+function blockIfDeactivatedUser(){
+    if(currentUser && currentUser.role==='user' && !isUserActiveForLogin(currentUser)){
+        alert('এই DA ID Deactive করা হয়েছে। নতুন Bill/Entry দেওয়া যাবে না।');
+        return true;
+    }
+    return false;
+}
+function startDAStatusWatcher(){
+    if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}
+    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;
+    window.__daStatusWatcher=database.ref('Users/'+currentUser.id);
+    window.__daStatusWatcher.on('value',function(snap){
+        if(!snap.exists()) return;
+        var u=snap.val(),active=isUserActiveForLogin(u);
+        currentUser.active=active;
+        currentUser.status=active?'active':'deactivated';
+        if(!active){
+            localStorage.removeItem('auth_user');
+            if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}
+            currentUser=null;
+            document.getElementById('dashboard_section').classList.add('hidden');
+            document.getElementById('login_section').classList.remove('hidden');
+            resetLoginUI();
+            setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');
+            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Bill/Entry বন্ধ।');
+        }else{
+            localStorage.setItem('auth_user',JSON.stringify(currentUser));
+        }
+    });
+}
+function validateSavedDA(){
+    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;
+    database.ref('Users/'+currentUser.id).once('value',function(s){
+        if(!s.exists()) return;
+        if(!isUserActiveForLogin(s.val())){
+            localStorage.removeItem('auth_user');
+            currentUser=null;
+            document.getElementById('dashboard_section').classList.add('hidden');
+            document.getElementById('login_section').classList.remove('hidden');
+            resetLoginUI();
+            setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');
+        }else{
+            startDAStatusWatcher();
+            showDashboard();
+        }
+    });
+}
 // ========== LOGIN ==========
 function setStatus(text,cls){var el=document.getElementById('w98_status');el.innerText=text;el.className='w98-status-text'+(cls?' '+cls:'');}
 function resetLoginUI(){
