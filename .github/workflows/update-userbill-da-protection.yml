@@ -9,106 +9,42 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Patch userbill.html through GitHub API
+      - name: Patch userbill.html
         uses: actions/github-script@v7
         with:
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-            const path = 'userbill.html';
-            const file = await github.rest.repos.getContent({owner, repo, path, ref:'main'});
-            let s = Buffer.from(file.data.content, 'base64').toString('utf8');
-            const original = s;
-
-            const helper = `
-function isUserActiveForLogin(u){
-    return !!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);
-}
-function blockIfDeactivatedUser(){
-    if(currentUser && currentUser.role==='user' && !isUserActiveForLogin(currentUser)){
-        alert('এই DA ID Deactive করা হয়েছে। নতুন Bill/Entry দেওয়া যাবে না।');
-        return true;
-    }
-    return false;
-}
-function validateCurrentUserStatus(callback){
-    if(!currentUser || currentUser.role!=='user' || !currentUser.id){ if(callback) callback(true); return; }
-    database.ref('Users/'+currentUser.id).once('value',function(snap){
-        var u=snap.val();
-        var active=isUserActiveForLogin(u);
-        currentUser.active=active;
-        currentUser.status=active?'active':'deactivated';
-        if(!active){
-            localStorage.removeItem('auth_user');
-            if(typeof showLogin==='function') showLogin();
-            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Entry বন্ধ।');
-        }else{
-            localStorage.setItem('auth_user',JSON.stringify(currentUser));
-        }
-        if(callback) callback(active);
-    });
-}
-`;
-
-            if(!s.includes('function blockIfDeactivatedUser()')){
-              const marker='// ========== LOGIN ==========';
-              if(!s.includes(marker)) throw new Error('LOGIN marker not found');
-              s=s.replace(marker, helper+'\n'+marker);
-            }
-
-            const loginNeedle = "    var d=lookedUpUser.data;\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে";
-            const loginReplacement = "    var d=lookedUpUser.data;\n\n    if(!isUserActiveForLogin(d)){\n        setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');\n        document.getElementById('login_password').value='';\n        alert('এই DA ID Deactive করা হয়েছে। Login করা যাবে না।');\n        return;\n    }\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে";
-            if(s.includes(loginNeedle) && !s.includes("Login বন্ধ")) s=s.replace(loginNeedle, loginReplacement);
-
-            s=s.replace(
-              "currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};",
-              "currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,active:true,status:'active'};"
-            );
-
-            const billRegex=/function\s+submitOrUpdateBill\s*\([^)]*\)\s*\{/;
-            if(billRegex.test(s) && !s.includes('if(blockIfDeactivatedUser()) return;')){
-              s=s.replace(billRegex, m=>m+'\n    if(blockIfDeactivatedUser()) return;');
-            }
-
-            const fresh="localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    showDashboard();";
-            if(s.includes(fresh)) s=s.replace(fresh,"localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    startDAStatusWatcher();\n    showDashboard();",1);
-
-            if(!s.includes('function startDAStatusWatcher()')){
-              const dbMarker='const database=firebase.database();';
-              const watcher=`
+            const owner=context.repo.owner, repo=context.repo.repo, path='userbill.html';
+            const f=await github.rest.repos.getContent({owner,repo,path,ref:'main'});
+            let s=Buffer.from(f.data.content,'base64').toString('utf8');
+            const old=s;
+            const helper=`
+function isUserActiveForLogin(u){return !!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);}
+function blockIfDeactivatedUser(){if(currentUser&&currentUser.role==='user'&&!isUserActiveForLogin(currentUser)){alert('এই DA ID Deactive করা হয়েছে। নতুন Bill/Entry দেওয়া যাবে না।');return true;}return false;}
 function startDAStatusWatcher(){
-    if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}
-    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;
-    window.__daStatusWatcher=database.ref('Users/'+currentUser.id);
-    window.__daStatusWatcher.on('value',function(snap){
-        var u=snap.val();
-        var active=isUserActiveForLogin(u);
-        currentUser.active=active;
-        currentUser.status=active?'active':'deactivated';
-        if(!active){
-            localStorage.removeItem('auth_user');
-            if(typeof showLogin==='function') showLogin();
-            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Bill/Entry বন্ধ।');
-        }else localStorage.setItem('auth_user',JSON.stringify(currentUser));
-    });
+ if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}
+ if(!currentUser||currentUser.role!=='user'||!currentUser.id)return;
+ window.__daStatusWatcher=database.ref('Users/'+currentUser.id);
+ window.__daStatusWatcher.on('value',function(snap){var u=snap.val(),active=isUserActiveForLogin(u);currentUser.active=active;currentUser.status=active?'active':'deactivated';if(!active){localStorage.removeItem('auth_user');if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}currentUser=null;document.getElementById('dashboard_section').classList.add('hidden');document.getElementById('login_section').classList.remove('hidden');resetLoginUI();setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Bill/Entry বন্ধ।');}else localStorage.setItem('auth_user',JSON.stringify(currentUser));});
 }
+function validateSavedDA(){if(!currentUser||currentUser.role!=='user'||!currentUser.id)return;database.ref('Users/'+currentUser.id).once('value',function(s){if(!isUserActiveForLogin(s.val())){localStorage.removeItem('auth_user');currentUser=null;document.getElementById('dashboard_section').classList.add('hidden');document.getElementById('login_section').classList.remove('hidden');resetLoginUI();setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');}else{startDAStatusWatcher();showDashboard();}});}
 `;
-              if(!s.includes(dbMarker)) throw new Error('database marker not found');
-              s=s.replace(dbMarker,dbMarker+'\n'+watcher,1);
-            }
-
-            if(s===original) throw new Error('No changes were made');
+            if(!s.includes('function isUserActiveForLogin'))s=s.replace('// ========== LOGIN ==========',helper+'\n// ========== LOGIN ==========');
+            const loginNeedle="    var d=lookedUpUser.data;\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে";
+            if(s.includes(loginNeedle)&&!s.includes("এই DA ID Deactive করা হয়েছে। Login বন্ধ"))s=s.replace(loginNeedle,"    var d=lookedUpUser.data;\n    if(!isUserActiveForLogin(d)){setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ.','err');document.getElementById('login_password').value='';alert('এই DA ID Deactive করা হয়েছে। Login করা যাবে না।');return;}\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে");
+            if(!s.includes('if(blockIfDeactivatedUser()) return;'))s=s.replace(/function submitOrUpdateBill\(statusType\)\{/,"function submitOrUpdateBill(statusType){\n    if(blockIfDeactivatedUser()) return;");
+            s=s.replace("currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};","currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,active:true,status:'active'};");
+            const init="if(currentUser.role === 'user') {\n                showDashboard();\n            } else {";
+            if(s.includes(init)&&!s.includes('validateSavedDA();'))s=s.replace(init,"if(currentUser.role === 'user') {\n                validateSavedDA();\n            } else {");
+            const loginShow="localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    showDashboard();";
+            if(s.includes(loginShow))s=s.replace(loginShow,"localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    startDAStatusWatcher();\n    showDashboard();");
+            if(s===old)throw new Error('No changes made');
             const content=Buffer.from(s,'utf8').toString('base64');
-            await github.rest.repos.createOrUpdateFileContents({
-              owner, repo, path, message:'Block deactivated DA login and bill entry', content,
-              sha:file.data.sha, branch:'main'
-            });
-            core.setOutput('updated','true');
-      - name: Remove temporary workflow
+            await github.rest.repos.createOrUpdateFileContents({owner,repo,path,message:'Block deactivated DA login and bill entry',content,sha:f.data.sha,branch:'main'});
+      - name: Remove workflow
         if: success()
         uses: actions/github-script@v7
         with:
           script: |
             const owner=context.repo.owner, repo=context.repo.repo, path='.github/workflows/update-userbill-da-protection.yml';
             const f=await github.rest.repos.getContent({owner,repo,path,ref:'main'});
-            await github.rest.repos.deleteFile({owner,repo,path,message:'Remove temporary userbill protection workflow',sha:f.data.sha,branch:'main'});
+            await github.rest.repos.deleteFile({owner,repo,path,message:'Remove temporary protection workflow',sha:f.data.sha,branch:'main'});
