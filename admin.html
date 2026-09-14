@@ -613,6 +613,7 @@
                                     <th>Phone</th>
                                     <th>Depot</th>
                                     <th>Role</th>
+                                    <th>Status</th>
                                     <th class="text-center">Action</th>
                                 </tr>
                             </thead>
@@ -765,6 +766,20 @@ function getDateParts(dateStr){
 
 function getBillDate(b){return b.submitDate||b.depDate||'';}
 
+function isUserActive(u){
+    if(!u)return false;
+    return !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);
+}
+
+function blockIfDeactivated(){
+    if(!currentUser || currentUser.role!=='user')return false;
+    if(currentUser._activeChecked===false){
+        alert('এই DA ID Deactive করা হয়েছে। নতুন Entry দেওয়া যাবে না।');
+        return true;
+    }
+    return false;
+}
+
 function isDateInMonth(dateStr,monthVal){
     if(!monthVal)return true;
     if(!dateStr)return false;
@@ -847,8 +862,12 @@ function showLookedUpUser(){
     roleEl.className='w98-role-tag w98-role-'+(d.role||'user');
     document.getElementById('w98_show_depot').innerText=d.depot||'—';
     document.getElementById('w98_user_card').classList.add('show');
-    document.getElementById('login_password').disabled=false;
-    document.getElementById('w98_login_btn').disabled=false;
+    var inactive = d.role==='user' && !isUserActive(d);
+    document.getElementById('login_password').disabled=inactive;
+    document.getElementById('w98_login_btn').disabled=inactive;
+    if(inactive){
+        setStatus('DA account is deactivated — Login not allowed','err');
+    }
     var frame=document.getElementById('w98_avatar_frame');
     if(d.photoUrl){frame.innerHTML='<img id="w98_avatar_icon" src="'+d.photoUrl+'" alt="">';}
     else{var iconCls=d.role==='superadmin'?'bi-shield-lock-fill':d.role==='admin'?'bi-person-gear':'bi-person-fill';frame.innerHTML='<i class="bi '+iconCls+'" id="w98_avatar_icon"></i>';}
@@ -862,6 +881,10 @@ function handleUnifiedLogin(){
     if(!lookedUpUser){setStatus('Enter a valid User ID first','err');return;}
     var pwd=document.getElementById('login_password').value;
     if(!pwd){setStatus('Enter password','err');document.getElementById('login_password').focus();return;}
+    if(lookedUpUser.data.role==='user' && !isUserActive(lookedUpUser.data)){
+        setStatus('This DA account is deactivated. Login not allowed.','err');
+        return;
+    }
     if(lookedUpUser.data.password!==pwd){
         setStatus('Wrong password! Try again.','err');
         document.getElementById('login_password').value='';
@@ -870,7 +893,7 @@ function handleUnifiedLogin(){
         return;
     }
     var d=lookedUpUser.data;
-    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};
+    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,_activeChecked:isUserActive(d)};
     localStorage.setItem('auth_user', JSON.stringify(currentUser));
     showDashboard();
 }
@@ -1286,7 +1309,10 @@ function loadUserList() {
             var key = c.key;
             var roleMap={'superadmin':'Super Admin','admin':'Admin','user':'User'};
             var tr=document.createElement('tr');
-            tr.innerHTML='<td>'+(u.userId||'-')+'</td><td>'+escHtml(u.name||'-')+'</td><td>'+(u.phone||'-')+'</td><td>'+(u.depot||'-')+'</td><td>'+(roleMap[u.role]||u.role||'-')+'</td><td class="text-center"><button class="btn btn-sm btn-warning" onclick="editUser(\''+key+'\')"><i class="bi bi-pencil"></i></button> <button class="btn btn-sm btn-danger" onclick="deleteUser(\''+key+'\')"><i class="bi bi-trash"></i></button></td>';
+            var active=isUserActive(u);
+            var statusBadge=active?'<span class="badge bg-success">Active</span>':'<span class="badge bg-danger">Deactive</span>';
+            var toggleBtn='<button class="btn btn-sm '+(active?'btn-danger':'btn-success')+'" title="'+(active?'Deactivate':'Reactivate')+'" onclick="toggleUserActive(\''+key+'\')"><i class="bi '+(active?'bi-person-x':'bi-person-check')+'"></i></button>';
+            tr.innerHTML='<td>'+(u.userId||'-')+'</td><td>'+escHtml(u.name||'-')+'</td><td>'+(u.phone||'-')+'</td><td>'+(u.depot||'-')+'</td><td>'+(roleMap[u.role]||u.role||'-')+'</td><td>'+statusBadge+'</td><td class="text-center"><button class="btn btn-sm btn-warning" onclick="editUser(\''+key+'\')"><i class="bi bi-pencil"></i></button> '+toggleBtn+' <button class="btn btn-sm btn-danger" onclick="deleteUser(\''+key+'\')"><i class="bi bi-trash"></i></button></td>';
             tbody.appendChild(tr);
         });
     });
@@ -1336,6 +1362,31 @@ function editUser(id){
         var newUserTabEl = document.getElementById('new-user-tab');
         if(newUserTabEl){ var tab = new bootstrap.Tab(newUserTabEl); tab.show(); }
         window.scrollTo({top:0, behavior:'smooth'});
+    });
+}
+
+function toggleUserActive(id){
+    if(!currentUser || (currentUser.role!=='admin' && currentUser.role!=='superadmin'))return;
+    database.ref('Users/'+id).once('value',function(snap){
+        var u=snap.val();
+        if(!u)return;
+        var active=isUserActive(u);
+        var next=!active;
+        var action=next?'Re-Activate':'Deactive';
+        if(!confirm(action+' '+(u.name||'this user')+'?'))return;
+        var update={active:next,status:next?'active':'deactivated'};
+        if(!next){
+            update.deactivatedAt=firebase.database.ServerValue.TIMESTAMP;
+            update.deactivatedBy=currentUser.name||'';
+        }else{
+            update.reactivatedAt=firebase.database.ServerValue.TIMESTAMP;
+            update.reactivatedBy=currentUser.name||'';
+        }
+        database.ref('Users/'+id).update(update).then(function(){
+            alert(next?'User Re-Activated Successfully!':'User Deactivated Successfully!\nOld Bills/Attendance will remain available.');
+            loadUserList();
+            loadDAListForFilters();
+        }).catch(function(e){alert('Error: '+e.message);});
     });
 }
 
@@ -1404,6 +1455,7 @@ function updateEntryFormCostPercent(){var inv=parseFloat(document.getElementById
 function prepareBillEntryForm(){if(currentUser.role!=='user')return;document.getElementById('form_da_name').value=currentUser.name;document.getElementById('form_depot').value=currentUser.depot;var today=new Date().toISOString().split('T')[0];document.getElementById('form_dep_date').value=today;document.getElementById('form_ret_date').value=today;document.getElementById('form_submit_date').value=today;document.getElementById('expense_table_body').innerHTML='';if(!editingBillId)loadLocalDraft();}
 
 function submitOrUpdateBill(statusType){
+    if(blockIfDeactivated())return;
     var targetDaName,targetDepot;
     if(editingBillId&&editingBillYear&&editingBillMonth&&editingBillDaName){targetDaName=editingBillDaName;targetDepot=document.getElementById('form_depot').value||'Kushtia';}
     else{targetDaName=currentUser.name;targetDepot=currentUser.depot||'Kushtia';}
@@ -2217,6 +2269,7 @@ function saveNewUser(){
     var username=document.getElementById('new_user_username').value.trim();var password=document.getElementById('new_user_pass').value.trim();
     var role=document.getElementById('new_user_role').value;if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
     var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
+    if(!editingUserId)userData.active=true;
     if(userPhotoBase64)userData.photoUrl=userPhotoBase64;
     
     if(editingUserId){
@@ -2250,7 +2303,24 @@ document.addEventListener('DOMContentLoaded',function(){
     if(savedUser){
         try {
             currentUser = JSON.parse(savedUser);
-            showDashboard();
+            if(currentUser.role==='user'){
+                database.ref('Users/'+currentUser.id).once('value',function(snap){
+                    var u=snap.val();
+                    if(!u || !isUserActive(u)){
+                        localStorage.removeItem('auth_user');
+                        currentUser=null;
+                        document.getElementById('login_section').classList.remove('hidden');
+                        document.getElementById('dashboard_section').classList.add('hidden');
+                        setStatus('DA account is deactivated — Login not allowed','err');
+                        return;
+                    }
+                    currentUser._activeChecked=true;
+                    localStorage.setItem('auth_user',JSON.stringify(currentUser));
+                    showDashboard();
+                });
+            }else{
+                showDashboard();
+            }
         } catch(e){
             localStorage.removeItem('auth_user');
         }
