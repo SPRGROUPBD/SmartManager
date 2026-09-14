@@ -30,16 +30,15 @@ function validateSavedDA(){if(!currentUser||currentUser.role!=='user'||!currentU
 `;
             if(!s.includes('function isUserActiveForLogin'))s=s.replace('// ========== LOGIN ==========',helper+'\n// ========== LOGIN ==========');
             const loginNeedle="    var d=lookedUpUser.data;\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে";
-            if(s.includes(loginNeedle)&&!s.includes("এই DA ID Deactive করা হয়েছে। Login বন্ধ"))s=s.replace(loginNeedle,"    var d=lookedUpUser.data;\n    if(!isUserActiveForLogin(d)){setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ.','err');document.getElementById('login_password').value='';alert('এই DA ID Deactive করা হয়েছে। Login করা যাবে না।');return;}\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে");
+            if(s.includes(loginNeedle)&&!s.includes("if(!isUserActiveForLogin(d))"))s=s.replace(loginNeedle,"    var d=lookedUpUser.data;\n    if(!isUserActiveForLogin(d)){setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ.','err');document.getElementById('login_password').value='';alert('এই DA ID Deactive করা হয়েছে। Login করা যাবে না।');return;}\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে");
             if(!s.includes('if(blockIfDeactivatedUser()) return;'))s=s.replace(/function submitOrUpdateBill\(statusType\)\{/,"function submitOrUpdateBill(statusType){\n    if(blockIfDeactivatedUser()) return;");
             s=s.replace("currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};","currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,active:true,status:'active'};");
             const init="if(currentUser.role === 'user') {\n                showDashboard();\n            } else {";
             if(s.includes(init)&&!s.includes('validateSavedDA();'))s=s.replace(init,"if(currentUser.role === 'user') {\n                validateSavedDA();\n            } else {");
             const loginShow="localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    showDashboard();";
-            if(s.includes(loginShow))s=s.replace(loginShow,"localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    startDAStatusWatcher();\n    showDashboard();");
+            if(s.includes(loginShow)&&!s.includes('startDAStatusWatcher();'))s=s.replace(loginShow,"localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    startDAStatusWatcher();\n    showDashboard();");
             if(s===old)throw new Error('No changes made');
-            const content=Buffer.from(s,'utf8').toString('base64');
-            await github.rest.repos.createOrUpdateFileContents({owner,repo,path,message:'Block deactivated DA login and bill entry',content,sha:f.data.sha,branch:'main'});
+            await github.rest.repos.createOrUpdateFileContents({owner,repo,path,message:'Apply DA deactivation protection to userbill',content:Buffer.from(s,'utf8').toString('base64'),sha:f.data.sha,branch:'main'});
       - name: Remove workflow
         if: success()
         uses: actions/github-script@v7
@@ -48,3 +47,4 @@ function validateSavedDA(){if(!currentUser||currentUser.role!=='user'||!currentU
             const owner=context.repo.owner, repo=context.repo.repo, path='.github/workflows/update-userbill-da-protection.yml';
             const f=await github.rest.repos.getContent({owner,repo,path,ref:'main'});
             await github.rest.repos.deleteFile({owner,repo,path,message:'Remove temporary protection workflow',sha:f.data.sha,branch:'main'});
+# force trigger 2026-09-14
