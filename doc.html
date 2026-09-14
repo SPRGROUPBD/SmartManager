@@ -120,7 +120,7 @@
             .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; height: 100% !important; line-height: 20px !important;}
             body.force-print .main-content > .top-bar,
             body.force-print .main-content > .print-area { display: none !important; }
-            body.force-print #hiddenPrintArea { display: block !important; padding: 20px; }
+            body.force-print #hiddenPrintArea { display: block !important; padding: 0 !important; }
         }
         .input-focus:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.15)}
         table:not(.po-print-table):not(.ps-print-table):not(.label-card-table){border-collapse:collapse}
@@ -262,6 +262,12 @@
                         <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Chamber *</label><input type="text" id="docChamber" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Mobile *</label><input type="text" id="docMobile" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"></div>
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Territory *</label><input type="text" id="docTerritory" list="territoryList" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none"><datalist id="territoryList"></datalist></div>
+                        
+                        <!-- নতুন ব্যাংক ফিল্ড যোগ করা হলো -->
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">Bank Name</label><input type="text" id="docBankName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="e.g. IBBL"></div>
+                        <div><label class="block text-xs font-semibold text-slate-500 mb-1">AC No</label><input type="text" id="docAcNo" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="Account Number"></div>
+                        <div class="md:col-span-2"><label class="block text-xs font-semibold text-slate-500 mb-1">Branch Name</label><input type="text" id="docBranchName" class="input-focus w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm outline-none" placeholder="Bank Branch"></div>
+                        
                         <div><label class="block text-xs font-semibold text-slate-500 mb-1">Amount *</label><div class="relative"><span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">৳</span><input type="number" id="docAmount" min="0" class="input-focus w-full border border-slate-300 rounded-lg pl-8 pr-4 py-2.5 text-sm outline-none"></div></div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-500 mb-1">MPO (Search & Transfer)</label>
@@ -290,7 +296,7 @@
                             <a href="#" onclick="showPage('add-doctor');return false;" class="btn-primary text-white px-4 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-plus mr-1"></i> Add</a>
                         </div>
                     </div>
-                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">Doc ID</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Degree</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">MPO</th><th class="text-center px-4 py-3">Active</th><th class="text-center px-4 py-3">Actions</th></tr></thead><tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="doctorEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No doctors</div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3 whitespace-nowrap">#</th><th class="text-left px-4 py-3 whitespace-nowrap">Doc ID</th><th class="text-left px-4 py-3 whitespace-nowrap">Name</th><th class="text-left px-4 py-3 whitespace-nowrap">Degree</th><th class="text-left px-4 py-3 whitespace-nowrap">Specialty</th><th class="text-left px-4 py-3 whitespace-nowrap">Territory</th><th class="text-left px-4 py-3 whitespace-nowrap">Chamber</th><th class="text-left px-4 py-3 whitespace-nowrap">Mobile</th><th class="text-left px-4 py-3 whitespace-nowrap">Amount</th><th class="text-left px-4 py-3 whitespace-nowrap">Bank Name</th><th class="text-left px-4 py-3 whitespace-nowrap">AC No</th><th class="text-left px-4 py-3 whitespace-nowrap">Branch Name</th><th class="text-left px-4 py-3 whitespace-nowrap">MPO</th><th class="text-center px-4 py-3 whitespace-nowrap">Active</th><th class="text-center px-4 py-3 whitespace-nowrap">Actions</th></tr></thead><tbody id="doctorListBody" class="divide-y divide-slate-100"></tbody></table></div><div id="doctorEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No doctors</div>
                 </div>
             </div>
 
@@ -768,25 +774,14 @@
         onValue(ref(db,'mpos'),snap=>{mposCache=snap.val()||{};updateTerritoryDatalist();refreshCurrentPage();});
         onValue(ref(db,'honorarium'),snap=>{honorariumCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'mpoSales'),snap=>{mpoSalesCache=snap.val()||{};refreshCurrentPage();});
-        onValue(ref(db,'areas'),snap=>{
-            areasCache = snap.val()||[];
-            areasCache.sort((a,b) => a.localeCompare(b));
-            populateAreaDropdowns();
-            refreshCurrentPage();
-        });
-        onValue(ref(db,'settings/signatures'),snap=>{
-            signaturesCache = snap.val() || {};
-            refreshCurrentPage();
-        });
+        onValue(ref(db,'areas'),snap=>{areasCache = snap.val()||[];areasCache.sort((a,b) => a.localeCompare(b));populateAreaDropdowns();refreshCurrentPage();});
+        onValue(ref(db,'settings/signatures'),snap=>{signaturesCache = snap.val() || {};refreshCurrentPage();});
         onValue(ref(db,'settings'),snap=>{
             const val = snap.val();
             if(val) {
                 if (val.defaultType) settingsCache.defaultType = val.defaultType;
-                if(Array.isArray(val.commissionSlabs)) {
-                    settingsCache.commissionSlabs = val.commissionSlabs;
-                } else if (val.commissionSlabs) {
-                    settingsCache.commissionSlabs = Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0}));
-                }
+                if(Array.isArray(val.commissionSlabs)) settingsCache.commissionSlabs = val.commissionSlabs;
+                else if (val.commissionSlabs) settingsCache.commissionSlabs = Object.entries(val.commissionSlabs).map(([k,v])=>({type:k, amount:0, commission:v, vat:0}));
             }
             populatePOTypeDropdown();
             refreshCurrentPage();
@@ -830,11 +825,7 @@
             switch(pageId){
                 case'dashboard':loadDashboard();break;
                 case'doctor-list':loadDoctors();break;
-                case'add-doctor':
-                    if(!document.getElementById('editDocId').value){
-                        document.getElementById('docId').value=generateNextDoctorId();
-                    }
-                    break;
+                case'add-doctor':if(!document.getElementById('editDocId').value){document.getElementById('docId').value=generateNextDoctorId();}break;
                 case'mpo-list':loadMPOs();break;
                 case'mpo-sales':loadMPOSalesTable();break;
                 case'pay-order-entry':populatePOEntryDropdowns();loadPOEntriesList();break;
@@ -867,6 +858,9 @@
             document.getElementById('docMobile').value=d.mobile||'';
             document.getElementById('docTerritory').value=d.territory||'';
             document.getElementById('docAmount').value=d.amount||'';
+            document.getElementById('docBankName').value=d.bankName||'';
+            document.getElementById('docAcNo').value=d.acNo||'';
+            document.getElementById('docBranchName').value=d.branchName||'';
             document.getElementById('docAssignedMpo').value=d.assignedMpoId||'';
             if(d.assignedMpoId && mposCache[d.assignedMpoId]){
                 const mpo = mposCache[d.assignedMpoId];
@@ -892,16 +886,30 @@
             document.getElementById('doctorFormTitle').innerHTML='<i class="fas fa-user-doctor text-brand-600"></i> Add Doctor';
             document.getElementById('btnSaveDoctor').className='btn-primary text-white px-6 py-2.5 rounded-lg text-sm font-semibold';
             document.getElementById('btnSaveDoctor').innerHTML='<i class="fas fa-save mr-1"></i> Save';
-            document.getElementById('btnCancelEdit').classList.remove('hidden');
+            document.getElementById('btnCancelEdit').classList.add('hidden');
             document.getElementById('doctorFormCard').classList.remove('ring-2','ring-blue-500','ring-offset-2');
             document.getElementById('docId').value=generateNextDoctorId();
         }
         function cancelEditDoctor(){exitEditMode();resetDoctorForm();showPage('doctor-list');}
         window.cancelEditDoctor=cancelEditDoctor;
         function saveDoctor(){
-            const editId=document.getElementById('editDocId').value,doctorId=document.getElementById('docId').value,name=document.getElementById('docName').value.trim(),degree=document.getElementById('docDegree').value.trim(),specialty=document.getElementById('docSpecialty').value.trim(),chamber=document.getElementById('docChamber').value.trim(),mobile=document.getElementById('docMobile').value.trim(),territory=document.getElementById('docTerritory').value.trim(),amount=parseFloat(document.getElementById('docAmount').value)||0,assignedMpoId=document.getElementById('docAssignedMpo').value;
+            const editId=document.getElementById('editDocId').value,
+            doctorId=document.getElementById('docId').value,
+            name=document.getElementById('docName').value.trim(),
+            degree=document.getElementById('docDegree').value.trim(),
+            specialty=document.getElementById('docSpecialty').value.trim(),
+            chamber=document.getElementById('docChamber').value.trim(),
+            mobile=document.getElementById('docMobile').value.trim(),
+            territory=document.getElementById('docTerritory').value.trim(),
+            amount=parseFloat(document.getElementById('docAmount').value)||0,
+            bankName=document.getElementById('docBankName').value.trim(),
+            acNo=document.getElementById('docAcNo').value.trim(),
+            branchName=document.getElementById('docBranchName').value.trim(),
+            assignedMpoId=document.getElementById('docAssignedMpo').value;
+            
             if(!name||!degree||!specialty||!chamber||!mobile||!territory){showToast('সব ফিল্ড পূরণ করুন','error');return;}
-            const data={doctorId,name,degree,specialty,chamber,mobile,territory,amount,assignedMpoId,active:docActiveTemp};
+            
+            const data={doctorId,name,degree,specialty,chamber,mobile,territory,amount,bankName,acNo,branchName,assignedMpoId,active:docActiveTemp};
             if(editId){
                 const oldDoc = doctorsCache[editId] || {};
                 const oldMpoId = oldDoc.assignedMpoId || '';
@@ -919,7 +927,7 @@
         }
         window.saveDoctor=saveDoctor;
         function resetDoctorForm(){
-            ['docName','docDegree','docSpecialty','docChamber','docMobile','docTerritory','docAmount'].forEach(id=>document.getElementById(id).value='');
+            ['docName','docDegree','docSpecialty','docChamber','docMobile','docTerritory','docAmount','docBankName','docAcNo','docBranchName'].forEach(id=>document.getElementById(id).value='');
             document.getElementById('docAssignedMpo').value='';
             document.getElementById('docAssignedMpoSearch').value='';
             docActiveTemp=true;
@@ -938,11 +946,7 @@
             const term = (document.getElementById('doctorSearchInput')?.value || '').toLowerCase();
             let filtered = en;
             if(term) {
-                filtered = en.filter(([id, d]) => 
-                    (d.name && d.name.toLowerCase().includes(term)) || 
-                    (d.doctorId && d.doctorId.toLowerCase().includes(term)) ||
-                    (d.specialty && d.specialty.toLowerCase().includes(term))
-                );
+                filtered = en.filter(([id, d]) => (d.name && d.name.toLowerCase().includes(term)) || (d.doctorId && d.doctorId.toLowerCase().includes(term)) || (d.specialty && d.specialty.toLowerCase().includes(term)));
             }
             if(!filtered.length){b.innerHTML='';e.classList.remove('hidden');e.textContent='No matching doctors';return;}
             e.textContent='No doctors';
@@ -950,53 +954,67 @@
             b.innerHTML=filtered.map(([id,d],i)=>{
                 const isActive=d.active!==false;
                 return`<tr class="table-row ${isActive?'':'doc-inactive'}">
-                    <td class="px-4 py-3 text-slate-400 text-xs">${i+1}</td>
-                    <td class="px-4 py-3"><code class="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-0.5 rounded">${d.doctorId||'-'}</code></td>
-                    <td class="px-4 py-3 font-semibold">${d.name}</td>
-                    <td class="px-4 py-3 text-xs">${d.degree}</td>
-                    <td class="px-4 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${d.territory}</span></td>
-                    <td class="px-4 py-3 font-semibold text-brand-700">${formatBDT(d.amount||0)}</td>
-                    <td class="px-4 py-3">${d.assignedMpoId&&mposCache[d.assignedMpoId]?`<span class="mpo-badge">${mposCache[d.assignedMpoId].name}</span>`:'<span class="mpo-badge-none">None</span>'}</td>
-                    <td class="px-4 py-3 text-center"><div class="toggle-track ${isActive?'on':''}" onclick="toggleDoctorActive('${id}')" style="margin:0 auto"><div class="toggle-thumb"></div></div></td>
-                    <td class="px-4 py-3 text-center"><button onclick="enterEditMode('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="requestDelete('${id}','doctor')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button></td>
+                    <td class="px-4 py-3 text-slate-400 text-xs whitespace-nowrap">${i+1}</td>
+                    <td class="px-4 py-3 whitespace-nowrap"><code class="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-0.5 rounded">${d.doctorId||'-'}</code></td>
+                    <td class="px-4 py-3 font-semibold whitespace-nowrap">${d.name}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.degree}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.specialty||'-'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${d.territory}</span></td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.chamber||'-'}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.mobile||'-'}</td>
+                    <td class="px-4 py-3 font-semibold text-brand-700 whitespace-nowrap">${formatBDT(d.amount||0)}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.bankName||'-'}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.acNo||'-'}</td>
+                    <td class="px-4 py-3 text-xs whitespace-nowrap">${d.branchName||'-'}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${d.assignedMpoId&&mposCache[d.assignedMpoId]?`<span class="mpo-badge">${mposCache[d.assignedMpoId].name}</span>`:'<span class="mpo-badge-none">None</span>'}</td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap"><div class="toggle-track ${isActive?'on':''}" onclick="toggleDoctorActive('${id}')" style="margin:0 auto"><div class="toggle-thumb"></div></div></td>
+                    <td class="px-4 py-3 text-center whitespace-nowrap"><button onclick="enterEditMode('${id}')" class="text-blue-500 hover:text-blue-700 mr-2" title="Edit"><i class="fas fa-edit"></i></button><button onclick="requestDelete('${id}','doctor')" class="text-red-400 hover:text-red-600" title="Delete"><i class="fas fa-trash"></i></button></td>
                 </tr>`;
             }).join('');
         }
         function printDoctorList() {
-            let html = `<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1100px;margin:0 auto;font-size:14px;">`;
-            html += `<div style="text-align:center;margin-bottom:15px;">
-                        <h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1>
-                        <p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
-                        <p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
+            let html = `<div style="font-family:'Inter',sans-serif;color:#000;width:100%;font-size:10px;">`;
+            html += `<div style="text-align:center;margin-bottom:10px;">
+                        <h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1>
+                        <p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
+                        <p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
                      </div>
-                     <div style="text-align:center;margin-bottom:15px;">
-                        <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor List</h2>
+                     <div style="text-align:center;margin-bottom:10px;">
+                        <h2 style="font-size:13px;font-weight:700;text-decoration:underline;margin:0;">Doctor List</h2>
                      </div>`;
             const en = Object.entries(doctorsCache);
             en.sort((a,b) => (a[1].name||'').localeCompare(b[1].name||''));
-            html += `<table class="po-print-table"><thead><tr>
-                        <th style="padding:10px 5px;">SL</th>
-                        <th style="padding:10px 5px;">Doc ID</th>
-                        <th style="padding:10px 5px;">Name</th>
-                        <th style="padding:10px 5px;">Degree</th>
-                        <th style="padding:10px 5px;">Specialty</th>
-                        <th style="padding:10px 5px;">Territory</th>
-                        <th style="padding:10px 5px;">Chamber</th>
-                        <th style="padding:10px 5px;">Mobile</th>
-                        <th style="padding:10px 5px;">MPO</th>
+            html += `<table class="po-print-table doctor-list-print" style="font-size:10px; width:100%;"><thead><tr>
+                        <th style="padding:3px 4px;white-space:nowrap;">SL</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Doc ID</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Name</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Degree</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Specialty</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Territory</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Chamber</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Mobile</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Amount</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Bank Name</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">AC No</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">Branch Name</th>
+                        <th style="padding:3px 4px;white-space:nowrap;">MPO</th>
                      </tr></thead><tbody>`;
             en.forEach(([id, d], i) => {
                 const mpo = d.assignedMpoId && mposCache[d.assignedMpoId] ? mposCache[d.assignedMpoId].name : '-';
                 html += `<tr>
-                            <td style="text-align:center;">${i+1}</td>
-                            <td style="font-weight:600;">${d.doctorId||'-'}</td>
-                            <td style="font-weight:600;">${d.name||'-'}</td>
-                            <td>${d.degree||'-'}</td>
-                            <td>${d.specialty||'-'}</td>
-                            <td>${d.territory||'-'}</td>
-                            <td>${d.chamber||'-'}</td>
-                            <td>${d.mobile||'-'}</td>
-                            <td>${mpo}</td>
+                            <td style="text-align:center;white-space:nowrap;padding:3px 4px;">${i+1}</td>
+                            <td style="font-weight:600;white-space:nowrap;padding:3px 4px;">${d.doctorId||'-'}</td>
+                            <td style="font-weight:600;white-space:nowrap;padding:3px 4px;">${d.name||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.degree||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.specialty||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.territory||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.chamber||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.mobile||'-'}</td>
+                            <td style="text-align:right;white-space:nowrap;padding:3px 4px;">${Number(d.amount||0).toLocaleString()}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.bankName||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.acNo||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${d.branchName||'-'}</td>
+                            <td style="white-space:nowrap;padding:3px 4px;">${mpo}</td>
                          </tr>`;
             });
             html += `</tbody></table></div>`;
@@ -1004,11 +1022,23 @@
             area.innerHTML = html;
             area.classList.remove('hidden');
             document.body.classList.add('force-print');
-            printAs('landscape');
+            
+            const styleEl = document.getElementById('dynamicPrintStyle');
+            styleEl.textContent = `
+                @media print { 
+                    @page { size: A4 landscape; margin: 5mm; } 
+                    body.force-print #hiddenPrintArea { padding: 0 !important; margin: 0 !important; } 
+                    .doctor-list-print { font-size: 10px !important; line-height: 15px !important; }
+                    .doctor-list-print td, .doctor-list-print th { padding: 3px 4px !important; white-space: nowrap !important; }
+                    .doctor-list-print tr { page-break-inside: avoid; }
+                }
+            `;
+            window.print();
             setTimeout(() => {
                 area.classList.add('hidden');
                 area.innerHTML = '';
                 document.body.classList.remove('force-print');
+                styleEl.textContent = '';
             }, 500);
         }
         window.printDoctorList = printDoctorList;
@@ -1024,14 +1054,8 @@
                 showToast(newActive ? 'MPO Activated' : 'MPO Deactivated & Doctors Cascaded', newActive ? 'success' : 'info');
                 if (!newActive) {
                     const updates = {};
-                    Object.entries(doctorsCache).forEach(([docId, d]) => {
-                        if (d.assignedMpoId === id) {
-                            updates['doctors/'+docId+'/active'] = false;
-                        }
-                    });
-                    if(Object.keys(updates).length > 0) {
-                        update(ref(db), updates).catch(err => showToast('Doctor cascade failed: ' + err.message, 'error'));
-                    }
+                    Object.entries(doctorsCache).forEach(([docId, d]) => { if (d.assignedMpoId === id) { updates['doctors/'+docId+'/active'] = false; }});
+                    if(Object.keys(updates).length > 0) { update(ref(db), updates).catch(err => showToast('Doctor cascade failed: ' + err.message, 'error')); }
                 }
             }).catch(err => showToast('Error: ' + err.message, 'error'));
         }
@@ -1043,11 +1067,7 @@
             const term = (document.getElementById('mpoSearchInput')?.value || '').toLowerCase();
             let filtered = en;
             if(term) {
-                filtered = en.filter(([id, m]) => 
-                    (m.name && m.name.toLowerCase().includes(term)) || 
-                    (m.employeeId && m.employeeId.toLowerCase().includes(term)) ||
-                    (m.area && m.area.toLowerCase().includes(term))
-                );
+                filtered = en.filter(([id, m]) => (m.name && m.name.toLowerCase().includes(term)) || (m.employeeId && m.employeeId.toLowerCase().includes(term)) || (m.area && m.area.toLowerCase().includes(term)));
             }
             if(!filtered.length){b.innerHTML='';e.classList.remove('hidden');e.textContent='No matching MPOs';return;}
             e.textContent='No MPOs';
@@ -1099,15 +1119,9 @@
             const input = document.getElementById('newAreaInput');
             const newArea = input.value.trim();
             if (!newArea) { showToast('Area নাম লিখুন','error'); return; }
-            if (areasCache.some(a => a.toLowerCase() === newArea.toLowerCase())) {
-                showToast('এই Area আগে থেকেই আছে','error'); return;
-            }
+            if (areasCache.some(a => a.toLowerCase() === newArea.toLowerCase())) { showToast('এই Area আগে থেকেই আছে','error'); return; }
             const updatedAreas = [...areasCache, newArea].sort((a,b) => a.localeCompare(b));
-            set(ref(db, 'areas'), updatedAreas).then(() => {
-                showToast('Area যোগ হয়েছে');
-                input.value = '';
-                input.focus();
-            }).catch(err => showToast('সমস্যা: ' + err.message, 'error'));
+            set(ref(db, 'areas'), updatedAreas).then(() => { showToast('Area যোগ হয়েছে'); input.value = ''; input.focus(); }).catch(err => showToast('সমস্যা: ' + err.message, 'error'));
         }
         window.addNewArea = addNewArea;
         function openSignatureSettings() {
@@ -1135,11 +1149,7 @@
         function handleSigUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 100000) { 
-                showToast('Image too large! Max 100KB allowed for cloud sync.', 'error');
-                e.target.value = '';
-                return;
-            }
+            if (file.size > 100000) { showToast('Image too large! Max 100KB allowed for cloud sync.', 'error'); e.target.value = ''; return; }
             const reader = new FileReader();
             const label = e.target.dataset.label;
             const sigKey = 'sig_' + label.replace(/\s/g, '_');
@@ -1153,9 +1163,7 @@
                         if (!btnContainer.querySelector('button[title="Delete Signature"]')) {
                             btnContainer.insertAdjacentHTML('beforeend', `<button onclick="deleteSignature('${label}')" class="text-red-400 hover:text-red-600 text-sm whitespace-nowrap" title="Delete Signature"><i class="fas fa-trash"></i></button>`);
                         }
-                        if (previewDiv) {
-                            previewDiv.innerHTML = `<img src="${base64}" class="h-12 border rounded bg-slate-50 p-1">`;
-                        }
+                        if (previewDiv) { previewDiv.innerHTML = `<img src="${base64}" class="h-12 border rounded bg-slate-50 p-1">`; }
                     })
                     .catch(err => showToast('Firebase error: ' + err.message, 'error'));
             };
@@ -1184,10 +1192,7 @@
             const comm = parseFloat(element.value) || 0;
             const vat = (comm * 0.15).toFixed(2);
             const row = element.closest('.slab-row');
-            if(row) {
-                const vatInput = row.querySelector('.slab-vat');
-                if(vatInput) vatInput.value = vat;
-            }
+            if(row) { const vatInput = row.querySelector('.slab-vat'); if(vatInput) vatInput.value = vat; }
         }
         window.calculateVAT = calculateVAT;
         function openSlabSettings() {
@@ -1265,20 +1270,9 @@
         function saveQualifiedSalesSettings() {
             const currentMonth = parseFloat(document.getElementById('qualCurrentMonth').value) || 0;
             const nextMonth = parseFloat(document.getElementById('qualNextMonth').value) || 0;
-            if (currentMonth < 0 || nextMonth < 0) {
-                showToast('Amount 0 বা তার বেশি হতে হবে', 'error');
-                return;
-            }
-            if (nextMonth < currentMonth) {
-                showToast('Next Month Amount সাধারণত Current Month এর চেয়ে বেশি হয়। তবে সেভ করা হলো।', 'info');
-            }
-            update(ref(db, 'settings/qualifiedSales'), {
-                currentMonth: currentMonth,
-                nextMonth: nextMonth
-            }).then(() => {
-                showToast('Qualified Sales Settings সেভ হয়েছে');
-                closeModal('modalQualifiedSalesSettings');
-            }).catch(err => showToast('Error: ' + err.message, 'error'));
+            if (currentMonth < 0 || nextMonth < 0) { showToast('Amount 0 বা তার বেশি হতে হবে', 'error'); return; }
+            if (nextMonth < currentMonth) { showToast('Next Month Amount সাধারণত Current Month এর চেয়ে বেশি হয়। তবে সেভ করা হলো।', 'info'); }
+            update(ref(db, 'settings/qualifiedSales'), { currentMonth: currentMonth, nextMonth: nextMonth }).then(() => { showToast('Qualified Sales Settings সেভ হয়েছে'); closeModal('modalQualifiedSalesSettings'); }).catch(err => showToast('Error: ' + err.message, 'error'));
         }
         window.saveQualifiedSalesSettings = saveQualifiedSalesSettings;
         function loadMPOSalesTable(){
@@ -1327,11 +1321,7 @@
             const editId = document.getElementById('editPOId').value;
             const currentVal = editId ? sel.value : (settingsCache.defaultType || uniqueTypes[0]);
             sel.innerHTML = uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
-            if (uniqueTypes.includes(currentVal)) {
-                sel.value = currentVal;
-            } else {
-                sel.value = uniqueTypes[0];
-            }
+            if (uniqueTypes.includes(currentVal)) { sel.value = currentVal; } else { sel.value = uniqueTypes[0]; }
             if(rptSel) {
                 const rptVal = rptSel.value;
                 rptSel.innerHTML = '<option value="">All</option>' + uniqueTypes.map(t => `<option value="${t}">${t}</option>`).join('');
@@ -1381,14 +1371,10 @@
                         firstItem.click();
                     }
                 }
-                if (e.key === 'Escape') {
-                    dropdown.classList.add('hidden');
-                }
+                if (e.key === 'Escape') { dropdown.classList.add('hidden'); }
             });
             document.addEventListener('click', (e) => {
-                if (wrapper && !wrapper.contains(e.target)) {
-                    dropdown.classList.add('hidden');
-                }
+                if (wrapper && !wrapper.contains(e.target)) { dropdown.classList.add('hidden'); }
             });
         }
         window.setupDoctorSearch = setupDoctorSearch;
@@ -1403,9 +1389,7 @@
                 if (!isMPOQualified(month, historicalMpoId)) return false;
                 const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month && !h.isCancelled);
                 if (hasEntry) {
-                    if (editId && honorariumCache[editId] && honorariumCache[editId].doctorId === id) {
-                        return true;
-                    }
+                    if (editId && honorariumCache[editId] && honorariumCache[editId].doctorId === id) { return true; }
                     return false; 
                 }
                 return true;
@@ -1413,9 +1397,7 @@
             const filtered = activeDocs.filter(([id, d]) => {
                 if (!searchTerm) return true;
                 const term = searchTerm.toLowerCase();
-                return (d.name && d.name.toLowerCase().includes(term)) || 
-                       (d.specialty && d.specialty.toLowerCase().includes(term)) ||
-                       (d.doctorId && d.doctorId.toLowerCase().includes(term));
+                return (d.name && d.name.toLowerCase().includes(term)) || (d.specialty && d.specialty.toLowerCase().includes(term)) || (d.doctorId && d.doctorId.toLowerCase().includes(term));
             });
             if (filtered.length === 0) {
                 dropdown.innerHTML = '<div class="doctor-search-item" style="cursor:default;color:#94a3b8;">No doctors found or already paid</div>';
@@ -1453,18 +1435,12 @@
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     const firstItem = dropdown.querySelector('.doctor-search-item');
-                    if (firstItem && !dropdown.classList.contains('hidden')) {
-                        firstItem.click();
-                    }
+                    if (firstItem && !dropdown.classList.contains('hidden')) { firstItem.click(); }
                 }
-                if (e.key === 'Escape') {
-                    dropdown.classList.add('hidden');
-                }
+                if (e.key === 'Escape') { dropdown.classList.add('hidden'); }
             });
             document.addEventListener('click', (e) => {
-                if (wrapper && !wrapper.contains(e.target)) {
-                    dropdown.classList.add('hidden');
-                }
+                if (wrapper && !wrapper.contains(e.target)) { dropdown.classList.add('hidden'); }
             });
         }
         window.setupMPOSearch = setupMPOSearch;
@@ -1479,9 +1455,7 @@
             const filtered = mpoEntries.filter(([id, m]) => {
                 if (!searchTerm) return true;
                 const term = searchTerm.toLowerCase();
-                return (m.name && m.name.toLowerCase().includes(term)) || 
-                       (m.employeeId && m.employeeId.toLowerCase().includes(term)) ||
-                       (m.area && m.area.toLowerCase().includes(term));
+                return (m.name && m.name.toLowerCase().includes(term)) || (m.employeeId && m.employeeId.toLowerCase().includes(term)) || (m.area && m.area.toLowerCase().includes(term));
             });
             if (filtered.length === 0) {
                 dropdown.innerHTML = '<div class="doctor-search-item" style="cursor:default;color:#94a3b8;">No MPOs found</div>';
@@ -1669,9 +1643,7 @@
             if(term) {
                 entries = entries.filter(([id, h]) => {
                     const doc = doctorsCache[h.doctorId] || {};
-                    return (doc.name && doc.name.toLowerCase().includes(term)) || 
-                           (doc.doctorId && doc.doctorId.toLowerCase().includes(term)) ||
-                           (h.payOrderNo && h.payOrderNo.toLowerCase().includes(term));
+                    return (doc.name && doc.name.toLowerCase().includes(term)) || (doc.doctorId && doc.doctorId.toLowerCase().includes(term)) || (h.payOrderNo && h.payOrderNo.toLowerCase().includes(term));
                 });
             }
             entries.sort((a,b)=>(b[1].date||0)-(a[1].date||0));
@@ -2142,7 +2114,7 @@
                 const group=mpoGroups[mpoId];const mpo=group.mpo;const sales=monthSales[mpoId]||{tp1:'',tp2:''};
                 group.doctors.forEach(item=>{
                     const amount=item.entry?(item.entry.amount||0):(item.doc.amount||0);
-                    const remarks=item.entry?(item.entry.remarks||''):'';
+                    const remarks=item.entry?(item.entry.remarks||''):''; 
                     const isPaid = !!item.entry; 
                     flatRows.push({
                         docId:item.docId,
@@ -2368,38 +2340,28 @@
         
         function loadLabelPrint(){
             const month=document.getElementById('labelPrintMonth').value;
-            
-            // শুধু তাদের দেখানো হবে যাদের Pay Order Issue করা (PO No দেওয়া আছে)
             let entries=Object.entries(honorariumCache).filter(([,h])=>{
                 if(h.month!==month || h.isCancelled || !h.payOrderNo || h.payOrderNo.trim()==='') return false;
                 return true;
             });
-            
             entries.sort((a,b)=>{
                 const mpoNameA=getMPOName(a[1].mpoId), mpoNameB=getMPOName(b[1].mpoId);
                 if(mpoNameA!==mpoNameB) return mpoNameA.localeCompare(mpoNameB);
                 return getDoctorName(a[1].doctorId).localeCompare(getDoctorName(b[1].doctorId));
             });
-            
             const container=document.getElementById('labelPrintArea');
-            
             if(entries.length===0){
                 container.innerHTML='<div class="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400">এই মাসের জন্য কোনো Pay Order Issue করা হয়নি।</div>';
                 return;
             }
-            
             let html='';
             const chunkSize=10; // প্রতি পেজে ১০টি লেবেল
-            
             for(let i=0;i<entries.length;i+=chunkSize){
                 const chunk=entries.slice(i,i+chunkSize);
-                // Watermark রিমুভ করা হয়েছে
                 html+=`<div class="label-page">`;
-                
                 chunk.forEach(([id,h])=>{
                     const doc=doctorsCache[h.doctorId]||{};
                     const location=doc.territory||getMPOArea(h.mpoId)||'-';
-                    
                     html+=`
                     <div class="label-card">
                         <table class="label-card-table">
@@ -2430,15 +2392,11 @@
                         </table>
                     </div>`;
                 });
-                
-                // খালি স্পেস পূরণ (যদি পেজে ১০টি লেবেল না থাকে, তবে গ্রিড মেইনটেইন করার জন্য)
                 for(let j=chunk.length;j<chunkSize;j++){
                     html+=`<div class="label-card"></div>`;
                 }
-                
                 html+=`</div>`;
             }
-            
             container.innerHTML=html;
         }
         window.loadLabelPrint=loadLabelPrint;
