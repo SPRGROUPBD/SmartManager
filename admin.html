@@ -1127,7 +1127,7 @@ function loadUserDashboardData(){
             ub.innerHTML+='<tr><td>'+formatDate(d.date)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-semibold">'+d.taka+'</td><td>'+usedIcon+'</td></tr>';
         }else{
             abCount++;activeIouCount++;
-            var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';}
+            var daysBadge='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));var dc=diff>3?'bg-danger':diff>1?'bg-warning':'bg-success';daysBadge='<span class="badge '+dc+' ms-1">'+diff+'d</span>';};
             ab.innerHTML+='<tr class="clickable-row" onclick="fillBillFromIOU(\''+id+'\')"><td>'+formatDate(d.date)+daysBadge+'</td><td><small class="badge bg-info text-dark">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td><td><i class="bi bi-arrow-right-circle text-primary"></i></td></tr>';
         }
     });
@@ -1176,7 +1176,7 @@ function loadUnbilledIOUList(){
         if(!isBillRequiredIOU(type))return;
         if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
         if(d.status==='used')return;count++;
-        var days='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));days='<span class="badge bg-light text-dark ms-1">'+diff+'d</span>';}
+        var days='';if(d.date){var diff=Math.ceil(Math.abs(new Date()-new Date(d.date))/(864e5));days='<span class="badge bg-light text-dark ms-1">'+diff+'d</span>';};
         tbody.innerHTML+='<tr><td>'+formatDate(d.date)+' '+days+'</td><td>'+escHtml(d.daName)+'</td><td><small class="badge bg-secondary">'+escHtml(type)+'</small></td><td>'+escHtml(d.territory)+'</td><td class="text-end fw-bold text-danger">'+d.taka+'</td></tr>';
     });
     badge.innerText=count;
@@ -1278,10 +1278,21 @@ function loadDAListForFilters(callback){
                 if(u.role!=='admin'&&u.role!=='superadmin'){
                     daListCache[c.key]=u.name;
                     daNameToIdCache[u.name]=c.key;
-                    // If deactivated, add (Inactive) tag so admin knows
-                    var nameSuffix = u.isActive === false ? ' (Inactive)' : '';
-                    var opt='<option value="'+c.key+'">'+escHtml(u.name+nameSuffix)+'</option>';
-                    ids.forEach(function(id){var el=document.getElementById(id);if(el)el.innerHTML+=opt;});
+                    
+                    // Check active status (default true if undefined)
+                    var isActive = u.isActive !== false;
+                    var nameSuffix = !isActive ? ' (Inactive)' : '';
+                    
+                    ids.forEach(function(id){
+                        var el=document.getElementById(id);
+                        if(!el) return;
+                        
+                        // ★★★ KEY CHANGE: IOU Entry Form dropdown থেকে deactivated user বাদ দাও ★★★
+                        if(id === 'iou_da_name' && !isActive) return;
+                        
+                        var opt='<option value="'+c.key+'">'+escHtml(u.name+nameSuffix)+'</option>';
+                        el.innerHTML+=opt;
+                    });
                 }
             });
         }
@@ -1388,7 +1399,41 @@ function toggleUserStatus(id, makeActive){
 function calcIouPercent(){var s=parseFloat(document.getElementById('iou_sales').value)||0,r=parseFloat(document.getElementById('iou_return').value)||0,sold=s-r,t=parseFloat(document.getElementById('iou_taka').value)||0;document.getElementById('iou_sold').value=sold;document.getElementById('iou_percent').value=sold>0?((t/sold)*100).toFixed(2):"0";}
 function saveIOU(){var daId=document.getElementById('iou_da_name').value;if(!daId){alert("Select DA");return;}var daName=daListCache[daId];var dateVal=document.getElementById('iou_date').value;if(!dateVal){alert("Select date");return;}var dp=getDateParts(dateVal);var iouType=document.getElementById('iou_type').value;var autoStatus=isNoBillIOU(iouType)?'used':'active';var salesV=parseFloat(document.getElementById('iou_sales').value)||0,retV=parseFloat(document.getElementById('iou_return').value)||0;var data={date:dateVal,daId:daId,daName:daName,territory:document.getElementById('iou_territory').value,mpo:document.getElementById('iou_mpo').value,summary:document.getElementById('iou_summary').value,sales:salesV,returnVal:retV,soldVal:salesV-retV,qty:parseInt(document.getElementById('iou_qty').value)||0,bundleQty:parseInt(document.getElementById('iou_bundle_qty').value)||0,taka:parseFloat(document.getElementById('iou_taka').value)||0,percent:document.getElementById('iou_percent').value,status:autoStatus,type:iouType,remarks:document.getElementById('iou_remarks').value || ''};var safeName=sanitizeKey(daName);var op;if(editingIouId&&editingIouYear&&editingIouMonth&&editingIouDaName){op=database.ref('IOU_List/'+editingIouYear+'/'+editingIouMonth+'/'+sanitizeKey(editingIouDaName)+'/'+editingIouId).update(data);}else{op=database.ref('IOU_List/'+dp.year+'/'+dp.month+'/'+safeName).push(data);}op.then(function(){alert(editingIouId?"Updated!":"Saved!");clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function clearIOUForm(){document.getElementById('iou_date').value='';document.getElementById('iou_da_name').value='';document.getElementById('iou_territory').value='';document.getElementById('iou_mpo').value='';document.getElementById('iou_summary').value='';document.getElementById('iou_sales').value='';document.getElementById('iou_return').value='';document.getElementById('iou_sold').value='';document.getElementById('iou_qty').value='';document.getElementById('iou_bundle_qty').value='';document.getElementById('iou_taka').value='';document.getElementById('iou_percent').value='0';document.getElementById('iou_type').value='Delivery';document.getElementById('iou_remarks').value='';editingIouId=null;editingIouYear=null;editingIouMonth=null;editingIouDaName=null;document.getElementById('iou_save_btn').innerText="Save IOU Entry";document.getElementById('iou_cancel_btn').classList.add('hidden');}
-function editIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found in cache");return;}editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;document.getElementById('iou_date').value=iou.date||'';document.getElementById('iou_da_name').value=iou.daId||'';document.getElementById('iou_territory').value=iou.territory||'';document.getElementById('iou_mpo').value=iou.mpo||'';document.getElementById('iou_summary').value=iou.summary||'';document.getElementById('iou_sales').value=iou.sales||0;document.getElementById('iou_return').value=iou.returnVal||0;document.getElementById('iou_sold').value=iou.soldVal||0;document.getElementById('iou_qty').value=iou.qty||0;document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;document.getElementById('iou_taka').value=iou.taka||0;document.getElementById('iou_percent').value=iou.percent||'0';document.getElementById('iou_type').value=iou.type||'Delivery';document.getElementById('iou_remarks').value=iou.remarks||'';document.getElementById('iou_save_btn').innerText="Update";document.getElementById('iou_cancel_btn').classList.remove('hidden');var iouEntryTabEl=document.getElementById('iou-entry-tab');if(iouEntryTabEl){var tab=new bootstrap.Tab(iouEntryTabEl);tab.show();}window.scrollTo({top:0,behavior:'smooth'});}
+function editIOU(id){
+    var iou=iouListGlobal[id];
+    if(!iou){alert("Not found in cache");return;}
+    editingIouId=id;editingIouYear=iou._year;editingIouMonth=iou._month;editingIouDaName=iou._daName;
+    
+    // ★ Fix: Add deactivated user to dropdown temporarily if editing their IOU
+    var daSel = document.getElementById('iou_da_name');
+    if(daSel && iou.daId){
+        var exists = Array.from(daSel.options).some(function(o){return o.value === iou.daId;});
+        if(!exists){
+            var newOpt = document.createElement('option');
+            newOpt.value = iou.daId;
+            newOpt.text = (iou.daName||'') + ' (Inactive)';
+            daSel.appendChild(newOpt);
+        }
+    }
+    
+    document.getElementById('iou_date').value=iou.date||'';
+    document.getElementById('iou_da_name').value=iou.daId||'';
+    document.getElementById('iou_territory').value=iou.territory||'';
+    document.getElementById('iou_mpo').value=iou.mpo||'';
+    document.getElementById('iou_summary').value=iou.summary||'';
+    document.getElementById('iou_sales').value=iou.sales||0;
+    document.getElementById('iou_return').value=iou.returnVal||0;
+    document.getElementById('iou_sold').value=iou.soldVal||0;
+    document.getElementById('iou_qty').value=iou.qty||0;
+    document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;
+    document.getElementById('iou_taka').value=iou.taka||0;
+    document.getElementById('iou_percent').value=iou.percent||'0';
+    document.getElementById('iou_type').value=iou.type||'Delivery';
+    document.getElementById('iou_remarks').value=iou.remarks||'';
+    document.getElementById('iou_save_btn').innerText="Update";
+    document.getElementById('iou_cancel_btn').classList.remove('hidden');
+    var iouEntryTabEl=document.getElementById('iou-entry-tab');if(iouEntryTabEl){var tab=new bootstrap.Tab(iouEntryTabEl);tab.show();}window.scrollTo({top:0,behavior:'smooth'});
+}
 function deleteIOU(id){var iou=iouListGlobal[id];if(!iou){alert("Not found");return;}if(!confirm("Delete?"))return;database.ref('IOU_List/'+iou._year+'/'+iou._month+'/'+sanitizeKey(iou._daName)+'/'+id).remove().then(function(){if(editingIouId===id)clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
 function cancelIOUEdit(){clearIOUForm();}
 
@@ -2241,7 +2286,7 @@ function importExpensesToTable(){
             addExpenseRowWithData({date:dateVal,from:from,to:to,mode:mode,amount:amount,da:daExp});importCount++;
         }
         calculateGrandTotal();triggerAutoSave();alert('Imported '+importCount+' rows!');input.value='';
-        }catch(ex){console.error(ex);alert("Error reading file.\nColumns: Date, From, To, Mode, Amount, DA");}
+        }catch(ex){console.error(ex);alert("Error reading file.\nColumns: Date, From, To, Mode, Amount, DA");;}
     };reader.readAsArrayBuffer(file);
 }
 
