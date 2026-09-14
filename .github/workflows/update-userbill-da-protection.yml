@@ -1,4 +1,4 @@
-name: Update userbill DA protection
+name: Fix userbill DA protection
 on:
   push:
     branches: [main]
@@ -10,21 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update userbill.html
-        shell: python
+      - name: Patch userbill.html
+        shell: bash
         run: |
+          python3 <<'PY'
           from pathlib import Path
           import re
           p=Path('userbill.html')
           s=p.read_text(encoding='utf-8')
           original=s
 
-          helper="""
-function isCurrentUserActive(){
-    return !(currentUser && (currentUser.active===false || currentUser.status==='inactive' || currentUser.status==='deactivated' || currentUser.deactivated===true));
+          helper = r'''
+function isUserActiveForLogin(u){
+    return !!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);
 }
 function blockIfDeactivatedUser(){
-    if(currentUser && currentUser.role==='user' && !isCurrentUserActive()){
+    if(currentUser && currentUser.role==='user' && !isUserActiveForLogin(currentUser)){
         alert('এই DA ID Deactive করা হয়েছে। নতুন Bill/Entry দেওয়া যাবে না।');
         return true;
     }
@@ -34,66 +35,99 @@ function validateCurrentUserStatus(callback){
     if(!currentUser || currentUser.role!=='user' || !currentUser.id){ if(callback) callback(true); return; }
     database.ref('Users/'+currentUser.id).once('value',function(snap){
         var u=snap.val();
-        var active=!!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);
+        var active=isUserActiveForLogin(u);
         currentUser.active=active;
         currentUser.status=active?'active':'deactivated';
-        if(!active){ localStorage.removeItem('auth_user'); if(typeof showLogin==='function') showLogin(); alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Entry বন্ধ।'); }
-        else localStorage.setItem('auth_user',JSON.stringify(currentUser));
+        if(!active){
+            localStorage.removeItem('auth_user');
+            if(typeof showLogin==='function') showLogin();
+            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Entry বন্ধ।');
+        }else{
+            localStorage.setItem('auth_user',JSON.stringify(currentUser));
+        }
         if(callback) callback(active);
+    },function(){ if(callback) callback(false); });
+}
+'''
+          marker='// ========== LOGIN =========='
+          if 'function blockIfDeactivatedUser()' not in s:
+              if marker not in s: raise SystemExit('LOGIN marker not found')
+              s=s.replace(marker,helper+'\n'+marker,1)
+
+          # Login: reject inactive/deactivated DA before opening dashboard.
+          target="""    var d=lookedUpUser.data;\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে"""
+          repl="""    var d=lookedUpUser.data;\n\n    if(!isUserActiveForLogin(d)){\n        setStatus('এই DA ID Deactive করা হয়েছে। Login বন্ধ।','err');\n        document.getElementById('login_password').value='';\n        alert('এই DA ID Deactive করা হয়েছে। Login করা যাবে না।');\n        return;\n    }\n    \n    // শুধুমাত্র ইউজার লগইন করতে পারবে"""
+          if target in s and 'Login বন্ধ' not in s:
+              s=s.replace(target,repl,1)
+
+          # Store active state in the login session.
+          old="currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};"
+          new="currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,active:true,status:'active'};"
+          if old in s:
+              s=s.replace(old,new,1)
+
+          # Add a realtime status watcher after the Firebase database declaration.
+          watch_marker="const database=firebase.database();"
+          watch="""
+function startDAStatusWatcher(){
+    if(window.__daStatusWatcher){window.__daStatusWatcher.off('value');window.__daStatusWatcher=null;}
+    if(!currentUser || currentUser.role!=='user' || !currentUser.id)return;
+    window.__daStatusWatcher=database.ref('Users/'+currentUser.id);
+    window.__daStatusWatcher.on('value',function(snap){
+        var u=snap.val();
+        var active=isUserActiveForLogin(u);
+        currentUser.active=active;
+        currentUser.status=active?'active':'deactivated';
+        if(!active){
+            localStorage.removeItem('auth_user');
+            if(typeof showLogin==='function') showLogin();
+            alert('এই DA ID Deactive করা হয়েছে। Login/নতুন Bill/Entry বন্ধ।');
+        }else{
+            localStorage.setItem('auth_user',JSON.stringify(currentUser));
+        }
     });
 }
 """
-          if 'function blockIfDeactivatedUser()' not in s:
-              marker='</script>'
-              pos=s.rfind(marker)
-              if pos<0: raise SystemExit('script closing tag not found')
-              s=s[:pos]+helper+'\n'+s[pos:]
+          if 'function startDAStatusWatcher()' not in s:
+              if watch_marker not in s: raise SystemExit('database marker not found')
+              s=s.replace(watch_marker,watch_marker+'\n'+watch,1)
 
-          # Add guard to common bill-save/submit functions if present.
-          funcs=['submitOrUpdateBill','saveBill','submitBill','saveAndSubmitBill']
-          added=0
-          for fn in funcs:
-              pat=r'(function\s+'+re.escape(fn)+r'\s*\([^)]*\)\s*\{)'
-              m=re.search(pat,s)
-              if m:
-                  start=m.end()
-                  if 'blockIfDeactivatedUser()' not in s[start:start+500]:
-                      s=s[:start]+"\n    if(blockIfDeactivatedUser()) return;"+s[start:]
-                      added+=1
+          # Protect bill submit/update.
+          m=re.search(r'function\s+submitOrUpdateBill\s*\([^)]*\)\s*\{',s)
+          if m and 'blockIfDeactivatedUser()' not in s[m.end():m.end()+300]:
+              s=s[:m.end()]+'\n    if(blockIfDeactivatedUser()) return;'+s[m.end():]
 
-          # Restore/mark cached session with active status and revalidate on load.
-          old="currentUser = JSON.parse(savedUser);\n            showDashboard();"
-          if old in s:
-              s=s.replace(old,"currentUser = JSON.parse(savedUser);\n            if(currentUser.role==='user') validateCurrentUserStatus(function(active){ if(active) showDashboard(); }); else showDashboard();",1)
-          else:
-              old2="currentUser=JSON.parse(savedUser);"
-              if old2 in s and 'validateCurrentUserStatus(function(active)' not in s:
-                  s=s.replace(old2,"currentUser=JSON.parse(savedUser); if(currentUser.role==='user') validateCurrentUserStatus(function(active){ if(active) showDashboard(); });",1)
+          # Validate cached session before dashboard access, regardless of exact existing formatting.
+          cached_patterns=[
+              ("currentUser = JSON.parse(savedUser);\n            showDashboard();", "currentUser = JSON.parse(savedUser);\n            validateCurrentUserStatus(function(active){ if(active){ startDAStatusWatcher(); showDashboard(); } });"),
+              ("currentUser=JSON.parse(savedUser);\n            showDashboard();", "currentUser=JSON.parse(savedUser);\n            validateCurrentUserStatus(function(active){ if(active){ startDAStatusWatcher(); showDashboard(); } });"),
+              ("currentUser = JSON.parse(savedUser);showDashboard();", "currentUser = JSON.parse(savedUser);validateCurrentUserStatus(function(active){ if(active){ startDAStatusWatcher(); showDashboard(); } });")
+          ]
+          for a,b in cached_patterns:
+              if a in s:
+                  s=s.replace(a,b,1); break
 
-          # If login code sets currentUser, copy active/status from the looked-up User record.
-          pat=r"(currentUser\s*=\s*\{[^\n]*?id\s*:\s*lookedUpUser\.key[^\n]*?\};)"
-          m=re.search(pat,s)
-          if m and 'active:' not in m.group(1):
-              oldcur=m.group(1)
-              newcur=oldcur[:-2]+",active:isUserActiveForLogin(d),status:isUserActiveForLogin(d)?'active':'deactivated'};"
-              # Add local helper if needed; avoid depending on exact helper name elsewhere.
-              if 'function isUserActiveForLogin' not in s:
-                  marker='function isCurrentUserActive(){'
-                  s=s.replace(marker,"function isUserActiveForLogin(u){ return !!u && !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true); }\n"+marker,1)
-              s=s.replace(oldcur,newcur,1)
+          # Start watcher immediately after a successful fresh login.
+          fresh="localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    showDashboard();"
+          if fresh in s:
+              s=s.replace(fresh,"localStorage.setItem('auth_user', JSON.stringify(currentUser));\n    startDAStatusWatcher();\n    showDashboard();",1)
 
           if s==original: raise SystemExit('No changes made')
           p.write_text(s,encoding='utf-8')
-      - name: Commit
+          PY
+      - name: Commit patched file
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add userbill.html
-          git diff --cached --quiet || git commit -m "Block deactivated DA from user bill entry"
+          if git diff --cached --quiet; then echo "No staged changes"; exit 1; fi
+          git commit -m "Block deactivated DA login and bill entry"
           git push
-      - name: Remove workflow
+      - name: Remove temporary workflow
         if: success()
+        shell: bash
         run: |
           git rm .github/workflows/update-userbill-da-protection.yml
-          git commit -m "Remove temporary userbill patch workflow"
+          git commit -m "Remove temporary userbill protection workflow"
           git push
