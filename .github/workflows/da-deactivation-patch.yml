@@ -1,0 +1,115 @@
+name: Apply DA Deactivation Rules
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Patch admin.html
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          p = Path('admin.html')
+          s = p.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global s
+              if old not in s:
+                  raise SystemExit(f'Missing patch target: {label}')
+              if s.count(old) != 1:
+                  raise SystemExit(f'Patch target is not unique: {label} ({s.count(old)})')
+              s = s.replace(old, new, 1)
+
+          # Reusable DA active/deactivated check.
+          replace_once(
+              "function getBillDate(b){return b.submitDate||b.depDate||'';}\n",
+              "function getBillDate(b){return b.submitDate||b.depDate||'';}\n\nfunction isUserActive(u){\n    if(!u)return false;\n    return !(u.active===false || u.status==='inactive' || u.status==='deactivated' || u.deactivated===true);\n}\n\nfunction blockIfDeactivated(){\n    if(!currentUser || currentUser.role!=='user')return false;\n    if(currentUser._activeChecked===false){\n        alert('এই DA ID Deactive করা হয়েছে। নতুন Entry দেওয়া যাবে না।');\n        return true;\n    }\n    return false;\n}\n",
+              'active helper'
+          )
+
+          # Login UI + hard login block.
+          replace_once(
+              "    document.getElementById('w98_user_card').classList.add('show');\n    document.getElementById('login_password').disabled=false;\n    document.getElementById('w98_login_btn').disabled=false;\n",
+              "    document.getElementById('w98_user_card').classList.add('show');\n    var inactive = d.role==='user' && !isUserActive(d);\n    document.getElementById('login_password').disabled=inactive;\n    document.getElementById('w98_login_btn').disabled=inactive;\n    if(inactive){\n        setStatus('DA account is deactivated — Login not allowed','err');\n    }\n",
+              'login UI active check'
+          )
+          replace_once(
+              "    if(lookedUpUser.data.password!==pwd){\n",
+              "    if(lookedUpUser.data.role==='user' && !isUserActive(lookedUpUser.data)){\n        setStatus('This DA account is deactivated. Login not allowed.','err');\n        return;\n    }\n    if(lookedUpUser.data.password!==pwd){\n",
+              'login hard block'
+          )
+          replace_once(
+              "    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null};\n",
+              "    currentUser={name:d.name,role:d.role||'user',depot:d.depot,id:lookedUpUser.key,photoUrl:d.photoUrl||null,_activeChecked:isUserActive(d)};\n",
+              'login active session flag'
+          )
+
+          # Block DA bill submission/update after deactivation.
+          replace_once(
+              "function submitOrUpdateBill(statusType){\n    var targetDaName,targetDepot;\n",
+              "function submitOrUpdateBill(statusType){\n    if(blockIfDeactivated())return;\n    var targetDaName,targetDepot;\n",
+              'bill entry guard'
+          )
+
+          # New users are active by default; editing preserves existing active field.
+          replace_once(
+              "var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};\n",
+              "var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};\n    if(!editingUserId)userData.active=true;\n",
+              'new user active default'
+          )
+
+          # Add Active/Deactive status and toggle button to user list.
+          marker = "function loadUserList() {"
+          start = s.index(marker)
+          end = s.index("\nfunction clearUserForm()", start)
+          section = s[start:end]
+          pattern = r"\n\s*tr\.innerHTML=.*?;\n\s*tbody\.appendChild\(tr\);"
+          replacement = "\n            var active=isUserActive(u);\n            var statusBadge=active?'<span class=\"badge bg-success\">Active</span>':'<span class=\"badge bg-danger\">Deactive</span>';\n            var toggleBtn='<button class=\"btn btn-sm '+(active?'btn-danger':'btn-success')+'\" title=\"'+(active?'Deactivate':'Reactivate')+'\" onclick=\"toggleUserActive(\\''+key+'\\')\"><i class=\"bi '+(active?'bi-person-x':'bi-person-check')+'\"></i></button>';\n            tr.innerHTML='<td>'+(u.userId||'-')+'</td><td>'+escHtml(u.name||'-')+'</td><td>'+(u.phone||'-')+'</td><td>'+(u.depot||'-')+'</td><td>'+(roleMap[u.role]||u.role||'-')+'</td><td>'+statusBadge+'</td><td class=\"text-center\"><button class=\"btn btn-sm btn-warning\" onclick=\"editUser(\\''+key+'\\')\"><i class=\"bi bi-pencil\"></i></button> '+toggleBtn+' <button class=\"btn btn-sm btn-danger\" onclick=\"deleteUser(\\''+key+'\\')\"><i class=\"bi bi-trash\"></i></button></td>';\n            tbody.appendChild(tr);"
+          section2, n = re.subn(pattern, replacement, section, count=1, flags=re.S)
+          if n != 1:
+              raise SystemExit('Missing patch target: user list row renderer')
+          s = s[:start] + section2 + s[end:]
+
+          replace_once(
+              "function deleteUser(id){\n",
+              "function toggleUserActive(id){\n    if(!currentUser || (currentUser.role!=='admin' && currentUser.role!=='superadmin'))return;\n    database.ref('Users/'+id).once('value',function(snap){\n        var u=snap.val();\n        if(!u)return;\n        var active=isUserActive(u);\n        var next=!active;\n        var action=next?'Re-Activate':'Deactive';\n        if(!confirm(action+' '+(u.name||'this user')+'?'))return;\n        var update={active:next,status:next?'active':'deactivated'};\n        if(!next){\n            update.deactivatedAt=firebase.database.ServerValue.TIMESTAMP;\n            update.deactivatedBy=currentUser.name||'';\n        }else{\n            update.reactivatedAt=firebase.database.ServerValue.TIMESTAMP;\n            update.reactivatedBy=currentUser.name||'';\n        }\n        database.ref('Users/'+id).update(update).then(function(){\n            alert(next?'User Re-Activated Successfully!':'User Deactivated Successfully!\\nOld Bills/Attendance will remain available.');\n            loadUserList();\n            loadDAListForFilters();\n        }).catch(function(e){alert('Error: '+e.message);});\n    });\n}\n\nfunction deleteUser(id){\n",
+              'toggle active function'
+          )
+
+          # Add a Status column to the User List header.
+          replace_once(
+              "                                    <th>Role</th>\n                                    <th class=\"text-center\">Action</th>",
+              "                                    <th>Role</th>\n                                    <th>Status</th>\n                                    <th class=\"text-center\">Action</th>",
+              'user list status header'
+          )
+
+          # Revalidate a cached DA session against Firebase before restoring the dashboard.
+          replace_once(
+              "    if(savedUser){\n        try {\n            currentUser = JSON.parse(savedUser);\n            showDashboard();\n        } catch(e){\n            localStorage.removeItem('auth_user');\n        }\n    }\n",
+              "    if(savedUser){\n        try {\n            currentUser = JSON.parse(savedUser);\n            if(currentUser.role==='user'){\n                database.ref('Users/'+currentUser.id).once('value',function(snap){\n                    var u=snap.val();\n                    if(!u || !isUserActive(u)){\n                        localStorage.removeItem('auth_user');\n                        currentUser=null;\n                        document.getElementById('login_section').classList.remove('hidden');\n                        document.getElementById('dashboard_section').classList.add('hidden');\n                        setStatus('DA account is deactivated — Login not allowed','err');\n                        return;\n                    }\n                    currentUser._activeChecked=true;\n                    localStorage.setItem('auth_user',JSON.stringify(currentUser));\n                    showDashboard();\n                });\n            }else{\n                showDashboard();\n            }\n        } catch(e){\n            localStorage.removeItem('auth_user');\n        }\n    }\n",
+              'session revalidation'
+          )
+
+          p.write_text(s, encoding='utf-8')
+          print('admin.html patched successfully')
+
+      - name: Commit changes and remove patch workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add admin.html
+          git rm .github/workflows/da-deactivation-patch.yml
+          git commit -m "Add DA deactivation and bill history protection"
+          git push
