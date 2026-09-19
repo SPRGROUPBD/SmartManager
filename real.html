@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Real-Time Internet Speed Test</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+}
+
+:root{
+    --bg:#050b16;
+    --panel:#0b1628;
+    --panel2:#0f1d32;
+    --border:rgba(255,255,255,.10);
+    --text:#f4f8ff;
+    --muted:#8295b0;
+    --cyan:#20dfff;
+    --blue:#4677ff;
+    --green:#31e88b;
+    --red:#ff5570;
+    --purple:#8b5cff;
+}
+
+body{
+    min-height:100vh;
+    font-family:Arial,Helvetica,sans-serif;
+    color:var(--text);
+    background:
+        radial-gradient(circle at 50% -10%,#183968 0%,#091528 35%,#030711 75%);
+    padding:20px;
+}
+
+.app{
+    width:100%;
+    max-width:1180px;
+    margin:auto;
+}
+
+.header{
+    text-align:center;
+    margin:5px 0 22px;
+}
+
+.header h1{
+    font-size:34px;
+    letter-spacing:.5px;
+}
+
+.header p{
+    margin-top:8px;
+    color:var(--muted);
+    font-size:14px;
+}
+
+.main{
+    background:rgba(8,19,35,.78);
+    border:1px solid var(--border);
+    border-radius:26px;
+    padding:24px;
+    box-shadow:0 25px 80px rgba(0,0,0,.5);
+    backdrop-filter:blur(18px);
+}
+
+/* TOP */
+.top{
+    display:grid;
+    grid-template-columns:1.25fr .75fr;
+    gap:22px;
+}
+
+/* SPEED AREA */
+.speed-area{
+    min-height:570px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+}
+
+.mode{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+}
+
+.mode span{
+    padding:7px 12px;
+    border-radius:30px;
+    background:rgba(32,223,255,.08);
+    border:1px solid rgba(32,223,255,.2);
+    color:#79eaff;
+    font-size:11px;
+    font-weight:bold;
+}
+
+/* METER */
+.meter{
+    width:360px;
+    height:360px;
+    border-radius:50%;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:
+        conic-gradient(
+            from 220deg,
+            var(--cyan) 0deg,
+            var(--blue) 90deg,
+            var(--purple) 180deg,
+            #26344c 180deg,
+            #26344c 280deg,
+            transparent 280deg
+        );
+
+    box-shadow:
+        0 0 50px rgba(32,223,255,.18),
+        inset 0 0 35px rgba(0,0,0,.45);
+}
+
+.meter::before{
+    content:"";
+    position:absolute;
+    inset:13px;
+    border-radius:50%;
+    background:
+        radial-gradient(circle,#0e1d34 0%,#06101e 70%);
+    box-shadow:
+        inset 0 0 35px rgba(0,0,0,.8);
+}
+
+.meter::after{
+    content:"";
+    position:absolute;
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:
+        0 0 15px var(--cyan);
+}
+
+.meter-content{
+    position:relative;
+    z-index:5;
+    text-align:center;
+}
+
+.live-label{
+    color:#6f87a7;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:2px;
+    margin-bottom:9px;
+}
+
+.speed{
+    font-size:66px;
+    font-weight:800;
+    line-height:1;
+    letter-spacing:-2px;
+}
+
+.unit{
+    color:#9aacc5;
+    font-size:16px;
+    margin-top:7px;
+}
+
+.phase{
+    margin-top:18px;
+    color:var(--cyan);
+    font-size:13px;
+    font-weight:bold;
+}
+
+.percent{
+    margin-top:7px;
+    color:#7186a4;
+    font-size:12px;
+}
+
+/* PROGRESS */
+.progress{
+    width:300px;
+    height:7px;
+    background:#17253b;
+    border-radius:20px;
+    overflow:hidden;
+    margin-top:18px;
+}
+
+.progress-bar{
+    width:0%;
+    height:100%;
+    background:linear-gradient(
+        90deg,
+        var(--cyan),
+        var(--blue),
+        var(--purple)
+    );
+    transition:width .25s ease;
+}
+
+/* BUTTONS */
+.controls{
+    display:flex;
+    gap:10px;
+    margin-top:25px;
+}
+
+button{
+    border:0;
+    border-radius:11px;
+    padding:13px 22px;
+    font-weight:bold;
+    cursor:pointer;
+    transition:.2s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+    filter:brightness(1.08);
+}
+
+.start{
+    min-width:170px;
+    color:#fff;
+    background:linear-gradient(
+        135deg,
+        #18dfff,
+        #416eff
+    );
+    box-shadow:0 8px 25px rgba(35,147,255,.22);
+}
+
+.stop{
+    display:none;
+    background:#d83e58;
+    color:white;
+}
+
+.reset{
+    background:#22344e;
+    color:#dbe8fa;
+}
+
+/* INFO */
+.info{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+}
+
+.card{
+    background:rgba(255,255,255,.035);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:17px;
+}
+
+.card-title{
+    font-size:14px;
+    color:#dfeaff;
+    font-weight:bold;
+    margin-bottom:14px;
+}
+
+.results{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.result{
+    background:rgba(0,0,0,.18);
+    border-radius:12px;
+    padding:13px;
+}
+
+.result small{
+    color:#7f94b1;
+    font-size:10px;
+}
+
+.result strong{
+    display:block;
+    margin-top:6px;
+    font-size:22px;
+}
+
+.result em{
+    color:#7f94b1;
+    font-style:normal;
+    font-size:10px;
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    padding:9px 0;
+    border-bottom:1px solid rgba(255,255,255,.06);
+    font-size:12px;
+}
+
+.row:last-child{
+    border-bottom:0;
+}
+
+.row span:first-child{
+    color:#8196b2;
+}
+
+.online{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 10px var(--green);
+}
+
+/* QUALITY */
+.quality{
+    font-size:27px;
+    font-weight:800;
+}
+
+.quality-text{
+    color:#7e93af;
+    font-size:11px;
+    margin-top:6px;
+    line-height:1.5;
+}
+
+/* GRAPH */
+.graph-card{
+    margin-top:22px;
+}
+
+.graph-wrap{
+    position:relative;
+    width:100%;
+    height:230px;
+    background:
+        linear-gradient(
+            rgba(255,255,255,.025) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,.025) 1px,
+            transparent 1px
+        );
+    background-size:40px 40px;
+    border-radius:13px;
+    overflow:hidden;
+}
+
+canvas{
+    width:100%;
+    height:100%;
+    display:block;
+}
+
+.graph-label{
+    display:flex;
+    justify-content:space-between;
+    margin-top:9px;
+    color:#7186a3;
+    font-size:10px;
+}
+
+/* HISTORY */
+.history{
+    margin-top:22px;
+}
+
+.history-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+}
+
+.history-head h3{
+    font-size:16px;
+}
+
+.clear{
+    background:#25364e;
+    color:#dce8f7;
+    padding:8px 12px;
+    font-size:11px;
+}
+
+.table-wrap{
+    overflow-x:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:650px;
+    font-size:12px;
+}
+
+th,td{
+    padding:11px 8px;
+    text-align:left;
+    border-bottom:1px solid rgba(255,255,255,.06);
+}
+
+th{
+    color:#748aa8;
+    font-size:10px;
+    text-transform:uppercase;
+}
+
+td{
+    color:#d8e5f6;
+}
+
+.empty{
+    text-align:center;
+    color:#70849f;
+    padding:20px;
+}
+
+/* FOOTER */
+.footer{
+    margin-top:15px;
+    text-align:center;
+    color:#637894;
+    font-size:10px;
+    line-height:1.6;
+}
+
+.cf{
+    color:#8eaccc;
+}
+
+/* RESPONSIVE */
+@media(max-width:850px){
+
+    body{
+        padding:10px;
+    }
+
+    .main{
+        padding:14px;
+    }
+
+    .top{
+        grid-template-columns:1fr;
+    }
+
+    .speed-area{
+        min-height:480px;
+    }
+
+    .meter{
+        width:300px;
+        height:300px;
+    }
+
+    .speed{
+        font-size:55px;
+    }
+
+    .progress{
+        width:250px;
+    }
+}
+
+@media(max-width:450px){
+
+    .header h1{
+        font-size:25px;
+    }
+
+    .meter{
+        width:255px;
+        height:255px;
+    }
+
+    .speed{
+        font-size:46px;
+    }
+
+    .controls{
+        flex-wrap:wrap;
+        justify-content:center;
+    }
+
+    .results{
+        grid-template-columns:1fr 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="header">
+        <h1>🌐 Real-Time Internet Speed Test</h1>
+        <p>Powered by Cloudflare Edge Network</p>
+    </div>
+
+    <div class="main">
+
+        <div class="top">
+
+            <!-- SPEED -->
+            <section class="speed-area">
+
+                <div class="mode">
+                    <span>⚡ REAL-TIME</span>
+                    <span>☁ CLOUDFLARE</span>
+                </div>
+
+                <div class="meter">
+
+                    <div class="meter-content">
+
+                        <div class="live-label">
+                            LIVE SPEED
+                        </div>
+
+                        <div
+                            id="speed"
+                            class="speed"
+                        >
+                            0.00
+                        </div>
+
+                        <div class="unit">
+                            Mbps
+                        </div>
+
+                        <div
+                            id="phase"
+                            class="phase"
+                        >
+                            Ready
+                        </div>
+
+                        <div
+                            id="percent"
+                            class="percent"
+                        >
+                            0%
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="progress">
+                    <div
+                        id="progress"
+                        class="progress-bar"
+                    ></div>
+                </div>
+
+                <div class="controls">
+
+                    <button
+                        id="start"
+                        class="start"
+                    >
+                        ▶ START TEST
+                    </button>
+
+                    <button
+                        id="stop"
+                        class="stop"
+                    >
+                        ■ STOP
+                    </button>
+
+                    <button
+                        id="reset"
+                        class="reset"
+                    >
+                        RESET
+                    </button>
+
+                </div>
+
+            </section>
+
+
+            <!-- INFORMATION -->
+            <section class="info">
+
+                <div class="card">
+
+                    <div class="card-title">
+                        📊 Live Results
+                    </div>
+
+                    <div class="results">
+
+                        <div class="result">
+                            <small>DOWNLOAD</small>
+                            <strong id="download">—</strong>
+                            <em>Mbps</em>
+                        </div>
+
+                        <div class="result">
+                            <small>UPLOAD</small>
+                            <strong id="upload">—</strong>
+                            <em>Mbps</em>
+                        </div>
+
+                        <div class="result">
+                            <small>PING</small>
+                            <strong id="ping">—</strong>
+                            <em>ms</em>
+                        </div>
+
+                        <div class="result">
+                            <small>JITTER</small>
+                            <strong id="jitter">—</strong>
+                            <em>ms</em>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="card">
+
+                    <div class="card-title">
+                        📡 Connection
+                    </div>
+
+                    <div class="row">
+                        <span>Status</span>
+                        <span class="online">
+                            <i class="dot"></i>
+                            <b id="status">Online</b>
+                        </span>
+                    </div>
+
+                    <div class="row">
+                        <span>Network</span>
+                        <span id="network">Detecting...</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Effective Type</span>
+                        <span id="effective">—</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Browser Downlink</span>
+                        <span id="browserDownlink">—</span>
+                    </div>
+
+                    <div class="row">
+                        <span>Browser RTT</span>
+                        <span id="browserRtt">—</span>
+                    </div>
+
+                </div>
+
+
+                <div class="card">
+
+                    <div class="card-title">
+                        ⚡ Connection Quality
+                    </div>
+
+                    <div
+                        id="quality"
+                        class="quality"
+                    >
+                        Not Tested
+                    </div>
+
+                    <div
+                        id="qualityText"
+                        class="quality-text"
+                    >
+                        Start the test to measure your
+                        internet connection.
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+
+        <!-- GRAPH -->
+
+        <div class="card graph-card">
+
+            <div class="card-title">
+                📈 Real-Time Speed Graph
+            </div>
+
+            <div class="graph-wrap">
+                <canvas id="graph"></canvas>
+            </div>
+
+            <div class="graph-label">
+                <span>0 Mbps</span>
+                <span id="graphMax">Live measurement</span>
+            </div>
+
+        </div>
+
+
+        <!-- HISTORY -->
+
+        <div class="history">
+
+            <div class="history-head">
+
+                <h3>🕘 Test History</h3>
+
+                <button
+                    id="clear"
+                    class="clear"
+                >
+                    CLEAR HISTORY
+                </button>
+
+            </div>
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Download</th>
+                            <th>Upload</th>
+                            <th>Ping</th>
+                            <th>Jitter</th>
+                            <th>Quality</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="history">
+                        <tr>
+                            <td
+                                colspan="6"
+                                class="empty"
+                            >
+                                No test history
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+
+        <div class="footer">
+            Real measurements are performed against the
+            <span class="cf">
+                Cloudflare Speed Test infrastructure.
+            </span>
+            Browser/network conditions can affect results.
+        </div>
+
+    </div>
+
+</div>
+
+
+<!--
+    Cloudflare official Speedtest library.
+    Current package is loaded from Skypack CDN.
+-->
+<script type="module">
+
+import SpeedTest
+    from "https://cdn.skypack.dev/@cloudflare/speedtest";
+
+
+/* ---------------------------------------
+   ELEMENTS
+--------------------------------------- */
+
+const $ = id =>
+    document.getElementById(id);
+
+
+/* ---------------------------------------
+   STATE
+--------------------------------------- */
+
+let engine = null;
+
+let running = false;
+
+let graphPoints = [];
+
+let graphTimer = null;
+
+
+/* ---------------------------------------
+   CANVAS
+--------------------------------------- */
+
+const canvas =
+    $("graph");
+
+const ctx =
+    canvas.getContext("2d");
+
+
+function resizeCanvas(){
+
+    const rect =
+        canvas.getBoundingClientRect();
+
+    const dpr =
+        window.devicePixelRatio || 1;
+
+    canvas.width =
+        rect.width * dpr;
+
+    canvas.height =
+        rect.height * dpr;
+
+    ctx.setTransform(
+        dpr,
+        0,
+        0,
+        dpr,
+        0,
+        0
+    );
+
+    drawGraph();
+}
+
+
+window.addEventListener(
+    "resize",
+    resizeCanvas
+);
+
+
+/* ---------------------------------------
+   GRAPH
+--------------------------------------- */
+
+function drawGraph(){
+
+    const width =
+        canvas.clientWidth;
+
+    const height =
+        canvas.clientHeight;
+
+    ctx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    if(graphPoints.length < 2)
+        return;
+
+    let max =
+        Math.max(
+            10,
+            ...graphPoints
+        );
+
+    const padding = 20;
+
+    /* line */
+
+    ctx.beginPath();
+
+    graphPoints.forEach(
+        (value,index)=>{
+
+            const x =
+                padding +
+                (
+                    index /
+                    Math.max(
+                        1,
+                        graphPoints.length-1
+                    )
+                ) *
+                (
+                    width -
+                    padding*2
+                );
+
+            const y =
+                height -
+                padding -
+                (
+                    value/max
+                ) *
+                (
+                    height -
+                    padding*2
+                );
+
+            if(index===0)
+                ctx.moveTo(x,y);
+            else
+                ctx.lineTo(x,y);
+        }
+    );
+
+    ctx.strokeStyle =
+        "#20dfff";
+
+    ctx.lineWidth = 3;
+
+    ctx.shadowBlur = 12;
+
+    ctx.shadowColor =
+        "#20dfff";
+
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+
+
+    /* fill */
+
+    const last =
+        graphPoints.length-1;
+
+    const lastX =
+        padding +
+        (
+            last /
+            Math.max(
+                1,
+                graphPoints.length-1
+            )
+        ) *
+        (
+            width -
+            padding*2
+        );
+
+    ctx.lineTo(
+        lastX,
+        height-padding
+    );
+
+    ctx.lineTo(
+        padding,
+        height-padding
+    );
+
+    ctx.closePath();
+
+    const gradient =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            height
+        );
+
+    gradient.addColorStop(
+        0,
+        "rgba(32,223,255,.20)"
+    );
+
+    gradient.addColorStop(
+        1,
+        "rgba(32,223,255,0)"
+    );
+
+    ctx.fillStyle =
+        gradient;
+
+    ctx.fill();
+
+    $("graphMax").textContent =
+        "Peak: " + max.toFixed(2) + " Mbps";
+}
+
+
+/* ---------------------------------------
+   LIVE RESULT PROCESSOR
+--------------------------------------- */
+
+function updateLiveResults(){
+
+    if(!engine)
+        return;
+
+    try{
+
+        const results =
+            engine.results;
+
+        const raw =
+            results.raw || {};
+
+        /*
+         * Cloudflare exposes bandwidth point
+         * getters while the test is running.
+         */
+
+        const down =
+            results.getDownloadBandwidth();
+
+        const up =
+            results.getUploadBandwidth();
+
+        const latency =
+            results.getUnloadedLatency();
+
+        const jitter =
+            results.getUnloadedJitter();
+
+
+        if(
+            Number.isFinite(down) &&
+            down > 0
+        ){
+
+            const mbps =
+                down / 1000000;
+
+            $("download").textContent =
+                mbps.toFixed(2);
+
+            /*
+             * Show current direction as
+             * the main live speed.
+             */
+
+            if(
+                !raw.upload ||
+                raw.upload.length === 0
+            ){
+
+                $("speed").textContent =
+                    mbps.toFixed(2);
+            }
+
+            graphPoints.push(mbps);
+
+            if(graphPoints.length > 120)
+                graphPoints.shift();
+
+            drawGraph();
+        }
+
+
+        if(
+            Number.isFinite(up) &&
+            up > 0
+        ){
+
+            const mbps =
+                up / 1000000;
+
+            $("upload").textContent =
+                mbps.toFixed(2);
+
+            $("speed").textContent =
+                mbps.toFixed(2);
+
+            graphPoints.push(mbps);
+
+            if(graphPoints.length > 120)
+                graphPoints.shift();
+
+            drawGraph();
+        }
+
+
+        if(
+            Number.isFinite(latency)
+        ){
+
+            $("ping").textContent =
+                latency.toFixed(0);
+        }
+
+
+        if(
+            Number.isFinite(jitter)
+        ){
+
+            $("jitter").textContent =
+                jitter.toFixed(1);
+        }
+
+
+        updatePhase(
+            raw
+        );
+
+    }catch(error){
+
+        console.warn(
+            "Live update:",
+            error
+        );
+    }
+}
+
+
+/* ---------------------------------------
+   PHASE
+--------------------------------------- */
+
+function updatePhase(raw){
+
+    if(!engine)
+        return;
+
+    let phase =
+        "Testing...";
+
+    const down =
+        raw.download || [];
+
+    const up =
+        raw.upload || [];
+
+    const latency =
+        raw.latency || [];
+
+
+    if(
+        latency.length &&
+        !down.length
+    ){
+
+        phase =
+            "Measuring latency...";
+    }
+
+    else if(
+        down.length &&
+        !up.length
+    ){
+
+        phase =
+            "Measuring download...";
+    }
+
+    else if(
+        up.length
+    ){
+
+        phase =
+            "Measuring upload...";
+    }
+
+
+    $("phase").textContent =
+        phase;
+}
+
+
+/* ---------------------------------------
+   PROGRESS
+--------------------------------------- */
+
+function updateProgress(){
+
+    if(!engine)
+        return;
+
+    /*
+     * Progress is estimated from the
+     * measurement lifecycle.
+     */
+
+    const results =
+        engine.results;
+
+    const raw =
+        results.raw || {};
+
+    const latency =
+        (raw.latency || []).length;
+
+    const down =
+        (raw.download || []).length;
+
+    const up =
+        (raw.upload || []).length;
+
+    let progress = 5;
+
+    if(latency)
+        progress = 15;
+
+    if(down)
+        progress = 45;
+
+    if(up)
+        progress = 75;
+
+    if(engine.isFinished)
+        progress = 100;
+
+    $("progress").style.width =
+        progress + "%";
+
+    $("percent").textContent =
+        progress + "%";
+}
+
+
+/* ---------------------------------------
+   QUALITY
+--------------------------------------- */
+
+function qualityFromSpeed(mbps){
+
+    if(!Number.isFinite(mbps))
+        return {
+            name:"Unavailable",
+            text:"The speed measurement could not be completed."
+        };
+
+    if(mbps < 5)
+        return {
+            name:"Very Slow",
+            text:"Suitable mainly for light browsing and messaging."
+        };
+
+    if(mbps < 15)
+        return {
+            name:"Slow",
+            text:"Basic browsing and standard streaming should work."
+        };
+
+    if(mbps < 50)
+        return {
+            name:"Moderate",
+            text:"Good for everyday browsing and HD streaming."
+        };
+
+    if(mbps < 100)
+        return {
+            name:"Fast",
+            text:"Good performance for streaming and downloads."
+        };
+
+    return {
+        name:"Very Fast",
+        text:"High-speed connection detected."
+    };
+}
+
+
+/* ---------------------------------------
+   FINISH
+--------------------------------------- */
+
+function finishTest(results){
+
+    running = false;
+
+    clearInterval(graphTimer);
+
+    $("start").disabled =
+        false;
+
+    $("stop").style.display =
+        "none";
+
+    $("phase").textContent =
+        "Test Complete";
+
+    $("progress").style.width =
+        "100%";
+
+    $("percent").textContent =
+        "100%";
+
+
+    try{
+
+        const summary =
+            results.getSummary();
+
+        console.log(
+            "Cloudflare Speed Test:",
+            summary
+        );
+
+        const down =
+            results.getDownloadBandwidth();
+
+        const up =
+            results.getUploadBandwidth();
+
+        const ping =
+            results.getUnloadedLatency();
+
+        const jitter =
+            results.getUnloadedJitter();
+
+
+        if(Number.isFinite(down)){
+
+            $("download").textContent =
+                (
+                    down / 1000000
+                ).toFixed(2);
+
+            $("speed").textContent =
+                (
+                    down / 1000000
+                ).toFixed(2);
+        }
+
+
+        if(Number.isFinite(up)){
+
+            $("upload").textContent =
+                (
+                    up / 1000000
+                ).toFixed(2);
+        }
+
+
+        if(Number.isFinite(ping)){
+
+            $("ping").textContent =
+                ping.toFixed(0);
+        }
+
+
+        if(Number.isFinite(jitter)){
+
+            $("jitter").textContent =
+                jitter.toFixed(1);
+        }
+
+
+        const speed =
+            Number.isFinite(down)
+                ? down / 1000000
+                : NaN;
+
+        const quality =
+            qualityFromSpeed(speed);
+
+
+        $("quality").textContent =
+            quality.name;
+
+        $("qualityText").textContent =
+            quality.text;
+
+
+        saveHistory({
+
+            date:
+                new Date()
+                .toLocaleString(),
+
+            download:
+                Number.isFinite(down)
+                    ? (
+                        down / 1000000
+                    ).toFixed(2)
+                    : "—",
+
+            upload:
+                Number.isFinite(up)
+                    ? (
+                        up / 1000000
+                    ).toFixed(2)
+                    : "—",
+
+            ping:
+                Number.isFinite(ping)
+                    ? ping.toFixed(0)
+                    : "—",
+
+            jitter:
+                Number.isFinite(jitter)
+                    ? jitter.toFixed(1)
+                    : "—",
+
+            quality:
+                quality.name
+        });
+
+    }catch(error){
+
+        console.error(
+            "Finish error:",
+            error
+        );
+    }
+}
+
+
+/* ---------------------------------------
+   START
+--------------------------------------- */
+
+function startTest(){
+
+    if(running)
+        return;
+
+    if(!navigator.onLine){
+
+        alert(
+            "Your device is offline."
+        );
+
+        return;
+    }
+
+
+    running = true;
+
+    graphPoints = [];
+
+    drawGraph();
+
+    $("start").disabled =
+        true;
+
+    $("stop").style.display =
+        "inline-block";
+
+    $("phase").textContent =
+        "Starting Cloudflare test...";
+
+    $("quality").textContent =
+        "Testing...";
+
+    $("qualityText").textContent =
+        "Live connection measurement is running.";
+
+    $("speed").textContent =
+        "0.00";
+
+    $("download").textContent =
+        "—";
+
+    $("upload").textContent =
+        "—";
+
+    $("ping").textContent =
+        "—";
+
+    $("jitter").textContent =
+        "—";
+
+    $("progress").style.width =
+        "3%";
+
+    $("percent").textContent =
+        "3%";
+
+
+    /*
+     * Cloudflare official engine.
+     *
+     * The endpoints below are the defaults
+     * used by @cloudflare/speedtest.
+     */
+
+    engine =
+        new SpeedTest({
+
+            autoStart:false,
+
+            downloadApiUrl:
+                "https://speed.cloudflare.com/__down",
+
+            uploadApiUrl:
+                "https://speed.cloudflare.com/__up",
+
+            /*
+             * A balanced measurement profile
+             * suitable for a browser dashboard.
+             */
+
+            measurements:[
+
+                {
+                    type:"latency",
+                    numPackets:5
+                },
+
+                {
+                    type:"download",
+                    bytes:100000,
+                    count:1,
+                    bypassMinDuration:true
+                },
+
+                {
+                    type:"download",
+                    bytes:1000000,
+                    count:4
+                },
+
+                {
+                    type:"upload",
+                    bytes:100000,
+                    count:4
+                },
+
+                {
+                    type:"download",
+                    bytes:10000000,
+                    count:5
+                },
+
+                {
+                    type:"upload",
+                    bytes:10000000,
+                    count:5
+                },
+
+                {
+                    type:"download",
+                    bytes:25000000,
+                    count:3
+                },
+
+                {
+                    type:"upload",
+                    bytes:25000000,
+                    count:3
+                }
+
+            ]
+        });
+
+
+    /*
+     * LIVE EVENT
+     */
+
+    engine.onResultsChange =
+        ({type}) => {
+
+            updateLiveResults();
+
+            updateProgress();
+
+            if(type){
+
+                const name =
+                    String(type)
+                    .toLowerCase();
+
+                if(name.includes("download"))
+                    $("phase").textContent =
+                        "⚡ Live Download Test";
+
+                else if(name.includes("upload"))
+                    $("phase").textContent =
+                        "⚡ Live Upload Test";
+
+                else if(name.includes("latency"))
+                    $("phase").textContent =
+                        "📡 Measuring Ping";
+            }
+        };
+
+
+    /*
+     * RUNNING STATE
+     */
+
+    engine.onRunningChange =
+        isRunning => {
+
+            running =
+                isRunning;
+
+            if(isRunning){
+
+                $("stop").style.display =
+                    "inline-block";
+
+            }else{
+
+                $("stop").style.display =
+                    "none";
+            }
+        };
+
+
+    /*
+     * FINISH
+     */
+
+    engine.onFinish =
+        results => {
+
+            finishTest(
+                results
+            );
+        };
+
+
+    /*
+     * ERROR
+     */
+
+    engine.onError =
+        error => {
+
+            console.error(
+                "Cloudflare SpeedTest Error:",
+                error
+            );
+
+            running = false;
+
+            clearInterval(
+                graphTimer
+            );
+
+            $("start").disabled =
+                false;
+
+            $("stop").style.display =
+                "none";
+
+            $("phase").textContent =
+                "Test Error";
+
+            $("quality").textContent =
+                "Error";
+
+            $("qualityText").textContent =
+                String(
+                    error &&
+                    error.message
+                    ? error.message
+                    : error
+                );
+
+            alert(
+                "Speed test could not be completed. " +
+                "Please check your internet connection and try again."
+            );
+        };
+
+
+    /*
+     * Additional live polling.
+     *
+     * onResultsChange is the primary live
+     * event; this polling makes the UI refresh
+     * smoothly between measurement events.
+     */
+
+    graphTimer =
+        setInterval(
+            () => {
+
+                updateLiveResults();
+                updateProgress();
+
+            },
+            250
+        );
+
+
+    try{
+
+        engine.play();
+
+    }catch(error){
+
+        console.error(
+            error
+        );
+
+        running = false;
+
+        clearInterval(
+            graphTimer
+        );
+
+        $("start").disabled =
+            false;
+
+        $("stop").style.display =
+            "none";
+
+        $("phase").textContent =
+            "Unable to Start";
+
+    }
+}
+
+
+/* ---------------------------------------
+   STOP
+--------------------------------------- */
+
+function stopTest(){
+
+    if(!engine)
+        return;
+
+    try{
+
+        engine.pause();
+
+    }catch(error){
+
+        console.warn(
+            error
+        );
+    }
+
+    running = false;
+
+    clearInterval(
+        graphTimer
+    );
+
+    $("start").disabled =
+        false;
+
+    $("stop").style.display =
+        "none";
+
+    $("phase").textContent =
+        "Test Paused";
+}
+
+
+/* ---------------------------------------
+   RESET
+--------------------------------------- */
+
+function resetTest(){
+
+    try{
+
+        if(engine)
+            engine.pause();
+
+    }catch(e){}
+
+    clearInterval(
+        graphTimer
+    );
+
+    engine = null;
+
+    running = false;
+
+    graphPoints = [];
+
+    $("start").disabled =
+        false;
+
+    $("stop").style.display =
+        "none";
+
+    $("speed").textContent =
+        "0.00";
+
+    $("download").textContent =
+        "—";
+
+    $("upload").textContent =
+        "—";
+
+    $("ping").textContent =
+        "—";
+
+    $("jitter").textContent =
+        "—";
+
+    $("phase").textContent =
+        "Ready";
+
+    $("percent").textContent =
+        "0%";
+
+    $("progress").style.width =
+        "0%";
+
+    $("quality").textContent =
+        "Not Tested";
+
+    $("qualityText").textContent =
+        "Start the test to measure your internet connection.";
+
+    graphPoints = [];
+
+    drawGraph();
+}
+
+
+/* ---------------------------------------
+   HISTORY
+--------------------------------------- */
+
+function saveHistory(item){
+
+    let data =
+        JSON.parse(
+            localStorage.getItem(
+                "cfSpeedHistory"
+            ) || "[]"
+        );
+
+    data.unshift(item);
+
+    data =
+        data.slice(0,20);
+
+    localStorage.setItem(
+        "cfSpeedHistory",
+        JSON.stringify(data)
+    );
+
+    renderHistory();
+}
+
+
+function renderHistory(){
+
+    const body =
+        $("history");
+
+    const data =
+        JSON.parse(
+            localStorage.getItem(
+                "cfSpeedHistory"
+            ) || "[]"
+        );
+
+    if(!data.length){
+
+        body.innerHTML =
+            `
+            <tr>
+                <td
+                    colspan="6"
+                    class="empty"
+                >
+                    No test history
+                </td>
+            </tr>
+            `;
+
+        return;
+    }
+
+
+    body.innerHTML =
+        data.map(
+            item => `
+            <tr>
+                <td>${escapeHtml(item.date)}</td>
+                <td>${escapeHtml(item.download)} Mbps</td>
+                <td>${escapeHtml(item.upload)} Mbps</td>
+                <td>${escapeHtml(item.ping)} ms</td>
+                <td>${escapeHtml(item.jitter)} ms</td>
+                <td>${escapeHtml(item.quality)}</td>
+            </tr>
+            `
+        ).join("");
+}
+
+
+/* ---------------------------------------
+   CLEAR
+--------------------------------------- */
+
+$("clear").onclick =
+    () => {
+
+        if(
+            confirm(
+                "Clear all speed test history?"
+            )
+        ){
+
+            localStorage.removeItem(
+                "cfSpeedHistory"
+            );
+
+            renderHistory();
+        }
+    };
+
+
+/* ---------------------------------------
+   NETWORK INFO
+--------------------------------------- */
+
+function updateNetwork(){
+
+    if(
+        !navigator.onLine
+    ){
+
+        $("status").textContent =
+            "Offline";
+
+        return;
+    }
+
+    $("status").textContent =
+        "Online";
+
+
+    const c =
+        navigator.connection ||
+        navigator.mozConnection ||
+        navigator.webkitConnection;
+
+
+    if(!c){
+
+        $("network").textContent =
+            "Browser API unavailable";
+
+        return;
+    }
+
+
+    $("network").textContent =
+        c.type || "Unknown";
+
+    $("effective").textContent =
+        c.effectiveType || "—";
+
+    $("browserDownlink").textContent =
+        c.downlink
+            ? c.downlink + " Mbps"
+            : "—";
+
+    $("browserRtt").textContent =
+        c.rtt
+            ? c.rtt + " ms"
+            : "—";
+}
+
+
+window.addEventListener(
+    "online",
+    updateNetwork
+);
+
+window.addEventListener(
+    "offline",
+    updateNetwork
+);
+
+
+/* ---------------------------------------
+   ESCAPE HTML
+--------------------------------------- */
+
+function escapeHtml(value){
+
+    return String(value)
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+}
+
+
+/* ---------------------------------------
+   EVENTS
+--------------------------------------- */
+
+$("start").onclick =
+    startTest;
+
+$("stop").onclick =
+    stopTest;
+
+$("reset").onclick =
+    resetTest;
+
+
+/* ---------------------------------------
+   INITIALIZE
+--------------------------------------- */
+
+updateNetwork();
+
+renderHistory();
+
+setTimeout(
+    resizeCanvas,
+    100
+);
+
+</script>
+
+</body>
+</html>
