@@ -538,7 +538,12 @@ input:focus,select:focus,textarea:focus{
 
                 <a href="#"
                    onclick="showView('productEntryView');return false;">
-                    Prescribing Habit / Generic & Product
+                    Product Entry
+                </a>
+
+                <a href="#"
+                   onclick="showView('genericEntryView');return false;">
+                    Generic Entry
                 </a>
 
             </div>
@@ -643,7 +648,7 @@ input:focus,select:focus,textarea:focus{
         <div id="productEntryView" class="view">
 
             <h2 class="section-title">
-                Product & Generic Entry
+                Product Entry Form
             </h2>
 
             <form id="productForm"
@@ -663,8 +668,7 @@ input:focus,select:focus,textarea:focus{
                                    id="p_name">
                         </td>
 
-                        <td rowspan="2"
-                            style="width:25%;text-align:center">
+                        <td style="width:25%;text-align:center">
 
                             <button type="submit"
                                     class="btn btn-success">
@@ -680,13 +684,53 @@ input:focus,select:focus,textarea:focus{
                         </td>
                     </tr>
 
+                </table>
+
+            </form>
+
+            <h3 style="margin:15px 0 7px">Product List</h3>
+            <div id="productList">Loading...</div>
+
+        </div>
+
+        <!-- ================= GENERIC ================= -->
+
+        <div id="genericEntryView" class="view">
+
+            <h2 class="section-title">
+                Generic / Prescribing Habit Entry
+            </h2>
+
+            <form id="genericForm"
+                  onsubmit="event.preventDefault();saveGeneric();">
+
+                <input type="hidden" id="editingGenericKey">
+                  
+                <table class="form-table">
+
                     <tr>
-                        <td>
-                            <strong>Prescribing Habit / Generic *</strong>
+                        <td style="width:30%">
+                            <strong>Generic Name *</strong>
                         </td>
 
-                        <td>
-                            <input type="text" id="p_generic">
+                        <td style="width:45%">
+                            <input type="text"
+                                   id="g_name">
+                        </td>
+
+                        <td style="width:25%;text-align:center">
+
+                            <button type="submit"
+                                    class="btn btn-success">
+                                Add Generic
+                            </button>
+
+                            <button type="button"
+                                    class="btn btn-warning"
+                                    onclick="clearGenericForm()">
+                                Clear
+                            </button>
+
                         </td>
                     </tr>
 
@@ -694,8 +738,8 @@ input:focus,select:focus,textarea:focus{
 
             </form>
 
-            <h3 style="margin:15px 0 7px">Product List</h3>
-            <div id="productList">Loading...</div>
+            <h3 style="margin:15px 0 7px">Generic List</h3>
+            <div id="genericList">Loading...</div>
 
         </div>
 
@@ -1330,7 +1374,7 @@ input:focus,select:focus,textarea:focus{
                                 <br>
                                 <textarea id="noteRsm"
                                           class="editable"
-                                          style="height:45px"></textarea>
+                                          style="height:65px"></textarea> <!-- Increased height for 3 rows -->
                             </td>
                         </tr>
 
@@ -1689,7 +1733,8 @@ function showView(viewId){
         currentRole!=="superadmin" &&
         (
             viewId==="userEntryView"||
-            viewId==="productEntryView"
+            viewId==="productEntryView"||
+            viewId==="genericEntryView"
         )
     ){
 
@@ -1780,13 +1825,49 @@ function initFirebaseListeners(){
                 .filter(p=>p.name);
 
             renderProducts(products);
-            populateDropdowns(products);
+            populateDropdowns(products, null); 
         },
         error=>{
 
             console.error(error);
 
             document.getElementById("productList").innerHTML=
+                '<div class="fb-error">'+
+                escapeHTML(getFirebaseError(error))+
+                '</div>';
+        }
+    );
+
+
+    /* GENERICS */
+
+    db.ref("generics").on(
+        "value",
+        snapshot=>{
+
+            const data=snapshot.val()||{};
+
+            const generics=
+                Object.entries(data)
+                .map(([key,value])=>({
+                    key:key,
+                    ...(value||{})
+                }))
+                .filter(g=>g.name);
+
+            renderGenerics(generics);
+            
+            db.ref("products").once("value").then(prodSnap => {
+                const prodData = prodSnap.val() || {};
+                const prods = Object.entries(prodData).map(([k,v])=>({key:k,...v})).filter(p=>p.name);
+                populateDropdowns(prods, generics);
+            });
+        },
+        error=>{
+
+            console.error(error);
+
+            document.getElementById("genericList").innerHTML=
                 '<div class="fb-error">'+
                 escapeHTML(getFirebaseError(error))+
                 '</div>';
@@ -2040,16 +2121,8 @@ async function saveProduct(){
     const name=
         document.getElementById("p_name").value.trim();
 
-    const generic=
-        document.getElementById("p_generic").value.trim();
-
     if(!name){
         alert("Product Name is required.");
-        return;
-    }
-
-    if(!generic){
-        alert("Generic / Prescribing Habit is required.");
         return;
     }
 
@@ -2060,7 +2133,6 @@ async function saveProduct(){
         if(editingKey){
             await db.ref("products/"+editingKey).set({
                 name:name,
-                generic:generic,
                 updatedAt:Date.now()
             });
             alert("Product updated successfully!");
@@ -2068,7 +2140,6 @@ async function saveProduct(){
             const ref=db.ref("products").push();
             await ref.set({
                 name:name,
-                generic:generic,
                 createdAt:Date.now(),
                 updatedAt:Date.now()
             });
@@ -2107,7 +2178,6 @@ async function editProduct(key) {
         
         document.getElementById("editingProductKey").value = key;
         document.getElementById("p_name").value = product.name || "";
-        document.getElementById("p_generic").value = product.generic || "";
         
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch(error) {
@@ -2140,7 +2210,6 @@ function renderProducts(products){
         <thead>
         <tr>
             <th>Product Name</th>
-            <th>Generic / Prescribing Habit</th>
             ${currentRole === "superadmin" ? "<th>Actions</th>" : ""}
         </tr>
         </thead>
@@ -2151,7 +2220,7 @@ function renderProducts(products){
 
         html+=`
             <tr>
-                <td colspan="${currentRole === "superadmin" ? 3 : 2}" style="text-align:center">
+                <td colspan="${currentRole === "superadmin" ? 2 : 1}" style="text-align:center">
                     No Products Found
                 </td>
             </tr>
@@ -2179,7 +2248,6 @@ function renderProducts(products){
             html+=`
                 <tr>
                     <td>${escapeHTML(p.name)}</td>
-                    <td>${escapeHTML(p.generic)}</td>
                     ${actions}
                 </tr>
             `;
@@ -2193,45 +2261,181 @@ function renderProducts(products){
 
 
 /* =========================================================
-   PRODUCT DROPDOWNS
+   GENERIC SAVE / EDIT / DELETE
 ========================================================= */
 
-function populateDropdowns(products){
+async function saveGeneric(){
 
-    const genericSelect=
-        document.getElementById("genericSelect");
+    if(currentRole!=="superadmin"){
+        alert("Only Super Admin can add generics.");
+        return;
+    }
 
-    const oldGeneric=genericSelect.value;
+    const name=
+        document.getElementById("g_name").value.trim();
 
-    genericSelect.innerHTML=
-        '<option value="">-- Select Generic --</option>';
+    if(!name){
+        alert("Generic Name is required.");
+        return;
+    }
 
-    const genericMap={};
+    try{
 
-    products.forEach(p=>{
+        const editingKey = document.getElementById("editingGenericKey").value;
 
-        const generic=
-            String(p.generic||"").trim();
-
-        if(!generic)return;
-
-        const key=generic.toLowerCase();
-
-        if(!genericMap[key]){
-
-            genericMap[key]=generic;
-
-            const option=document.createElement("option");
-
-            option.value=generic;
-            option.textContent=generic;
-
-            genericSelect.appendChild(option);
+        if(editingKey){
+            await db.ref("generics/"+editingKey).set({
+                name:name,
+                updatedAt:Date.now()
+            });
+            alert("Generic updated successfully!");
+        } else {
+            const ref=db.ref("generics").push();
+            await ref.set({
+                name:name,
+                createdAt:Date.now(),
+                updatedAt:Date.now()
+            });
+            alert("Generic saved successfully!");
         }
-    });
+
+        clearGenericForm();
+        showStatus("Generic saved successfully");
+
+    }catch(error){
+
+        console.error(error);
+
+        alert(
+            "Error saving generic:\n"+
+            getFirebaseError(error)
+        );
+    }
+}
+
+
+function clearGenericForm(){
+    document.getElementById("genericForm").reset();
+    document.getElementById("editingGenericKey").value = "";
+}
+
+
+async function editGeneric(key) {
+    try {
+        const snapshot = await db.ref("generics/"+key).once("value");
+        if(!snapshot.exists()) {
+            alert("Generic not found!");
+            return;
+        }
+        const generic = snapshot.val();
+        
+        document.getElementById("editingGenericKey").value = key;
+        document.getElementById("g_name").value = generic.name || "";
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch(error) {
+        console.error(error);
+        alert("Error editing generic:\n" + getFirebaseError(error));
+    }
+}
+
+
+async function deleteGeneric(key) {
+    if(currentRole !== "superadmin") return;
+    
+    if(!confirm("Are you sure you want to delete this generic?")) return;
+    
+    try {
+        await db.ref("generics/"+key).remove();
+        showStatus("Generic deleted");
+        alert("Generic Deleted!");
+    } catch(error) {
+        console.error(error);
+        alert("Delete Error:\n" + getFirebaseError(error));
+    }
+}
+
+
+function renderGenerics(generics){
+
+    let html=`
+        <table class="form-table">
+        <thead>
+        <tr>
+            <th>Generic Name</th>
+            ${currentRole === "superadmin" ? "<th>Actions</th>" : ""}
+        </tr>
+        </thead>
+        <tbody>
+    `;
+
+    if(!generics.length){
+
+        html+=`
+            <tr>
+                <td colspan="${currentRole === "superadmin" ? 2 : 1}" style="text-align:center">
+                    No Generics Found
+                </td>
+            </tr>
+        `;
+
+    }else{
+
+        generics.sort((a,b)=>
+            String(a.name||"")
+            .localeCompare(String(b.name||""))
+        );
+
+        generics.forEach(g=>{
+
+            let actions = "";
+            if(currentRole === "superadmin") {
+                actions = `
+                    <td>
+                        <button class="btn btn-warning" onclick="editGeneric('${escapeHTML(g.key)}')">Edit</button>
+                        <button class="btn btn-danger" onclick="deleteGeneric('${escapeHTML(g.key)}')">Delete</button>
+                    </td>
+                `;
+            }
+
+            html+=`
+                <tr>
+                    <td>${escapeHTML(g.name)}</td>
+                    ${actions}
+                </tr>
+            `;
+        });
+    }
+
+    html+="</tbody></table>";
+
+    document.getElementById("genericList").innerHTML=html;
+}
+
+
+/* =========================================================
+   PRODUCT & GENERIC DROPDOWNS
+========================================================= */
+
+function populateDropdowns(products, generics){
+
+    const genericSelect = document.getElementById("genericSelect");
+    const oldGeneric = genericSelect.value;
+
+    genericSelect.innerHTML = '<option value="">-- Select Generic --</option>';
+
+    if(generics) {
+        generics.forEach(g => {
+            if(!g.name) return;
+            const option = document.createElement("option");
+            option.value = g.name;
+            option.textContent = g.name;
+            genericSelect.appendChild(option);
+        });
+    }
 
     if(oldGeneric){
-        genericSelect.value=oldGeneric;
+        genericSelect.value = oldGeneric;
     }
 
 
@@ -2246,17 +2450,15 @@ function populateDropdowns(products){
         select.innerHTML=
             '<option value="">Select Product...</option>';
 
-        products.forEach(p=>{
-
-            if(!p.name)return;
-
-            const option=document.createElement("option");
-
-            option.value=p.name;
-            option.textContent=p.name;
-
-            select.appendChild(option);
-        });
+        if(products) {
+            products.forEach(p=>{
+                if(!p.name)return;
+                const option=document.createElement("option");
+                option.value=p.name;
+                option.textContent=p.name;
+                select.appendChild(option);
+            });
+        }
 
         if(old){
             select.value=old;
@@ -2618,9 +2820,8 @@ function populateStartingMonths() {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const currentYear = new Date().getFullYear();
     
-    // Populate from current year - 1 to current year + 3
     for (let y = currentYear - 1; y <= currentYear + 3; y++) {
-        const yr = String(y).slice(-2); // Get last 2 digits of year
+        const yr = String(y).slice(-2); 
         months.forEach(m => {
             const val = `${m}-${yr}`;
             const option = document.createElement("option");
@@ -3036,7 +3237,7 @@ document.addEventListener(
     ()=>{
 
         setCurrentDate();
-        populateStartingMonths(); // Populate Starting Month dropdown
+        populateStartingMonths(); 
 
         document.getElementById("region").value="KUSHTIA";
         document.getElementById("depot").value="KUSHTIA";
