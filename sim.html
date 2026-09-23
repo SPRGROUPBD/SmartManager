@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monico SmartManager — Employee & SIM Management (Firebase)</title>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<!-- SheetJS for Excel Export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root{--navy:#001f3f;--blue:#004b8d;--gray:#d8d8d8;--light:#f4f4f4;--border:#777;--green:#0a6b2b;--red:#a00000;--yellow:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;background:#c0c0c0;color:#111;font-family:Tahoma,Arial,sans-serif;font-size:13px}
+.titlebar{height:38px;background:linear-gradient(#173f69,#001f3f);color:#fff;font-weight:bold;padding:10px 12px;font-size:15px}
+.toolbar{display:flex;flex-wrap:wrap;gap:4px;padding:5px;background:#c0c0c0;border-bottom:1px solid #666}
+button,.btn,select,input,textarea{font:inherit}
+button,.btn{border:1px solid #666;border-top-color:#fff;border-left-color:#fff;background:#ddd;padding:5px 10px;cursor:pointer}
+button:active,.btn:active{border-top-color:#666;border-left-color:#666;border-bottom-color:#fff;border-right-color:#fff}
+button.primary{background:#dbe9f7;font-weight:bold}
+button.danger{background:#f4caca}
+button.success{background:#cce9d3}
+button.warn{background:#f5e4bb}
+.nav.active{background:#fff;font-weight:bold}
+#app{padding:8px;padding-bottom:35px}
+.page{display:none}
+.page.active{display:block}
+.window{background:#efefef;border:1px solid #555;box-shadow:1px 1px 0 #fff inset;margin-bottom:8px}
+.window-title{background:#173f69;color:#fff;font-weight:bold;padding:6px 8px}
+.window-body{padding:8px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:7px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-weight:bold}
+input,select,textarea{border:1px solid #666;background:#fff;padding:5px;min-height:29px}
+textarea{min-height:70px;resize:vertical}
+.actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.card{border:1px solid #777;background:#fff;padding:9px}
+.card b{display:block;font-size:20px;margin-top:4px}
+.card small{color:#555}
+.table-wrap{overflow:auto;border:1px solid #777;background:#fff}
+table{width:100%;border-collapse:collapse;min-width:800px}
+th,td{border:1px solid #999;padding:5px;text-align:left;vertical-align:top}
+th{background:#d3d3d3;white-space:nowrap}
+tr:nth-child(even){background:#f7f7f7}
+.badge{display:inline-block;padding:2px 6px;border:1px solid #777;background:#eee}
+.badge.green{background:#d8f0df;color:#064d1d}
+.badge.red{background:#f4cccc;color:#700}
+.badge.yellow{background:#fff0bd;color:#754c00}
+.badge.blue{background:#d8e8f7;color:#063b6d}
+.notice{border:1px solid #888;background:#fffde6;padding:8px;margin-bottom:8px}
+.muted{color:#666}
+.kpi{font-size:11px;color:#555}
+.checkbox{display:flex;align-items:center;gap:6px;padding:7px;border:1px solid #999;background:#fff}
+.checkbox input{min-height:auto;width:18px;height:18px}
+.full{grid-column:1/-1}
+.statusbar{position:fixed;bottom:0;left:0;right:0;background:#d4d4d4;border-top:1px solid #666;padding:4px 8px;height:25px}
+.hidden{display:none!important}
+.firebase-status{font-size:11px;color:#555;padding:2px 8px}
+.firebase-status.online{color:#064d1d}
+.firebase-status.offline{color:#700}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.grid,.cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="titlebar">MONICO SMARTMANAGER — Employee & SIM Management (Firebase)</div>
+
+<div class="toolbar">
+  <button class="nav active" data-page="dashboard">Dashboard</button>
+  <button class="nav" data-page="employee">Employee Entry</button>
+  <button class="nav" data-page="employees">Employee List</button>
+  <button class="nav" data-page="stock">SIM Stock</button>
+  <button class="nav" data-page="allocation">SIM Allocation</button>
+  <button class="nav" data-page="transfer">SIM Transfer</button>
+  <button class="nav" data-page="replacement">SIM Replacement</button>
+  <button class="nav" data-page="history">Full History</button>
+  <button class="nav" data-page="reports">Reports</button>
+  <button class="nav" data-page="backup">Data / Backup</button>
+</div>
+
+<div id="app">
+
+<section id="dashboard" class="page active">
+  <div class="window"><div class="window-title">SIM Dashboard</div><div class="window-body">
+    <div class="cards" id="dashboardCards"></div>
+  </div></div>
+  <div class="window"><div class="window-title">Recent Activity</div><div class="window-body"><div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th>Action</th><th>Mobile</th><th>Employee</th><th>Location</th><th>Details</th></tr></thead>
+    <tbody id="recentHistory"></tbody>
+  </table></div></div></div>
+</section>
+
+<section id="employee" class="page">
+  <div class="window"><div class="window-title">Employee Master Entry</div><div class="window-body">
+    <div class="notice">Employee Type অনুযায়ী প্রয়োজনীয় Location field ব্যবহার করুন। সব data Firebase-এ save হবে।</div>
+    <div class="grid">
+      <div class="field"><label>Employee Type *</label><select id="empType">
+        <option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option><option value="Depot Staff">Depot Staff</option>
+      </select></div>
+      <div class="field"><label>EMP Code *</label><input id="empCode" placeholder="যেমন: MPO001"></div>
+      <div class="field"><label>Name *</label><input id="empName"></div>
+      <div class="field" id="locationLabel"><label id="locationCaption">Territory *</label><input id="empLocation"></div>
+      <div class="field"><label>Joining Date *</label><input id="joinDate" type="date"></div>
+      <div class="field"><label>Mobile No</label><input id="empMobile" placeholder="01XXXXXXXXX"></div>
+      <div class="field"><label>Status</label><select id="empStatus"><option>Active</option><option>Inactive</option><option>Dropout</option></select></div>
+      <div class="field"><label>Current SIM</label><input id="empCurrentSim" placeholder="Auto / optional"></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="saveEmployee()">Save Employee</button><button onclick="clearEmployeeForm()">New / Clear</button></div>
+  </div></div>
+</section>
+
+<section id="employees" class="page">
+  <div class="window"><div class="window-title">Employee List</div><div class="window-body">
+    <div class="grid">
+      <div class="field"><label>Search</label><input id="empSearch" oninput="renderEmployees()" placeholder="Name / EMP Code / Mobile / Location"></div>
+      <div class="field"><label>Type</label><select id="empFilterType" onchange="renderEmployees()"><option value="">All</option><option>MPO</option><option>AM</option><option>RSM</option><option>Depot Staff</option></select></div>
+      <div class="field"><label>Status</label><select id="empFilterStatus" onchange="renderEmployees()"><option value="">All</option><option>Active</option><option>Inactive</option><option>Dropout</option></select></div>
+    </div>
+    <div class="actions">
+      <button onclick="renderEmployees()">Refresh</button>
+      <button class="success" onclick="exportEmployeesExcel()">⬇ Export Excel (EMP List)</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Type</th><th>EMP Code</th><th>Name</th><th>Location</th><th>Joining Date</th><th>Mobile</th><th>Status</th><th>Current SIM</th><th>Action</th></tr></thead><tbody id="employeeTable"></tbody></table></div>
+  </div></div>
+</section>
+
+<section id="stock" class="page">
+  <div class="window"><div class="window-title">SIM Stock Entry</div><div class="window-body">
+    <div class="grid">
+      <div class="field"><label>Mobile Number *</label><input id="simMobile"></div>
+      <div class="field"><label>Operator *</label><select id="simOperator"><option>Grameenphone</option><option>Robi</option><option>Banglalink</option><option>Teletalk</option><option>Other</option></select></div>
+      <div class="field"><label>SIM Serial</label><input id="simSerial"></div>
+      <div class="field"><label>Initial Status</label><select id="simStatus"><option>Office Stock</option><option>Available</option></select></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="saveSim()">Save SIM</button><button onclick="clearSimForm()">Clear</button></div>
+  </div></div>
+  <div class="window"><div class="window-title">SIM Stock</div><div class="window-body"><div class="table-wrap"><table><thead><tr><th>Mobile</th><th>Operator</th><th>Serial</th><th>Status</th><th>Current User</th><th>Location</th><th>Assigned Date</th><th>Replacement Link</th></tr></thead><tbody id="stockTable"></tbody></table></div></div></div>
+</section>
+
+<section id="allocation" class="page">
+  <div class="window"><div class="window-title">SIM Allocation — Available SIM List</div><div class="window-body">
+    <div class="table-wrap"><table><thead><tr><th>Mobile</th><th>Operator</th><th>SIM Status</th><th>Previous User</th><th>Location</th><th>Action</th></tr></thead><tbody id="allocationTable"></tbody></table></div>
+  </div></div>
+</section>
+
+<section id="transfer" class="page">
+  <div class="window"><div class="window-title">SIM Transfer / Area Transfer</div><div class="window-body">
+    <div class="notice">
+      <b>Transfer Logic:</b> একই SIM Transfer করলে নম্বর অপরিবর্তিত থাকবে। <b>Auto SIM Replacement</b> টিক দিলে পুরাতন SIM সরাসরি <b>Replaced</b> হবে।
+    </div>
+    <div class="grid">
+      <div class="field"><label>Transfer To Employee *</label><select id="transferEmp" onchange="loadTransferEmployee()"></select></div>
+      <div class="field"><label>Current SIM</label><input id="transferOldSim" readonly></div>
+      <div class="field"><label>New Location</label><input id="transferLocation" readonly></div>
+      <div class="field"><label>Transfer Date *</label><input id="transferDate" type="date"></div>
+      <div class="field full"><label>Reason</label><textarea id="transferReason" placeholder="Area transfer / new join / dropout replacement / other"></textarea></div>
+      <div class="field full"><label class="checkbox"><input type="checkbox" id="autoReplace" onchange="toggleReplacementFields()"> SIM Transfer-এর সাথে Auto SIM Replacement</label></div>
+      <div class="field hidden" id="newSimBox"><label>New SIM *</label><select id="transferNewSim"></select></div>
+      <div class="field hidden" id="replaceReasonBox"><label>Replacement Reason</label><select id="transferReplaceReason"><option>Lost</option><option>Damaged</option><option>Network</option><option>Upgrade</option><option>Ownership</option><option>Other</option></select></div>
+      <div class="field"><label>Transferred By</label><input id="transferBy" placeholder="DIC / RSM / Admin"></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="processTransfer()">Process Transfer</button><button onclick="clearTransferForm()">Clear</button></div>
+  </div></div>
+</section>
+
+<section id="replacement" class="page">
+  <div class="window"><div class="window-title">Manual SIM Replacement</div><div class="window-body">
+    <div class="notice">Replacement সম্পন্ন হলে পুরাতন SIM-এর status হবে <b>Replaced</b>।</div>
+    <div class="grid">
+      <div class="field"><label>Employee *</label><select id="replacementEmp" onchange="loadReplacementEmployee()"></select></div>
+      <div class="field"><label>Old Mobile *</label><input id="replacementOld" readonly></div>
+      <div class="field"><label>New Mobile *</label><select id="replacementNew"></select></div>
+      <div class="field"><label>Replacement Date *</label><input id="replacementDate" type="date"></div>
+      <div class="field"><label>Reason</label><select id="replacementReason"><option>Lost</option><option>Damaged</option><option>Network</option><option>Upgrade</option><option>Ownership</option><option>Other</option></select></div>
+      <div class="field"><label>Approved By</label><input id="replacementApprovedBy"></div>
+      <div class="field"><label>Delivered To</label><input id="replacementDeliveredTo"></div>
+      <div class="field"><label>New SIM Serial</label><input id="replacementSerial"></div>
+    </div>
+    <div class="actions"><button class="primary" onclick="processReplacement()">Complete Replacement</button><button onclick="clearReplacementForm()">Clear</button></div>
+  </div></div>
+  <div class="window"><div class="window-title">Replacement Required</div><div class="window-body"><div class="table-wrap"><table><thead><tr><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody id="replacementPending"></tbody></table></div></div></div>
+</section>
+
+<section id="history" class="page">
+  <div class="window"><div class="window-title">Full SIM / Employee History</div><div class="window-body">
+    <div class="grid">
+      <div class="field"><label>Search Mobile / EMP / Name</label><input id="historySearch" oninput="renderHistory()"></div>
+      <div class="field"><label>Action</label><select id="historyAction" onchange="renderHistory()"><option value="">All</option><option>ASSIGN</option><option>TRANSFER</option><option>REPLACEMENT</option><option>RELEASE</option><option>DROPOUT</option><option>STOCK</option></select></div>
+    </div>
+    <div class="actions"><button onclick="renderHistory()">Refresh</button></div>
+    <div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Old SIM</th><th>New SIM</th><th>Employee</th><th>From</th><th>To</th><th>Reason</th><th>By</th></tr></thead><tbody id="historyTable"></tbody></table></div>
+  </div></div>
+</section>
+
+<section id="reports" class="page">
+  <div class="window"><div class="window-title">Reports</div><div class="window-body">
+    <div class="actions">
+      <button onclick="printReport('employees')">Print Employee Report</button>
+      <button onclick="printReport('sims')">Print SIM Report</button>
+      <button onclick="printReport('history')">Print Full History</button>
+      <button class="success" onclick="exportEmployeesExcel()">⬇ Export Emp List Excel</button>
+    </div>
+    <div class="notice"><b>Replacement reporting rule:</b> status <b>Replaced</b> is completed history; status <b>Replacement Required</b> is only pending.</div>
+  </div></div>
+</section>
+
+<section id="backup" class="page">
+  <div class="window"><div class="window-title">Data / Backup (Firebase Live)</div><div class="window-body">
+    <div class="notice">আপনার data এখন <b>Firebase Realtime Database</b> এ save হচ্ছে। Backup হিসেবে JSON ও export করতে পারবেন।</div>
+    <div class="actions">
+      <button class="primary" onclick="exportData()">Export JSON Backup</button>
+      <button class="warn" onclick="reloadFromFirebase()">Reload From Firebase</button>
+    </div>
+    <p class="firebase-status" id="fbStatus">Firebase: connecting...</p>
+  </div></div>
+</section>
+
+</div>
+<div class="statusbar"><span id="status">Ready</span> | Monico SmartManager | Firebase Realtime DB</div>
+
+<script>
+/* ---------- Firebase Config & Init ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyBYuWms25FOoTdP2UubzgYAEo7zZbEcvtA",
+  authDomain: "flatbonussales.firebaseapp.com",
+  databaseURL: "https://flatbonussales-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "flatbonussales",
+  storageBucket: "flatbonussales.firebasestorage.app",
+  messagingSenderId: "483282030676",
+  appId: "1:483282030676:web:59c11f3f049ea3bd875dc1",
+  measurementId: "G-ESMC8BWT47"
+};
+
+firebase.initializeApp(firebaseConfig);
+const fbDb = firebase.database();
+const FB_ROOT = 'monicoSimManager'; // Firebase root node
+
+/* ---------- Local in-memory cache (synced from Firebase) ---------- */
+let db = { employees: [], sims: [], history: [] };
+
+/* ---------- Helpers ---------- */
+function today(){return new Date().toISOString().slice(0,10)}
+function now(){return new Date().toLocaleString('en-GB',{hour12:false})}
+function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function setStatus(s){document.getElementById('status').textContent=s}
+function setFbStatus(s, online){
+  const el=document.getElementById('fbStatus');
+  el.textContent='Firebase: '+s;
+  el.className='firebase-status '+(online?'online':'offline');
+}
+function badge(s){
+  let c=s==='Assigned'?'green':s==='Replacement Required'?'red':s==='Replaced'?'blue':(s==='Lost/Damaged'?'red':'yellow');
+  return '<span class="badge '+c+'">'+esc(s)+'</span>';
+}
+function genId(){return 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)}
+
+/* ---------- Firebase: Save full DB (overwrite) ---------- */
+function saveDB(){
+  // Push whole object to Firebase root node
+  return fbDb.ref(FB_ROOT).set(db).then(()=>{
+    setStatus('Saved to Firebase');
+  }).catch(err=>{
+    console.error(err);
+    setStatus('Firebase save error: '+err.message);
+    alert('Firebase save error: '+err.message);
+  });
+}
+
+/* ---------- Firebase: Load data ---------- */
+function loadFromFirebase(){
+  setFbStatus('connecting...', false);
+  return fbDb.ref(FB_ROOT).get().then(snap=>{
+    const val = snap.val();
+    if(val){
+      db.employees = val.employees || [];
+      db.sims = val.sims || [];
+      db.history = val.history || [];
+    }else{
+      // First time: initialize empty
+      db = { employees: [], sims: [], history: [] };
+    }
+    setFbStatus('connected ✓', true);
+    renderAll();
+    setStatus('Loaded from Firebase');
+  }).catch(err=>{
+    console.error(err);
+    setFbStatus('error: '+err.message, false);
+    alert('Firebase load error: '+err.message);
+  });
+}
+
+/* ---------- Firebase: Realtime listener (auto refresh) ---------- */
+function listenFirebase(){
+  fbDb.ref(FB_ROOT).on('value', snap=>{
+    const val = snap.val();
+    if(val){
+      db.employees = val.employees || [];
+      db.sims = val.sims || [];
+      db.history = val.history || [];
+      renderAll();
+      setFbStatus('live ✓', true);
+    } else {
+      db = { employees: [], sims: [], history: [] };
+      renderAll();
+      setFbStatus('connected (empty) ✓', true);
+    }
+  }, err=>{
+    setFbStatus('listen error: '+err.code, false);
+  });
+}
+
+function reloadFromFirebase(){ loadFromFirebase(); }
+
+/* ---------- Location caption ---------- */
+function locationCaption(){
+  const t=document.getElementById('empType').value;
+  document.getElementById('locationCaption').textContent=(t==='MPO'?'Territory *':t==='AM'?'Area *':'Region *');
+}
+document.getElementById('empType').addEventListener('change',locationCaption);
+
+/* ---------- Navigation ---------- */
+document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');document.getElementById(b.dataset.page).classList.add('active');
+  renderAll();
+});
+
+/* ---------- Employee ---------- */
+function saveEmployee(){
+  const type=empType.value, code=empCode.value.trim(), name=empName.value.trim(), loc=empLocation.value.trim(), jd=joinDate.value;
+  if(!code||!name||!loc||!jd){alert('EMP Code, Name, Location এবং Joining Date দিন।');return}
+  if(db.employees.some(e=>e.code.toLowerCase()===code.toLowerCase())){alert('এই EMP Code আগে থেকেই আছে।');return}
+  db.employees.push({id:genId(),type,code,name,location:loc,joiningDate:jd,mobile:empMobile.value.trim(),status:empStatus.value,currentSim:empCurrentSim.value.trim()});
+  saveDB().then(()=>{
+    alert('Employee saved successfully to Firebase.');
+    clearEmployeeForm();
+    renderAll();
+  });
+}
+function clearEmployeeForm(){['empCode','empName','empLocation','joinDate','empMobile','empCurrentSim'].forEach(id=>document.getElementById(id).value='');empStatus.value='Active';empType.value='MPO';locationCaption()}
+function renderEmployees(){
+  const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
+  const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
+  employeeTable.innerHTML=rows.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.mobile)}</td><td>${badge(e.status)}</td><td>${esc(e.currentSim||'-')}</td><td><button onclick="editEmployee('${e.id}')">Edit</button> <button class="danger" onclick="dropoutEmployee('${e.id}')">Dropout</button></td></tr>`).join('')||'<tr><td colspan="9">No data</td></tr>';
+}
+function editEmployee(id){
+  const e=db.employees.find(x=>x.id===id);if(!e)return;
+  empType.value=e.type;empCode.value=e.code;empName.value=e.name;empLocation.value=e.location;joinDate.value=e.joiningDate;empMobile.value=e.mobile||'';empStatus.value=e.status;empCurrentSim.value=e.currentSim||'';locationCaption();
+  document.querySelector('[data-page="employee"]').click();
+}
+function dropoutEmployee(id){
+  const e=db.employees.find(x=>x.id===id);if(!e)return;
+  if(!confirm('এই employee-কে Dropout করবেন?'))return;
+  e.status='Dropout';
+  if(e.currentSim){
+    const s=db.sims.find(x=>x.mobile===e.currentSim);
+    if(s){s.status='Available';s.empCode='';s.location='';s.assignedDate='';}
+    db.history.push({date:now(),action:'DROPOUT',oldSim:e.currentSim,newSim:'',emp:e.code+' - '+e.name,from:e.location,to:'Office Stock/Available',reason:'Employee Dropout',by:'Admin'});
+    e.currentSim='';
+  }
+  saveDB().then(renderAll);
+}
+
+/* ---------- SIM ---------- */
+function saveSim(){
+  const mobile=simMobile.value.trim(), op=simOperator.value, serial=simSerial.value.trim(), status=simStatus.value;
+  if(!mobile){alert('Mobile Number দিন।');return}
+  if(db.sims.some(s=>s.mobile===mobile)){alert('এই Mobile Number আগে থেকেই আছে।');return}
+  db.sims.push({id:genId(),mobile,operator:op,serial,status,empCode:'',location:'',assignedDate:'',previousUser:'',replacedBy:'',replacementReason:''});
+  db.history.push({date:now(),action:'STOCK',oldSim:'',newSim:mobile,emp:'',from:'',to:'Office Stock',reason:'New SIM Added',by:'Admin'});
+  saveDB().then(()=>{clearSimForm();renderAll()});
+}
+function clearSimForm(){simMobile.value='';simSerial.value='';simStatus.value='Office Stock'}
+function renderStock(){
+  stockTable.innerHTML=db.sims.map(s=>{
+    const e=db.employees.find(x=>x.code===s.empCode);
+    return `<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${esc(s.serial)}</td><td>${badge(s.status)}</td><td>${esc(e?e.name+' ('+e.code+')':'-')}</td><td>${esc(s.location||'-')}</td><td>${esc(s.assignedDate||'-')}</td><td>${esc(s.replacedBy||'-')}</td></tr>`
+  }).join('')||'<tr><td colspan="8">No SIM data</td></tr>';
+}
+function availableSims(excludeMobile=''){
+  return db.sims.filter(s=>['Available','Office Stock'].includes(s.status)&&s.mobile!==excludeMobile);
+}
+function renderAllocation(){
+  allocationTable.innerHTML=availableSims().map(s=>`<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${badge(s.status)}</td><td>${esc(s.previousUser||'-')}</td><td>${esc(s.location||'-')}</td><td><button class="primary" onclick="quickAssign('${s.mobile}')">Assign</button></td></tr>`).join('')||'<tr><td colspan="6">No Available SIM</td></tr>';
+}
+function quickAssign(mobile){
+  const active=db.employees.filter(e=>e.status==='Active');
+  const code=prompt('Employee EMP Code দিন:');if(!code)return;
+  const e=active.find(x=>x.code.toLowerCase()===code.toLowerCase());if(!e){alert('Employee পাওয়া যায়নি।');return}
+  if(e.currentSim){alert('এই employee-এর current SIM আছে। Transfer/Replacement ব্যবহার করুন।');return}
+  assignSim(e,mobile,'New SIM Allocation','Admin');
+}
+function assignSim(e,mobile,reason,by){
+  const s=db.sims.find(x=>x.mobile===mobile);if(!s||!['Available','Office Stock'].includes(s.status))return false;
+  s.status='Assigned';s.empCode=e.code;s.location=e.location;s.assignedDate=today();s.previousUser=e.name;
+  e.currentSim=s.mobile;
+  db.history.push({date:now(),action:'ASSIGN',oldSim:'',newSim:s.mobile,emp:e.code+' - '+e.name,from:'Office Stock',to:e.location,reason,by});
+  return true;
+}
+
+/* ---------- Transfer ---------- */
+function fillEmployeeSelect(id, includeDropout=false){
+  const list=db.employees.filter(e=>includeDropout||e.status!=='Dropout');
+  document.getElementById(id).innerHTML='<option value="">Select Employee</option>'+list.map(e=>`<option value="${e.id}">${esc(e.code)} — ${esc(e.name)} — ${esc(e.location)}</option>`).join('');
+}
+function loadTransferEmployee(){
+  const e=db.employees.find(x=>x.id===transferEmp.value);transferOldSim.value=e?.currentSim||'';transferLocation.value=e?.location||'';
+}
+function toggleReplacementFields(){
+  const on=autoReplace.checked;newSimBox.classList.toggle('hidden',!on);replaceReasonBox.classList.toggle('hidden',!on);
+  if(on){
+    transferNewSim.innerHTML='<option value="">Select New SIM</option>'+availableSims(transferOldSim.value).map(s=>`<option value="${s.mobile}">${esc(s.mobile)} — ${esc(s.operator)} — ${esc(s.serial)}</option>`).join('');
+  }
+}
+function processTransfer(){
+  const e=db.employees.find(x=>x.id===transferEmp.value);
+  if(!e){alert('Employee নির্বাচন করুন।');return}
+  if(!transferDate.value){alert('Transfer Date দিন।');return}
+  const oldMobile=e.currentSim||transferOldSim.value;
+  const reason=transferReason.value.trim()||'Employee/Area Transfer', by=transferBy.value.trim()||'Admin';
+  if(autoReplace.checked){
+    const newMobile=transferNewSim.value;
+    if(!oldMobile){alert('Old SIM পাওয়া যায়নি।');return}
+    if(!newMobile){alert('New SIM নির্বাচন করুন।');return}
+    if(newMobile===oldMobile){alert('Old SIM এবং New SIM একই হতে পারবে না।');return}
+    const old=db.sims.find(s=>s.mobile===oldMobile), ns=db.sims.find(s=>s.mobile===newMobile);
+    if(!old||!ns){alert('SIM data পাওয়া যায়নি।');return}
+    const oldLoc=e.location;
+    old.status='Replaced';old.replacedBy=newMobile;old.replacementReason=transferReplaceReason.value;old.empCode='';old.location='';old.assignedDate='';
+    ns.status='Assigned';ns.empCode=e.code;ns.location=e.location;ns.assignedDate=transferDate.value;ns.previousUser=e.name;
+    e.currentSim=newMobile;
+    db.history.push({date:now(),action:'REPLACEMENT',oldSim:oldMobile,newSim:newMobile,emp:e.code+' - '+e.name,from:oldLoc,to:e.location,reason:reason+' | '+transferReplaceReason.value,by});
+    saveDB().then(()=>{clearTransferForm();renderAll();alert('Transfer + Auto SIM Replacement সম্পন্ন হয়েছে।')});
+  }else{
+    if(!oldMobile){alert('Employee-এর current SIM নেই। New SIM Allocation ব্যবহার করুন।');return}
+    const old=db.sims.find(s=>s.mobile===oldMobile);
+    const oldLoc=old?.location||e.location;
+    if(old){old.empCode=e.code;old.location=e.location;old.assignedDate=transferDate.value;old.status='Assigned'}
+    db.history.push({date:now(),action:'TRANSFER',oldSim:oldMobile,newSim:'',emp:e.code+' - '+e.name,from:oldLoc,to:e.location,reason,by});
+    saveDB().then(()=>{clearTransferForm();renderAll();alert('Same SIM Transfer সম্পন্ন হয়েছে।')});
+  }
+}
+function clearTransferForm(){
+  transferEmp.value='';transferOldSim.value='';transferLocation.value='';transferDate.value=today();transferReason.value='';transferBy.value='';autoReplace.checked=false;toggleReplacementFields();
+}
+
+/* ---------- Replacement ---------- */
+function loadReplacementEmployee(){
+  const e=db.employees.find(x=>x.id===replacementEmp.value);replacementOld.value=e?.currentSim||'';
+  replacementNew.innerHTML='<option value="">Select New SIM</option>'+availableSims(e?.currentSim||'').map(s=>`<option value="${s.mobile}">${esc(s.mobile)} — ${esc(s.operator)} — ${esc(s.serial)}</option>`).join('');
+}
+function processReplacement(){
+  const e=db.employees.find(x=>x.id===replacementEmp.value), oldMobile=replacementOld.value, newMobile=replacementNew.value;
+  if(!e||!oldMobile||!newMobile){alert('Employee, Old SIM এবং New SIM দিন।');return}
+  const old=db.sims.find(s=>s.mobile===oldMobile), ns=db.sims.find(s=>s.mobile===newMobile);
+  if(!old||!ns){alert('SIM data পাওয়া যায়নি।');return}
+  old.status='Replaced';old.replacedBy=newMobile;old.replacementReason=replacementReason.value;old.empCode='';old.location='';old.assignedDate='';
+  ns.status='Assigned';ns.empCode=e.code;ns.location=e.location;ns.assignedDate=replacementDate.value||today();ns.previousUser=e.name;
+  e.currentSim=newMobile;
+  db.history.push({date:now(),action:'REPLACEMENT',oldSim:oldMobile,newSim:newMobile,emp:e.code+' - '+e.name,from:e.location,to:e.location,reason:replacementReason.value,by:replacementApprovedBy.value||'Admin'});
+  saveDB().then(()=>{clearReplacementForm();renderAll();alert('SIM Replacement completed. Old SIM status = Replaced.')});
+}
+function clearReplacementForm(){replacementEmp.value='';replacementOld.value='';replacementNew.innerHTML='<option value="">Select New SIM</option>';replacementDate.value=today();replacementApprovedBy.value='';replacementDeliveredTo.value='';replacementSerial.value='';replacementReason.value='Lost'}
+
+function renderReplacementPending(){
+  const rows=db.sims.filter(s=>s.status==='Replacement Required');
+  replacementPending.innerHTML=rows.map(s=>{const e=db.employees.find(x=>x.code===s.empCode);return `<tr><td>${esc(s.mobile)}</td><td>${esc(e?e.name+' ('+e.code+')':'-')}</td><td>${esc(s.location||'-')}</td><td>${esc(s.replacementReason||'-')}</td><td>${badge(s.status)}</td></tr>`}).join('')||'<tr><td colspan="5">No pending replacement.</td></tr>';
+}
+function renderHistory(){
+  const q=(historySearch.value||'').toLowerCase(), a=historyAction.value;
+  const rows=[...db.history].reverse().filter(h=>(!a||h.action===a)&&(!q||JSON.stringify(h).toLowerCase().includes(q)));
+  historyTable.innerHTML=rows.map(h=>`<tr><td>${esc(h.date)}</td><td>${badge(h.action)}</td><td>${esc(h.oldSim||'-')}</td><td>${esc(h.newSim||'-')}</td><td>${esc(h.emp||'-')}</td><td>${esc(h.from||'-')}</td><td>${esc(h.to||'-')}</td><td>${esc(h.reason||'-')}</td><td>${esc(h.by||'-')}</td></tr>`).join('')||'<tr><td colspan="9">No history</td></tr>';
+}
+function renderDashboard(){
+  const total=db.sims.length, assigned=db.sims.filter(s=>s.status==='Assigned').length, available=db.sims.filter(s=>['Available','Office Stock'].includes(s.status)).length;
+  const repl=db.sims.filter(s=>s.status==='Replacement Required').length, dropout=db.employees.filter(e=>e.status==='Dropout').length, lost=db.sims.filter(s=>s.status==='Lost/Damaged').length, replaced=db.sims.filter(s=>s.status==='Replaced').length, office=db.sims.filter(s=>s.status==='Office Stock').length;
+  const cards=[['Total SIM',total],['Assigned',assigned],['Available',available],['Replacement Required',repl],['Dropout Employee',dropout],['Lost / Damaged',lost],['Replaced (Completed)',replaced],['Office Stock',office]];
+  dashboardCards.innerHTML=cards.map(x=>`<div class="card"><small>${esc(x[0])}</small><b>${x[1]}</b></div>`).join('');
+  recentHistory.innerHTML=[...db.history].reverse().slice(0,12).map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.action)}</td><td>${esc(h.newSim||h.oldSim||'-')}</td><td>${esc(h.emp||'-')}</td><td>${esc(h.to||'-')}</td><td>${esc(h.reason||'-')}</td></tr>`).join('')||'<tr><td colspan="6">No activity</td></tr>';
+}
+
+function renderAll(){
+  renderDashboard();renderEmployees();renderStock();renderAllocation();renderReplacementPending();renderHistory();
+  fillEmployeeSelect('transferEmp');fillEmployeeSelect('replacementEmp');toggleReplacementFields();
+}
+
+/* ---------- Print Reports ---------- */
+function printReport(type){
+  let title='Monico SmartManager Report', html='';
+  if(type==='employees'){
+    html='<h2>Employee Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Type</th><th>EMP</th><th>Name</th><th>Location</th><th>Joining</th><th>Mobile</th><th>Status</th><th>SIM</th></tr>'+db.employees.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.mobile)}</td><td>${esc(e.status)}</td><td>${esc(e.currentSim||'')}</td></tr>`).join('')+'</table>';
+  }else if(type==='sims'){
+    html='<h2>SIM Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Mobile</th><th>Operator</th><th>Serial</th><th>Status</th><th>EMP</th><th>Location</th></tr>'+db.sims.map(s=>`<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${esc(s.serial)}</td><td>${esc(s.status)}</td><td>${esc(s.empCode)}</td><td>${esc(s.location)}</td></tr>`).join('')+'</table>';
+  }else{
+    html='<h2>Full SIM History</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Date</th><th>Action</th><th>Old SIM</th><th>New SIM</th><th>Employee</th><th>From</th><th>To</th><th>Reason</th><th>By</th></tr>'+db.history.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.action)}</td><td>${esc(h.oldSim)}</td><td>${esc(h.newSim)}</td><td>${esc(h.emp)}</td><td>${esc(h.from)}</td><td>${esc(h.to)}</td><td>${esc(h.reason)}</td><td>${esc(h.by)}</td></tr>`).join('')+'</table>';
+  }
+  const w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#ddd}</style></head><body>${html}<p>Printed: ${now()}</p></body></html>`);w.document.close();w.print();
+}
+
+/* ---------- Excel Export — EMP List ---------- */
+/* Headers exactly: EMP Code | Name of MPO | Territory | Deg. | Joining Date | Mobile No */
+function exportEmployeesExcel(){
+  if(!window.XLSX){ alert('SheetJS library not loaded.'); return; }
+  if(db.employees.length===0){ alert('কোনো employee data নেই।'); return; }
+
+  // Filtered export হবে যেটা UI তে দেখাচ্ছে সেভাবে
+  const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
+  const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
+
+  const data = rows.map(e=>({
+    'EMP Code': e.code || '',
+    'Name of MPO': e.name || '',
+    'Territory': e.location || '',
+    'Deg.': e.type || '',                 // MPO / AM / RSM / Depot Staff
+    'Joining Date': e.joiningDate || '',
+    'Mobile No': e.mobile || ''
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data, {
+    header:['EMP Code','Name of MPO','Territory','Deg.','Joining Date','Mobile No']
+  });
+  // Column widths
+  ws['!cols'] = [{wch:14},{wch:28},{wch:22},{wch:14},{wch:14},{wch:16}];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Emp List');
+  const fileName = 'Emp_List_'+today()+'.xlsx';
+  XLSX.writeFile(wb, fileName);
+  setStatus('Excel exported: '+fileName);
+}
+
+/* ---------- Backup ---------- */
+function exportData(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}), a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='monico-sim-backup-'+today()+'.json';a.click();URL.revokeObjectURL(a.href);setStatus('Backup exported');
+}
+
+/* ---------- Boot ---------- */
+document.addEventListener('DOMContentLoaded',()=>{
+  transferDate.value=today();replacementDate.value=today();joinDate.value=today();locationCaption();
+  // Load + listen Firebase
+  loadFromFirebase().then(()=>{
+    listenFirebase();   // realtime auto refresh
+  });
+});
+</script>
+</body>
+</html>
