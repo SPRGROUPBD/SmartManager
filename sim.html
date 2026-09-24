@@ -294,7 +294,7 @@ tr:nth-child(even){background:#f7f7f7}
   <div class="window"><div class="window-title">Full SIM / Employee History</div><div class="window-body">
     <div class="grid">
       <div class="field"><label>Search Mobile / EMP / Name</label><input id="historySearch" oninput="renderHistory()"></div>
-      <div class="field"><label>Action</label><select id="historyAction" onchange="renderHistory()"><option value="">All</option><option>ASSIGN</option><option>TRANSFER</option><option>DROPOUT</option><option>REPLACEMENT</option><option>RELEASE</option><option>STOCK</option></select></div>
+      <div class="field"><label>Action</label><select id="historyAction" onchange="renderHistory()"><option value="">All</option><option>ASSIGN</option><option>TRANSFER</option><option>DROPOUT</option><option>REPLACEMENT</option><option>RELEASE</option><option>STOCK</option><option>DELETE</option></select></div>
     </div>
     <div class="actions"><button onclick="renderHistory()">Refresh</button></div>
     <div class="table-wrap"><table><thead><tr><th>Date</th><th>Action</th><th>Old SIM</th><th>New SIM</th><th>Employee</th><th>From</th><th>To</th><th>Reason</th><th>By</th></tr></thead><tbody id="historyTable"></tbody></table></div>
@@ -446,7 +446,7 @@ document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
 });
 
 /* ============================================================
-   EMPLOYEE — SAVE / UPDATE / EDIT / DROPOUT
+   EMPLOYEE — SAVE / UPDATE / EDIT / DROPOUT / DELETE
    ============================================================ */
 function saveEmployee(){
   const type=empType.value, code=empCode.value.trim(), name=empName.value.trim(), loc=empLocation.value.trim(), jd=joinDate.value;
@@ -517,6 +517,7 @@ function renderEmployees(){
       <td>
         <button onclick="editEmployee('${e.id}')">✎ Edit</button>
         <button class="danger" onclick="dropoutEmployee('${e.id}')">Dropout</button>
+        <button class="danger" onclick="deleteEmployee('${e.id}')" style="margin-top:3px;">🗑 Delete</button>
       </td>
     </tr>`;
   }).join('')||'<tr><td colspan="9">No data</td></tr>';
@@ -555,7 +556,6 @@ function dropoutEmployee(id){
   if(oldSim){
     const s = db.sims.find(x=>x.mobile===oldSim);
     if(s){
-      // নতুন নিয়ম: "Replacement Required" status (Pending)
       s.status = 'Replacement Required';
       s.replacementReason = 'Employee Dropout - Pending Transfer';
       s.deliveryStatus = 'Pending';
@@ -576,6 +576,51 @@ function dropoutEmployee(id){
   
   saveDB().then(()=>{
     alert('Employee Dropout processed.\nSIM status: Replacement Required (Pending)\nএই SIM এখন Transfer page-এ Pending list-এ আছে।');
+    renderAll();
+  });
+}
+
+function deleteEmployee(id){
+  const e=db.employees.find(x=>x.id===id);
+  if(!e) return;
+  
+  if(!confirm('⚠️ এই Employee-কে সম্পূর্ণ মুছে (Delete) ফেলতে চান?\n\nEmployee: '+e.code+' - '+e.name+'\nSIM: '+(e.currentSim||'None')+'\n\n(সিম থাকলে তা Stock-এ Available হয়ে যাবে)')) return;
+
+  const oldSim = e.currentSim;
+  
+  if(oldSim){
+    const s = db.sims.find(x=>x.mobile===oldSim);
+    if(s){
+      s.status = 'Available';
+      s.empCode = '';
+      s.location = '';
+      s.assignedDate = '';
+      s.previousUser = e.name+' ('+e.code+')';
+      s.deliveryStatus = '';
+      s.replacedBy = '';
+      s.replacementReason = '';
+    }
+    db.history.push({
+      date: now(),
+      action: 'DELETE',
+      oldSim: oldSim,
+      newSim: '',
+      emp: e.code+' - '+e.name,
+      from: e.location,
+      to: 'Stock',
+      reason: 'Employee Deleted - SIM Returned to Stock',
+      by: 'Admin'
+    });
+  }
+  
+  db.employees = db.employees.filter(x => x.id !== id);
+  
+  if(editingEmpId === id){
+    clearEmployeeForm();
+  }
+  
+  saveDB().then(()=>{
+    alert('Employee deleted successfully. SIM returned to stock (if any).');
     renderAll();
   });
 }
@@ -641,7 +686,6 @@ function quickAssign(mobile){
    TRANSFER — Dropout MPO থেকে Active MPO-তে একই SIM
    ============================================================ */
 function fillTransferDropdowns(){
-  // Transfer From: Dropout MPO with currentSim (status: Replacement Required)
   const fromList = db.employees.filter(e=>
     ['MPO', 'Sr.MPO'].includes(e.type) &&
     e.status==='Dropout' &&
@@ -650,7 +694,6 @@ function fillTransferDropdowns(){
   transferFrom.innerHTML = '<option value="">Select Dropout MPO (has SIM)</option>' +
     fromList.map(e=>`<option value="${e.id}">${esc(e.code)} — ${esc(e.name)} — ${esc(e.location)} — SIM: ${esc(e.currentSim)}</option>`).join('');
   
-  // Transfer To: Active MPO without currentSim
   const toList = db.employees.filter(e=>
     ['MPO', 'Sr.MPO'].includes(e.type) &&
     e.status==='Active' &&
@@ -682,7 +725,6 @@ function processTransfer(){
   if(fromEmp.id===toEmp.id){alert('From ও To একই হতে পারবে না।');return}
   if(!transferDate.value){alert('Transfer Date দিন।');return}
   
-  // Validate rules
   if(!['MPO', 'Sr.MPO'].includes(fromEmp.type) || fromEmp.status!=='Dropout' || !fromEmp.currentSim){
     alert('Transfer From: শুধুমাত্র Dropout MPO/Sr.MPO (SIM সহ) হতে হবে।');return;
   }
@@ -701,7 +743,6 @@ function processTransfer(){
   const reason = transferReason.value.trim() || 'Dropout MPO → Active MPO SIM Transfer (Delivered)';
   const by = transferBy.value.trim() || 'Admin';
   
-  // KEY CHANGE: status = Assigned, deliveryStatus = Delivered
   s.status = 'Assigned';
   s.deliveryStatus = 'Delivered';
   s.empCode = toEmp.code;
@@ -711,14 +752,11 @@ function processTransfer(){
   s.deliveredTo = toEmp.code + ' - ' + toEmp.name;
   s.deliveryDate = transferDate.value;
   
-  // To MPO — নতুন currentSim এবং Mobile নম্বর অটো সেট হবে
   toEmp.currentSim = mobile;
   toEmp.mobile = mobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
   
-  // From MPO — currentSim clear → Transfer From list থেকে সরে যাবে
   fromEmp.currentSim = '';
   
-  // History entry
   db.history.push({
     date: now(),
     action: 'TRANSFER',
@@ -824,6 +862,7 @@ function renderHistory(){
     let actionBadge = badge(h.action);
     if(h.action==='TRANSFER') actionBadge='<span class="badge blue">'+esc(h.action)+'</span>';
     if(h.action==='DROPOUT') actionBadge='<span class="badge purple">'+esc(h.action)+'</span>';
+    if(h.action==='DELETE') actionBadge='<span class="badge red">'+esc(h.action)+'</span>';
     return `<tr><td>${esc(h.date)}</td><td>${actionBadge}</td><td>${esc(h.oldSim||'-')}</td><td>${esc(h.newSim||'-')}</td><td>${esc(h.emp||'-')}</td><td>${esc(h.from||'-')}</td><td>${esc(h.to||'-')}</td><td>${esc(h.reason||'-')}</td><td>${esc(h.by||'-')}</td></tr>`;
   }).join('')||'<tr><td colspan="9">No history</td></tr>';
 }
