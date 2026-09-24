@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monico Pharma - Modern Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK (v8.10.0) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Clean Print CSS */
+        @media print {
+            /* Minimum margin for print */
+            @page {
+                margin: 5mm; 
+            }
+            body > * { display: none !important; }
+            #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 0; margin: 0; box-shadow: none !important; }
+            #printArea * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+        }
+        .border-table { border-collapse: collapse; width: 100%; }
+        .border-table th, .border-table td { border: 1px solid #e2e8f0; }
+        
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Smooth transitions for all interactive elements */
+        button, input, select { transition: all 0.2s ease; }
+    </style>
+</head>
+<body class="min-h-screen flex">
+
+    <!-- Modern Sidebar -->
+    <aside class="sidebar no-print w-64 bg-slate-900 text-white flex-col fixed inset-y-0 left-0 hidden md:flex z-50 shadow-2xl border-r border-slate-800">
+        <div class="p-6 border-b border-slate-700/50">
+            <h1 class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-blue-400 to-indigo-500 text-transparent bg-clip-text">MONICO</h1>
+            <p class="text-xs text-slate-400 font-medium tracking-wide mt-1">PHARMA LIMITED</p>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <button onclick="showTab('challan')" id="tab-challan" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-600/30 text-white flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                <span class="font-medium">Challan Creation</span>
+            </button>
+            <button onclick="showTab('history')" id="tab-history" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span class="font-medium">Challan History</span>
+            </button>
+            <button onclick="showTab('products')" id="tab-products" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                <span class="font-medium">Product Management</span>
+            </button>
+            <button onclick="showTab('customers')" id="tab-customers" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <span class="font-medium">Customer Management</span>
+            </button>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content flex-1 md:ml-64 min-h-screen">
+        <div class="p-4 md:p-10">
+            
+            <!-- CHALLAN CREATION TAB -->
+            <div id="content-challan" class="tab-content">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-6 border-b border-gray-100 no-print flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Create Delivery Challan</h2>
+                            <p class="text-sm text-gray-500 font-medium mt-1">Fill in the details below to generate a new challan.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="p-8">
+                        <!-- Header -->
+                        <div class="text-center mb-10">
+                            <h1 class="text-3xl font-extrabold uppercase tracking-wider text-gray-800">MONICO PHARMA LIMITED</h1>
+                            <p class="text-base text-gray-500 mt-1">South Dhanua, Sreepur, Gazipur</p>
+                            <h2 class="text-xl font-bold mt-6 mb-4 uppercase bg-slate-50 text-slate-700 inline-block px-6 py-2 rounded-lg">Finished Product Delivery Challan</h2>
+                        
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-sm text-gray-600">Date: </span>
+                                <input type="date" id="challanDate" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent">
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-sm text-gray-600">Challan No.: </span>
+                                <input type="text" id="challanNumber" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent text-gray-500 italic" placeholder="Auto-generate on Save" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- From/To Information -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                        <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                            <h3 class="font-bold mb-4 text-slate-700 uppercase text-sm tracking-wide">From,</h3>
+                            <div class="space-y-2 text-sm">
+                                <p class="font-semibold text-slate-800">Monico Pharma Limited</p>
+                                <p class="text-slate-600">South Dhanua, Sreepur, Gazipur</p>
+                                <p class="text-slate-600">Contact Person: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="Alauddin Officer, Distribution"></p>
+                                <p class="text-slate-600">Cell: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="01332531300"></p>
+                            </div>
+                        </div>
+
+                        <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                            <h3 class="font-bold mb-4 text-blue-700 uppercase text-sm tracking-wide">To</h3>
+                            <div class="mb-4 no-print">
+                                <select id="customerSelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="selectCustomer()">
+                                    <option value="">Select Customer...</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2 text-sm">
+                                <p><input type="text" id="customerName" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-semibold text-gray-800" placeholder="Customer Name"></p>
+                                <p><input type="text" id="customerDepot" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Depot"></p>
+                                <p><input type="text" id="customerAddress" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Address"></p>
+                                <p><input type="text" id="customerCity" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="City"></p>
+                                <p class="text-gray-600">Contact Number: <input type="text" id="customerPhone" class="border-b border-blue-200 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Phone"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Add -->
+                    <div class="mb-8 no-print">
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                            <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wide">Quick Product Selection</h3>
+                            <div class="flex flex-wrap gap-3 items-center">
+                                <input type="text" id="productSearchInput" list="productsDatalist" placeholder="Search and select product..." class="border border-gray-300 rounded-lg px-4 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" autocomplete="off">
+                                <datalist id="productsDatalist"></datalist>
+                                
+                                <input type="number" id="quickMcInput" placeholder="Default MC" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-36 text-sm">
+                                <button onclick="addSelectedProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-green-500/30 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                                    Add Product
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Table -->
+                    <div class="mb-8">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                                <thead>
+                                    <tr class="bg-slate-800 text-slate-100">
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Sl.<br>No.</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Name of Product (s)</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Batch<br>No.</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Pack Size</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>Pack/MC</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>MC</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Total Qty.<br>(Packs)</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Remarks</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider no-print">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTable" class="bg-white"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-6 flex justify-end items-center">
+                            <div class="bg-blue-50 border border-blue-200 rounded-xl px-6 py-3 text-right">
+                                <span class="font-bold text-blue-800 text-sm uppercase tracking-wide">Total MC: </span>
+                                <span id="totalMC" class="font-extrabold text-blue-800 text-xl ml-2">00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Signature Section (Dashboard View) -->
+                    <div class="mb-10">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600">
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Function</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Prepared By</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Reviewed & Approved By</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Carried By</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Check Out By</th>
+                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Received By</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white">
+                                    <tr class="h-28">
+                                        <td class="px-4 py-3 text-center font-semibold text-slate-500 bg-slate-50">Sign & Date</td>
+                                        <td></td><td></td><td></td><td></td><td></td>
+                                    </tr>
+                                    <tr class="bg-slate-50">
+                                        <td class="px-4 py-3 text-center font-medium text-slate-600">Designation</td>
+                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Officer, Distribution</td>
+                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">General Manager, Plant</td>
+                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Driver / Transport</td>
+                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Security</td>
+                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Depot In-charge</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-4 no-print border-t border-gray-100 pt-6">
+                        <button onclick="saveChallan()" id="saveChallanBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+                            <span id="saveChallanBtnText">Save Challan</span>
+                        </button>
+                        <button onclick="saveAndNewChallan()" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-teal-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            <span>Save & New</span>
+                        </button>
+                        <button onclick="clearForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <span>Clear Form</span>
+                        </button>
+                    </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHALLAN HISTORY TAB -->
+            <div id="content-history" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-6 border-b border-gray-100">
+                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Challan History</h2>
+                        <p class="text-sm text-gray-500 font-medium mt-1">View, print, edit, or delete previously saved challans.</p>
+                    </div>
+                    <div class="p-8">
+                        <div id="historyList" class="space-y-4">
+                            <div class="text-center py-10 text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <p class="font-medium">Loading Challans...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUCT MANAGEMENT TAB -->
+            <div id="content-products" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Product Management</h2>
+                            <p class="text-sm text-gray-500 font-medium mt-1">Manage your product inventory and specifications.</p>
+                        </div>
+                        <button onclick="showAddProductForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            <span>Add Product</span>
+                        </button>
+                    </div>
+
+                    <div class="p-8">
+                        <div id="productForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-5 text-lg" id="productFormTitle">Add New Product</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                                    <input type="text" id="productNameInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Algerd Susp">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Batch No.</label>
+                                    <input type="text" id="productBatchInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. BN123">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Pack Size</label>
+                                    <input type="text" id="productPackSizeInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 1x20's">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">No. of Pack/MC</label>
+                                    <input type="number" id="productPacksPerMcInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 20">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button onclick="saveProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Product</button>
+                                <button onclick="cancelProductForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600">
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Batch No.</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">No. of Pack/MC</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productsTableBody" class="bg-white divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CUSTOMER MANAGEMENT TAB -->
+            <div id="content-customers" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Customer Management</h2>
+                            <p class="text-sm text-gray-500 font-medium mt-1">Manage depots, branches, and customer contacts.</p>
+                        </div>
+                        <button onclick="showAddCustomerForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                            <span>Add Customer</span>
+                        </button>
+                    </div>
+
+                    <div class="p-8">
+                        <div id="customerForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-5 text-lg" id="customerFormTitle">Add New Customer</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                                    <input type="text" id="customerNameFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Mr. Sajjad Ahmed">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Depot/Branch</label>
+                                    <input type="text" id="customerDepotFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Kushtia Depot">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                                    <input type="text" id="customerAddressFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Street address">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                                    <input type="text" id="customerCityFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Kustia Sador">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
+                                    <input type="text" id="customerPhoneFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 01329731296">
+                                </div>
+                            </div>
+                            <div class="flex gap-3 mt-6">
+                                <button onclick="saveCustomer()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Customer</button>
+                                <button onclick="cancelCustomerForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 text-slate-600">
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Customer Name</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Depot/Branch</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Address</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">City</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Phone</th>
+                                        <th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customersTableBody" class="bg-white divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Hidden Print Area for Direct Print -->
+    <div id="printArea" style="display: none;"></div>
+
+    <script>
+        // --- Firebase Initialization ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyD3DBNkMcvm9RF1QNd6g37mn-todxR4THQ",
+            authDomain: "mplfpdc.firebaseapp.com",
+            databaseURL: "https://mplfpdc-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "mplfpdc",
+            storageBucket: "mplfpdc.firebasestorage.app",
+            messagingSenderId: "1004917483554",
+            appId: "1:1004917483554:web:91ee71365c64869e07027b",
+            measurementId: "G-S3JLB16V13"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- Global State ---
+        let products = [];
+        let customers = [];
+        let savedChallans = [];
+        let editingProductKey = null;
+        let editingCustomerKey = null;
+        let editingChallanKey = null;
+
+        // --- Initial Data Seeding (If DB is empty) ---
+        function seedDatabase() {
+            db.ref('products').once('value').then(snap => {
+                if (!snap.exists()) {
+                    const defaultProducts = [
+                        {name: "Algerd Susp", batch: "", packSize: "1x20's", packsPerMc: 20}, {name: "Allerkit Syrup", batch: "", packSize: "1x60's", packsPerMc: 60},
+                        {name: "Aseral-D Tab", batch: "", packSize: "1x132's", packsPerMc: 132}, {name: "Azimon 500 Tab", batch: "", packSize: "", packsPerMc: 132},
+                        {name: "Azimon PFS", batch: "", packSize: "", packsPerMc: 40}, {name: "Calsto 500 Tab", batch: "", packSize: "", packsPerMc: 0},
+                        {name: "Calsto D Tab", batch: "", packSize: "", packsPerMc: 98}, {name: "Cefmix 200 Cap", batch: "", packSize: "", packsPerMc: 192},
+                        {name: "Cefmix 400 Cap", batch: "", packSize: "", packsPerMc: 192}, {name: "Cefmix PFS", batch: "", packSize: "", packsPerMc: 50},
+                        {name: "Deu 20 Cap", batch: "", packSize: "", packsPerMc: 105}, {name: "Dimolan 30 Cap", batch: "", packSize: "", packsPerMc: 69},
+                        {name: "Dimolan 60 Cap", batch: "", packSize: "", packsPerMc: 99}, {name: "Ezylow Oral Solution", batch: "", packSize: "", packsPerMc: 60},
+                        {name: "Fesler 120 Tab", batch: "", packSize: "", packsPerMc: 168}, {name: "Fesler Susp", batch: "", packSize: "", packsPerMc: 40},
+                        {name: "Fomox 400mg Tablet", batch: "", packSize: "", packsPerMc: 204}, {name: "Funzole 150 Cap", batch: "", packSize: "", packsPerMc: 144},
+                        {name: "Funzole Susp", batch: "", packSize: "", packsPerMc: 40}, {name: "Hizin Syrup", batch: "", packSize: "", packsPerMc: 60},
+                        {name: "Kepros Tab", batch: "", packSize: "", packsPerMc: 408}, {name: "Monipro Tab", batch: "", packSize: "", packsPerMc: 60},
+                        {name: "Moset Syrup", batch: "", packSize: "", packsPerMc: 40}, {name: "Moset Tab", batch: "", packSize: "", packsPerMc: 288},
+                        {name: "Nostrin Tab", batch: "", packSize: "", packsPerMc: 288}, {name: "Nuloc 20 Cap", batch: "", packSize: "", packsPerMc: 69},
+                        {name: "Nuloc 20 Tab", batch: "", packSize: "", packsPerMc: 81}, {name: "Nuloc 40 Cap", batch: "", packSize: "", packsPerMc: 81},
+                        {name: "Perix 1 IV", batch: "", packSize: "", packsPerMc: 36}, {name: "Perix 2 IV", batch: "", packSize: "", packsPerMc: 36},
+                        {name: "Priga 25 Cap", batch: "", packSize: "", packsPerMc: 108}, {name: "Priga 50 Cap", batch: "", packSize: "", packsPerMc: 108},
+                        {name: "Proxen Plus 500 Tab", batch: "", packSize: "", packsPerMc: 132}, {name: "Recast 10 Tab", batch: "", packSize: "", packsPerMc: 317},
+                        {name: "Recast 5 Tab", batch: "", packSize: "", packsPerMc: 216}, {name: "Refain Tab", batch: "", packSize: "", packsPerMc: 0},
+                        {name: "Refain TR Cap", batch: "", packSize: "", packsPerMc: 72}, {name: "Remap Syrup", batch: "", packSize: "", packsPerMc: 60},
+                        {name: "Temrif Plus Tab", batch: "", packSize: "", packsPerMc: 0}, {name: "V- Nerve Tab", batch: "", packSize: "", packsPerMc: 98},
+                        {name: "Vomino Susp", batch: "", packSize: "", packsPerMc: 40}, {name: "Vomino Tab", batch: "", packSize: "", packsPerMc: 150},
+                        {name: "Zicolin Cap", batch: "", packSize: "", packsPerMc: 60}, {name: "Ziqui Syrup", batch: "", packSize: "", packsPerMc: 60}
+                    ];
+                    defaultProducts.forEach(p => db.ref('products').push(p));
+                }
+            });
+
+            db.ref('customers').once('value').then(snap => {
+                if (!snap.exists()) {
+                    const defaultCustomers = [
+                        {name: "Mr. Sajjad Ahmed", depot: "Kushtia Depot", address: "Kana Biler Mor Mongalbary", city: "Kustia Sador", phone: "01329731296"},
+                        {name: "Mr. Sajjad Ahmed", depot: "Khulna Depot", address: "Kana Biler Mor Mongalbary", city: "Kustia Sador", phone: "01329731296"},
+                        {name: "Mr. Sajjad Ahmed", depot: "Barisal Depot", address: "Kana Biler Mor Mongalbary", city: "Kustia Sador", phone: "01329731296"}
+                    ];
+                    defaultCustomers.forEach(c => db.ref('customers').push(c));
+                }
+            });
+        }
+
+        // --- Firebase Real-time Listeners ---
+        db.ref('products').on('value', (snap) => {
+            products = snap.val() ? Object.keys(snap.val()).map(k => ({ key: k, ...snap.val()[k] })) : [];
+            loadProductsTable();
+            updateProductDropdowns();
+        });
+
+        db.ref('customers').on('value', (snap) => {
+            customers = snap.val() ? Object.keys(snap.val()).map(k => ({ key: k, ...snap.val()[k] })) : [];
+            loadCustomersTable();
+            updateCustomerDropdown();
+        });
+
+        db.ref('challans').on('value', (snap) => {
+            const challansObj = snap.val() || {};
+            savedChallans = Object.keys(challansObj).map(k => ({ key: k, ...challansObj[k] }))
+                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            
+            if (!document.getElementById('content-history').classList.contains('hidden')) {
+                loadHistory();
+            }
+        });
+
+        // --- Navigation ---
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(b => {
+                b.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'shadow-lg', 'shadow-blue-600/30', 'text-white');
+                b.classList.add('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-white');
+            });
+            
+            document.getElementById(`content-${tabName}`).classList.remove('hidden');
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            activeTab.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'shadow-lg', 'shadow-blue-600/30', 'text-white');
+            activeTab.classList.remove('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-white');
+
+            if (tabName === 'history') loadHistory();
+            if (tabName === 'products') loadProductsTable();
+            if (tabName === 'customers') loadCustomersTable();
+        }
+
+        // --- Challan Creation Logic ---
+        async function generateNewChallanNumber() {
+            return new Promise((resolve, reject) => {
+                const counterRef = db.ref('counters/challanSerial');
+                counterRef.transaction(current => (current || 0) + 1, (error, committed, snapshot) => {
+                    if (error) return reject(error);
+                    const serial = snapshot.val();
+                    const year = new Date().getFullYear() % 100;
+                    const serialStr = String(serial).padStart(3, '0');
+                    const challanNumber = `MPLFPDC/${serialStr}/${year}`;
+                    resolve(challanNumber);
+                });
+            });
+        }
+
+        function selectCustomer() {
+            const select = document.getElementById('customerSelect');
+            if (select.value) {
+                const c = customers.find(c => c.key === select.value);
+                if (c) {
+                    document.getElementById('customerName').value = c.name;
+                    document.getElementById('customerDepot').value = c.depot;
+                    document.getElementById('customerAddress').value = c.address;
+                    document.getElementById('customerCity').value = c.city;
+                    document.getElementById('customerPhone').value = c.phone;
+                }
+            }
+        }
+
+        function addSelectedProduct() {
+            const searchInput = document.getElementById('productSearchInput');
+            const quickMcInput = document.getElementById('quickMcInput');
+            const searchValue = searchInput.value.trim();
+            
+            if (!searchValue) return alert("Please search and select a product first.");
+            
+            const product = products.find(p => p.name.toLowerCase() === searchValue.toLowerCase());
+            if (!product) return alert("Selected product not found. Please choose a valid product from the list.");
+            
+            const mcValue = quickMcInput.value || '1';
+            
+            const tbody = document.getElementById('productsTable');
+            const rowCount = tbody.querySelectorAll('.product-row').length;
+            const newRowNumber = String(rowCount + 1).padStart(2, '0');
+            
+            const newRow = document.createElement('tr');
+            newRow.className = 'product-row hover:bg-slate-50 transition-colors';
+            newRow.innerHTML = `
+                <td class="px-4 py-3 text-center text-slate-500 font-medium">${newRowNumber}</td>
+                <td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td>
+                <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" placeholder="Enter Batch"></td>
+                <td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600"></td>
+                <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600"></td>
+                <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${mcValue}"></td>
+                <td class="px-4 py-3 text-center total-packs font-bold text-slate-800"></td>
+                <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="Commercial"></td>
+                <td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>
+            `;
+            tbody.appendChild(newRow);
+            
+            const select = newRow.querySelector('.product-name-select');
+            select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
+            select.value = `${product.name}|${product.packsPerMc}`;
+            
+            newRow.querySelector('.pack-size').value = product.packSize || '';
+            newRow.querySelector('.packs-per-mc').value = product.packsPerMc || '';
+            newRow.querySelector('.total-packs').textContent = (product.packsPerMc || 0) * mcValue;
+            
+            attachProductListeners(newRow);
+            updateTotalMC();
+            searchInput.value = '';
+            quickMcInput.value = '';
+        }
+
+        function attachProductListeners(row) {
+            const packsPerMcInput = row.querySelector('.packs-per-mc');
+            const numMcInput = row.querySelector('.num-mc');
+            const productSelect = row.querySelector('.product-name-select');
+            
+            function updateTotalPacks() {
+                const packsPerMc = parseInt(packsPerMcInput.value) || 0;
+                const numMc = parseInt(numMcInput.value) || 0;
+                row.querySelector('.total-packs').textContent = packsPerMc * numMc;
+                updateTotalMC();
+            }
+            
+            productSelect.addEventListener('change', function() {
+                if (this.value) {
+                    const [productName] = this.value.split('|');
+                    const product = products.find(p => p.name === productName);
+                    if (product) {
+                        row.querySelector('.pack-size').value = product.packSize || '';
+                        row.querySelector('.packs-per-mc').value = product.packsPerMc || '';
+                    }
+                }
+                updateTotalPacks();
+            });
+            
+            packsPerMcInput.addEventListener('input', updateTotalPacks);
+            numMcInput.addEventListener('input', updateTotalPacks);
+        }
+
+        function removeProduct(btn) {
+            btn.closest('tr').remove();
+            updateRowNumbers();
+            updateTotalMC();
+        }
+
+        function updateRowNumbers() {
+            document.querySelectorAll('.product-row').forEach((row, i) => {
+                row.querySelector('td:first-child').textContent = String(i + 1).padStart(2, '0');
+            });
+        }
+
+        function updateTotalMC() {
+            let total = 0;
+            document.querySelectorAll('.product-row .num-mc').forEach(input => total += parseInt(input.value) || 0);
+            document.getElementById('totalMC').textContent = String(total).padStart(2, '0');
+        }
+
+        async function saveChallan() {
+            if (!document.getElementById('customerName').value) return alert("Please select a customer.");
+            if (document.querySelectorAll('.product-row').length === 0) return alert("Please add at least one product.");
+            
+            const challanData = {
+                date: document.getElementById('challanDate').value,
+                toName: document.getElementById('customerName').value,
+                toDepot: document.getElementById('customerDepot').value,
+                toAddress: document.getElementById('customerAddress').value,
+                toCity: document.getElementById('customerCity').value,
+                toPhone: document.getElementById('customerPhone').value,
+                products: []
+            };
+            
+            document.querySelectorAll('.product-row').forEach(row => {
+                const select = row.querySelector('.product-name-select');
+                challanData.products.push({
+                    name: select.options[select.selectedIndex].text,
+                    value: select.value,
+                    batch: row.querySelector('.product-batch').value,
+                    packSize: row.querySelector('.pack-size').value,
+                    packsPerMc: row.querySelector('.packs-per-mc').value,
+                    numMc: row.querySelector('.num-mc').value,
+                    totalPacks: row.querySelector('.total-packs').textContent,
+                    remarks: row.querySelector('.product-remarks').value
+                });
+            });
+            
+            try {
+                if (editingChallanKey) {
+                    challanData.challanNumber = document.getElementById('challanNumber').value;
+                    challanData.updatedAt = firebase.database.ServerValue.TIMESTAMP;
+                    await db.ref('challans/' + editingChallanKey).update(challanData);
+                    alert("Challan Updated Successfully!");
+                } else {
+                    const newChallanNumber = await generateNewChallanNumber();
+                    challanData.challanNumber = newChallanNumber;
+                    challanData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+                    await db.ref('challans').push(challanData);
+                    alert(`Challan Saved Successfully! Number: ${newChallanNumber}`);
+                }
+                clearForm();
+            } catch (error) {
+                alert("Error saving challan: " + error.message);
+            }
+        }
+
+        function saveAndNewChallan() {
+            saveChallan();
+        }
+
+        async function clearForm() {
+            document.getElementById('challanDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('customerSelect').value = '';
+            ['customerName', 'customerDepot', 'customerAddress', 'customerCity', 'customerPhone'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('productsTable').innerHTML = '';
+            editingChallanKey = null;
+            
+            document.getElementById('challanNumber').value = "";
+            document.getElementById('challanNumber').placeholder = "Auto-generate on Save";
+            
+            document.getElementById('saveChallanBtnText').textContent = 'Save Challan';
+            document.getElementById('saveChallanBtn').classList.add('from-green-500', 'to-emerald-600', 'hover:from-green-600', 'hover:to-emerald-700', 'shadow-green-500/30');
+            document.getElementById('saveChallanBtn').classList.remove('from-blue-500', 'to-indigo-600', 'hover:from-blue-600', 'hover:to-indigo-700', 'shadow-blue-500/30');
+            
+            updateTotalMC();
+        }
+
+        // --- Challan History Logic ---
+        function loadHistory() {
+            const list = document.getElementById('historyList');
+            if (savedChallans.length === 0) {
+                list.innerHTML = '<div class="text-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p>No saved challans found.</p></div>';
+                return;
+            }
+            
+            list.innerHTML = savedChallans.map(challan => `
+                <div class="border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-slate-300 transition-all duration-300 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 p-3 rounded-xl border border-blue-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg">${challan.challanNumber}</h4>
+                            <p class="text-sm text-gray-500 font-medium">Date: ${challan.date} <span class="mx-1 text-slate-300">|</span> Customer: ${challan.toName} (${challan.toDepot})</p>
+                            <p class="text-xs text-gray-400 mt-1">${challan.products ? challan.products.length : 0} Products</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 flex-wrap">
+                        <button onclick="loadChallan('${challan.key}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                            <span>Edit</span>
+                        </button>
+                        <button onclick="printChallan('${challan.key}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                            <span>Print</span>
+                        </button>
+                        <button onclick="deleteChallan('${challan.key}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadChallan(key) {
+            const challan = savedChallans.find(c => c.key === key);
+            if (!challan) return;
+            
+            showTab('challan');
+            editingChallanKey = key;
+            
+            document.getElementById('challanNumber').value = challan.challanNumber;
+            document.getElementById('challanDate').value = challan.date;
+            document.getElementById('customerName').value = challan.toName || '';
+            document.getElementById('customerDepot').value = challan.toDepot || '';
+            document.getElementById('customerAddress').value = challan.toAddress || '';
+            document.getElementById('customerCity').value = challan.toCity || '';
+            document.getElementById('customerPhone').value = challan.toPhone || '';
+            
+            const tbody = document.getElementById('productsTable');
+            tbody.innerHTML = '';
+            
+            if (challan.products && challan.products.length > 0) {
+                challan.products.forEach((product, idx) => {
+                    const newRow = document.createElement('tr');
+                    newRow.className = 'product-row hover:bg-slate-50 transition-colors';
+                    newRow.innerHTML = `
+                        <td class="px-4 py-3 text-center text-slate-500 font-medium">${String(idx + 1).padStart(2, '0')}</td>
+                        <td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td>
+                        <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" value="${product.batch}"></td>
+                        <td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600" value="${product.packSize}"></td>
+                        <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600" value="${product.packsPerMc}"></td>
+                        <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${product.numMc}"></td>
+                        <td class="px-4 py-3 text-center total-packs font-bold text-slate-800">${product.totalPacks}</td>
+                        <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${product.remarks}"></td>
+                        <td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>
+                    `;
+                    tbody.appendChild(newRow);
+                    
+                    const select = newRow.querySelector('.product-name-select');
+                    select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
+                    select.value = product.value;
+                    
+                    attachProductListeners(newRow);
+                });
+            }
+            updateTotalMC();
+
+            document.getElementById('saveChallanBtnText').textContent = 'Update Challan';
+            document.getElementById('saveChallanBtn').classList.remove('from-green-500', 'to-emerald-600', 'hover:from-green-600', 'hover:to-emerald-700', 'shadow-green-500/30');
+            document.getElementById('saveChallanBtn').classList.add('from-blue-500', 'to-indigo-600', 'hover:from-blue-600', 'hover:to-indigo-700', 'shadow-blue-500/30');
+        }
+
+        // --- Direct Print Logic (New Format) ---
+        function printChallan(key) {
+            const challan = savedChallans.find(c => c.key === key);
+            if (!challan) return;
+
+            let productsHTML = '';
+            let totalMC = 0;
+
+            if (challan.products && challan.products.length > 0) {
+                challan.products.forEach((product, idx) => {
+                    totalMC += parseInt(product.numMc) || 0;
+                    productsHTML += `
+                        <tr>
+                            <td class="text-center">${String(idx + 1).padStart(2, '0')}</td>
+                            <td>${product.name}</td>
+                            <td class="text-center">${product.batch}</td>
+                            <td class="text-center">${product.packSize}</td>
+                            <td class="text-center">${product.packsPerMc}</td>
+                            <td class="text-center">${product.numMc}</td>
+                            <td class="text-center">${product.totalPacks}</td>
+                            <td class="text-center">${product.remarks}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const html = `
+                <style>
+                    #printContent { font-family: Arial, sans-serif; color: black; margin: 20px; font-size: 12px; display: flex; flex-direction: column; min-height: 99vh; box-sizing: border-box; }
+                    #printContent table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    #printContent th, #printContent td { border: 1px solid black; padding: 6px; text-align: left; color: black; vertical-align: top; }
+                    #printContent th { background-color: #f2f2f2 !important; text-align: center; }
+                    #printContent .text-center { text-align: center; }
+                    #printContent .text-right { text-align: right; }
+                    #printContent .no-border { border: none; }
+                    #printContent .header-table td { border: 1px solid black; vertical-align: middle; }
+                    #printContent .company-title { font-weight: bold; font-size: 14px; text-align: center; }
+                    #printContent .company-subtitle { font-size: 11px; text-align: center; }
+                    #printContent .challan-title { background-color: #e6e6e6 !important; font-weight: bold; text-align: center; font-size: 13px; }
+                </style>
+                <div id="printContent">
+
+                    <!-- Main Header Table -->
+                    <table class="header-table">
+                        <tr>
+                            <td width="25%" class="text-center" style="font-weight: bold; font-style: italic;">
+                                MONICO PHARMA LIMITED
+                            </td>
+                            <td width="75%" class="text-center">
+                                <div class="company-title">MONICO PHARMA LIMITED</div>
+                                <div class="company-subtitle">South Dhanua, Sreepur, Gazipur</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="challan-title">
+                                FINISHED PRODUCT DELIVERY CHALLAN
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Date and Challan No -->
+                    <table>
+                        <tr>
+                            <td width="50%"><strong>Date:</strong> ${challan.date}</td>
+                            <td width="50%"><strong>Challan No.:</strong> ${challan.challanNumber}</td>
+                        </tr>
+                    </table>
+
+                    <!-- From / To Section -->
+                    <table>
+                        <tr>
+                            <td width="50%">
+                                <strong>From,</strong><br>
+                                Monico Pharma Limited<br>
+                                South Dhanua, Sreepur, Gazipur<br>
+                                Contact Person: Alauddin<br>
+                                Distribution Officer<br>
+                                Cell: 01332531300
+                            </td>
+                            <td width="50%">
+                                <strong>To,</strong><br>
+                                ${challan.toName || ''}<br>
+                                <strong>${challan.toDepot || ''}</strong><br>
+                                ${challan.toAddress || ''}<br>
+                                ${challan.toCity || ''}<br>
+                                Call #: ${challan.toPhone || ''}
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- Product Details Table -->
+                    <table>
+                        <thead>
+                            <tr>
+                                <th width="6%">Sl. No.</th>
+                                <th width="34%">Name of Product (s)</th>
+                                <th width="10%">Batch No.</th>
+                                <th width="10%">Pack Size</th>
+                                <th width="10%">No. of Pack/MC</th>
+                                <th width="10%">No. of MC</th>
+                                <th width="10%">Total Qty. (Packs)</th>
+                                <th width="10%">Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${productsHTML}
+                        </tbody>
+                    </table>
+
+                    <!-- Total MC Table -->
+                    <table style="width: 35%; margin-left: auto;">
+                        <tr>
+                            <td class="text-center" style="font-weight: bold;">Total MC: ${String(totalMC).padStart(2, '0')}</td>
+                        </tr>
+                    </table>
+
+                    <!-- Signatures and Designations Table (Pushed to bottom) -->
+                    <div style="margin-top: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th width="16%">FUNCTION</th>
+                                    <th width="16%">PREPARED BY</th>
+                                    <th width="20%">REVIEWED & APPROVED BY</th>
+                                    <th width="16%">CARRIED BY</th>
+                                    <th width="16%">CHECK OUT BY</th>
+                                    <th width="16%">RECEIVED BY</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="height: 45px;">
+                                    <td style="font-weight: bold; vertical-align: middle;">Sign & Date</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td style="font-weight: bold; vertical-align: middle;">Designation</td>
+                                    <td class="text-center">Officer, Distribution</td>
+                                    <td class="text-center">General Manager, Plant</td>
+                                    <td class="text-center">Driver / Transport</td>
+                                    <td class="text-center">Security</td>
+                                    <td class="text-center">Depot In-charge</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = html;
+            window.print();
+        }
+
+        async function deleteChallan(key) {
+            if (!confirm("Are you sure you want to delete this challan?")) return;
+            try {
+                await db.ref('challans/' + key).remove();
+                loadHistory();
+            } catch (error) {
+                alert("Error deleting: " + error.message);
+            }
+        }
+
+        // --- Product Management Logic ---
+        function loadProductsTable() {
+            const tbody = document.getElementById('productsTableBody');
+            tbody.innerHTML = products.map((p) => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.batch || '-'}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packsPerMc}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-center">
+                        <button onclick="editProduct('${p.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button>
+                        <button onclick="deleteProduct('${p.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddProductForm() {
+            document.getElementById('productForm').classList.remove('hidden');
+            document.getElementById('productFormTitle').textContent = 'Add New Product';
+            editingProductKey = null;
+            clearProductForm();
+        }
+
+        function editProduct(key) {
+            const p = products.find(pr => pr.key === key);
+            if (!p) return;
+            document.getElementById('productForm').classList.remove('hidden');
+            document.getElementById('productFormTitle').textContent = 'Edit Product';
+            document.getElementById('productNameInput').value = p.name;
+            document.getElementById('productBatchInput').value = p.batch;
+            document.getElementById('productPackSizeInput').value = p.packSize;
+            document.getElementById('productPacksPerMcInput').value = p.packsPerMc;
+            editingProductKey = key;
+        }
+
+        function saveProduct() {
+            const name = document.getElementById('productNameInput').value.trim();
+            if (!name) return alert("Product Name is required.");
+            
+            const product = {
+                name: name,
+                batch: document.getElementById('productBatchInput').value.trim(),
+                packSize: document.getElementById('productPackSizeInput').value.trim(),
+                packsPerMc: parseInt(document.getElementById('productPacksPerMcInput').value) || 0
+            };
+
+            if (editingProductKey) {
+                db.ref('products/' + editingProductKey).update(product);
+            } else {
+                db.ref('products').push(product);
+            }
+            cancelProductForm();
+        }
+
+        function deleteProduct(key) {
+            if (!confirm("Delete this product?")) return;
+            db.ref('products/' + key).remove();
+        }
+
+        function cancelProductForm() {
+            document.getElementById('productForm').classList.add('hidden');
+            clearProductForm();
+        }
+
+        function clearProductForm() {
+            ['productNameInput', 'productBatchInput', 'productPackSizeInput', 'productPacksPerMcInput'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        function updateProductDropdowns() {
+            const datalist = document.getElementById('productsDatalist');
+            if (datalist) {
+                datalist.innerHTML = products.map(p => `<option value="${p.name}">${p.name} (Pack: ${p.packsPerMc})</option>`).join('');
+            }
+        }
+
+        // --- Customer Management Logic ---
+        function loadCustomersTable() {
+            const tbody = document.getElementById('customersTableBody');
+            tbody.innerHTML = customers.map((c) => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${c.name}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.depot}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.address}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.city}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.phone}</td>
+                    <td class="border border-slate-200 px-4 py-3 text-center">
+                        <button onclick="editCustomer('${c.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button>
+                        <button onclick="deleteCustomer('${c.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddCustomerForm() {
+            document.getElementById('customerForm').classList.remove('hidden');
+            document.getElementById('customerFormTitle').textContent = 'Add New Customer';
+            editingCustomerKey = null;
+            clearCustomerForm();
+        }
+
+        function editCustomer(key) {
+            const c = customers.find(cu => cu.key === key);
+            if (!c) return;
+            document.getElementById('customerForm').classList.remove('hidden');
+            document.getElementById('customerFormTitle').textContent = 'Edit Customer';
+            document.getElementById('customerNameFormInput').value = c.name;
+            document.getElementById('customerDepotFormInput').value = c.depot;
+            document.getElementById('customerAddressFormInput').value = c.address;
+            document.getElementById('customerCityFormInput').value = c.city;
+            document.getElementById('customerPhoneFormInput').value = c.phone;
+            editingCustomerKey = key;
+        }
+
+        function saveCustomer() {
+            const name = document.getElementById('customerNameFormInput').value.trim();
+            if (!name) return alert("Customer Name is required.");
+            
+            const customer = {
+                name: name,
+                depot: document.getElementById('customerDepotFormInput').value.trim(),
+                address: document.getElementById('customerAddressFormInput').value.trim(),
+                city: document.getElementById('customerCityFormInput').value.trim(),
+                phone: document.getElementById('customerPhoneFormInput').value.trim()
+            };
+
+            if (editingCustomerKey) {
+                db.ref('customers/' + editingCustomerKey).update(customer);
+            } else {
+                db.ref('customers').push(customer);
+            }
+            cancelCustomerForm();
+        }
+
+        function deleteCustomer(key) {
+            if (!confirm("Delete this customer?")) return;
+            db.ref('customers/' + key).remove();
+        }
+
+        function cancelCustomerForm() {
+            document.getElementById('customerForm').classList.add('hidden');
+            clearCustomerForm();
+        }
+
+        function clearCustomerForm() {
+            ['customerNameFormInput', 'customerDepotFormInput', 'customerAddressFormInput', 'customerCityFormInput', 'customerPhoneFormInput'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        function updateCustomerDropdown() {
+            const dropdown = document.getElementById('customerSelect');
+            if (dropdown) {
+                dropdown.innerHTML = '<option value="">Select Customer...</option>' + 
+                    customers.map(c => `<option value="${c.key}">${c.name} - ${c.depot}</option>`).join('');
+            }
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async function() {
+            seedDatabase();
+            document.getElementById('challanDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('challanNumber').placeholder = "Auto-generate on Save";
+        });
+    </script>
+</body>
+</html>
