@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         @media print {
@@ -25,6 +26,15 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         button, input, select { transition: all 0.2s ease; }
+
+        /* Classic Windows dialog styling for Receive Modal */
+        .win-box { background-color: #ece9d8; border: 2px solid; border-color: #ffffff #dfdfdf #dfdfdf #ffffff; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+        .win-input { background-color: #ffffff; border: 1px solid; border-color: #7f9db9 #5c749d #5c749d #7f9db9; padding: 1px 3px; outline: none; font-size: 12px; font-family: Tahoma, Arial, sans-serif; }
+        .win-input:focus { border-color: #316ac5; }
+        .win-button { background: linear-gradient(to bottom, #f3f3f3 0%, #ece9d8 50%, #d4d0c8 100%); border: 1px solid #003c74; border-radius: 2px; padding: 3px 12px; font-size: 12px; font-family: Tahoma, Arial, sans-serif; cursor: pointer; text-align: center; }
+        .win-button:hover { background: linear-gradient(to bottom, #e7f1ff 0%, #cce4fc 50%, #99c6e8 100%); }
+        .win-grid-header { background-color: #ece9d8; border-right: 1px solid #aca899; border-bottom: 1px solid #aca899; padding: 2px 6px; font-weight: normal; }
+        .modal-overlay { background: rgba(0, 0, 0, 0.4); }
     </style>
 </head>
 <body class="min-h-screen flex">
@@ -35,12 +45,8 @@
             <h3 class="text-xl font-bold mb-2 text-gray-800 tracking-tight">Select Challan Type</h3>
             <p class="text-sm text-gray-500 mb-6">Please choose whether this is a Product or Sample delivery.</p>
             <div class="flex gap-4">
-                <button onclick="startNewChallan('Product')" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all hover:scale-[1.02]">
-                    Product
-                </button>
-                <button onclick="startNewChallan('Sample')" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-purple-500/30 transition-all hover:scale-[1.02]">
-                    Sample
-                </button>
+                <button onclick="startNewChallan('Product')" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all hover:scale-[1.02]">Product</button>
+                <button onclick="startNewChallan('Sample')" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-purple-500/30 transition-all hover:scale-[1.02]">Sample</button>
             </div>
         </div>
     </div>
@@ -68,6 +74,10 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 <span class="font-medium">Product Management</span>
             </button>
+            <button onclick="showTab('stock')" id="tab-stock" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+                <span class="font-medium">Stock Management</span>
+            </button>
             <button onclick="showTab('customers')" id="tab-customers" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 <span class="font-medium">Customer Management</span>
@@ -87,8 +97,6 @@
                         <div class="text-sm font-medium text-gray-500 hidden md:block">Depot: Kushtia Depot | DIC: Md. Sajjad Ahmed</div>
                     </div>
                     <div class="p-6 md:p-8 bg-gray-50">
-                        
-                        <!-- Summary Cards -->
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
                             <div class="bg-white border-2 border-black rounded-lg p-5 shadow-sm flex flex-col justify-between min-h-[120px]">
                                 <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Total Challans</h3>
@@ -104,50 +112,39 @@
                             </div>
                         </div>
 
-                        <!-- Recent Product Challans Table -->
                         <div class="bg-white border-2 border-black rounded-lg p-5 mb-8">
                             <h3 class="text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Product Delivery Challans</h3>
                             <div class="overflow-x-auto">
                                 <table class="w-full border-collapse text-sm">
-                                    <thead>
-                                        <tr class="bg-gray-100">
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
-                                            <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboardRecentChallans">
-                                        <tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr>
-                                    </tbody>
+                                    <thead><tr class="bg-gray-100">
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
+                                        <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
+                                    </tr></thead>
+                                    <tbody id="dashboardRecentChallans"><tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <!-- Recent Sample Challans Table -->
                         <div class="bg-white border-2 border-black rounded-lg p-5">
                             <h3 class="text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Sample Delivery Challans</h3>
                             <div class="overflow-x-auto">
                                 <table class="w-full border-collapse text-sm">
-                                    <thead>
-                                        <tr class="bg-gray-100">
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
-                                            <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
-                                            <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboardRecentSampleChallans">
-                                        <tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr>
-                                    </tbody>
+                                    <thead><tr class="bg-gray-100">
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
+                                        <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
+                                        <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
+                                    </tr></thead>
+                                    <tbody id="dashboardRecentSampleChallans"><tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -161,78 +158,52 @@
                             <p class="text-sm text-gray-500 font-medium mt-1">Fill in the details below to generate a new challan.</p>
                         </div>
                     </div>
-                    
                     <div class="p-8">
-                        <!-- Header -->
                         <div class="text-center mb-10">
                             <h1 class="text-3xl font-extrabold uppercase tracking-wider text-gray-800">MONICO PHARMA LIMITED</h1>
                             <p class="text-base text-gray-500 mt-1">South Dhanua, Sreepur, Gazipur</p>
                             <h2 class="text-xl font-bold mt-6 mb-4 uppercase bg-slate-50 text-slate-700 inline-block px-6 py-2 rounded-lg">Finished Product Delivery Challan</h2>
-                        
-                        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium text-sm text-gray-600">Date: </span>
-                                <input type="date" id="challanDate" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent">
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-medium text-sm text-gray-600">Challan No.: </span>
-                                <input type="text" id="challanNumber" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent text-gray-500 italic" placeholder="Auto-generate on Save" readonly>
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+                                <div class="flex items-center gap-2"><span class="font-medium text-sm text-gray-600">Date: </span><input type="date" id="challanDate" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent"></div>
+                                <div class="flex items-center gap-2"><span class="font-medium text-sm text-gray-600">Challan No.: </span><input type="text" id="challanNumber" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent text-gray-500 italic" placeholder="Auto-generate on Save" readonly></div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- From/To Information -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                        <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
-                            <h3 class="font-bold mb-4 text-slate-700 uppercase text-sm tracking-wide">From,</h3>
-                            <div class="space-y-2 text-sm">
-                                <p class="font-semibold text-slate-800">Monico Pharma Limited</p>
-                                <p class="text-slate-600">South Dhanua, Sreepur, Gazipur</p>
-                                <p class="text-slate-600">Contact Person: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="Alauddin Officer, Distribution"></p>
-                                <p class="text-slate-600">Cell: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="01332531300"></p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                            <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                                <h3 class="font-bold mb-4 text-slate-700 uppercase text-sm tracking-wide">From,</h3>
+                                <div class="space-y-2 text-sm">
+                                    <p class="font-semibold text-slate-800">Monico Pharma Limited</p>
+                                    <p class="text-slate-600">South Dhanua, Sreepur, Gazipur</p>
+                                    <p class="text-slate-600">Contact Person: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="Alauddin Officer, Distribution"></p>
+                                    <p class="text-slate-600">Cell: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="01332531300"></p>
+                                </div>
+                            </div>
+                            <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                                <h3 class="font-bold mb-4 text-blue-700 uppercase text-sm tracking-wide">To</h3>
+                                <div class="mb-4 no-print"><select id="customerSelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="selectCustomer()"><option value="">Select Customer...</option></select></div>
+                                <div class="space-y-2 text-sm">
+                                    <p><input type="text" id="customerName" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-semibold text-gray-800" placeholder="Customer Name"></p>
+                                    <p><input type="text" id="customerDepot" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Depot"></p>
+                                    <p><input type="text" id="customerAddress" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Address"></p>
+                                    <p><input type="text" id="customerCity" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="City"></p>
+                                    <p class="text-gray-600">Contact Number: <input type="text" id="customerPhone" class="border-b border-blue-200 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Phone"></p>
+                                </div>
                             </div>
                         </div>
-
-                        <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                            <h3 class="font-bold mb-4 text-blue-700 uppercase text-sm tracking-wide">To</h3>
-                            <div class="mb-4 no-print">
-                                <select id="customerSelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="selectCustomer()">
-                                    <option value="">Select Customer...</option>
-                                </select>
-                            </div>
-                            <div class="space-y-2 text-sm">
-                                <p><input type="text" id="customerName" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-semibold text-gray-800" placeholder="Customer Name"></p>
-                                <p><input type="text" id="customerDepot" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Depot"></p>
-                                <p><input type="text" id="customerAddress" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Address"></p>
-                                <p><input type="text" id="customerCity" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="City"></p>
-                                <p class="text-gray-600">Contact Number: <input type="text" id="customerPhone" class="border-b border-blue-200 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Phone"></p>
+                        <div class="mb-8 no-print">
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
+                                <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wide">Quick Product Selection</h3>
+                                <div class="flex flex-wrap gap-3 items-center">
+                                    <input type="text" id="productSearchInput" list="productsDatalist" placeholder="Search and select product..." class="border border-gray-300 rounded-lg px-4 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" autocomplete="off"><datalist id="productsDatalist"></datalist>
+                                    <input type="number" id="quickMcInput" placeholder="Default MC" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-36 text-sm">
+                                    <button onclick="addSelectedProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-green-500/30 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>Add Product</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Quick Add -->
-                    <div class="mb-8 no-print">
-                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
-                            <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wide">Quick Product Selection</h3>
-                            <div class="flex flex-wrap gap-3 items-center">
-                                <input type="text" id="productSearchInput" list="productsDatalist" placeholder="Search and select product..." class="border border-gray-300 rounded-lg px-4 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" autocomplete="off">
-                                <datalist id="productsDatalist"></datalist>
-                                
-                                <input type="number" id="quickMcInput" placeholder="Default MC" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-36 text-sm">
-                                <button onclick="addSelectedProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-green-500/30 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                                    Add Product
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Products Table -->
-                    <div class="mb-8">
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="border-table text-sm" style="border-color: #cbd5e1;">
-                                <thead>
-                                    <tr class="bg-slate-800 text-slate-100">
+                        <div class="mb-8">
+                            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                                    <thead><tr class="bg-slate-800 text-slate-100">
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Sl.<br>No.</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Name of Product (s)</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Batch<br>No.</th>
@@ -242,67 +213,42 @@
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Total Qty.<br>(Packs)</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Remarks</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider no-print">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productsTable" class="bg-white"></tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="mt-6 flex justify-end items-center">
-                            <div class="bg-blue-50 border border-blue-200 rounded-xl px-6 py-3 text-right">
-                                <span class="font-bold text-blue-800 text-sm uppercase tracking-wide">Total MC: </span>
-                                <span id="totalMC" class="font-extrabold text-blue-800 text-xl ml-2">00</span>
+                                    </tr></thead>
+                                    <tbody id="productsTable" class="bg-white"></tbody>
+                                </table>
                             </div>
+                            <div class="mt-6 flex justify-end items-center"><div class="bg-blue-50 border border-blue-200 rounded-xl px-6 py-3 text-right"><span class="font-bold text-blue-800 text-sm uppercase tracking-wide">Total MC: </span><span id="totalMC" class="font-extrabold text-blue-800 text-xl ml-2">00</span></div></div>
                         </div>
-                    </div>
-
-                    <!-- Signature Section -->
-                    <div class="mb-10">
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="border-table text-sm" style="border-color: #cbd5e1;">
-                                <thead>
-                                    <tr class="bg-slate-50 text-slate-600">
+                        <div class="mb-10">
+                            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                                    <thead><tr class="bg-slate-50 text-slate-600">
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Function</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Prepared By</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Reviewed & Approved By</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Carried By</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Check Out By</th>
                                         <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Received By</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white">
-                                    <tr class="h-28">
-                                        <td class="px-4 py-3 text-center font-semibold text-slate-500 bg-slate-50">Sign & Date</td>
-                                        <td></td><td></td><td></td><td></td><td></td>
-                                    </tr>
-                                    <tr class="bg-slate-50">
-                                        <td class="px-4 py-3 text-center font-medium text-slate-600">Designation</td>
-                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Officer, Distribution</td>
-                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">General Manager, Plant</td>
-                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Driver / Transport</td>
-                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Security</td>
-                                        <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Depot In-charge</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                    </tr></thead>
+                                    <tbody class="bg-white">
+                                        <tr class="h-28"><td class="px-4 py-3 text-center font-semibold text-slate-500 bg-slate-50">Sign & Date</td><td></td><td></td><td></td><td></td><td></td></tr>
+                                        <tr class="bg-slate-50">
+                                            <td class="px-4 py-3 text-center font-medium text-slate-600">Designation</td>
+                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Officer, Distribution</td>
+                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">General Manager, Plant</td>
+                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Driver / Transport</td>
+                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Security</td>
+                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Depot In-charge</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Action Buttons -->
-                    <div class="flex flex-wrap gap-4 no-print border-t border-gray-100 pt-6">
-                        <button onclick="saveChallan()" id="saveChallanBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
-                            <span id="saveChallanBtnText">Save Challan</span>
-                        </button>
-                        <button onclick="saveAndNewChallan()" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-teal-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            <span>Save & New</span>
-                        </button>
-                        <button onclick="clearForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            <span>Clear Form</span>
-                        </button>
-                    </div>
+                        <div class="flex flex-wrap gap-4 no-print border-t border-gray-100 pt-6">
+                            <button onclick="saveChallan()" id="saveChallanBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span id="saveChallanBtnText">Save Challan</span></button>
+                            <button onclick="saveAndNewChallan()" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-teal-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Save & New</span></button>
+                            <button onclick="clearForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Clear Form</span></button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -310,34 +256,15 @@
             <!-- CHALLAN HISTORY TAB -->
             <div id="content-history" class="tab-content hidden">
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100">
-                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Challan History</h2>
-                        <p class="text-sm text-gray-500 font-medium mt-1">View, print, edit, or delete previously saved challans.</p>
-                    </div>
-                    <div class="p-8">
-                        <div id="historyList" class="space-y-4">
-                            <div class="text-center py-10 text-gray-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <p class="font-medium">Loading Challans...</p>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="p-6 border-b border-gray-100"><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Challan History</h2><p class="text-sm text-gray-500 font-medium mt-1">View, print, edit, or delete previously saved challans.</p></div>
+                    <div class="p-8"><div id="historyList" class="space-y-4"><div class="text-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="font-medium">Loading Challans...</p></div></div></div>
                 </div>
             </div>
 
             <!-- PRODUCT MANAGEMENT TAB -->
             <div id="content-products" class="tab-content hidden">
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Product Management</h2>
-                            <p class="text-sm text-gray-500 font-medium mt-1">Manage your product inventory and specifications.</p>
-                        </div>
-                        <button onclick="showAddProductForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            <span>Add Product</span>
-                        </button>
-                    </div>
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Product Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Manage your product inventory and specifications.</p></div><button onclick="showAddProductForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Product</span></button></div>
                     <div class="p-8">
                         <div id="productForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
                             <h3 class="font-bold text-slate-800 mb-5 text-lg" id="productFormTitle">Add New Product</h3>
@@ -347,21 +274,30 @@
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Pack Size</label><input type="text" id="productPackSizeInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 1x20's"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">No. of Pack/MC</label><input type="number" id="productPacksPerMcInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 20"></div>
                             </div>
-                            <div class="flex gap-3 mt-6">
-                                <button onclick="saveProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Product</button>
-                                <button onclick="cancelProductForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button>
-                            </div>
+                            <div class="flex gap-3 mt-6"><button onclick="saveProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Product</button><button onclick="cancelProductForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
                         </div>
                         <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Batch No.</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">No. of Pack/MC</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="productsTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STOCK MANAGEMENT TAB -->
+            <div id="content-stock" class="tab-content hidden">
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-wrap gap-4">
+                        <div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Stock Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Current available stock (MC). Automatically updates when challans are created or received.</p></div>
+                        <div class="flex gap-3">
+                            <button onclick="printStock()" class="bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print Stock</span></button>
+                            <button onclick="openReceiveModal()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg><span>Received Product</span></button>
+                        </div>
+                    </div>
+                    <div class="p-8">
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
                             <table class="w-full border-collapse text-sm">
-                                <thead><tr class="bg-slate-50 text-slate-600">
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Batch No.</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">No. of Pack/MC</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th>
-                                </tr></thead>
-                                <tbody id="productsTableBody" class="bg-white divide-y divide-slate-100"></tbody>
+                                <thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Current Stock (MC)</th></tr></thead>
+                                <tbody id="stockTableBody" class="bg-white divide-y divide-slate-100"></tbody>
                             </table>
                         </div>
                     </div>
@@ -371,16 +307,7 @@
             <!-- CUSTOMER MANAGEMENT TAB -->
             <div id="content-customers" class="tab-content hidden">
                 <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div>
-                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Customer Management</h2>
-                            <p class="text-sm text-gray-500 font-medium mt-1">Manage depots, branches, and customer contacts.</p>
-                        </div>
-                        <button onclick="showAddCustomerForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                            <span>Add Customer</span>
-                        </button>
-                    </div>
+                    <div class="p-6 border-b border-gray-100 flex justify-between items-center"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Customer Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Manage depots, branches, and customer contacts.</p></div><button onclick="showAddCustomerForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Customer</span></button></div>
                     <div class="p-8">
                         <div id="customerForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
                             <h3 class="font-bold text-slate-800 mb-5 text-lg" id="customerFormTitle">Add New Customer</h3>
@@ -391,23 +318,10 @@
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" id="customerCityFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Kustia Sador"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label><input type="text" id="customerPhoneFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 01329731296"></div>
                             </div>
-                            <div class="flex gap-3 mt-6">
-                                <button onclick="saveCustomer()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Customer</button>
-                                <button onclick="cancelCustomerForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button>
-                            </div>
+                            <div class="flex gap-3 mt-6"><button onclick="saveCustomer()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Customer</button><button onclick="cancelCustomerForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
                         </div>
                         <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full border-collapse text-sm">
-                                <thead><tr class="bg-slate-50 text-slate-600">
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Customer Name</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Depot/Branch</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Address</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">City</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Phone</th>
-                                    <th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th>
-                                </tr></thead>
-                                <tbody id="customersTableBody" class="bg-white divide-y divide-slate-100"></tbody>
-                            </table>
+                            <table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Customer Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Depot/Branch</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Address</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">City</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Phone</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="customersTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -416,8 +330,80 @@
         </div>
     </main>
 
-    <!-- Hidden Print Area for Direct Print -->
+    <!-- Hidden Print Area -->
     <div id="printArea" style="display: none;"></div>
+
+    <!-- Product Receive Modal -->
+    <div id="productReceiveModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[70] p-4">
+        <div class="win-box w-full max-w-3xl rounded-none shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-[#0a246a] to-[#a6caf0] text-white px-2 py-1 flex items-center justify-between text-xs font-bold select-none">
+                <div class="flex items-center space-x-1">
+                    <i class="fa-solid fa-sailboat text-[10px] text-red-500 bg-white px-0.5 rounded"></i>
+                    <span class="font-normal tracking-wide">Product Receive</span>
+                </div>
+                <button onclick="closeReceiveModal()" class="bg-[#ece9d8] text-black w-4 h-4 flex items-center justify-center text-[10px] border border-gray-600 hover:bg-red-600 hover:text-white">×</button>
+            </div>
+            <div class="p-3 bg-[#ece9d8]">
+                <div class="text-[#0a246a] text-lg font-bold mb-3 tracking-tight font-serif">Product Receive</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 mb-3 text-xs">
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Receive Date</label><input type="date" id="receiveDate" class="win-input w-full max-w-[180px]"></div>
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Challan Issue Date</label><input type="date" id="challanIssueDate" class="win-input w-full max-w-[180px]"></div>
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Issued Challan No.</label><input type="text" id="issuedChallanNo" class="win-input w-full max-w-[180px]"></div>
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Receive Challan No.</label><input type="text" id="receiveChallanNo" value="" class="win-input w-full max-w-[180px]"></div>
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Received From</label><input type="text" id="receivedFrom" class="win-input w-full max-w-[180px]"></div>
+                    <div class="flex items-center space-x-2"><label class="w-32 text-right">To</label><input type="text" id="destinationTo" value="Kustia" class="win-input w-full max-w-[180px]"></div>
+                </div>
+                <hr class="border-t border-gray-400 my-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 mb-3 text-xs items-center">
+                    <div class="flex items-center space-x-2">
+                        <label class="w-32 text-right">Product Name</label>
+                        <div class="flex items-center space-x-2 w-full max-w-[240px]">
+                            <select id="productSelectReceive" class="win-input bg-white w-full"></select>
+                            <button onclick="openProductListModal()" class="text-blue-700 font-semibold underline text-nowrap hover:text-blue-900 cursor-pointer">Ctrl - List</button>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <label class="w-32 text-right">Received Quantity</label>
+                        <div class="flex items-center space-x-2">
+                            <input type="number" id="receivedQty" min="1" value="1" class="win-input w-24">
+                            <button onclick="addItemToReceiveGrid()" class="win-button px-4 font-bold text-blue-900"><i class="fa-solid fa-plus mr-1"></i> Add Item</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white border border-[#aca899] h-56 overflow-auto mb-3 shadow-inner relative">
+                    <table id="productGrid" class="w-full border-collapse text-xs select-none">
+                        <thead><tr class="bg-[#ece9d8] text-left sticky top-0"><th class="win-grid-header w-10 text-center">#</th><th class="win-grid-header">Product Name</th><th class="win-grid-header w-24">Qty</th><th class="win-grid-header w-36">Cha. No.</th></tr></thead>
+                        <tbody id="gridBody" class="divide-y divide-gray-200"><tr id="emptyRow" class="text-gray-400 italic"><td colspan="4" class="p-4 text-center">No products added yet.</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                    <div class="flex flex-wrap gap-1">
+                        <button onclick="saveReceiveForm()" class="win-button font-bold text-black"><span class="underline">S</span>ave</button>
+                        <button onclick="resetReceiveForm()" class="win-button"><span class="underline">C</span>ancel</button>
+                    </div>
+                </div>
+                <div class="bg-[#ffffcc] border border-[#d4d0c8] py-1 px-2 text-center text-xs font-medium text-gray-800 mb-1">Cancel ( After Process )</div>
+                <div class="text-center text-blue-900 font-bold text-xs tracking-wide">F5 - Save</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Quick List Modal -->
+    <div id="productListModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[80]">
+        <div class="win-box w-[480px] p-4 shadow-2xl">
+            <div class="flex justify-between items-center bg-[#0a246a] text-white px-2 py-1 -mt-4 -mx-4 mb-3">
+                <span class="font-bold text-xs">Product Quick List (Ctrl-List)</span>
+                <button onclick="closeProductListModal()" class="text-white font-bold text-sm px-1 hover:bg-red-600">×</button>
+            </div>
+            <div class="bg-white border border-gray-400 h-48 overflow-y-auto mb-3">
+                <table class="w-full text-xs cursor-pointer">
+                    <tr class="bg-gray-100 font-bold border-b"><th class="p-1.5 text-left">Product Name</th><th class="p-1.5 text-right">Stock</th></tr>
+                    <tbody id="quickProductList" class="divide-y"></tbody>
+                </table>
+            </div>
+            <div class="text-right"><button onclick="closeProductListModal()" class="win-button px-4">Close</button></div>
+        </div>
+    </div>
 
     <script>
         // --- Firebase Initialization ---
@@ -434,42 +420,42 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // --- Global State ---
         let products = [];
         let customers = [];
         let savedChallans = [];
         let editingProductKey = null;
         let editingCustomerKey = null;
         let editingChallanKey = null;
-        let currentChallanType = 'Product'; // Tracks if creating Product or Sample
+        let currentChallanType = 'Product';
+        let receiveTableItems = [];
 
         // --- Initial Data Seeding ---
         function seedDatabase() {
             db.ref('products').once('value').then(snap => {
                 if (!snap.exists()) {
                     const defaultProducts = [
-                        {name: "Algerd Susp", batch: "", packSize: "1x20's", packsPerMc: 20}, {name: "Allerkit Syrup", batch: "", packSize: "1x60's", packsPerMc: 60},
-                        {name: "Aseral-D Tab", batch: "", packSize: "1x132's", packsPerMc: 132}, {name: "Azimon 500 Tab", batch: "", packSize: "", packsPerMc: 132},
-                        {name: "Azimon PFS", batch: "", packSize: "", packsPerMc: 40}, {name: "Calsto 500 Tab", batch: "", packSize: "", packsPerMc: 0},
-                        {name: "Calsto D Tab", batch: "", packSize: "", packsPerMc: 98}, {name: "Cefmix 200 Cap", batch: "", packSize: "", packsPerMc: 192},
-                        {name: "Cefmix 400 Cap", batch: "", packSize: "", packsPerMc: 192}, {name: "Cefmix PFS", batch: "", packSize: "", packsPerMc: 50},
-                        {name: "Deu 20 Cap", batch: "", packSize: "", packsPerMc: 105}, {name: "Dimolan 30 Cap", batch: "", packSize: "", packsPerMc: 69},
-                        {name: "Dimolan 60 Cap", batch: "", packSize: "", packsPerMc: 99}, {name: "Ezylow Oral Solution", batch: "", packSize: "", packsPerMc: 60},
-                        {name: "Fesler 120 Tab", batch: "", packSize: "", packsPerMc: 168}, {name: "Fesler Susp", batch: "", packSize: "", packsPerMc: 40},
-                        {name: "Fomox 400mg Tablet", batch: "", packSize: "", packsPerMc: 204}, {name: "Funzole 150 Cap", batch: "", packSize: "", packsPerMc: 144},
-                        {name: "Funzole Susp", batch: "", packSize: "", packsPerMc: 40}, {name: "Hizin Syrup", batch: "", packSize: "", packsPerMc: 60},
-                        {name: "Kepros Tab", batch: "", packSize: "", packsPerMc: 408}, {name: "Monipro Tab", batch: "", packSize: "", packsPerMc: 60},
-                        {name: "Moset Syrup", batch: "", packSize: "", packsPerMc: 40}, {name: "Moset Tab", batch: "", packSize: "", packsPerMc: 288},
-                        {name: "Nostrin Tab", batch: "", packSize: "", packsPerMc: 288}, {name: "Nuloc 20 Cap", batch: "", packSize: "", packsPerMc: 69},
-                        {name: "Nuloc 20 Tab", batch: "", packSize: "", packsPerMc: 81}, {name: "Nuloc 40 Cap", batch: "", packSize: "", packsPerMc: 81},
-                        {name: "Perix 1 IV", batch: "", packSize: "", packsPerMc: 36}, {name: "Perix 2 IV", batch: "", packSize: "", packsPerMc: 36},
-                        {name: "Priga 25 Cap", batch: "", packSize: "", packsPerMc: 108}, {name: "Priga 50 Cap", batch: "", packSize: "", packsPerMc: 108},
-                        {name: "Proxen Plus 500 Tab", batch: "", packSize: "", packsPerMc: 132}, {name: "Recast 10 Tab", batch: "", packSize: "", packsPerMc: 317},
-                        {name: "Recast 5 Tab", batch: "", packSize: "", packsPerMc: 216}, {name: "Refain Tab", batch: "", packSize: "", packsPerMc: 0},
-                        {name: "Refain TR Cap", batch: "", packSize: "", packsPerMc: 72}, {name: "Remap Syrup", batch: "", packSize: "", packsPerMc: 60},
-                        {name: "Temrif Plus Tab", batch: "", packSize: "", packsPerMc: 0}, {name: "V- Nerve Tab", batch: "", packSize: "", packsPerMc: 98},
-                        {name: "Vomino Susp", batch: "", packSize: "", packsPerMc: 40}, {name: "Vomino Tab", batch: "", packSize: "", packsPerMc: 150},
-                        {name: "Zicolin Cap", batch: "", packSize: "", packsPerMc: 60}, {name: "Ziqui Syrup", batch: "", packSize: "", packsPerMc: 60}
+                        {name: "Algerd Susp", batch: "", packSize: "1x20's", packsPerMc: 20, stock: 500}, {name: "Allerkit Syrup", batch: "", packSize: "1x60's", packsPerMc: 60, stock: 500},
+                        {name: "Aseral-D Tab", batch: "", packSize: "1x132's", packsPerMc: 132, stock: 500}, {name: "Azimon 500 Tab", batch: "", packSize: "", packsPerMc: 132, stock: 500},
+                        {name: "Azimon PFS", batch: "", packSize: "", packsPerMc: 40, stock: 500}, {name: "Calsto 500 Tab", batch: "", packSize: "", packsPerMc: 0, stock: 500},
+                        {name: "Calsto D Tab", batch: "", packSize: "", packsPerMc: 98, stock: 500}, {name: "Cefmix 200 Cap", batch: "", packSize: "", packsPerMc: 192, stock: 500},
+                        {name: "Cefmix 400 Cap", batch: "", packSize: "", packsPerMc: 192, stock: 500}, {name: "Cefmix PFS", batch: "", packSize: "", packsPerMc: 50, stock: 500},
+                        {name: "Deu 20 Cap", batch: "", packSize: "", packsPerMc: 105, stock: 500}, {name: "Dimolan 30 Cap", batch: "", packSize: "", packsPerMc: 69, stock: 500},
+                        {name: "Dimolan 60 Cap", batch: "", packSize: "", packsPerMc: 99, stock: 500}, {name: "Ezylow Oral Solution", batch: "", packSize: "", packsPerMc: 60, stock: 500},
+                        {name: "Fesler 120 Tab", batch: "", packSize: "", packsPerMc: 168, stock: 500}, {name: "Fesler Susp", batch: "", packSize: "", packsPerMc: 40, stock: 500},
+                        {name: "Fomox 400mg Tablet", batch: "", packSize: "", packsPerMc: 204, stock: 500}, {name: "Funzole 150 Cap", batch: "", packSize: "", packsPerMc: 144, stock: 500},
+                        {name: "Funzole Susp", batch: "", packSize: "", packsPerMc: 40, stock: 500}, {name: "Hizin Syrup", batch: "", packSize: "", packsPerMc: 60, stock: 500},
+                        {name: "Kepros Tab", batch: "", packSize: "", packsPerMc: 408, stock: 500}, {name: "Monipro Tab", batch: "", packSize: "", packsPerMc: 60, stock: 500},
+                        {name: "Moset Syrup", batch: "", packSize: "", packsPerMc: 40, stock: 500}, {name: "Moset Tab", batch: "", packSize: "", packsPerMc: 288, stock: 500},
+                        {name: "Nostrin Tab", batch: "", packSize: "", packsPerMc: 288, stock: 500}, {name: "Nuloc 20 Cap", batch: "", packSize: "", packsPerMc: 69, stock: 500},
+                        {name: "Nuloc 20 Tab", batch: "", packSize: "", packsPerMc: 81, stock: 500}, {name: "Nuloc 40 Cap", batch: "", packSize: "", packsPerMc: 81, stock: 500},
+                        {name: "Perix 1 IV", batch: "", packSize: "", packsPerMc: 36, stock: 500}, {name: "Perix 2 IV", batch: "", packSize: "", packsPerMc: 36, stock: 500},
+                        {name: "Priga 25 Cap", batch: "", packSize: "", packsPerMc: 108, stock: 500}, {name: "Priga 50 Cap", batch: "", packSize: "", packsPerMc: 108, stock: 500},
+                        {name: "Proxen Plus 500 Tab", batch: "", packSize: "", packsPerMc: 132, stock: 500}, {name: "Recast 10 Tab", batch: "", packSize: "", packsPerMc: 317, stock: 500},
+                        {name: "Recast 5 Tab", batch: "", packSize: "", packsPerMc: 216, stock: 500}, {name: "Refain Tab", batch: "", packSize: "", packsPerMc: 0, stock: 500},
+                        {name: "Refain TR Cap", batch: "", packSize: "", packsPerMc: 72, stock: 500}, {name: "Remap Syrup", batch: "", packSize: "", packsPerMc: 60, stock: 500},
+                        {name: "Temrif Plus Tab", batch: "", packSize: "", packsPerMc: 0, stock: 500}, {name: "V- Nerve Tab", batch: "", packSize: "", packsPerMc: 98, stock: 500},
+                        {name: "Vomino Susp", batch: "", packSize: "", packsPerMc: 40, stock: 500}, {name: "Vomino Tab", batch: "", packSize: "", packsPerMc: 150, stock: 500},
+                        {name: "Zicolin Cap", batch: "", packSize: "", packsPerMc: 60, stock: 500}, {name: "Ziqui Syrup", batch: "", packSize: "", packsPerMc: 60, stock: 500}
                     ];
                     defaultProducts.forEach(p => db.ref('products').push(p));
                 }
@@ -491,6 +477,7 @@
         db.ref('products').on('value', (snap) => {
             products = snap.val() ? Object.keys(snap.val()).map(k => ({ key: k, ...snap.val()[k] })) : [];
             loadProductsTable();
+            loadStockTable();
             updateProductDropdowns();
         });
 
@@ -502,21 +489,18 @@
 
         db.ref('challans').on('value', (snap) => {
             const challansObj = snap.val() || {};
-            savedChallans = Object.keys(challansObj).map(k => ({ key: k, ...challansObj[k] }))
-                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            
+            savedChallans = Object.keys(challansObj).map(k => ({ key: k, ...challansObj[k] })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
             if (!document.getElementById('content-history').classList.contains('hidden')) loadHistory();
             if (!document.getElementById('content-dashboard').classList.contains('hidden')) loadDashboard();
         });
 
-        // --- Navigation & Dialog ---
+        // --- Navigation ---
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
             document.querySelectorAll('.nav-item').forEach(b => {
                 b.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'shadow-lg', 'shadow-blue-600/30', 'text-white');
                 b.classList.add('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-white');
             });
-            
             const activeTab = document.getElementById(`tab-${tabName}`);
             activeTab.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-600', 'shadow-lg', 'shadow-blue-600/30', 'text-white');
             activeTab.classList.remove('text-slate-400', 'hover:bg-slate-800/50', 'hover:text-white');
@@ -525,10 +509,12 @@
             if (tabName === 'products') loadProductsTable();
             if (tabName === 'customers') loadCustomersTable();
             if (tabName === 'dashboard') loadDashboard();
+            if (tabName === 'stock') loadStockTable();
             
             if (tabName === 'challan') {
                 if (!editingChallanKey) {
                     document.getElementById('selectionModal').classList.remove('hidden');
+                    document.getElementById('selectionModal').classList.add('flex');
                 } else {
                     document.getElementById('content-challan').classList.remove('hidden');
                 }
@@ -541,6 +527,7 @@
             currentChallanType = type;
             editingChallanKey = null;
             document.getElementById('selectionModal').classList.add('hidden');
+            document.getElementById('selectionModal').classList.remove('flex');
             document.getElementById('content-challan').classList.remove('hidden');
             document.getElementById('challanFormTitle').textContent = `Create ${type} Delivery Challan`;
             clearForm();
@@ -549,17 +536,12 @@
         // --- Dashboard Logic ---
         function loadDashboard() {
             let pendingCount = 0, receivedCount = 0;
-            savedChallans.forEach(challan => {
-                if (challan.status === 'Received') receivedCount++; else pendingCount++;
-            });
-
+            savedChallans.forEach(challan => { if (challan.status === 'Received') receivedCount++; else pendingCount++; });
             document.getElementById('dashTotalChallans').innerText = savedChallans.length;
             document.getElementById('dashPending').innerText = pendingCount;
             document.getElementById('dashCompleted').innerText = receivedCount;
-
             const productChallans = savedChallans.filter(c => !c.challanType || c.challanType === 'Product');
             const sampleChallans = savedChallans.filter(c => c.challanType === 'Sample');
-
             renderDashboardTable('dashboardRecentChallans', productChallans);
             renderDashboardTable('dashboardRecentSampleChallans', sampleChallans);
         }
@@ -570,26 +552,15 @@
                 list.innerHTML = `<tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">No challans found</td></tr>`;
                 return;
             }
-
             list.innerHTML = challans.map(challan => {
                 let totalMcRow = 0;
-                if (challan.products && challan.products.length > 0) {
-                    totalMcRow = challan.products.reduce((sum, p) => sum + (parseInt(p.numMc) || 0), 0);
-                }
-                
+                if (challan.products && challan.products.length > 0) totalMcRow = challan.products.reduce((sum, p) => sum + (parseInt(p.numMc) || 0), 0);
                 const currentStatus = challan.status || 'Pending';
                 const isLocked = challan.receivedFile1 || challan.receivedFile2;
-
                 let statusHtml = `<span class="text-green-600 font-semibold text-xs">Received & Locked</span>`;
                 if (!isLocked) {
-                    statusHtml = `
-                        <select onchange="updateChallanStatus('${challan.key}', this.value)" class="border border-gray-300 rounded-md px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option>
-                            <option value="Return" ${currentStatus === 'Return' ? 'selected' : ''}>Return</option>
-                        </select>
-                    `;
+                    statusHtml = `<select onchange="updateChallanStatus('${challan.key}', this.value)" class="border border-gray-300 rounded-md px-2 py-1 text-xs"><option value="Pending" ${currentStatus === 'Pending' ? 'selected' : ''}>Pending</option><option value="Return" ${currentStatus === 'Return' ? 'selected' : ''}>Return</option></select>`;
                 }
-
                 let filesHtml = '';
                 if (isLocked) {
                     filesHtml = '<div class="flex flex-col space-y-1 items-center">';
@@ -597,55 +568,26 @@
                     if (challan.receivedFile2) filesHtml += `<button onclick="viewFile('${challan.key}', 2)" class="text-blue-600 hover:underline text-xs font-medium">View File 2</button>`;
                     filesHtml += '</div>';
                 } else {
-                    filesHtml = `
-                        <div class="flex flex-col space-y-1 items-center">
-                            <label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors">
-                                <span>Upload 1</span>
-                                <input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 1)">
-                            </label>
-                            <label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium hover:bg-blue-100 transition-colors">
-                                <span>Upload 2</span>
-                                <input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 2)">
-                            </label>
-                        </div>
-                    `;
+                    filesHtml = `<div class="flex flex-col space-y-1 items-center"><label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium"><span>Upload 1</span><input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 1)"></label><label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium"><span>Upload 2</span><input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 2)"></label></div>`;
                 }
-
-                return `
-                    <tr>
-                        <td class="border border-black px-3 py-2 text-center">${challan.date}</td>
-                        <td class="border border-black px-3 py-2 text-center font-medium">${challan.challanNumber}</td>
-                        <td class="border border-black px-3 py-2">${challan.toName || 'N/A'} (${challan.toDepot || 'N/A'})</td>
-                        <td class="border border-black px-3 py-2 text-center">${totalMcRow}</td>
-                        <td class="border border-black px-3 py-2 text-center">${statusHtml}</td>
-                        <td class="border border-black px-3 py-2 text-center">${filesHtml}</td>
-                    </tr>
-                `;
+                return `<tr><td class="border border-black px-3 py-2 text-center">${challan.date}</td><td class="border border-black px-3 py-2 text-center font-medium">${challan.challanNumber}</td><td class="border border-black px-3 py-2">${challan.toName || 'N/A'} (${challan.toDepot || 'N/A'})</td><td class="border border-black px-3 py-2 text-center">${totalMcRow}</td><td class="border border-black px-3 py-2 text-center">${statusHtml}</td><td class="border border-black px-3 py-2 text-center">${filesHtml}</td></tr>`;
             }).join('');
         }
 
-        async function updateChallanStatus(key, status) {
-            try { await db.ref('challans/' + key).update({ status: status }); } 
-            catch (error) { alert("Error updating status: " + error.message); }
-        }
+        async function updateChallanStatus(key, status) { try { await db.ref('challans/' + key).update({ status: status }); } catch (error) { alert("Error: " + error.message); } }
 
         function uploadReceivedFile(key, input, fileNumber) {
             if (input.files && input.files[0]) {
                 const file = input.files[0];
-                if (file.size > 2 * 1024 * 1024) {
-                    alert("File too large! Please upload a file smaller than 2MB.");
-                    return;
-                }
+                if (file.size > 2 * 1024 * 1024) { alert("File too large! Max 2MB."); return; }
                 const reader = new FileReader();
                 reader.onload = async function(e) {
                     try {
                         const updates = { status: 'Received' };
                         updates[`receivedFile${fileNumber}`] = e.target.result;
                         await db.ref('challans/' + key).update(updates);
-                        alert("File uploaded and locked successfully!");
-                    } catch (error) {
-                        alert("Error uploading file: " + error.message);
-                    }
+                        alert("File uploaded and locked!");
+                    } catch (error) { alert("Error: " + error.message); }
                 };
                 reader.readAsDataURL(input.files[0]);
             }
@@ -656,13 +598,96 @@
             if (!challan) return;
             const fileData = challan[`receivedFile${fileNum}`];
             if (!fileData) return;
-
             const win = window.open();
-            if (fileData.startsWith('data:application/pdf')) {
-                win.document.write(`<iframe src="${fileData}" style="width:100%; height:100vh; border:none;"></iframe>`);
-            } else {
-                win.document.write(`<img src="${fileData}" style="width:100%; height:auto;" />`);
+            if (fileData.startsWith('data:application/pdf')) { win.document.write(`<iframe src="${fileData}" style="width:100%; height:100vh; border:none;"></iframe>`); } 
+            else { win.document.write(`<img src="${fileData}" style="width:100%; height:auto;" />`); }
+        }
+
+        // --- Stock Management & Receive Modal ---
+        async function updateStock(productKey, changeAmount) {
+            if (!productKey || changeAmount === 0) return;
+            const stockRef = db.ref('products/' + productKey + '/stock');
+            await stockRef.transaction(current => { return (current || 0) + changeAmount; });
+        }
+
+        function printStock() {
+            let stockHTML = '<table><thead><tr><th>Sl No.</th><th>Product Name</th><th>Current Stock (MC)</th></tr></thead><tbody>';
+            products.forEach((p, idx) => { stockHTML += `<tr><td>${idx+1}</td><td>${p.name}</td><td>${p.stock || 0}</td></tr>`; });
+            stockHTML += '</tbody></table>';
+            const html = `<style>#printContent { font-family: Arial, sans-serif; color: black; margin: 20px; font-size: 12px; } #printContent h2 { text-align: center; margin-bottom: 20px; } #printContent table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } #printContent th, #printContent td { border: 1px solid black; padding: 8px; text-align: center; } #printContent th { background-color: #f2f2f2; }</style><div id="printContent"><h2>Stock Inventory Report</h2><p>Date: ${new Date().toLocaleDateString()}</p>${stockHTML}</div>`;
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = html;
+            window.print();
+        }
+
+        function openReceiveModal() {
+            document.getElementById('receiveDate').value = new Date().toISOString().split('T')[0];
+            document.getElementById('challanIssueDate').value = new Date().toISOString().split('T')[0];
+            const pSelect = document.getElementById('productSelectReceive');
+            pSelect.innerHTML = '<option value="">-- Select Product --</option>' + products.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            const qList = document.getElementById('quickProductList');
+            qList.innerHTML = products.map(p => `<tr class="hover:bg-blue-100" onclick="selectQuickProduct('${p.name}')"><td class="p-1.5">${p.name}</td><td class="p-1.5 text-right font-medium">${p.stock || 0}</td></tr>`).join('');
+            document.getElementById('productReceiveModal').classList.remove('hidden');
+            document.getElementById('productReceiveModal').classList.add('flex');
+        }
+
+        function closeReceiveModal() {
+            document.getElementById('productReceiveModal').classList.add('hidden');
+            document.getElementById('productReceiveModal').classList.remove('flex');
+            resetReceiveForm();
+        }
+
+        function openProductListModal() { document.getElementById('productListModal').classList.remove('hidden'); document.getElementById('productListModal').classList.add('flex'); }
+        function closeProductListModal() { document.getElementById('productListModal').classList.add('hidden'); document.getElementById('productListModal').classList.remove('flex'); }
+        function selectQuickProduct(name) { document.getElementById('productSelectReceive').value = name; closeProductListModal(); document.getElementById('receivedQty').focus(); }
+
+        function addItemToReceiveGrid() {
+            const productSelect = document.getElementById('productSelectReceive');
+            const receivedQty = document.getElementById('receivedQty');
+            const receiveChallanNo = document.getElementById('receiveChallanNo').value || 'N/A';
+            const productName = productSelect.value;
+            const qty = parseInt(receivedQty.value);
+            if (!productName) return alert("Please select a Product Name first.");
+            if (isNaN(qty) || qty <= 0) return alert("Please enter a valid Received Quantity.");
+            receiveTableItems.push({ product: productName, qty: qty, challanNo: receiveChallanNo });
+            productSelect.value = ""; receivedQty.value = "1";
+            renderReceiveGrid();
+        }
+
+        function renderReceiveGrid() {
+            const tbody = document.getElementById('gridBody');
+            tbody.innerHTML = '';
+            if (receiveTableItems.length === 0) {
+                tbody.innerHTML = `<tr id="emptyRow" class="text-gray-400 italic"><td colspan="4" class="p-4 text-center">No products added yet.</td></tr>`;
+                return;
             }
+            receiveTableItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = 'cursor-pointer hover:bg-blue-50';
+                tr.innerHTML = `<td class="p-1.5 border-b border-gray-200 text-center">${index + 1}</td><td class="p-1.5 border-b border-gray-200 font-medium">${item.product}</td><td class="p-1.5 border-b border-gray-200">${item.qty}</td><td class="p-1.5 border-b border-gray-200">${item.challanNo}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function saveReceiveForm() {
+            if (receiveTableItems.length === 0) return alert("Cannot save. No products have been added to the receive list.");
+            try {
+                for (const item of receiveTableItems) {
+                    const prod = products.find(p => p.name === item.product);
+                    if (prod) await updateStock(prod.key, item.qty);
+                }
+                alert(`Success! Product Receive Challan saved successfully with ${receiveTableItems.length} item(s).`);
+                closeReceiveModal();
+            } catch (error) { alert("Error saving: " + error.message); }
+        }
+
+        function resetReceiveForm() {
+            receiveTableItems = [];
+            document.getElementById('issuedChallanNo').value = '';
+            document.getElementById('receivedFrom').value = '';
+            document.getElementById('productSelectReceive').value = '';
+            document.getElementById('receivedQty').value = '1';
+            renderReceiveGrid();
         }
 
         // --- Challan Creation Logic ---
@@ -697,41 +722,27 @@
             const searchInput = document.getElementById('productSearchInput');
             const quickMcInput = document.getElementById('quickMcInput');
             const searchValue = searchInput.value.trim();
-            
             if (!searchValue) return alert("Please search and select a product first.");
             const product = products.find(p => p.name.toLowerCase() === searchValue.toLowerCase());
-            if (!product) return alert("Selected product not found. Please choose a valid product from the list.");
+            if (!product) return alert("Selected product not found.");
+            const mcValue = parseInt(quickMcInput.value) || 1;
             
-            const mcValue = quickMcInput.value || '1';
+            if ((product.stock || 0) < mcValue) return alert(`Insufficient stock for ${product.name}. Available: ${product.stock || 0} MC.`);
+            
             const defaultRemarks = currentChallanType === 'Sample' ? 'C.C' : 'Commercial';
-            
             const tbody = document.getElementById('productsTable');
             const rowCount = tbody.querySelectorAll('.product-row').length;
             const newRowNumber = String(rowCount + 1).padStart(2, '0');
-            
             const newRow = document.createElement('tr');
             newRow.className = 'product-row hover:bg-slate-50 transition-colors';
-            newRow.innerHTML = `
-                <td class="px-4 py-3 text-center text-slate-500 font-medium">${newRowNumber}</td>
-                <td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td>
-                <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" placeholder="Enter Batch"></td>
-                <td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600"></td>
-                <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600"></td>
-                <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${mcValue}"></td>
-                <td class="px-4 py-3 text-center total-packs font-bold text-slate-800"></td>
-                <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${defaultRemarks}"></td>
-                <td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>
-            `;
+            newRow.innerHTML = `<td class="px-4 py-3 text-center text-slate-500 font-medium">${newRowNumber}</td><td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" placeholder="Enter Batch"></td><td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${mcValue}"></td><td class="px-4 py-3 text-center total-packs font-bold text-slate-800"></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${defaultRemarks}"></td><td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
             tbody.appendChild(newRow);
-            
             const select = newRow.querySelector('.product-name-select');
             select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
             select.value = `${product.name}|${product.packsPerMc}`;
-            
             newRow.querySelector('.pack-size').value = product.packSize || '';
             newRow.querySelector('.packs-per-mc').value = product.packsPerMc || '';
             newRow.querySelector('.total-packs').textContent = (product.packsPerMc || 0) * mcValue;
-            
             attachProductListeners(newRow);
             updateTotalMC();
             searchInput.value = '';
@@ -742,14 +753,12 @@
             const packsPerMcInput = row.querySelector('.packs-per-mc');
             const numMcInput = row.querySelector('.num-mc');
             const productSelect = row.querySelector('.product-name-select');
-            
             function updateTotalPacks() {
                 const packsPerMc = parseInt(packsPerMcInput.value) || 0;
                 const numMc = parseInt(numMcInput.value) || 0;
                 row.querySelector('.total-packs').textContent = packsPerMc * numMc;
                 updateTotalMC();
             }
-            
             productSelect.addEventListener('change', function() {
                 if (this.value) {
                     const [productName] = this.value.split('|');
@@ -761,28 +770,13 @@
                 }
                 updateTotalPacks();
             });
-            
             packsPerMcInput.addEventListener('input', updateTotalPacks);
             numMcInput.addEventListener('input', updateTotalPacks);
         }
 
-        function removeProduct(btn) {
-            btn.closest('tr').remove();
-            updateRowNumbers();
-            updateTotalMC();
-        }
-
-        function updateRowNumbers() {
-            document.querySelectorAll('.product-row').forEach((row, i) => {
-                row.querySelector('td:first-child').textContent = String(i + 1).padStart(2, '0');
-            });
-        }
-
-        function updateTotalMC() {
-            let total = 0;
-            document.querySelectorAll('.product-row .num-mc').forEach(input => total += parseInt(input.value) || 0);
-            document.getElementById('totalMC').textContent = String(total).padStart(2, '0');
-        }
+        function removeProduct(btn) { btn.closest('tr').remove(); updateRowNumbers(); updateTotalMC(); }
+        function updateRowNumbers() { document.querySelectorAll('.product-row').forEach((row, i) => { row.querySelector('td:first-child').textContent = String(i + 1).padStart(2, '0'); }); }
+        function updateTotalMC() { let total = 0; document.querySelectorAll('.product-row .num-mc').forEach(input => total += parseInt(input.value) || 0); document.getElementById('totalMC').textContent = String(total).padStart(2, '0'); }
 
         async function saveChallan() {
             if (!document.getElementById('customerName').value) return alert("Please select a customer.");
@@ -808,14 +802,45 @@
                     totalPacks: row.querySelector('.total-packs').textContent, remarks: row.querySelector('.product-remarks').value
                 });
             });
+
+            // Stock Validation
+            for (const p of challanData.products) {
+                const prod = products.find(pr => pr.name === p.name);
+                if (prod) {
+                    let available = parseInt(prod.stock) || 0;
+                    if (editingChallanKey) {
+                        const oldChallan = savedChallans.find(c => c.key === editingChallanKey);
+                        const oldProd = oldChallan?.products.find(op => op.name === p.name);
+                        if (oldProd) available += parseInt(oldProd.numMc) || 0;
+                    }
+                    if (available < parseInt(p.numMc)) {
+                        return alert(`Insufficient stock for ${p.name}. Available: ${available} MC, Requested: ${p.numMc} MC. Cannot save challan.`);
+                    }
+                }
+            }
             
             try {
                 if (editingChallanKey) {
+                    const oldChallan = savedChallans.find(c => c.key === editingChallanKey);
+                    if (oldChallan && oldChallan.products) {
+                        for (const p of oldChallan.products) {
+                            const prod = products.find(pr => pr.name === p.name);
+                            if (prod) await updateStock(prod.key, parseInt(p.numMc) || 0);
+                        }
+                    }
+                    for (const p of challanData.products) {
+                        const prod = products.find(pr => pr.name === p.name);
+                        if (prod) await updateStock(prod.key, -(parseInt(p.numMc) || 0));
+                    }
                     challanData.challanNumber = document.getElementById('challanNumber').value;
                     challanData.updatedAt = firebase.database.ServerValue.TIMESTAMP;
                     await db.ref('challans/' + editingChallanKey).update(challanData);
-                    alert("Challan Updated Successfully!");
+                    alert("Challan Updated Successfully! Stock adjusted.");
                 } else {
+                    for (const p of challanData.products) {
+                        const prod = products.find(pr => pr.name === p.name);
+                        if (prod) await updateStock(prod.key, -(parseInt(p.numMc) || 0));
+                    }
                     const newChallanNumber = await generateNewChallanNumber();
                     challanData.challanNumber = newChallanNumber;
                     challanData.createdAt = firebase.database.ServerValue.TIMESTAMP;
@@ -853,68 +878,27 @@
                 list.innerHTML = '<div class="text-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><p>No saved challans found.</p></div>';
                 return;
             }
-            
             list.innerHTML = savedChallans.map(challan => {
                 const isLocked = challan.receivedFile1 || challan.receivedFile2;
                 const typeClass = challan.challanType === 'Sample' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
                 const editButton = isLocked ? 
-                    `<button class="bg-gray-100 text-gray-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed flex items-center space-x-1" disabled>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                        <span>Locked</span>
-                    </button>` : 
-                    `<button onclick="loadChallan('${challan.key}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                        <span>Edit</span>
-                    </button>`;
-
-                return `
-                    <div class="border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-slate-300 transition-all duration-300 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4">
-                        <div class="flex items-center space-x-4">
-                            <div class="bg-gradient-to-br ${challan.challanType === 'Sample' ? 'from-purple-50 to-pink-50 text-purple-600' : 'from-blue-50 to-indigo-50 text-blue-600'} p-3 rounded-xl border ${challan.challanType === 'Sample' ? 'border-purple-100' : 'border-blue-100'}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                            </div>
-                            <div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="font-bold text-gray-800 text-lg">${challan.challanNumber}</h4>
-                                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${typeClass}">${challan.challanType || 'Product'}</span>
-                                </div>
-                                <p class="text-sm text-gray-500 font-medium">Date: ${challan.date} <span class="mx-1 text-slate-300">|</span> Customer: ${challan.toName} (${challan.toDepot})</p>
-                                <p class="text-xs text-gray-400 mt-1">${challan.products ? challan.products.length : 0} Products</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 flex-wrap">
-                            ${editButton}
-                            <button onclick="printChallan('${challan.key}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                                <span>Print</span>
-                            </button>
-                            <button onclick="deleteChallan('${challan.key}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                <span>Delete</span>
-                            </button>
-                        </div>
-                    </div>
-                `;
+                    `<button class="bg-gray-100 text-gray-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed flex items-center space-x-1" disabled><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg><span>Locked</span></button>` : 
+                    `<button onclick="loadChallan('${challan.key}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg><span>Edit</span></button>`;
+                return `<div class="border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-slate-300 transition-all duration-300 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4"><div class="flex items-center space-x-4"><div class="bg-gradient-to-br ${challan.challanType === 'Sample' ? 'from-purple-50 to-pink-50 text-purple-600' : 'from-blue-50 to-indigo-50 text-blue-600'} p-3 rounded-xl border ${challan.challanType === 'Sample' ? 'border-purple-100' : 'border-blue-100'}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div><div><div class="flex items-center gap-2"><h4 class="font-bold text-gray-800 text-lg">${challan.challanNumber}</h4><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${typeClass}">${challan.challanType || 'Product'}</span></div><p class="text-sm text-gray-500 font-medium">Date: ${challan.date} <span class="mx-1 text-slate-300">|</span> Customer: ${challan.toName} (${challan.toDepot})</p><p class="text-xs text-gray-400 mt-1">${challan.products ? challan.products.length : 0} Products</p></div></div><div class="flex gap-2 flex-wrap">${editButton}<button onclick="printChallan('${challan.key}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print</span></button><button onclick="deleteChallan('${challan.key}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Delete</span></button></div></div>`;
             }).join('');
         }
 
         function loadChallan(key) {
             const challan = savedChallans.find(c => c.key === key);
             if (!challan) return;
-            
-            if (challan.receivedFile1 || challan.receivedFile2) {
-                alert("This challan is locked because a received copy has been uploaded. It cannot be edited.");
-                return;
-            }
-            
+            if (challan.receivedFile1 || challan.receivedFile2) { alert("This challan is locked."); return; }
             showTab('challan');
             editingChallanKey = key;
             currentChallanType = challan.challanType || 'Product';
-            
             document.getElementById('selectionModal').classList.add('hidden');
+            document.getElementById('selectionModal').classList.remove('flex');
             document.getElementById('content-challan').classList.remove('hidden');
             document.getElementById('challanFormTitle').textContent = `Edit ${currentChallanType} Delivery Challan`;
-            
             document.getElementById('challanNumber').value = challan.challanNumber;
             document.getElementById('challanDate').value = challan.date;
             document.getElementById('customerName').value = challan.toName || '';
@@ -922,27 +906,14 @@
             document.getElementById('customerAddress').value = challan.toAddress || '';
             document.getElementById('customerCity').value = challan.toCity || '';
             document.getElementById('customerPhone').value = challan.toPhone || '';
-            
             const tbody = document.getElementById('productsTable');
             tbody.innerHTML = '';
-            
             if (challan.products && challan.products.length > 0) {
                 challan.products.forEach((product, idx) => {
                     const newRow = document.createElement('tr');
                     newRow.className = 'product-row hover:bg-slate-50 transition-colors';
-                    newRow.innerHTML = `
-                        <td class="px-4 py-3 text-center text-slate-500 font-medium">${String(idx + 1).padStart(2, '0')}</td>
-                        <td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td>
-                        <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" value="${product.batch}"></td>
-                        <td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600" value="${product.packSize}"></td>
-                        <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600" value="${product.packsPerMc}"></td>
-                        <td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${product.numMc}"></td>
-                        <td class="px-4 py-3 text-center total-packs font-bold text-slate-800">${product.totalPacks}</td>
-                        <td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${product.remarks}"></td>
-                        <td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>
-                    `;
+                    newRow.innerHTML = `<td class="px-4 py-3 text-center text-slate-500 font-medium">${String(idx + 1).padStart(2, '0')}</td><td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" value="${product.batch}"></td><td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600" value="${product.packSize}"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600" value="${product.packsPerMc}"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${product.numMc}"></td><td class="px-4 py-3 text-center total-packs font-bold text-slate-800">${product.totalPacks}</td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${product.remarks}"></td><td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
                     tbody.appendChild(newRow);
-                    
                     const select = newRow.querySelector('.product-name-select');
                     select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
                     select.value = product.value;
@@ -955,105 +926,18 @@
             document.getElementById('saveChallanBtn').classList.add('from-blue-500', 'to-indigo-600', 'hover:from-blue-600', 'hover:to-indigo-700', 'shadow-blue-500/30');
         }
 
-        // --- Direct Print Logic ---
         function printChallan(key) {
             const challan = savedChallans.find(c => c.key === key);
             if (!challan) return;
-
             let productsHTML = '';
             let totalMC = 0;
-
             if (challan.products && challan.products.length > 0) {
                 challan.products.forEach((product, idx) => {
                     totalMC += parseInt(product.numMc) || 0;
-                    productsHTML += `
-                        <tr>
-                            <td class="text-center">${String(idx + 1).padStart(2, '0')}</td>
-                            <td>${product.name}</td>
-                            <td class="text-center">${product.batch}</td>
-                            <td class="text-center">${product.packSize}</td>
-                            <td class="text-center">${product.packsPerMc}</td>
-                            <td class="text-center">${product.numMc}</td>
-                            <td class="text-center">${product.totalPacks}</td>
-                            <td class="text-center">${product.remarks}</td>
-                        </tr>
-                    `;
+                    productsHTML += `<tr><td class="text-center">${String(idx + 1).padStart(2, '0')}</td><td>${product.name}</td><td class="text-center">${product.batch}</td><td class="text-center">${product.packSize}</td><td class="text-center">${product.packsPerMc}</td><td class="text-center">${product.numMc}</td><td class="text-center">${product.totalPacks}</td><td class="text-center">${product.remarks}</td></tr>`;
                 });
             }
-
-            const html = `
-                <style>
-                    #printContent { font-family: Arial, sans-serif; color: black; margin: 20px; font-size: 12px; display: flex; flex-direction: column; min-height: 99vh; box-sizing: border-box; }
-                    #printContent table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-                    #printContent th, #printContent td { border: 1px solid black; padding: 6px; text-align: left; color: black; vertical-align: top; }
-                    #printContent th { background-color: #f2f2f2 !important; text-align: center; }
-                    #printContent .text-center { text-align: center; }
-                    #printContent .text-right { text-align: right; }
-                    #printContent .no-border { border: none; }
-                    #printContent .header-table td { border: 1px solid black; vertical-align: middle; }
-                    #printContent .company-title { font-weight: bold; font-size: 14px; text-align: center; }
-                    #printContent .company-subtitle { font-size: 11px; text-align: center; }
-                    #printContent .challan-title { background-color: #e6e6e6 !important; font-weight: bold; text-align: center; font-size: 13px; }
-                </style>
-                <div id="printContent">
-                    <table class="header-table">
-                        <tr>
-                            <td width="25%" class="text-center" style="font-weight: bold; font-style: italic;">MONICO PHARMA LIMITED</td>
-                            <td width="75%" class="text-center">
-                                <div class="company-title">MONICO PHARMA LIMITED</div>
-                                <div class="company-subtitle">South Dhanua, Sreepur, Gazipur</div>
-                            </td>
-                        </tr>
-                        <tr><td colspan="2" class="challan-title">FINISHED PRODUCT DELIVERY CHALLAN</td></tr>
-                    </table>
-                    <table>
-                        <tr>
-                            <td width="50%"><strong>Date:</strong> ${challan.date}</td>
-                            <td width="50%"><strong>Challan No.:</strong> ${challan.challanNumber}</td>
-                        </tr>
-                    </table>
-                    <table>
-                        <tr>
-                            <td width="50%">
-                                <strong>From,</strong><br>Monico Pharma Limited<br>South Dhanua, Sreepur, Gazipur<br>Contact Person: Alauddin<br>Distribution Officer<br>Cell: 01332531300
-                            </td>
-                            <td width="50%">
-                                <strong>To,</strong><br>${challan.toName || ''}<br><strong>${challan.toDepot || ''}</strong><br>${challan.toAddress || ''}<br>${challan.toCity || ''}<br>Call #: ${challan.toPhone || ''}
-                            </td>
-                        </tr>
-                    </table>
-                    <table>
-                        <thead><tr>
-                            <th width="6%">Sl. No.</th><th width="34%">Name of Product (s)</th><th width="10%">Batch No.</th><th width="10%">Pack Size</th>
-                            <th width="10%">No. of Pack/MC</th><th width="10%">No. of MC</th><th width="10%">Total Qty. (Packs)</th><th width="10%">Remarks</th>
-                        </tr></thead>
-                        <tbody>${productsHTML}</tbody>
-                    </table>
-                    <table style="width: 35%; margin-left: auto;">
-                        <tr><td class="text-center" style="font-weight: bold;">Total MC: ${String(totalMC).padStart(2, '0')}</td></tr>
-                    </table>
-                    <div style="margin-top: auto;">
-                        <table>
-                            <thead><tr>
-                                <th width="16%">FUNCTION</th><th width="16%">PREPARED BY</th><th width="20%">REVIEWED & APPROVED BY</th>
-                                <th width="16%">CARRIED BY</th><th width="16%">CHECK OUT BY</th><th width="16%">RECEIVED BY</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr style="height: 45px;">
-                                    <td style="font-weight: bold; vertical-align: middle;">Sign & Date</td>
-                                    <td></td><td></td><td></td><td></td><td></td>
-                                </tr>
-                                <tr>
-                                    <td style="font-weight: bold; vertical-align: middle;">Designation</td>
-                                    <td class="text-center">Officer, Distribution</td><td class="text-center">General Manager, Plant</td>
-                                    <td class="text-center">Driver / Transport</td><td class="text-center">Security</td><td class="text-center">Depot In-charge</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-
+            const html = `<style>#printContent { font-family: Arial, sans-serif; color: black; margin: 20px; font-size: 12px; display: flex; flex-direction: column; min-height: 99vh; box-sizing: border-box; } #printContent table { width: 100%; border-collapse: collapse; margin-bottom: 10px; } #printContent th, #printContent td { border: 1px solid black; padding: 6px; text-align: left; color: black; vertical-align: top; } #printContent th { background-color: #f2f2f2 !important; text-align: center; } #printContent .text-center { text-align: center; } #printContent .text-right { text-align: right; } #printContent .no-border { border: none; } #printContent .header-table td { border: 1px solid black; vertical-align: middle; } #printContent .company-title { font-weight: bold; font-size: 14px; text-align: center; } #printContent .company-subtitle { font-size: 11px; text-align: center; } #printContent .challan-title { background-color: #e6e6e6 !important; font-weight: bold; text-align: center; font-size: 13px; }</style><div id="printContent"><table class="header-table"><tr><td width="25%" class="text-center" style="font-weight: bold; font-style: italic;">MONICO PHARMA LIMITED</td><td width="75%" class="text-center"><div class="company-title">MONICO PHARMA LIMITED</div><div class="company-subtitle">South Dhanua, Sreepur, Gazipur</div></td></tr><tr><td colspan="2" class="challan-title">FINISHED PRODUCT DELIVERY CHALLAN</td></tr></table><table><tr><td width="50%"><strong>Date:</strong> ${challan.date}</td><td width="50%"><strong>Challan No.:</strong> ${challan.challanNumber}</td></tr></table><table><tr><td width="50%"><strong>From,</strong><br>Monico Pharma Limited<br>South Dhanua, Sreepur, Gazipur<br>Contact Person: Alauddin<br>Distribution Officer<br>Cell: 01332531300</td><td width="50%"><strong>To,</strong><br>${challan.toName || ''}<br><strong>${challan.toDepot || ''}</strong><br>${challan.toAddress || ''}<br>${challan.toCity || ''}<br>Call #: ${challan.toPhone || ''}</td></tr></table><table><thead><tr><th width="6%">Sl. No.</th><th width="34%">Name of Product (s)</th><th width="10%">Batch No.</th><th width="10%">Pack Size</th><th width="10%">No. of Pack/MC</th><th width="10%">No. of MC</th><th width="10%">Total Qty. (Packs)</th><th width="10%">Remarks</th></tr></thead><tbody>${productsHTML}</tbody></table><table style="width: 35%; margin-left: auto;"><tr><td class="text-center" style="font-weight: bold;">Total MC: ${String(totalMC).padStart(2, '0')}</td></tr></table><div style="margin-top: auto;"><table><thead><tr><th width="16%">FUNCTION</th><th width="16%">PREPARED BY</th><th width="20%">REVIEWED & APPROVED BY</th><th width="16%">CARRIED BY</th><th width="16%">CHECK OUT BY</th><th width="16%">RECEIVED BY</th></tr></thead><tbody><tr style="height: 45px;"><td style="font-weight: bold; vertical-align: middle;">Sign & Date</td><td></td><td></td><td></td><td></td><td></td></tr><tr><td style="font-weight: bold; vertical-align: middle;">Designation</td><td class="text-center">Officer, Distribution</td><td class="text-center">General Manager, Plant</td><td class="text-center">Driver / Transport</td><td class="text-center">Security</td><td class="text-center">Depot In-charge</td></tr></tbody></table></div></div>`;
             const printArea = document.getElementById('printArea');
             printArea.innerHTML = html;
             window.print();
@@ -1061,130 +945,50 @@
 
         async function deleteChallan(key) {
             if (!confirm("Are you sure you want to delete this challan?")) return;
-            try { await db.ref('challans/' + key).remove(); loadHistory(); } 
-            catch (error) { alert("Error deleting: " + error.message); }
+            try {
+                const challan = savedChallans.find(c => c.key === key);
+                if (challan && challan.products) {
+                    for (const p of challan.products) {
+                        const prod = products.find(pr => pr.name === p.name);
+                        if (prod) await updateStock(prod.key, parseInt(p.numMc) || 0);
+                    }
+                }
+                await db.ref('challans/' + key).remove();
+                loadHistory();
+            } catch (error) { alert("Error deleting: " + error.message); }
         }
 
         // --- Product Management Logic ---
         function loadProductsTable() {
-            document.getElementById('productsTableBody').innerHTML = products.map((p) => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.batch || '-'}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packsPerMc}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-center">
-                        <button onclick="editProduct('${p.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button>
-                        <button onclick="deleteProduct('${p.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button>
-                    </td>
-                </tr>
-            `).join('');
+            document.getElementById('productsTableBody').innerHTML = products.map((p) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.batch || '-'}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packsPerMc}</td><td class="border border-slate-200 px-4 py-3 text-center"><button onclick="editProduct('${p.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteProduct('${p.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join('');
         }
-
-        function showAddProductForm() {
-            document.getElementById('productForm').classList.remove('hidden');
-            document.getElementById('productFormTitle').textContent = 'Add New Product';
-            editingProductKey = null; clearProductForm();
-        }
-
-        function editProduct(key) {
-            const p = products.find(pr => pr.key === key);
-            if (!p) return;
-            document.getElementById('productForm').classList.remove('hidden');
-            document.getElementById('productFormTitle').textContent = 'Edit Product';
-            document.getElementById('productNameInput').value = p.name;
-            document.getElementById('productBatchInput').value = p.batch;
-            document.getElementById('productPackSizeInput').value = p.packSize;
-            document.getElementById('productPacksPerMcInput').value = p.packsPerMc;
-            editingProductKey = key;
-        }
-
-        function saveProduct() {
-            const name = document.getElementById('productNameInput').value.trim();
-            if (!name) return alert("Product Name is required.");
-            const product = {
-                name: name, batch: document.getElementById('productBatchInput').value.trim(),
-                packSize: document.getElementById('productPackSizeInput').value.trim(),
-                packsPerMc: parseInt(document.getElementById('productPacksPerMcInput').value) || 0
-            };
-            if (editingProductKey) db.ref('products/' + editingProductKey).update(product);
-            else db.ref('products').push(product);
-            cancelProductForm();
-        }
-
-        function deleteProduct(key) {
-            if (!confirm("Delete this product?")) return;
-            db.ref('products/' + key).remove();
-        }
-
+        function showAddProductForm() { document.getElementById('productForm').classList.remove('hidden'); document.getElementById('productFormTitle').textContent = 'Add New Product'; editingProductKey = null; clearProductForm(); }
+        function editProduct(key) { const p = products.find(pr => pr.key === key); if (!p) return; document.getElementById('productForm').classList.remove('hidden'); document.getElementById('productFormTitle').textContent = 'Edit Product'; document.getElementById('productNameInput').value = p.name; document.getElementById('productBatchInput').value = p.batch; document.getElementById('productPackSizeInput').value = p.packSize; document.getElementById('productPacksPerMcInput').value = p.packsPerMc; editingProductKey = key; }
+        function saveProduct() { const name = document.getElementById('productNameInput').value.trim(); if (!name) return alert("Product Name is required."); const product = { name: name, batch: document.getElementById('productBatchInput').value.trim(), packSize: document.getElementById('productPackSizeInput').value.trim(), packsPerMc: parseInt(document.getElementById('productPacksPerMcInput').value) || 0 }; if (editingProductKey) db.ref('products/' + editingProductKey).update(product); else db.ref('products').push(product); cancelProductForm(); }
+        function deleteProduct(key) { if (!confirm("Delete this product?")) return; db.ref('products/' + key).remove(); }
         function cancelProductForm() { document.getElementById('productForm').classList.add('hidden'); clearProductForm(); }
         function clearProductForm() { ['productNameInput', 'productBatchInput', 'productPackSizeInput', 'productPacksPerMcInput'].forEach(id => document.getElementById(id).value = ''); }
-        function updateProductDropdowns() {
-            const datalist = document.getElementById('productsDatalist');
-            if (datalist) datalist.innerHTML = products.map(p => `<option value="${p.name}">${p.name} (Pack: ${p.packsPerMc})</option>`).join('');
+        function updateProductDropdowns() { const datalist = document.getElementById('productsDatalist'); if (datalist) datalist.innerHTML = products.map(p => `<option value="${p.name}">${p.name} (Pack: ${p.packsPerMc})</option>`).join(''); }
+
+        // --- Stock Table Logic ---
+        function loadStockTable() {
+            const tbody = document.getElementById('stockTableBody');
+            tbody.innerHTML = products.map((p) => {
+                const stockVal = p.stock || 0;
+                const stockColor = stockVal > 100 ? 'text-green-600' : (stockVal > 0 ? 'text-orange-500' : 'text-red-600');
+                return `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-4 py-3 text-center font-bold ${stockColor} text-lg">${stockVal}</td></tr>`;
+            }).join('');
         }
 
         // --- Customer Management Logic ---
-        function loadCustomersTable() {
-            document.getElementById('customersTableBody').innerHTML = customers.map((c) => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${c.name}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.depot}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.address}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.city}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-gray-600">${c.phone}</td>
-                    <td class="border border-slate-200 px-4 py-3 text-center">
-                        <button onclick="editCustomer('${c.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button>
-                        <button onclick="deleteCustomer('${c.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function showAddCustomerForm() {
-            document.getElementById('customerForm').classList.remove('hidden');
-            document.getElementById('customerFormTitle').textContent = 'Add New Customer';
-            editingCustomerKey = null; clearCustomerForm();
-        }
-
-        function editCustomer(key) {
-            const c = customers.find(cu => cu.key === key);
-            if (!c) return;
-            document.getElementById('customerForm').classList.remove('hidden');
-            document.getElementById('customerFormTitle').textContent = 'Edit Customer';
-            document.getElementById('customerNameFormInput').value = c.name;
-            document.getElementById('customerDepotFormInput').value = c.depot;
-            document.getElementById('customerAddressFormInput').value = c.address;
-            document.getElementById('customerCityFormInput').value = c.city;
-            document.getElementById('customerPhoneFormInput').value = c.phone;
-            editingCustomerKey = key;
-        }
-
-        function saveCustomer() {
-            const name = document.getElementById('customerNameFormInput').value.trim();
-            if (!name) return alert("Customer Name is required.");
-            const customer = {
-                name: name, depot: document.getElementById('customerDepotFormInput').value.trim(),
-                address: document.getElementById('customerAddressFormInput').value.trim(),
-                city: document.getElementById('customerCityFormInput').value.trim(),
-                phone: document.getElementById('customerPhoneFormInput').value.trim()
-            };
-            if (editingCustomerKey) db.ref('customers/' + editingCustomerKey).update(customer);
-            else db.ref('customers').push(customer);
-            cancelCustomerForm();
-        }
-
-        function deleteCustomer(key) {
-            if (!confirm("Delete this customer?")) return;
-            db.ref('customers/' + key).remove();
-        }
-
+        function loadCustomersTable() { document.getElementById('customersTableBody').innerHTML = customers.map((c) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${c.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.depot}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.address}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.city}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.phone}</td><td class="border border-slate-200 px-4 py-3 text-center"><button onclick="editCustomer('${c.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteCustomer('${c.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join(''); }
+        function showAddCustomerForm() { document.getElementById('customerForm').classList.remove('hidden'); document.getElementById('customerFormTitle').textContent = 'Add New Customer'; editingCustomerKey = null; clearCustomerForm(); }
+        function editCustomer(key) { const c = customers.find(cu => cu.key === key); if (!c) return; document.getElementById('customerForm').classList.remove('hidden'); document.getElementById('customerFormTitle').textContent = 'Edit Customer'; document.getElementById('customerNameFormInput').value = c.name; document.getElementById('customerDepotFormInput').value = c.depot; document.getElementById('customerAddressFormInput').value = c.address; document.getElementById('customerCityFormInput').value = c.city; document.getElementById('customerPhoneFormInput').value = c.phone; editingCustomerKey = key; }
+        function saveCustomer() { const name = document.getElementById('customerNameFormInput').value.trim(); if (!name) return alert("Customer Name is required."); const customer = { name: name, depot: document.getElementById('customerDepotFormInput').value.trim(), address: document.getElementById('customerAddressFormInput').value.trim(), city: document.getElementById('customerCityFormInput').value.trim(), phone: document.getElementById('customerPhoneFormInput').value.trim() }; if (editingCustomerKey) db.ref('customers/' + editingCustomerKey).update(customer); else db.ref('customers').push(customer); cancelCustomerForm(); }
+        function deleteCustomer(key) { if (!confirm("Delete this customer?")) return; db.ref('customers/' + key).remove(); }
         function cancelCustomerForm() { document.getElementById('customerForm').classList.add('hidden'); clearCustomerForm(); }
         function clearCustomerForm() { ['customerNameFormInput', 'customerDepotFormInput', 'customerAddressFormInput', 'customerCityFormInput', 'customerPhoneFormInput'].forEach(id => document.getElementById(id).value = ''); }
-        function updateCustomerDropdown() {
-            const dropdown = document.getElementById('customerSelect');
-            if (dropdown) dropdown.innerHTML = '<option value="">Select Customer...</option>' + customers.map(c => `<option value="${c.key}">${c.name} - ${c.depot}</option>`).join('');
-        }
+        function updateCustomerDropdown() { const dropdown = document.getElementById('customerSelect'); if (dropdown) dropdown.innerHTML = '<option value="">Select Customer...</option>' + customers.map(c => `<option value="${c.key}">${c.name} - ${c.depot}</option>`).join(''); }
 
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', async function() {
