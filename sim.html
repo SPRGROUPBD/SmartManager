@@ -104,7 +104,16 @@ tr:nth-child(even){background:#f7f7f7}
     <div class="notice">Employee Type অনুযায়ী প্রয়োজনীয় Location field ব্যবহার করুন। সব data Firebase-এ save হবে।</div>
     <div class="grid">
       <div class="field"><label>Employee Type *</label><select id="empType">
-        <option value="MPO">MPO</option><option value="AM">AM</option><option value="RSM">RSM</option><option value="Depot Staff">Depot Staff</option>
+        <option value="MPO">MPO</option>
+        <option value="Sr.MPO">Sr.MPO</option>
+        <option value="AM">AM</option>
+        <option value="Sr.AM">Sr.AM</option>
+        <option value="TM">TM</option>
+        <option value="RSM">RSM</option>
+        <option value="Sr.RSM">Sr.RSM</option>
+        <option value="DIC">DIC</option>
+        <option value="ADIC">ADIC</option>
+        <option value="DA">DA</option>
       </select></div>
       <div class="field"><label>EMP Code *</label><input id="empCode" placeholder="যেমন: MPO001"></div>
       <div class="field"><label>Name *</label><input id="empName"></div>
@@ -128,7 +137,19 @@ tr:nth-child(even){background:#f7f7f7}
   <div class="window"><div class="window-title">Employee List</div><div class="window-body">
     <div class="grid">
       <div class="field"><label>Search</label><input id="empSearch" oninput="renderEmployees()" placeholder="Name / EMP Code / Mobile / Location"></div>
-      <div class="field"><label>Type</label><select id="empFilterType" onchange="renderEmployees()"><option value="">All</option><option>MPO</option><option>AM</option><option>RSM</option><option>Depot Staff</option></select></div>
+      <div class="field"><label>Type</label><select id="empFilterType" onchange="renderEmployees()">
+        <option value="">All</option>
+        <option>MPO</option>
+        <option>Sr.MPO</option>
+        <option>AM</option>
+        <option>Sr.AM</option>
+        <option>TM</option>
+        <option>RSM</option>
+        <option>Sr.RSM</option>
+        <option>DIC</option>
+        <option>ADIC</option>
+        <option>DA</option>
+      </select></div>
       <div class="field"><label>Status</label><select id="empFilterStatus" onchange="renderEmployees()"><option value="">All</option><option>Active</option><option>Inactive</option><option>Dropout</option></select></div>
     </div>
     <div class="actions">
@@ -202,9 +223,9 @@ tr:nth-child(even){background:#f7f7f7}
   <div class="window"><div class="window-title">SIM Transfer — Dropout MPO থেকে Active MPO-তে</div><div class="window-body">
     <div class="notice">
       <b>Transfer Rules:</b><br>
-      • <b>Transfer From:</b> শুধুমাত্র <b>Dropout MPO</b> যাদের current SIM আছে (status: Replacement Required - Pending)।<br>
-      • <b>Transfer To:</b> শুধুমাত্র <b>Active MPO</b> যাদের current SIM নাই।<br>
-      • AM / RSM / Depot Staff এই Transfer-এ আসবে না।<br>
+      • <b>Transfer From:</b> শুধুমাত্র <b>Dropout MPO/Sr.MPO</b> যাদের current SIM আছে (status: Replacement Required - Pending)।<br>
+      • <b>Transfer To:</b> শুধুমাত্র <b>Active MPO/Sr.MPO</b> যাদের current SIM নাই।<br>
+      • অন্যান্য Designation এই Transfer-এ আসবে না।<br>
       • Transfer-এ একই নম্বর নতুন MPO-তে Assigned হবে (Delivered)।<br>
       • Transfer/Delivery হলে SIM Pending list থেকে সরে যাবে।
     </div>
@@ -412,7 +433,7 @@ function reloadFromFirebase(){ loadFromFirebase(); }
    ============================================================ */
 function locationCaption(){
   const t=document.getElementById('empType').value;
-  document.getElementById('locationCaption').textContent=(t==='MPO'?'Territory *':t==='AM'?'Area *':'Region *');
+  document.getElementById('locationCaption').textContent=(t==='MPO'||t==='Sr.MPO'?'Territory *':t==='AM'||t==='Sr.AM'?'Area *':'Region *');
 }
 document.getElementById('empType').addEventListener('change',locationCaption);
 
@@ -474,22 +495,31 @@ function clearEmployeeForm(){
 function renderEmployees(){
   const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
   const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
-  employeeTable.innerHTML=rows.map(e=>
-    `<tr data-id="${e.id}" class="${editingEmpId===e.id?'edit-mode':''}">
+  
+  // যেসব পদবির Row হলুদ হবে
+  const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
+  
+  employeeTable.innerHTML=rows.map(e=>{
+    const mobileNo = e.currentSim || e.mobile || '-';
+    const rowClass = editingEmpId===e.id ? 'edit-mode' : '';
+    // edit-mode না হলে এবং পদবি ম্যাচ করলে হলুদ ব্যাকগ্রাউন্ড দেবে
+    const rowStyle = (!rowClass && highlightTypes.includes(e.type)) ? 'background-color:#fff9c4 !important;' : '';
+    
+    return `<tr data-id="${e.id}" class="${rowClass}" style="${rowStyle}">
       <td>${esc(e.type)}</td>
       <td>${esc(e.code)}</td>
       <td>${esc(e.name)}</td>
       <td>${esc(e.location)}</td>
       <td>${esc(e.joiningDate)}</td>
-      <td>${esc(e.mobile)}</td>
+      <td>${esc(mobileNo)}</td>
       <td>${badge(e.status)}</td>
       <td>${esc(e.currentSim||'-')}</td>
       <td>
         <button onclick="editEmployee('${e.id}')">✎ Edit</button>
         <button class="danger" onclick="dropoutEmployee('${e.id}')">Dropout</button>
       </td>
-    </tr>`
-  ).join('')||'<tr><td colspan="9">No data</td></tr>';
+    </tr>`;
+  }).join('')||'<tr><td colspan="9">No data</td></tr>';
 }
 
 function editEmployee(id){
@@ -591,15 +621,18 @@ function renderAllocation(){
 }
 
 function quickAssign(mobile){
-  const code=prompt('Employee EMP Code দিন (Active MPO):');
+  const code=prompt('Employee EMP Code দিন (Active MPO/Sr.MPO):');
   if(!code) return;
   const e = db.employees.find(x=>x.code.toLowerCase()===code.toLowerCase() && x.status==='Active');
   if(!e){alert('Active Employee পাওয়া যায়নি।');return}
   if(e.currentSim){alert('এই employee-এর current SIM আছে। Transfer/Replacement ব্যবহার করুন।');return}
   const s = db.sims.find(x=>x.mobile===mobile);
   if(!s || !['Available','Office Stock'].includes(s.status)){alert('SIM available না।');return}
+  
   s.status='Assigned';s.empCode=e.code;s.location=e.location;s.assignedDate=today();s.previousUser=e.name;s.deliveryStatus='';
   e.currentSim=s.mobile;
+  e.mobile=s.mobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
+  
   db.history.push({date:now(),action:'ASSIGN',oldSim:'',newSim:s.mobile,emp:e.code+' - '+e.name,from:'Office Stock',to:e.location,reason:'New SIM Allocation',by:'Admin'});
   saveDB().then(renderAll);
 }
@@ -610,7 +643,7 @@ function quickAssign(mobile){
 function fillTransferDropdowns(){
   // Transfer From: Dropout MPO with currentSim (status: Replacement Required)
   const fromList = db.employees.filter(e=>
-    e.type==='MPO' &&
+    ['MPO', 'Sr.MPO'].includes(e.type) &&
     e.status==='Dropout' &&
     e.currentSim && e.currentSim !== ''
   );
@@ -619,7 +652,7 @@ function fillTransferDropdowns(){
   
   // Transfer To: Active MPO without currentSim
   const toList = db.employees.filter(e=>
-    e.type==='MPO' &&
+    ['MPO', 'Sr.MPO'].includes(e.type) &&
     e.status==='Active' &&
     (!e.currentSim || e.currentSim === '')
   );
@@ -650,11 +683,11 @@ function processTransfer(){
   if(!transferDate.value){alert('Transfer Date দিন।');return}
   
   // Validate rules
-  if(fromEmp.type!=='MPO' || fromEmp.status!=='Dropout' || !fromEmp.currentSim){
-    alert('Transfer From: শুধুমাত্র Dropout MPO (SIM সহ) হতে হবে।');return;
+  if(!['MPO', 'Sr.MPO'].includes(fromEmp.type) || fromEmp.status!=='Dropout' || !fromEmp.currentSim){
+    alert('Transfer From: শুধুমাত্র Dropout MPO/Sr.MPO (SIM সহ) হতে হবে।');return;
   }
-  if(toEmp.type!=='MPO' || toEmp.status!=='Active' || toEmp.currentSim){
-    alert('Transfer To: শুধুমাত্র Active MPO (SIM ছাড়া) হতে হবে।');return;
+  if(!['MPO', 'Sr.MPO'].includes(toEmp.type) || toEmp.status!=='Active' || toEmp.currentSim){
+    alert('Transfer To: শুধুমাত্র Active MPO/Sr.MPO (SIM ছাড়া) হতে হবে।');return;
   }
   
   const mobile = fromEmp.currentSim;
@@ -678,8 +711,9 @@ function processTransfer(){
   s.deliveredTo = toEmp.code + ' - ' + toEmp.name;
   s.deliveryDate = transferDate.value;
   
-  // To MPO — নতুন currentSim
+  // To MPO — নতুন currentSim এবং Mobile নম্বর অটো সেট হবে
   toEmp.currentSim = mobile;
+  toEmp.mobile = mobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
   
   // From MPO — currentSim clear → Transfer From list থেকে সরে যাবে
   fromEmp.currentSim = '';
@@ -750,9 +784,13 @@ function processReplacement(){
   if(!e||!oldMobile||!newMobile){alert('Employee, Old SIM এবং New SIM দিন।');return}
   const old=db.sims.find(s=>s.mobile===oldMobile), ns=db.sims.find(s=>s.mobile===newMobile);
   if(!old||!ns){alert('SIM data পাওয়া যায়নি।');return}
+  
   old.status='Replaced';old.replacedBy=newMobile;old.replacementReason=replacementReason.value;old.empCode='';old.location='';old.assignedDate='';old.deliveryStatus='';
   ns.status='Assigned';ns.empCode=e.code;ns.location=e.location;ns.assignedDate=replacementDate.value||today();ns.previousUser=e.name;ns.deliveryStatus='';
+  
   e.currentSim=newMobile;
+  e.mobile=newMobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
+  
   db.history.push({date:now(),action:'REPLACEMENT',oldSim:oldMobile,newSim:newMobile,emp:e.code+' - '+e.name,from:e.location,to:e.location,reason:replacementReason.value,by:replacementApprovedBy.value||'Admin'});
   saveDB().then(()=>{clearReplacementForm();renderAll();alert('SIM Replacement completed. Old SIM status = Replaced.')});
 }
@@ -835,7 +873,7 @@ function renderAll(){
 function printReport(type){
   let title='Monico SmartManager Report', html='';
   if(type==='employees'){
-    html='<h2>Employee Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Type</th><th>EMP</th><th>Name</th><th>Location</th><th>Joining</th><th>Mobile</th><th>Status</th><th>SIM</th></tr>'+db.employees.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.mobile)}</td><td>${esc(e.status)}</td><td>${esc(e.currentSim||'')}</td></tr>`).join('')+'</table>';
+    html='<h2>Employee Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Type</th><th>EMP</th><th>Name</th><th>Location</th><th>Joining</th><th>Mobile</th><th>Status</th><th>SIM</th></tr>'+db.employees.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.currentSim || e.mobile || '')}</td><td>${esc(e.status)}</td><td>${esc(e.currentSim||'')}</td></tr>`).join('')+'</table>';
   }else if(type==='sims'){
     html='<h2>SIM Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Mobile</th><th>Operator</th><th>Serial</th><th>Status</th><th>EMP</th><th>Location</th></tr>'+db.sims.map(s=>`<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${esc(s.serial)}</td><td>${esc(s.status)}</td><td>${esc(s.empCode)}</td><td>${esc(s.location)}</td></tr>`).join('')+'</table>';
   }else{
@@ -847,27 +885,55 @@ function printReport(type){
 /* ============================================================
    EXCEL EXPORT — EMP List
    Headers: EMP Code | Name of MPO | Territory | Deg. | Joining Date | Mobile No
+   Note: Exports only ACTIVE employees with borders in all cells
    ============================================================ */
 function exportEmployeesExcel(){
   if(!window.XLSX){ alert('SheetJS library not loaded.'); return; }
   if(db.employees.length===0){ alert('কোনো employee data নেই।'); return; }
-  const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
-  const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
-  const data = rows.map(e=>({
-    'EMP Code': e.code || '',
-    'Name of MPO': e.name || '',
-    'Territory': e.location || '',
-    'Deg.': e.type || '',
-    'Joining Date': e.joiningDate || '',
-    'Mobile No': e.mobile || ''
-  }));
-  const ws = XLSX.utils.json_to_sheet(data, {
-    header:['EMP Code','Name of MPO','Territory','Deg.','Joining Date','Mobile No']
+  
+  // শুধুমাত্র Active Employee গুলো ফিল্টার করা হলো
+  const rows = db.employees.filter(e => e.status === 'Active');
+  
+  if(rows.length === 0){
+    alert('কোনো Active Employee নেই।');
+    return;
+  }
+
+  // যেসব পদবির Row হলুদ হবে
+  const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
+
+  // Excel-এ Border করার জন্য HTML table মেথড ব্যবহার করা হলো
+  // data-t="s" ব্যবহার করা হয়েছে যাতে Mobile Number-এর প্রথম 0 (Zero) না কাটে (Text format হিসেবে সেভ হবে)
+  let html = `<table border="1" cellspacing="0" cellpadding="5"><thead><tr style="background-color:#d3d3d3; font-weight:bold;">
+    <th>EMP Code</th><th>Name of MPO</th><th>Territory</th><th>Deg.</th><th>Joining Date</th><th>Mobile No</th>
+  </tr></thead><tbody>`;
+  
+  rows.forEach(e => {
+    const mobileNo = e.currentSim || e.mobile || '';
+    // পদবি ম্যাচ করলে হলুদ ব্যাকগ্রাউন্ড সেট করা হলো
+    const rowStyle = highlightTypes.includes(e.type) ? ' style="background-color:#ffffcc;"' : '';
+    html += `<tr${rowStyle}>
+      <td>${e.code || ''}</td>
+      <td>${e.name || ''}</td>
+      <td>${e.location || ''}</td>
+      <td>${e.type || ''}</td>
+      <td>${e.joiningDate || ''}</td>
+      <td data-t="s">${mobileNo}</td>
+    </tr>`;
   });
+  html += `</tbody></table>`;
+  
+  // HTML কে DOM element-এ রূপান্তর করে SheetJS দিয়ে Excel শিট বানানো হচ্ছে
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  const ws = XLSX.utils.table_to_sheet(container.querySelector('table'));
+  
+  // কলামের প্রস্থ নির্ধারণ
   ws['!cols'] = [{wch:14},{wch:28},{wch:22},{wch:14},{wch:14},{wch:16}];
+  
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Emp List');
-  const fileName = 'Emp_List_'+today()+'.xlsx';
+  const fileName = 'Active_Emp_List_'+today()+'.xlsx';
   XLSX.writeFile(wb, fileName);
   setStatus('Excel exported: '+fileName);
 }
