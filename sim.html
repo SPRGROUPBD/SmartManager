@@ -227,7 +227,7 @@ tr:nth-child(even){background:#f7f7f7}
       • <b>Transfer To:</b> শুধুমাত্র <b>Active MPO/Sr.MPO</b> যাদের current SIM নাই।<br>
       • অন্যান্য Designation এই Transfer-এ আসবে না।<br>
       • Transfer-এ একই নম্বর নতুন MPO-তে Assigned হবে (Delivered)।<br>
-      • Transfer/Delivery হলে SIM Pending list থেকে সরে যাবে।
+      • Transfer/Delivery হলে SIM Pending list থেকে সরে যাবে এবং Dropout Count কমে যাবে।
     </div>
     <div class="grid">
       <div class="field"><label>Transfer From (Dropout MPO) *</label>
@@ -273,7 +273,7 @@ tr:nth-child(even){background:#f7f7f7}
 <!-- ============ SIM REPLACEMENT ============ -->
 <section id="replacement" class="page">
   <div class="window"><div class="window-title">Manual SIM Replacement</div><div class="window-body">
-    <div class="notice">Replacement সম্পন্ন হলে পুরাতন SIM-এর status হবে <b>Replaced</b>।</div>
+    <div class="notice">Replacement সম্পন্ন হলে পুরাতন SIM-এর status <b>Available</b> হবে এবং তা Stock-এ ফিরে আসবে।</div>
     <div class="grid">
       <div class="field"><label>Employee *</label><select id="replacementEmp" onchange="loadReplacementEmployee()"></select></div>
       <div class="field"><label>Old Mobile *</label><input id="replacementOld" readonly></div>
@@ -281,12 +281,17 @@ tr:nth-child(even){background:#f7f7f7}
       <div class="field"><label>Replacement Date *</label><input id="replacementDate" type="date"></div>
       <div class="field"><label>Reason</label><select id="replacementReason"><option>Lost</option><option>Damaged</option><option>Network</option><option>Upgrade</option><option>Ownership</option><option>Other</option></select></div>
       <div class="field"><label>Approved By</label><input id="replacementApprovedBy"></div>
-      <div class="field"><label>Delivered To</label><input id="replacementDeliveredTo"></div>
+      <div class="field"><label>Delivered To</label><input id="replacementDeliveredTo"></input></div>
       <div class="field"><label>New SIM Serial</label><input id="replacementSerial"></div>
     </div>
     <div class="actions"><button class="primary" onclick="processReplacement()">Complete Replacement</button><button onclick="clearReplacementForm()">Clear</button></div>
   </div></div>
-  <div class="window"><div class="window-title">Replacement Required (All Pending)</div><div class="window-body"><div class="table-wrap"><table><thead><tr><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody id="replacementPending"></tbody></table></div></div></div>
+  <div class="window"><div class="window-title">Replacement Required (All Pending)</div><div class="window-body">
+    <div class="actions" style="margin-bottom: 8px;">
+      <button class="primary" onclick="printPendingReplacement()">🖨 Print Pending List</button>
+    </div>
+    <div class="table-wrap"><table><thead><tr><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody id="replacementPending"></tbody></table></div>
+  </div></div>
 </section>
 
 <!-- ============ FULL HISTORY ============ -->
@@ -372,6 +377,48 @@ function badge(s){
   return '<span class="badge '+c+'">'+esc(s)+'</span>';
 }
 function genId(){return 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)}
+
+/* Universal Print Function using iFrame to prevent about:blank tab */
+function printHTML(title, bodyContent) {
+  let frame = document.getElementById('hidden-print-frame');
+  if (frame) frame.remove();
+
+  frame = document.createElement('iframe');
+  frame.id = 'hidden-print-frame';
+  frame.style.position = 'absolute';
+  frame.style.top = '-9999px';
+  frame.style.left = '-9999px';
+  document.body.appendChild(frame);
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(`
+    <html>
+      <head>
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #d3d3d3; }
+          td, th { border: 1px solid #999; padding: 5px; text-align: left; }
+        </style>
+      </head>
+      <body>
+        ${bodyContent}
+        <p>Printed: ${now()}</p>
+      </body>
+    </html>
+  `);
+  doc.close();
+
+  frame.onload = function() {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+    setTimeout(function() {
+      document.body.removeChild(frame);
+    }, 500);
+  };
+}
 
 /* ============================================================
    FIREBASE: SAVE / LOAD / LISTEN
@@ -496,13 +543,11 @@ function renderEmployees(){
   const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
   const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
   
-  // যেসব পদবির Row হলুদ হবে
   const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
   
   employeeTable.innerHTML=rows.map(e=>{
     const mobileNo = e.currentSim || e.mobile || '-';
     const rowClass = editingEmpId===e.id ? 'edit-mode' : '';
-    // edit-mode না হলে এবং পদবি ম্যাচ করলে হলুদ ব্যাকগ্রাউন্ড দেবে
     const rowStyle = (!rowClass && highlightTypes.includes(e.type)) ? 'background-color:#fff9c4 !important;' : '';
     
     return `<tr data-id="${e.id}" class="${rowClass}" style="${rowStyle}">
@@ -645,7 +690,6 @@ function renderStock(){
   }).join('')||'<tr><td colspan="8">No SIM data</td></tr>';
 }
 
-/* Regular available SIMs (not Replacement Required) */
 function availableSims(){
   return db.sims.filter(s=>['Available','Office Stock'].includes(s.status));
 }
@@ -676,7 +720,7 @@ function quickAssign(mobile){
   
   s.status='Assigned';s.empCode=e.code;s.location=e.location;s.assignedDate=today();s.previousUser=e.name;s.deliveryStatus='';
   e.currentSim=s.mobile;
-  e.mobile=s.mobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
+  e.mobile=s.mobile;
   
   db.history.push({date:now(),action:'ASSIGN',oldSim:'',newSim:s.mobile,emp:e.code+' - '+e.name,from:'Office Stock',to:e.location,reason:'New SIM Allocation',by:'Admin'});
   saveDB().then(renderAll);
@@ -753,7 +797,7 @@ function processTransfer(){
   s.deliveryDate = transferDate.value;
   
   toEmp.currentSim = mobile;
-  toEmp.mobile = mobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
+  toEmp.mobile = mobile;
   
   fromEmp.currentSim = '';
   
@@ -783,7 +827,6 @@ function clearTransferForm(){
   fillTransferDropdowns();
 }
 
-/* Pending Replacement Required SIM table (Delivery Pending) */
 function renderDropoutSimTable(){
   const pendingSims = db.sims.filter(s=>s.status==='Replacement Required');
   dropoutSimTable.innerHTML = pendingSims.map(s=>{
@@ -823,14 +866,27 @@ function processReplacement(){
   const old=db.sims.find(s=>s.mobile===oldMobile), ns=db.sims.find(s=>s.mobile===newMobile);
   if(!old||!ns){alert('SIM data পাওয়া যায়নি।');return}
   
-  old.status='Replaced';old.replacedBy=newMobile;old.replacementReason=replacementReason.value;old.empCode='';old.location='';old.assignedDate='';old.deliveryStatus='';
-  ns.status='Assigned';ns.empCode=e.code;ns.location=e.location;ns.assignedDate=replacementDate.value||today();ns.previousUser=e.name;ns.deliveryStatus='';
+  old.status='Available';
+  old.replacedBy=newMobile;
+  old.replacementReason=replacementReason.value;
+  old.empCode='';
+  old.location='';
+  old.assignedDate='';
+  old.deliveryStatus='';
+  old.previousUser=e.name+' ('+e.code+')';
+  
+  ns.status='Assigned';
+  ns.empCode=e.code;
+  ns.location=e.location;
+  ns.assignedDate=replacementDate.value||today();
+  ns.previousUser=e.name;
+  ns.deliveryStatus='';
   
   e.currentSim=newMobile;
-  e.mobile=newMobile; // Mobile No অটোমেটিক Current SIM এর সমান হবে
+  e.mobile=newMobile;
   
   db.history.push({date:now(),action:'REPLACEMENT',oldSim:oldMobile,newSim:newMobile,emp:e.code+' - '+e.name,from:e.location,to:e.location,reason:replacementReason.value,by:replacementApprovedBy.value||'Admin'});
-  saveDB().then(()=>{clearReplacementForm();renderAll();alert('SIM Replacement completed. Old SIM status = Replaced.')});
+  saveDB().then(()=>{clearReplacementForm();renderAll();alert('SIM Replacement completed. Old SIM returned to Stock as Available.')});
 }
 function clearReplacementForm(){replacementEmp.value='';replacementOld.value='';replacementNew.innerHTML='<option value="">Select New SIM</option>';replacementDate.value=today();replacementApprovedBy.value='';replacementDeliveredTo.value='';replacementSerial.value='';replacementReason.value='Lost'}
 
@@ -850,6 +906,40 @@ function renderReplacementPending(){
       <td>${badge(s.status)} <small>(${esc(delivery)})</small></td>
     </tr>`;
   }).join('')||'<tr><td colspan="5">✓ No pending replacement.</td></tr>';
+}
+
+/* Print Pending Replacement List using iFrame */
+function printPendingReplacement(){
+  const rows = db.sims.filter(s=>s.status==='Replacement Required');
+  if(rows.length === 0){
+    alert('কোনো Pending Replacement নেই।');
+    return;
+  }
+
+  let html = '<h2>Pending Replacement List</h2>';
+  // OTP Number যুক্ত করা হলো
+  html += '<p style="font-size:14px; font-weight:bold; color:#a00000;">OTP Number: 01329-731250</p>';
+  html += '<table border="1" cellspacing="0" cellpadding="5"><thead><tr style="background-color:#d3d3d3;"><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody>';
+  
+  rows.forEach(s => {
+    const e = db.employees.find(x=>x.code===s.empCode);
+    const fromEmp = db.employees.find(x=>x.currentSim===s.mobile && x.status==='Dropout');
+    const userLabel = e ? (e.name+' ('+e.code+')') : (fromEmp ? fromEmp.name+' ('+fromEmp.code+')' : (s.previousUser||'-'));
+    const loc = e ? e.location : (fromEmp ? fromEmp.location : (s.location||'-'));
+    const delivery = s.deliveryStatus || 'Pending';
+    
+    html += `<tr>
+      <td>${esc(s.mobile)}</td>
+      <td>${esc(userLabel)}</td>
+      <td>${esc(loc||'-')}</td>
+      <td>${esc(s.replacementReason||'-')}</td>
+      <td>${esc(s.status)} (${esc(delivery)})</td>
+    </tr>`;
+  });
+  
+  html += `</tbody></table>`;
+  
+  printHTML('Pending Replacement Report', html);
 }
 
 /* ============================================================
@@ -875,7 +965,9 @@ function renderDashboard(){
   const assigned=db.sims.filter(s=>s.status==='Assigned').length;
   const available=db.sims.filter(s=>['Available','Office Stock'].includes(s.status)).length;
   const pendingReplacement=db.sims.filter(s=>s.status==='Replacement Required').length;
-  const dropoutEmp=db.employees.filter(e=>e.status==='Dropout').length;
+  
+  const dropoutEmp=db.employees.filter(e=>e.status==='Dropout' && e.currentSim !== '').length;
+  
   const lost=db.sims.filter(s=>s.status==='Lost/Damaged').length;
   const replaced=db.sims.filter(s=>s.status==='Replaced').length;
   const office=db.sims.filter(s=>s.status==='Office Stock').length;
@@ -885,7 +977,7 @@ function renderDashboard(){
     ['Assigned',assigned],
     ['Available',available],
     ['Replacement Required (Pending)',pendingReplacement],
-    ['Dropout Employee',dropoutEmp],
+    ['Dropout Employee (Pending SIM)',dropoutEmp],
     ['Lost / Damaged',lost],
     ['Replaced (Completed)',replaced],
     ['Office Stock',office]
@@ -907,7 +999,7 @@ function renderAll(){
 }
 
 /* ============================================================
-   PRINT REPORTS
+   PRINT REPORTS using iFrame
    ============================================================ */
 function printReport(type){
   let title='Monico SmartManager Report', html='';
@@ -918,19 +1010,16 @@ function printReport(type){
   }else{
     html='<h2>Full SIM History</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Date</th><th>Action</th><th>Old SIM</th><th>New SIM</th><th>Employee</th><th>From</th><th>To</th><th>Reason</th><th>By</th></tr>'+db.history.map(h=>`<tr><td>${esc(h.date)}</td><td>${esc(h.action)}</td><td>${esc(h.oldSim)}</td><td>${esc(h.newSim)}</td><td>${esc(h.emp)}</td><td>${esc(h.from)}</td><td>${esc(h.to)}</td><td>${esc(h.reason)}</td><td>${esc(h.by)}</td></tr>`).join('')+'</table>';
   }
-  const w=window.open('','_blank');w.document.write(`<html><head><title>${title}</title><style>body{font-family:Arial;font-size:12px}table{width:100%;border-collapse:collapse}th{background:#ddd}</style></head><body>${html}<p>Printed: ${now()}</p></body></html>`);w.document.close();w.print();
+  printHTML(title, html);
 }
 
 /* ============================================================
    EXCEL EXPORT — EMP List
-   Headers: EMP Code | Name of MPO | Territory | Deg. | Joining Date | Mobile No
-   Note: Exports only ACTIVE employees with borders in all cells
    ============================================================ */
 function exportEmployeesExcel(){
   if(!window.XLSX){ alert('SheetJS library not loaded.'); return; }
   if(db.employees.length===0){ alert('কোনো employee data নেই।'); return; }
   
-  // শুধুমাত্র Active Employee গুলো ফিল্টার করা হলো
   const rows = db.employees.filter(e => e.status === 'Active');
   
   if(rows.length === 0){
@@ -938,18 +1027,14 @@ function exportEmployeesExcel(){
     return;
   }
 
-  // যেসব পদবির Row হলুদ হবে
   const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
 
-  // Excel-এ Border করার জন্য HTML table মেথড ব্যবহার করা হলো
-  // data-t="s" ব্যবহার করা হয়েছে যাতে Mobile Number-এর প্রথম 0 (Zero) না কাটে (Text format হিসেবে সেভ হবে)
   let html = `<table border="1" cellspacing="0" cellpadding="5"><thead><tr style="background-color:#d3d3d3; font-weight:bold;">
     <th>EMP Code</th><th>Name of MPO</th><th>Territory</th><th>Deg.</th><th>Joining Date</th><th>Mobile No</th>
   </tr></thead><tbody>`;
   
   rows.forEach(e => {
     const mobileNo = e.currentSim || e.mobile || '';
-    // পদবি ম্যাচ করলে হলুদ ব্যাকগ্রাউন্ড সেট করা হলো
     const rowStyle = highlightTypes.includes(e.type) ? ' style="background-color:#ffffcc;"' : '';
     html += `<tr${rowStyle}>
       <td>${e.code || ''}</td>
@@ -962,12 +1047,10 @@ function exportEmployeesExcel(){
   });
   html += `</tbody></table>`;
   
-  // HTML কে DOM element-এ রূপান্তর করে SheetJS দিয়ে Excel শিট বানানো হচ্ছে
   const container = document.createElement('div');
   container.innerHTML = html;
   const ws = XLSX.utils.table_to_sheet(container.querySelector('table'));
   
-  // কলামের প্রস্থ নির্ধারণ
   ws['!cols'] = [{wch:14},{wch:28},{wch:22},{wch:14},{wch:14},{wch:16}];
   
   const wb = XLSX.utils.book_new();
