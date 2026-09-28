@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Monico Pharma - Modern Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Firebase SDK (v8.10.0) -->
@@ -10,8 +10,22 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    screens: {
+                        'xs': '475px',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; overflow-x: hidden; }
+        html, body { width: 100%; }
+
         @media print {
             @page { margin: 5mm; }
             body > * { display: none !important; }
@@ -19,127 +33,171 @@
             #printArea * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .no-print { display: none !important; }
         }
+
         .border-table { border-collapse: collapse; width: 100%; }
         .border-table th, .border-table td { border: 1px solid #e2e8f0; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
         button, input, select { transition: all 0.2s ease; }
 
-        /* Classic Windows dialog styling for Receive Modal */
+        /* Mobile drawer animation */
+        #sidebar { transition: transform 0.3s ease-in-out; }
+        #sidebar.open { transform: translateX(0); }
+        #sidebarOverlay { transition: opacity 0.3s ease; }
+
+        /* Win dialog styling */
         .win-box { background-color: #ece9d8; border: 2px solid; border-color: #ffffff #dfdfdf #dfdfdf #ffffff; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-        .win-input { background-color: #ffffff; border: 1px solid; border-color: #7f9db9 #5c749d #5c749d #7f9db9; padding: 1px 3px; outline: none; font-size: 12px; font-family: Tahoma, Arial, sans-serif; }
+        .win-input { background-color: #ffffff; border: 1px solid; border-color: #7f9db9 #5c749d #5c749d #7f9db9; padding: 2px 4px; outline: none; font-size: 12px; font-family: Tahoma, Arial, sans-serif; }
         .win-input:focus { border-color: #316ac5; }
-        .win-button { background: linear-gradient(to bottom, #f3f3f3 0%, #ece9d8 50%, #d4d0c8 100%); border: 1px solid #003c74; border-radius: 2px; padding: 3px 12px; font-size: 12px; font-family: Tahoma, Arial, sans-serif; cursor: pointer; text-align: center; }
+        .win-button { background: linear-gradient(to bottom, #f3f3f3 0%, #ece9d8 50%, #d4d0c8 100%); border: 1px solid #003c74; border-radius: 2px; padding: 4px 12px; font-size: 12px; font-family: Tahoma, Arial, sans-serif; cursor: pointer; text-align: center; }
         .win-button:hover { background: linear-gradient(to bottom, #e7f1ff 0%, #cce4fc 50%, #99c6e8 100%); }
         .win-grid-header { background-color: #ece9d8; border-right: 1px solid #aca899; border-bottom: 1px solid #aca899; padding: 2px 6px; font-weight: normal; }
-        .modal-overlay { background: rgba(0, 0, 0, 0.4); }
+        .modal-overlay { background: rgba(0, 0, 0, 0.5); }
+
+        /* Responsive table wrapper */
+        .table-wrap { -webkit-overflow-scrolling: touch; }
+        .table-wrap::-webkit-scrollbar { height: 5px; }
+
+        /* Mobile nav item */
+        @media (max-width: 767px) {
+            .nav-item { padding: 0.875rem 1rem !important; font-size: 0.95rem; }
+        }
+
+        /* Safe area for mobile */
+        @supports (padding: env(safe-area-inset-top)) {
+            .mobile-header { padding-top: env(safe-area-inset-top); }
+        }
+
+        /* Prevent zoom on input focus iOS */
+        @media screen and (-webkit-min-device-pixel-ratio: 0) {
+            select, textarea, input[type="text"], input[type="number"], input[type="date"] { font-size: 16px !important; }
+        }
+        @media (min-width: 768px) {
+            select, textarea, input[type="text"], input[type="number"], input[type="date"] { font-size: inherit !important; }
+        }
     </style>
 </head>
-<body class="min-h-screen flex">
+<body class="min-h-screen">
 
-    <!-- Selection Dialog -->
-    <div id="selectionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[60] flex items-center justify-center no-print">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center w-full max-w-md mx-4">
-            <h3 class="text-xl font-bold mb-2 text-gray-800 tracking-tight">Select Challan Type</h3>
-            <p class="text-sm text-gray-500 mb-6">Please choose whether this is a Product or Sample delivery.</p>
-            <div class="flex gap-4">
-                <button onclick="startNewChallan('Product')" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all hover:scale-[1.02]">Product</button>
-                <button onclick="startNewChallan('Sample')" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-purple-500/30 transition-all hover:scale-[1.02]">Sample</button>
+    <!-- Mobile Header -->
+    <header class="mobile-header md:hidden fixed top-0 left-0 right-0 bg-slate-900 text-white z-50 shadow-lg no-print">
+        <div class="flex items-center justify-between px-4 h-14">
+            <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-lg hover:bg-slate-800 active:bg-slate-700" aria-label="Toggle menu">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <div class="flex items-center space-x-2">
+                <h1 class="text-lg font-extrabold tracking-wider bg-gradient-to-r from-blue-400 to-indigo-500 text-transparent bg-clip-text">MONICO</h1>
+                <span class="text-xs text-slate-400 font-medium">PHARMA</span>
             </div>
+            <div class="w-10"></div>
         </div>
-    </div>
+    </header>
 
-    <!-- Modern Sidebar -->
-    <aside class="sidebar no-print w-64 bg-slate-900 text-white flex-col fixed inset-y-0 left-0 hidden md:flex z-50 shadow-2xl border-r border-slate-800">
-        <div class="p-6 border-b border-slate-700/50">
-            <h1 class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-blue-400 to-indigo-500 text-transparent bg-clip-text">MONICO</h1>
-            <p class="text-xs text-slate-400 font-medium tracking-wide mt-1">PHARMA LIMITED</p>
+    <!-- Sidebar Overlay (mobile) -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden no-print" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar no-print w-72 md:w-64 bg-slate-900 text-white fixed inset-y-0 left-0 z-50 flex flex-col -translate-x-full md:translate-x-0 transition-transform duration-300 shadow-2xl border-r border-slate-800">
+        <div class="p-5 md:p-6 border-b border-slate-700/50 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl md:text-2xl font-extrabold tracking-wider bg-gradient-to-r from-blue-400 to-indigo-500 text-transparent bg-clip-text">MONICO</h1>
+                <p class="text-xs text-slate-400 font-medium tracking-wide mt-1">PHARMA LIMITED</p>
+            </div>
+            <button onclick="closeSidebar()" class="md:hidden p-2 rounded-lg hover:bg-slate-800 text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2">
+        <nav class="flex-1 px-3 md:px-4 py-4 md:py-6 space-y-1 md:space-y-2 overflow-y-auto">
             <button onclick="showTab('dashboard')" id="tab-dashboard" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg shadow-blue-600/30 text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                 <span class="font-medium">Dashboard</span>
             </button>
             <button onclick="showTab('challan')" id="tab-challan" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                 <span class="font-medium">Challan Creation</span>
             </button>
             <button onclick="showTab('history')" id="tab-history" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span class="font-medium">Challan History</span>
             </button>
             <button onclick="showTab('products')" id="tab-products" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 <span class="font-medium">Product Management</span>
             </button>
             <button onclick="showTab('stock')" id="tab-stock" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" /></svg>
                 <span class="font-medium">Stock Management</span>
             </button>
             <button onclick="showTab('customers')" id="tab-customers" class="nav-item w-full text-left px-4 py-3 rounded-xl transition-all duration-200 text-slate-400 hover:bg-slate-800/50 hover:text-white flex items-center space-x-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 <span class="font-medium">Customer Management</span>
             </button>
         </nav>
     </aside>
 
     <!-- Main Content -->
-    <main class="main-content flex-1 md:ml-64 min-h-screen">
-        <div class="p-4 md:p-10">
+    <main class="main-content min-h-screen md:ml-64 pt-14 md:pt-0">
+        <div class="p-3 sm:p-4 md:p-6 lg:p-8">
 
             <!-- DASHBOARD TAB -->
             <div id="content-dashboard" class="tab-content">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center">
-                        <h2 class="text-2xl font-bold text-gray-800 tracking-tight">Delivery Challan Dashboard</h2>
-                        <div class="text-sm font-medium text-gray-500 hidden md:block">Depot: Kushtia Depot | DIC: Md. Sajjad Ahmed</div>
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight">Delivery Challan Dashboard</h2>
+                        <div class="text-xs md:text-sm font-medium text-gray-500">Depot: Kushtia Depot | DIC: Md. Sajjad Ahmed</div>
                     </div>
-                    <div class="p-6 md:p-8 bg-gray-50">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-                            <div class="bg-white border-2 border-black rounded-lg p-5 shadow-sm flex flex-col justify-between min-h-[120px]">
-                                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Total Challans</h3>
-                                <div id="dashTotalChallans" class="text-3xl font-extrabold text-black mt-2">0</div>
+                    <div class="p-3 md:p-6 lg:p-8 bg-gray-50">
+                        <div class="grid grid-cols-1 xs:grid-cols-3 md:grid-cols-3 gap-3 md:gap-5 mb-6 md:mb-8">
+                            <div class="bg-white border-2 border-black rounded-lg p-3 md:p-5 shadow-sm flex flex-col justify-between min-h-[100px] md:min-h-[120px]">
+                                <h3 class="text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wide">Total Challans</h3>
+                                <div id="dashTotalChallans" class="text-2xl md:text-3xl font-extrabold text-black mt-2">0</div>
                             </div>
-                            <div class="bg-white border-2 border-black rounded-lg p-5 shadow-sm flex flex-col justify-between min-h-[120px]">
-                                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pending Delivery</h3>
-                                <div id="dashPending" class="text-3xl font-extrabold text-orange-500 mt-2">0</div>
+                            <div class="bg-white border-2 border-black rounded-lg p-3 md:p-5 shadow-sm flex flex-col justify-between min-h-[100px] md:min-h-[120px]">
+                                <h3 class="text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wide">Pending Delivery</h3>
+                                <div id="dashPending" class="text-2xl md:text-3xl font-extrabold text-orange-500 mt-2">0</div>
                             </div>
-                            <div class="bg-white border-2 border-black rounded-lg p-5 shadow-sm flex flex-col justify-between min-h-[120px]">
-                                <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Completed Deliveries</h3>
-                                <div id="dashCompleted" class="text-3xl font-extrabold text-green-600 mt-2">0</div>
+                            <div class="bg-white border-2 border-black rounded-lg p-3 md:p-5 shadow-sm flex flex-col justify-between min-h-[100px] md:min-h-[120px]">
+                                <h3 class="text-xs md:text-sm font-semibold text-gray-700 uppercase tracking-wide">Completed Deliveries</h3>
+                                <div id="dashCompleted" class="text-2xl md:text-3xl font-extrabold text-green-600 mt-2">0</div>
                             </div>
                         </div>
 
-                        <div class="bg-white border-2 border-black rounded-lg p-5 mb-8">
-                            <h3 class="text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Product Delivery Challans</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full border-collapse text-sm">
+                        <div class="bg-white border-2 border-black rounded-lg p-3 md:p-5 mb-6 md:mb-8">
+                            <h3 class="text-sm md:text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Product Delivery Challans</h3>
+                            <div class="table-wrap overflow-x-auto">
+                                <table class="w-full border-collapse text-xs md:text-sm min-w-[700px]">
                                     <thead><tr class="bg-gray-100">
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
-                                        <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Date</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Challan No.</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-left font-semibold">Destination / To</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Total MC</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Status</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Received Copy</th>
                                     </tr></thead>
                                     <tbody id="dashboardRecentChallans"><tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr></tbody>
                                 </table>
                             </div>
                         </div>
 
-                        <div class="bg-white border-2 border-black rounded-lg p-5">
-                            <h3 class="text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Sample Delivery Challans</h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full border-collapse text-sm">
+                        <div class="bg-white border-2 border-black rounded-lg p-3 md:p-5">
+                            <h3 class="text-sm md:text-base font-bold text-black border-b-2 border-black pb-3 mb-4">Recent Finished Sample Delivery Challans</h3>
+                            <div class="table-wrap overflow-x-auto">
+                                <table class="w-full border-collapse text-xs md:text-sm min-w-[700px]">
                                     <thead><tr class="bg-gray-100">
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Date</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Challan No.</th>
-                                        <th class="border border-black px-3 py-2 text-left font-semibold">Destination / To</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Total MC</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Status</th>
-                                        <th class="border border-black px-3 py-2 text-center font-semibold">Received Copy</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Date</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Challan No.</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-left font-semibold">Destination / To</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Total MC</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Status</th>
+                                        <th class="border border-black px-2 md:px-3 py-2 text-center font-semibold">Received Copy</th>
                                     </tr></thead>
                                     <tbody id="dashboardRecentSampleChallans"><tr><td colspan="6" class="border border-black text-center py-4 text-gray-400">Loading data...</td></tr></tbody>
                                 </table>
@@ -151,34 +209,34 @@
 
             <!-- CHALLAN CREATION TAB -->
             <div id="content-challan" class="tab-content hidden">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 no-print flex justify-between items-center">
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100 no-print flex justify-between items-center">
                         <div>
-                            <h2 class="text-2xl font-bold text-gray-800 tracking-tight" id="challanFormTitle">Create Delivery Challan</h2>
-                            <p class="text-sm text-gray-500 font-medium mt-1">Fill in the details below to generate a new challan.</p>
+                            <h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight" id="challanFormTitle">Create Delivery Challan</h2>
+                            <p class="text-xs md:text-sm text-gray-500 font-medium mt-1">Fill in the details below to generate a new challan.</p>
                         </div>
                     </div>
-                    <div class="p-8">
-                        <div class="text-center mb-10">
-                            <h1 class="text-3xl font-extrabold uppercase tracking-wider text-gray-800">MONICO PHARMA LIMITED</h1>
-                            <p class="text-base text-gray-500 mt-1">South Dhanua, Sreepur, Gazipur</p>
-                            <h2 class="text-xl font-bold mt-6 mb-4 uppercase bg-slate-50 text-slate-700 inline-block px-6 py-2 rounded-lg">Finished Product Delivery Challan</h2>
-                            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                                <div class="flex items-center gap-2"><span class="font-medium text-sm text-gray-600">Date: </span><input type="date" id="challanDate" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent"></div>
-                                <div class="flex items-center gap-2"><span class="font-medium text-sm text-gray-600">Challan No.: </span><input type="text" id="challanNumber" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent text-gray-500 italic" placeholder="Auto-generate on Save" readonly></div>
+                    <div class="p-4 md:p-8">
+                        <div class="text-center mb-6 md:mb-10">
+                            <h1 class="text-xl md:text-3xl font-extrabold uppercase tracking-wider text-gray-800">MONICO PHARMA LIMITED</h1>
+                            <p class="text-sm md:text-base text-gray-500 mt-1">South Dhanua, Sreepur, Gazipur</p>
+                            <h2 class="text-base md:text-xl font-bold mt-4 md:mt-6 mb-4 uppercase bg-slate-50 text-slate-700 inline-block px-4 md:px-6 py-2 rounded-lg">Finished Product Delivery Challan</h2>
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-6 md:mb-8 gap-3 md:gap-4">
+                                <div class="flex items-center gap-2 w-full md:w-auto"><span class="font-medium text-sm text-gray-600 whitespace-nowrap">Date: </span><input type="date" id="challanDate" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent w-full md:w-auto"></div>
+                                <div class="flex items-center gap-2 w-full md:w-auto"><span class="font-medium text-sm text-gray-600 whitespace-nowrap">Challan No.: </span><input type="text" id="challanNumber" class="border-b-2 border-gray-200 px-2 py-1 focus:outline-none focus:border-blue-500 transition-colors bg-transparent text-gray-500 italic w-full md:w-auto" placeholder="Auto-generate on Save" readonly></div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                            <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6 md:mb-10">
+                            <div class="bg-slate-50 rounded-xl p-4 md:p-6 border border-slate-200">
                                 <h3 class="font-bold mb-4 text-slate-700 uppercase text-sm tracking-wide">From,</h3>
                                 <div class="space-y-2 text-sm">
                                     <p class="font-semibold text-slate-800">Monico Pharma Limited</p>
                                     <p class="text-slate-600">South Dhanua, Sreepur, Gazipur</p>
-                                    <p class="text-slate-600">Contact Person: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="Alauddin Officer, Distribution"></p>
-                                    <p class="text-slate-600">Cell: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium" value="01332531300"></p>
+                                    <p class="text-slate-600">Contact Person: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium w-full md:w-auto" value="Alauddin Officer, Distribution"></p>
+                                    <p class="text-slate-600">Cell: <input type="text" class="border-b border-gray-300 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium w-full md:w-auto" value="01332531300"></p>
                                 </div>
                             </div>
-                            <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                            <div class="bg-blue-50 rounded-xl p-4 md:p-6 border border-blue-200">
                                 <h3 class="font-bold mb-4 text-blue-700 uppercase text-sm tracking-wide">To</h3>
                                 <div class="mb-4 no-print"><select id="customerSelect" class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="selectCustomer()"><option value="">Select Customer...</option></select></div>
                                 <div class="space-y-2 text-sm">
@@ -186,68 +244,70 @@
                                     <p><input type="text" id="customerDepot" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Depot"></p>
                                     <p><input type="text" id="customerAddress" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Address"></p>
                                     <p><input type="text" id="customerCity" class="border-b border-blue-200 bg-transparent px-1 w-full focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="City"></p>
-                                    <p class="text-gray-600">Contact Number: <input type="text" id="customerPhone" class="border-b border-blue-200 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium text-gray-700" placeholder="Phone"></p>
+                                    <p class="text-gray-600">Contact Number: <input type="text" id="customerPhone" class="border-b border-blue-200 bg-transparent px-1 focus:outline-none focus:border-blue-500 font-medium text-gray-700 w-full md:w-auto" placeholder="Phone"></p>
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-8 no-print">
-                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5">
-                                <h3 class="font-bold text-slate-700 mb-4 text-sm uppercase tracking-wide">Quick Product Selection</h3>
-                                <div class="flex flex-wrap gap-3 items-center">
-                                    <input type="text" id="productSearchInput" list="productsDatalist" placeholder="Search and select product..." class="border border-gray-300 rounded-lg px-4 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" autocomplete="off"><datalist id="productsDatalist"></datalist>
-                                    <input type="number" id="quickMcInput" placeholder="Default MC" class="border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-36 text-sm">
-                                    <button onclick="addSelectedProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-green-500/30 flex items-center justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>Add Product</button>
+                        <div class="mb-6 md:mb-8 no-print">
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 md:p-5">
+                                <h3 class="font-bold text-slate-700 mb-3 md:mb-4 text-sm uppercase tracking-wide">Quick Product Selection</h3>
+                                <div class="flex flex-col sm:flex-row gap-2 sm:gap-3 items-stretch sm:items-center">
+                                    <input type="text" id="productSearchInput" list="productsDatalist" placeholder="Search and select product..." class="border border-gray-300 rounded-lg px-3 md:px-4 py-2 flex-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" autocomplete="off"><datalist id="productsDatalist"></datalist>
+                                    <div class="flex gap-2 sm:gap-3">
+                                        <input type="number" id="quickMcInput" placeholder="Default MC" class="border border-gray-300 rounded-lg px-3 md:px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent flex-1 sm:flex-none sm:w-36 text-sm">
+                                        <button onclick="addSelectedProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-md shadow-green-500/30 flex items-center justify-center whitespace-nowrap"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>Add</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="mb-8">
-                            <div class="overflow-x-auto rounded-xl border border-slate-200">
-                                <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                        <div class="mb-6 md:mb-8">
+                            <div class="table-wrap overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="border-table text-sm min-w-[900px]" style="border-color: #cbd5e1;">
                                     <thead><tr class="bg-slate-800 text-slate-100">
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Sl.<br>No.</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Name of Product (s)</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Batch<br>No.</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Pack Size</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>Pack/MC</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>MC</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Total Qty.<br>(Packs)</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Remarks</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider no-print">Action</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Sl.<br>No.</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Name of Product (s)</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Batch<br>No.</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Pack Size</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>Pack/MC</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">No. of<br>MC</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Total Qty.<br>(Packs)</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Remarks</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider no-print">Action</th>
                                     </tr></thead>
                                     <tbody id="productsTable" class="bg-white"></tbody>
                                 </table>
                             </div>
-                            <div class="mt-6 flex justify-end items-center"><div class="bg-blue-50 border border-blue-200 rounded-xl px-6 py-3 text-right"><span class="font-bold text-blue-800 text-sm uppercase tracking-wide">Total MC: </span><span id="totalMC" class="font-extrabold text-blue-800 text-xl ml-2">00</span></div></div>
+                            <div class="mt-4 md:mt-6 flex justify-end items-center"><div class="bg-blue-50 border border-blue-200 rounded-xl px-4 md:px-6 py-3 text-right"><span class="font-bold text-blue-800 text-sm uppercase tracking-wide">Total MC: </span><span id="totalMC" class="font-extrabold text-blue-800 text-xl ml-2">00</span></div></div>
                         </div>
-                        <div class="mb-10">
-                            <div class="overflow-x-auto rounded-xl border border-slate-200">
-                                <table class="border-table text-sm" style="border-color: #cbd5e1;">
+                        <div class="mb-8 md:mb-10">
+                            <div class="table-wrap overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="border-table text-sm min-w-[800px]" style="border-color: #cbd5e1;">
                                     <thead><tr class="bg-slate-50 text-slate-600">
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Function</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Prepared By</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Reviewed & Approved By</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Carried By</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Check Out By</th>
-                                        <th class="px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Received By</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Function</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Prepared By</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Reviewed & Approved By</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Carried By</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Check Out By</th>
+                                        <th class="px-3 md:px-4 py-3 text-center font-semibold text-xs uppercase tracking-wider">Received By</th>
                                     </tr></thead>
                                     <tbody class="bg-white">
-                                        <tr class="h-28"><td class="px-4 py-3 text-center font-semibold text-slate-500 bg-slate-50">Sign & Date</td><td></td><td></td><td></td><td></td><td></td></tr>
+                                        <tr class="h-24 md:h-28"><td class="px-3 md:px-4 py-3 text-center font-semibold text-slate-500 bg-slate-50">Sign & Date</td><td></td><td></td><td></td><td></td><td></td></tr>
                                         <tr class="bg-slate-50">
-                                            <td class="px-4 py-3 text-center font-medium text-slate-600">Designation</td>
-                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Officer, Distribution</td>
-                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">General Manager, Plant</td>
-                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Driver / Transport</td>
-                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Security</td>
-                                            <td class="px-4 py-3 text-center text-xs text-slate-500 font-medium">Depot In-charge</td>
+                                            <td class="px-3 md:px-4 py-3 text-center font-medium text-slate-600">Designation</td>
+                                            <td class="px-3 md:px-4 py-3 text-center text-xs text-slate-500 font-medium">Officer, Distribution</td>
+                                            <td class="px-3 md:px-4 py-3 text-center text-xs text-slate-500 font-medium">General Manager, Plant</td>
+                                            <td class="px-3 md:px-4 py-3 text-center text-xs text-slate-500 font-medium">Driver / Transport</td>
+                                            <td class="px-3 md:px-4 py-3 text-center text-xs text-slate-500 font-medium">Security</td>
+                                            <td class="px-3 md:px-4 py-3 text-center text-xs text-slate-500 font-medium">Depot In-charge</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="flex flex-wrap gap-4 no-print border-t border-gray-100 pt-6">
-                            <button onclick="saveChallan()" id="saveChallanBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span id="saveChallanBtnText">Save Challan</span></button>
-                            <button onclick="saveAndNewChallan()" class="bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-teal-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Save & New</span></button>
-                            <button onclick="clearForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Clear Form</span></button>
+                        <div class="flex flex-wrap gap-2 md:gap-4 no-print border-t border-gray-100 pt-4 md:pt-6">
+                            <button onclick="saveChallan()" id="saveChallanBtn" class="flex-1 sm:flex-none bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 md:px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg><span id="saveChallanBtnText">Save Challan</span></button>
+                            <button onclick="saveAndNewChallan()" class="flex-1 sm:flex-none bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white px-4 md:px-6 py-2.5 rounded-xl font-semibold shadow-md shadow-teal-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Save & New</span></button>
+                            <button onclick="clearForm()" class="flex-1 sm:flex-none bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 md:px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Clear Form</span></button>
                         </div>
                     </div>
                 </div>
@@ -255,29 +315,29 @@
 
             <!-- CHALLAN HISTORY TAB -->
             <div id="content-history" class="tab-content hidden">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100"><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Challan History</h2><p class="text-sm text-gray-500 font-medium mt-1">View, print, edit, or delete previously saved challans.</p></div>
-                    <div class="p-8"><div id="historyList" class="space-y-4"><div class="text-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="font-medium">Loading Challans...</p></div></div></div>
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100"><h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight">Challan History</h2><p class="text-xs md:text-sm text-gray-500 font-medium mt-1">View, print, edit, or delete previously saved challans.</p></div>
+                    <div class="p-3 md:p-8"><div id="historyList" class="space-y-3 md:space-y-4"><div class="text-center py-10 text-gray-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p class="font-medium">Loading Challans...</p></div></div></div>
                 </div>
             </div>
 
             <!-- PRODUCT MANAGEMENT TAB -->
             <div id="content-products" class="tab-content hidden">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Product Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Manage your product inventory and specifications.</p></div><button onclick="showAddProductForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Product</span></button></div>
-                    <div class="p-8">
-                        <div id="productForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
-                            <h3 class="font-bold text-slate-800 mb-5 text-lg" id="productFormTitle">Add New Product</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"><div><h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight">Product Management</h2><p class="text-xs md:text-sm text-gray-500 font-medium mt-1">Manage your product inventory and specifications.</p></div><button onclick="showAddProductForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2 w-full sm:w-auto justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Product</span></button></div>
+                    <div class="p-3 md:p-8">
+                        <div id="productForm" class="hidden mb-6 md:mb-8 p-4 md:p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-4 md:mb-5 text-base md:text-lg" id="productFormTitle">Add New Product</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 md:gap-5">
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Product Name</label><input type="text" id="productNameInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Algerd Susp"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Batch No.</label><input type="text" id="productBatchInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. BN123"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Pack Size</label><input type="text" id="productPackSizeInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 1x20's"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">No. of Pack/MC</label><input type="number" id="productPacksPerMcInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 20"></div>
                             </div>
-                            <div class="flex gap-3 mt-6"><button onclick="saveProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Product</button><button onclick="cancelProductForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
+                            <div class="flex gap-3 mt-5 md:mt-6"><button onclick="saveProduct()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Product</button><button onclick="cancelProductForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
                         </div>
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Batch No.</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">No. of Pack/MC</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="productsTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
+                        <div class="table-wrap overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm min-w-[700px]"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Batch No.</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">No. of Pack/MC</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="productsTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -285,18 +345,18 @@
 
             <!-- STOCK MANAGEMENT TAB -->
             <div id="content-stock" class="tab-content hidden">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center flex-wrap gap-4">
-                        <div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Stock Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Current available stock (MC). Automatically updates when challans are created or received.</p></div>
-                        <div class="flex gap-3">
-                            <button onclick="printStock()" class="bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print Stock</span></button>
-                            <button onclick="openReceiveModal()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg><span>Received Product</span></button>
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div><h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight">Stock Management</h2><p class="text-xs md:text-sm text-gray-500 font-medium mt-1">Current available stock (MC).</p></div>
+                        <div class="flex gap-2 md:gap-3 w-full sm:w-auto">
+                            <button onclick="printStock()" class="flex-1 sm:flex-none bg-gradient-to-r from-slate-500 to-slate-700 hover:from-slate-600 hover:to-slate-800 text-white px-4 md:px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print</span></button>
+                            <button onclick="openReceiveModal()" class="flex-1 sm:flex-none bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center justify-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg><span>Receive</span></button>
                         </div>
                     </div>
-                    <div class="p-8">
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full border-collapse text-sm">
-                                <thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Current Stock (MC)</th></tr></thead>
+                    <div class="p-3 md:p-8">
+                        <div class="table-wrap overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm min-w-[500px]">
+                                <thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Product Name</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Pack Size</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Current Stock (MC)</th></tr></thead>
                                 <tbody id="stockTableBody" class="bg-white divide-y divide-slate-100"></tbody>
                             </table>
                         </div>
@@ -306,22 +366,22 @@
 
             <!-- CUSTOMER MANAGEMENT TAB -->
             <div id="content-customers" class="tab-content hidden">
-                <div class="bg-white rounded-2xl shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
-                    <div class="p-6 border-b border-gray-100 flex justify-between items-center"><div><h2 class="text-2xl font-bold text-gray-800 tracking-tight">Customer Management</h2><p class="text-sm text-gray-500 font-medium mt-1">Manage depots, branches, and customer contacts.</p></div><button onclick="showAddCustomerForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Customer</span></button></div>
-                    <div class="p-8">
-                        <div id="customerForm" class="hidden mb-8 p-6 bg-slate-50 border border-slate-200 rounded-xl">
-                            <h3 class="font-bold text-slate-800 mb-5 text-lg" id="customerFormTitle">Add New Customer</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="bg-white rounded-xl md:rounded-2xl shadow-md md:shadow-xl border border-gray-100/80 overflow-hidden transition-all duration-300">
+                    <div class="p-4 md:p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"><div><h2 class="text-lg md:text-2xl font-bold text-gray-800 tracking-tight">Customer Management</h2><p class="text-xs md:text-sm text-gray-500 font-medium mt-1">Manage depots, branches, and customer contacts.</p></div><button onclick="showAddCustomerForm()" class="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white px-4 md:px-5 py-2.5 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all duration-200 hover:scale-[1.02] flex items-center space-x-2 w-full sm:w-auto justify-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg><span>Add Customer</span></button></div>
+                    <div class="p-3 md:p-8">
+                        <div id="customerForm" class="hidden mb-6 md:mb-8 p-4 md:p-6 bg-slate-50 border border-slate-200 rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-4 md:mb-5 text-base md:text-lg" id="customerFormTitle">Add New Customer</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Customer Name</label><input type="text" id="customerNameFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Mr. Sajjad Ahmed"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Depot/Branch</label><input type="text" id="customerDepotFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Kushtia Depot"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Address</label><input type="text" id="customerAddressFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Street address"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">City</label><input type="text" id="customerCityFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. Kustia Sador"></div>
                                 <div><label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label><input type="text" id="customerPhoneFormInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g. 01329731296"></div>
                             </div>
-                            <div class="flex gap-3 mt-6"><button onclick="saveCustomer()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Customer</button><button onclick="cancelCustomerForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
+                            <div class="flex gap-3 mt-5 md:mt-6"><button onclick="saveCustomer()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-5 py-2 rounded-lg font-semibold shadow-md shadow-green-500/30 transition-all duration-200 hover:scale-[1.02]">Save Customer</button><button onclick="cancelCustomerForm()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02]">Cancel</button></div>
                         </div>
-                        <div class="overflow-x-auto rounded-xl border border-slate-200">
-                            <table class="w-full border-collapse text-sm"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Customer Name</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Depot/Branch</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Address</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">City</th><th class="border border-slate-200 px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Phone</th><th class="border border-slate-200 px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="customersTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
+                        <div class="table-wrap overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full border-collapse text-sm min-w-[800px]"><thead><tr class="bg-slate-50 text-slate-600"><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Customer Name</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Depot/Branch</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Address</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">City</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-left font-semibold uppercase text-xs tracking-wider">Phone</th><th class="border border-slate-200 px-3 md:px-4 py-3 text-center font-semibold uppercase text-xs tracking-wider">Actions</th></tr></thead><tbody id="customersTableBody" class="bg-white divide-y divide-slate-100"></tbody></table>
                         </div>
                     </div>
                 </div>
@@ -330,49 +390,61 @@
         </div>
     </main>
 
+    <!-- Selection Dialog -->
+    <div id="selectionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[60] items-center justify-center no-print p-4">
+        <div class="bg-white p-6 md:p-8 rounded-2xl shadow-2xl text-center w-full max-w-md mx-4">
+            <h3 class="text-lg md:text-xl font-bold mb-2 text-gray-800 tracking-tight">Select Challan Type</h3>
+            <p class="text-sm text-gray-500 mb-6">Please choose whether this is a Product or Sample delivery.</p>
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button onclick="startNewChallan('Product')" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-blue-500/30 transition-all hover:scale-[1.02]">Product</button>
+                <button onclick="startNewChallan('Sample')" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-4 rounded-xl font-semibold shadow-md shadow-purple-500/30 transition-all hover:scale-[1.02]">Sample</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden Print Area -->
     <div id="printArea" style="display: none;"></div>
 
     <!-- Product Receive Modal -->
-    <div id="productReceiveModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[70] p-4">
-        <div class="win-box w-full max-w-3xl rounded-none shadow-2xl overflow-hidden">
-            <div class="bg-gradient-to-r from-[#0a246a] to-[#a6caf0] text-white px-2 py-1 flex items-center justify-between text-xs font-bold select-none">
+    <div id="productReceiveModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[70] p-2 sm:p-4">
+        <div class="win-box w-full max-w-3xl max-h-[95vh] overflow-y-auto rounded-none shadow-2xl">
+            <div class="bg-gradient-to-r from-[#0a246a] to-[#a6caf0] text-white px-2 py-1 flex items-center justify-between text-xs font-bold select-none sticky top-0 z-10">
                 <div class="flex items-center space-x-1">
                     <i class="fa-solid fa-sailboat text-[10px] text-red-500 bg-white px-0.5 rounded"></i>
                     <span class="font-normal tracking-wide">Product Receive</span>
                 </div>
-                <button onclick="closeReceiveModal()" class="bg-[#ece9d8] text-black w-4 h-4 flex items-center justify-center text-[10px] border border-gray-600 hover:bg-red-600 hover:text-white">×</button>
+                <button onclick="closeReceiveModal()" class="bg-[#ece9d8] text-black w-5 h-5 flex items-center justify-center text-sm border border-gray-600 hover:bg-red-600 hover:text-white">×</button>
             </div>
             <div class="p-3 bg-[#ece9d8]">
-                <div class="text-[#0a246a] text-lg font-bold mb-3 tracking-tight font-serif">Product Receive</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 mb-3 text-xs">
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Receive Date</label><input type="date" id="receiveDate" class="win-input w-full max-w-[180px]"></div>
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Challan Issue Date</label><input type="date" id="challanIssueDate" class="win-input w-full max-w-[180px]"></div>
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Issued Challan No.</label><input type="text" id="issuedChallanNo" class="win-input w-full max-w-[180px]"></div>
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Receive Challan No.</label><input type="text" id="receiveChallanNo" value="" class="win-input w-full max-w-[180px]"></div>
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">Received From</label><input type="text" id="receivedFrom" class="win-input w-full max-w-[180px]"></div>
-                    <div class="flex items-center space-x-2"><label class="w-32 text-right">To</label><input type="text" id="destinationTo" value="Kustia" class="win-input w-full max-w-[180px]"></div>
+                <div class="text-[#0a246a] text-base md:text-lg font-bold mb-3 tracking-tight font-serif">Product Receive</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 md:gap-x-6 mb-3 text-xs">
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">Receive Date</label><input type="date" id="receiveDate" class="win-input w-full"></div>
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">Challan Issue Date</label><input type="date" id="challanIssueDate" class="win-input w-full"></div>
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">Issued Challan No.</label><input type="text" id="issuedChallanNo" class="win-input w-full"></div>
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">Receive Challan No.</label><input type="text" id="receiveChallanNo" value="" class="win-input w-full"></div>
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">Received From</label><input type="text" id="receivedFrom" class="win-input w-full"></div>
+                    <div class="flex items-center space-x-2"><label class="w-28 sm:w-32 text-right shrink-0">To</label><input type="text" id="destinationTo" value="Kustia" class="win-input w-full"></div>
                 </div>
                 <hr class="border-t border-gray-400 my-2">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-6 mb-3 text-xs items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 md:gap-x-6 mb-3 text-xs items-center">
                     <div class="flex items-center space-x-2">
-                        <label class="w-32 text-right">Product Name</label>
-                        <div class="flex items-center space-x-2 w-full max-w-[240px]">
-                            <select id="productSelectReceive" class="win-input bg-white w-full"></select>
-                            <button onclick="openProductListModal()" class="text-blue-700 font-semibold underline text-nowrap hover:text-blue-900 cursor-pointer">Ctrl - List</button>
+                        <label class="w-28 sm:w-32 text-right shrink-0">Product Name</label>
+                        <div class="flex items-center space-x-2 flex-1 min-w-0">
+                            <select id="productSelectReceive" class="win-input bg-white flex-1 min-w-0"></select>
+                            <button onclick="openProductListModal()" class="text-blue-700 font-semibold underline text-nowrap hover:text-blue-900 cursor-pointer shrink-0">List</button>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <label class="w-32 text-right">Received Quantity</label>
-                        <div class="flex items-center space-x-2">
-                            <input type="number" id="receivedQty" min="1" value="1" class="win-input w-24">
-                            <button onclick="addItemToReceiveGrid()" class="win-button px-4 font-bold text-blue-900"><i class="fa-solid fa-plus mr-1"></i> Add Item</button>
+                        <label class="w-28 sm:w-32 text-right shrink-0">Received Qty</label>
+                        <div class="flex items-center space-x-2 flex-1">
+                            <input type="number" id="receivedQty" min="1" value="1" class="win-input w-20 shrink-0">
+                            <button onclick="addItemToReceiveGrid()" class="win-button px-3 font-bold text-blue-900 whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i> Add</button>
                         </div>
                     </div>
                 </div>
-                <div class="bg-white border border-[#aca899] h-56 overflow-auto mb-3 shadow-inner relative">
+                <div class="bg-white border border-[#aca899] h-40 sm:h-56 overflow-auto mb-3 shadow-inner relative">
                     <table id="productGrid" class="w-full border-collapse text-xs select-none">
-                        <thead><tr class="bg-[#ece9d8] text-left sticky top-0"><th class="win-grid-header w-10 text-center">#</th><th class="win-grid-header">Product Name</th><th class="win-grid-header w-24">Qty</th><th class="win-grid-header w-36">Cha. No.</th></tr></thead>
+                        <thead><tr class="bg-[#ece9d8] text-left sticky top-0"><th class="win-grid-header w-10 text-center">#</th><th class="win-grid-header">Product Name</th><th class="win-grid-header w-20 sm:w-24">Qty</th><th class="win-grid-header w-28 sm:w-36">Cha. No.</th></tr></thead>
                         <tbody id="gridBody" class="divide-y divide-gray-200"><tr id="emptyRow" class="text-gray-400 italic"><td colspan="4" class="p-4 text-center">No products added yet.</td></tr></tbody>
                     </table>
                 </div>
@@ -389,15 +461,15 @@
     </div>
 
     <!-- Product Quick List Modal -->
-    <div id="productListModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[80]">
-        <div class="win-box w-[480px] p-4 shadow-2xl">
+    <div id="productListModal" class="fixed inset-0 modal-overlay hidden items-center justify-center z-[80] p-4">
+        <div class="win-box w-full max-w-md p-4 shadow-2xl">
             <div class="flex justify-between items-center bg-[#0a246a] text-white px-2 py-1 -mt-4 -mx-4 mb-3">
-                <span class="font-bold text-xs">Product Quick List (Ctrl-List)</span>
+                <span class="font-bold text-xs">Product Quick List</span>
                 <button onclick="closeProductListModal()" class="text-white font-bold text-sm px-1 hover:bg-red-600">×</button>
             </div>
             <div class="bg-white border border-gray-400 h-48 overflow-y-auto mb-3">
                 <table class="w-full text-xs cursor-pointer">
-                    <tr class="bg-gray-100 font-bold border-b"><th class="p-1.5 text-left">Product Name</th><th class="p-1.5 text-right">Stock</th></tr>
+                    <tr class="bg-gray-100 font-bold border-b sticky top-0"><th class="p-1.5 text-left">Product Name</th><th class="p-1.5 text-right">Stock</th></tr>
                     <tbody id="quickProductList" class="divide-y"></tbody>
                 </table>
             </div>
@@ -428,6 +500,22 @@
         let editingChallanKey = null;
         let currentChallanType = 'Product';
         let receiveTableItems = [];
+
+        // --- Sidebar Mobile Toggle ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+        }
+        function closeSidebar() {
+            if (window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebarOverlay').classList.add('hidden');
+            }
+        }
 
         // --- Initial Data Seeding ---
         function seedDatabase() {
@@ -515,12 +603,15 @@
                 if (!editingChallanKey) {
                     document.getElementById('selectionModal').classList.remove('hidden');
                     document.getElementById('selectionModal').classList.add('flex');
+                    document.getElementById('content-challan').classList.add('hidden');
                 } else {
                     document.getElementById('content-challan').classList.remove('hidden');
                 }
             } else {
                 document.getElementById('content-' + tabName).classList.remove('hidden');
             }
+            closeSidebar();
+            window.scrollTo(0, 0);
         }
 
         function startNewChallan(type) {
@@ -570,7 +661,7 @@
                 } else {
                     filesHtml = `<div class="flex flex-col space-y-1 items-center"><label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium"><span>Upload 1</span><input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 1)"></label><label class="cursor-pointer bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium"><span>Upload 2</span><input type="file" accept="image/*,application/pdf" class="hidden" onchange="uploadReceivedFile('${challan.key}', this, 2)"></label></div>`;
                 }
-                return `<tr><td class="border border-black px-3 py-2 text-center">${challan.date}</td><td class="border border-black px-3 py-2 text-center font-medium">${challan.challanNumber}</td><td class="border border-black px-3 py-2">${challan.toName || 'N/A'} (${challan.toDepot || 'N/A'})</td><td class="border border-black px-3 py-2 text-center">${totalMcRow}</td><td class="border border-black px-3 py-2 text-center">${statusHtml}</td><td class="border border-black px-3 py-2 text-center">${filesHtml}</td></tr>`;
+                return `<tr><td class="border border-black px-2 md:px-3 py-2 text-center">${challan.date}</td><td class="border border-black px-2 md:px-3 py-2 text-center font-medium">${challan.challanNumber}</td><td class="border border-black px-2 md:px-3 py-2">${challan.toName || 'N/A'} (${challan.toDepot || 'N/A'})</td><td class="border border-black px-2 md:px-3 py-2 text-center">${totalMcRow}</td><td class="border border-black px-2 md:px-3 py-2 text-center">${statusHtml}</td><td class="border border-black px-2 md:px-3 py-2 text-center">${filesHtml}</td></tr>`;
             }).join('');
         }
 
@@ -735,7 +826,7 @@
             const newRowNumber = String(rowCount + 1).padStart(2, '0');
             const newRow = document.createElement('tr');
             newRow.className = 'product-row hover:bg-slate-50 transition-colors';
-            newRow.innerHTML = `<td class="px-4 py-3 text-center text-slate-500 font-medium">${newRowNumber}</td><td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" placeholder="Enter Batch"></td><td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${mcValue}"></td><td class="px-4 py-3 text-center total-packs font-bold text-slate-800"></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${defaultRemarks}"></td><td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
+            newRow.innerHTML = `<td class="px-3 md:px-4 py-3 text-center text-slate-500 font-medium">${newRowNumber}</td><td class="px-3 md:px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-3 md:px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" placeholder="Enter Batch"></td><td class="px-3 md:px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600"></td><td class="px-3 md:px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600"></td><td class="px-3 md:px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${mcValue}"></td><td class="px-3 md:px-4 py-3 text-center total-packs font-bold text-slate-800"></td><td class="px-3 md:px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${defaultRemarks}"></td><td class="px-3 md:px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
             tbody.appendChild(newRow);
             const select = newRow.querySelector('.product-name-select');
             select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
@@ -803,7 +894,6 @@
                 });
             });
 
-            // Stock Validation
             for (const p of challanData.products) {
                 const prod = products.find(pr => pr.name === p.name);
                 if (prod) {
@@ -882,9 +972,9 @@
                 const isLocked = challan.receivedFile1 || challan.receivedFile2;
                 const typeClass = challan.challanType === 'Sample' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
                 const editButton = isLocked ? 
-                    `<button class="bg-gray-100 text-gray-400 px-4 py-2 rounded-lg text-sm font-medium cursor-not-allowed flex items-center space-x-1" disabled><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg><span>Locked</span></button>` : 
-                    `<button onclick="loadChallan('${challan.key}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg><span>Edit</span></button>`;
-                return `<div class="border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-slate-300 transition-all duration-300 bg-white flex flex-col md:flex-row justify-between md:items-center gap-4"><div class="flex items-center space-x-4"><div class="bg-gradient-to-br ${challan.challanType === 'Sample' ? 'from-purple-50 to-pink-50 text-purple-600' : 'from-blue-50 to-indigo-50 text-blue-600'} p-3 rounded-xl border ${challan.challanType === 'Sample' ? 'border-purple-100' : 'border-blue-100'}"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div><div><div class="flex items-center gap-2"><h4 class="font-bold text-gray-800 text-lg">${challan.challanNumber}</h4><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${typeClass}">${challan.challanType || 'Product'}</span></div><p class="text-sm text-gray-500 font-medium">Date: ${challan.date} <span class="mx-1 text-slate-300">|</span> Customer: ${challan.toName} (${challan.toDepot})</p><p class="text-xs text-gray-400 mt-1">${challan.products ? challan.products.length : 0} Products</p></div></div><div class="flex gap-2 flex-wrap">${editButton}<button onclick="printChallan('${challan.key}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print</span></button><button onclick="deleteChallan('${challan.key}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Delete</span></button></div></div>`;
+                    `<button class="bg-gray-100 text-gray-400 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-medium cursor-not-allowed flex items-center space-x-1" disabled><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg><span>Locked</span></button>` : 
+                    `<button onclick="loadChallan('${challan.key}')" class="bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg><span>Edit</span></button>`;
+                return `<div class="border border-slate-200 rounded-xl p-3 md:p-5 hover:shadow-lg hover:border-slate-300 transition-all duration-300 bg-white flex flex-col gap-3"><div class="flex items-center space-x-3"><div class="bg-gradient-to-br ${challan.challanType === 'Sample' ? 'from-purple-50 to-pink-50 text-purple-600' : 'from-blue-50 to-indigo-50 text-blue-600'} p-2 md:p-3 rounded-xl border ${challan.challanType === 'Sample' ? 'border-purple-100' : 'border-blue-100'} shrink-0"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 md:h-6 w-5 md:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg></div><div class="min-w-0 flex-1"><div class="flex items-center gap-2 flex-wrap"><h4 class="font-bold text-gray-800 text-base md:text-lg">${challan.challanNumber}</h4><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${typeClass}">${challan.challanType || 'Product'}</span></div><p class="text-xs md:text-sm text-gray-500 font-medium">Date: ${challan.date}</p><p class="text-xs md:text-sm text-gray-500 font-medium truncate">Customer: ${challan.toName} (${challan.toDepot})</p><p class="text-xs text-gray-400 mt-1">${challan.products ? challan.products.length : 0} Products</p></div></div><div class="flex gap-2 flex-wrap">${editButton}<button onclick="printChallan('${challan.key}')" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 001-2v-4a2 2 0 00-1-2H5a2 2 0 00-1 2v4a2 2 0 001 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg><span>Print</span></button><button onclick="deleteChallan('${challan.key}')" class="bg-red-50 hover:bg-red-100 text-red-700 px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 hover:scale-[1.02] flex items-center space-x-1"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg><span>Delete</span></button></div></div>`;
             }).join('');
         }
 
@@ -912,7 +1002,7 @@
                 challan.products.forEach((product, idx) => {
                     const newRow = document.createElement('tr');
                     newRow.className = 'product-row hover:bg-slate-50 transition-colors';
-                    newRow.innerHTML = `<td class="px-4 py-3 text-center text-slate-500 font-medium">${String(idx + 1).padStart(2, '0')}</td><td class="px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" value="${product.batch}"></td><td class="px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600" value="${product.packSize}"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600" value="${product.packsPerMc}"></td><td class="px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${product.numMc}"></td><td class="px-4 py-3 text-center total-packs font-bold text-slate-800">${product.totalPacks}</td><td class="px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${product.remarks}"></td><td class="px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
+                    newRow.innerHTML = `<td class="px-3 md:px-4 py-3 text-center text-slate-500 font-medium">${String(idx + 1).padStart(2, '0')}</td><td class="px-3 md:px-4 py-3"><select class="w-full border-0 focus:outline-none bg-transparent product-name-select font-medium text-slate-800"></select></td><td class="px-3 md:px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-batch text-slate-600" value="${product.batch}"></td><td class="px-3 md:px-4 py-3 text-center"><input type="text" class="w-20 text-center border-0 focus:outline-none bg-transparent pack-size text-slate-600" value="${product.packSize}"></td><td class="px-3 md:px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent packs-per-mc text-slate-600" value="${product.packsPerMc}"></td><td class="px-3 md:px-4 py-3 text-center"><input type="number" class="w-16 text-center border-0 focus:outline-none bg-transparent num-mc text-slate-800 font-semibold" value="${product.numMc}"></td><td class="px-3 md:px-4 py-3 text-center total-packs font-bold text-slate-800">${product.totalPacks}</td><td class="px-3 md:px-4 py-3"><input type="text" class="w-full border-0 focus:outline-none bg-transparent product-remarks text-slate-600" value="${product.remarks}"></td><td class="px-3 md:px-4 py-3 text-center no-print"><button onclick="removeProduct(this)" class="text-red-500 hover:text-red-700 text-xs font-semibold transition-colors">Remove</button></td>`;
                     tbody.appendChild(newRow);
                     const select = newRow.querySelector('.product-name-select');
                     select.innerHTML = '<option value="">Select...</option>' + products.map(p => `<option value="${p.name}|${p.packsPerMc}">${p.name}</option>`).join('');
@@ -960,7 +1050,7 @@
 
         // --- Product Management Logic ---
         function loadProductsTable() {
-            document.getElementById('productsTableBody').innerHTML = products.map((p) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.batch || '-'}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packsPerMc}</td><td class="border border-slate-200 px-4 py-3 text-center"><button onclick="editProduct('${p.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteProduct('${p.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join('');
+            document.getElementById('productsTableBody').innerHTML = products.map((p) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-3 md:px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${p.batch || '-'}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${p.packsPerMc}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-center"><button onclick="editProduct('${p.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteProduct('${p.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join('');
         }
         function showAddProductForm() { document.getElementById('productForm').classList.remove('hidden'); document.getElementById('productFormTitle').textContent = 'Add New Product'; editingProductKey = null; clearProductForm(); }
         function editProduct(key) { const p = products.find(pr => pr.key === key); if (!p) return; document.getElementById('productForm').classList.remove('hidden'); document.getElementById('productFormTitle').textContent = 'Edit Product'; document.getElementById('productNameInput').value = p.name; document.getElementById('productBatchInput').value = p.batch; document.getElementById('productPackSizeInput').value = p.packSize; document.getElementById('productPacksPerMcInput').value = p.packsPerMc; editingProductKey = key; }
@@ -976,12 +1066,12 @@
             tbody.innerHTML = products.map((p) => {
                 const stockVal = p.stock || 0;
                 const stockColor = stockVal > 100 ? 'text-green-600' : (stockVal > 0 ? 'text-orange-500' : 'text-red-600');
-                return `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-4 py-3 text-center font-bold ${stockColor} text-lg">${stockVal}</td></tr>`;
+                return `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-3 md:px-4 py-3 font-semibold text-gray-800">${p.name}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${p.packSize || '-'}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-center font-bold ${stockColor} text-base md:text-lg">${stockVal}</td></tr>`;
             }).join('');
         }
 
         // --- Customer Management Logic ---
-        function loadCustomersTable() { document.getElementById('customersTableBody').innerHTML = customers.map((c) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-4 py-3 font-semibold text-gray-800">${c.name}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.depot}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.address}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.city}</td><td class="border border-slate-200 px-4 py-3 text-gray-600">${c.phone}</td><td class="border border-slate-200 px-4 py-3 text-center"><button onclick="editCustomer('${c.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteCustomer('${c.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join(''); }
+        function loadCustomersTable() { document.getElementById('customersTableBody').innerHTML = customers.map((c) => `<tr class="hover:bg-slate-50 transition-colors"><td class="border border-slate-200 px-3 md:px-4 py-3 font-semibold text-gray-800">${c.name}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${c.depot}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${c.address}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${c.city}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-gray-600">${c.phone}</td><td class="border border-slate-200 px-3 md:px-4 py-3 text-center"><button onclick="editCustomer('${c.key}')" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md text-xs font-semibold transition-colors">Edit</button><button onclick="deleteCustomer('${c.key}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded-md text-xs font-semibold ml-1 transition-colors">Delete</button></td></tr>`).join(''); }
         function showAddCustomerForm() { document.getElementById('customerForm').classList.remove('hidden'); document.getElementById('customerFormTitle').textContent = 'Add New Customer'; editingCustomerKey = null; clearCustomerForm(); }
         function editCustomer(key) { const c = customers.find(cu => cu.key === key); if (!c) return; document.getElementById('customerForm').classList.remove('hidden'); document.getElementById('customerFormTitle').textContent = 'Edit Customer'; document.getElementById('customerNameFormInput').value = c.name; document.getElementById('customerDepotFormInput').value = c.depot; document.getElementById('customerAddressFormInput').value = c.address; document.getElementById('customerCityFormInput').value = c.city; document.getElementById('customerPhoneFormInput').value = c.phone; editingCustomerKey = key; }
         function saveCustomer() { const name = document.getElementById('customerNameFormInput').value.trim(); if (!name) return alert("Customer Name is required."); const customer = { name: name, depot: document.getElementById('customerDepotFormInput').value.trim(), address: document.getElementById('customerAddressFormInput').value.trim(), city: document.getElementById('customerCityFormInput').value.trim(), phone: document.getElementById('customerPhoneFormInput').value.trim() }; if (editingCustomerKey) db.ref('customers/' + editingCustomerKey).update(customer); else db.ref('customers').push(customer); cancelCustomerForm(); }
@@ -996,6 +1086,16 @@
             document.getElementById('challanDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('challanNumber').placeholder = "Auto-generate on Save";
             showTab('dashboard');
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 768) {
+                document.getElementById('sidebar').classList.remove('-translate-x-full');
+                document.getElementById('sidebarOverlay').classList.add('hidden');
+            } else {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+            }
         });
     </script>
 </body>
