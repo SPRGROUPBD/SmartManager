@@ -120,9 +120,16 @@ tr:nth-child(even){background:#f7f7f7}
       <div class="field" id="locationLabel"><label id="locationCaption">Territory *</label><input id="empLocation"></div>
       <div class="field"><label>Joining Date *</label><input id="joinDate" type="date"></div>
       <div class="field"><label>Mobile No</label><input id="empMobile" placeholder="01XXXXXXXXX"></div>
+      <div class="field"><label>Assign To (Supervisor)</label><select id="empAssignTo"><option value="">None</option></select></div>
       <div class="field"><label>Status</label><select id="empStatus"><option>Active</option><option>Inactive</option><option>Dropout</option></select></div>
       <div class="field"><label>Current SIM</label><input id="empCurrentSim" placeholder="Auto / optional" readonly></div>
     </div>
+    
+    <div class="checkbox full" id="removeSimBox" style="display:none; margin-top:8px; background:#f4cccc; border-color:#a00000;">
+      <input type="checkbox" id="empRemoveSim">
+      <label for="empRemoveSim" style="font-weight:bold; color:#a00000;">Check this to Remove Current SIM & Return to Stock (Then save)</label>
+    </div>
+
     <div class="actions">
       <button class="primary" id="btnSaveEmployee" onclick="saveEmployee()">Save Employee</button>
       <button class="warn" id="btnUpdateEmployee" onclick="updateEmployee()" style="display:none">⬆ Update Employee</button>
@@ -134,44 +141,45 @@ tr:nth-child(even){background:#f7f7f7}
 
 <!-- ============ EMPLOYEE LIST ============ -->
 <section id="employees" class="page">
-  <div class="window"><div class="window-title">Employee List</div><div class="window-body">
+  <div class="window"><div class="window-title">Employee List (Only Active & Inactive)</div><div class="window-body">
     <div class="grid">
       <div class="field"><label>Search</label><input id="empSearch" oninput="renderEmployees()" placeholder="Name / EMP Code / Mobile / Location"></div>
       <div class="field"><label>Type</label><select id="empFilterType" onchange="renderEmployees()">
         <option value="">All</option>
-        <option>MPO</option>
-        <option>Sr.MPO</option>
-        <option>AM</option>
-        <option>Sr.AM</option>
-        <option>TM</option>
-        <option>RSM</option>
-        <option>Sr.RSM</option>
-        <option>DIC</option>
-        <option>ADIC</option>
-        <option>DA</option>
+        <option>MPO</option><option>Sr.MPO</option><option>AM</option><option>Sr.AM</option><option>TM</option><option>RSM</option><option>Sr.RSM</option><option>DIC</option><option>ADIC</option><option>DA</option>
       </select></div>
-      <div class="field"><label>Status</label><select id="empFilterStatus" onchange="renderEmployees()"><option value="">All</option><option>Active</option><option>Inactive</option><option>Dropout</option></select></div>
+      <div class="field"><label>Supervisor (Assign To)</label><select id="empFilterSupervisor" onchange="renderEmployees()">
+        <option value="">All Supervisors</option>
+      </select></div>
+      <div class="field"><label>Status</label><select id="empFilterStatus" onchange="renderEmployees()">
+        <option value="Active" selected>Active</option>
+        <option value="Inactive">Inactive</option>
+      </select></div>
     </div>
     <div class="actions">
       <button onclick="renderEmployees()">Refresh</button>
       <button class="success" onclick="exportEmployeesExcel()">⬇ Export Excel (EMP List)</button>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Type</th><th>EMP Code</th><th>Name</th><th>Location</th><th>Joining Date</th><th>Mobile</th><th>Status</th><th>Current SIM</th><th>Action</th></tr></thead><tbody id="employeeTable"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Type</th><th>EMP Code</th><th>Name</th><th>Location</th><th>Joining Date</th><th>Mobile</th><th>Assign To</th><th>Status</th><th>Current SIM</th><th>Action</th></tr></thead><tbody id="employeeTable"></tbody></table></div>
   </div></div>
 </section>
 
 <!-- ============ SIM STOCK ============ -->
 <section id="stock" class="page">
-  <div class="window"><div class="window-title">SIM Stock Entry</div><div class="window-body">
+  <div class="window"><div class="window-title">SIM Stock Entry <span id="simFormMode" style="float:right;font-weight:normal;font-size:11px"></span></div><div class="window-body">
     <div class="grid">
       <div class="field"><label>Mobile Number *</label><input id="simMobile"></div>
       <div class="field"><label>Operator *</label><select id="simOperator"><option>Grameenphone</option><option>Robi</option><option>Banglalink</option><option>Teletalk</option><option>Other</option></select></div>
       <div class="field"><label>SIM Serial</label><input id="simSerial"></div>
-      <div class="field"><label>Initial Status</label><select id="simStatus"><option>Office Stock</option><option>Available</option></select></div>
+      <div class="field"><label>Initial Status</label><select id="simStatus"><option>Available</option></select></div>
     </div>
-    <div class="actions"><button class="primary" onclick="saveSim()">Save SIM</button><button onclick="clearSimForm()">Clear</button></div>
+    <div class="actions">
+      <button class="primary" id="btnSaveSim" onclick="saveSim()">Save SIM</button>
+      <button class="warn" id="btnUpdateSim" onclick="updateSim()" style="display:none">⬆ Update SIM</button>
+      <button onclick="clearSimForm()">Clear</button>
+    </div>
   </div></div>
-  <div class="window"><div class="window-title">SIM Stock</div><div class="window-body"><div class="table-wrap"><table><thead><tr><th>Mobile</th><th>Operator</th><th>Serial</th><th>Status</th><th>Current User</th><th>Location</th><th>Assigned Date</th><th>Replacement Link</th></tr></thead><tbody id="stockTable"></tbody></table></div></div></div>
+  <div class="window"><div class="window-title">SIM Stock List (All SIMs)</div><div class="window-body"><div class="table-wrap"><table><thead><tr><th>SL</th><th>Number</th><th>Operator</th><th>Status</th><th>Current User</th><th>Action</th></tr></thead><tbody id="stockTable"></tbody></table></div></div></div>
 </section>
 
 <!-- ============ SIM ALLOCATION ============ -->
@@ -188,11 +196,7 @@ tr:nth-child(even){background:#f7f7f7}
           <label>Operator</label>
           <select id="allocFilterOperator" onchange="renderAllocation()">
             <option value="">All</option>
-            <option>Grameenphone</option>
-            <option>Robi</option>
-            <option>Banglalink</option>
-            <option>Teletalk</option>
-            <option>Other</option>
+            <option>Grameenphone</option><option>Robi</option><option>Banglalink</option><option>Teletalk</option><option>Other</option>
           </select>
         </div>
         <div class="field">
@@ -220,19 +224,18 @@ tr:nth-child(even){background:#f7f7f7}
 
 <!-- ============ SIM TRANSFER ============ -->
 <section id="transfer" class="page">
-  <div class="window"><div class="window-title">SIM Transfer — Dropout MPO থেকে Active MPO-তে</div><div class="window-body">
+  <div class="window"><div class="window-title">SIM Transfer — Any MPO থেকে Active MPO-তে</div><div class="window-body">
     <div class="notice">
       <b>Transfer Rules:</b><br>
-      • <b>Transfer From:</b> শুধুমাত্র <b>Dropout MPO/Sr.MPO</b> যাদের current SIM আছে (status: Replacement Required - Pending)।<br>
+      • <b>Transfer From:</b> যেকোনো <b>MPO/Sr.MPO</b> (Active বা Dropout) যাদের current SIM আছে।<br>
       • <b>Transfer To:</b> শুধুমাত্র <b>Active MPO/Sr.MPO</b> যাদের current SIM নাই।<br>
-      • অন্যান্য Designation এই Transfer-এ আসবে না।<br>
-      • Transfer-এ একই নম্বর নতুন MPO-তে Assigned হবে (Delivered)।<br>
-      • Transfer/Delivery হলে SIM Pending list থেকে সরে যাবে এবং Dropout Count কমে যাবে।
+      • Transfer-এ একই নম্বর নতুন Active MPO-তে Assigned হবে এবং পুরোনো MPO থেকে সরে যাবে।<br>
+      • Transfer-এর সম্পূর্ণ History সংরক্ষিত থাকবে।
     </div>
     <div class="grid">
-      <div class="field"><label>Transfer From (Dropout MPO) *</label>
+      <div class="field"><label>Transfer From (Any MPO with SIM) *</label>
         <select id="transferFrom" onchange="loadTransferFrom()">
-          <option value="">Select Dropout MPO (has SIM)</option>
+          <option value="">Select MPO (has SIM)</option>
         </select>
       </div>
       <div class="field"><label>Transfer To (Active MPO) *</label>
@@ -244,11 +247,11 @@ tr:nth-child(even){background:#f7f7f7}
       <div class="field"><label>Transfer Date *</label><input id="transferDate" type="date"></div>
       <div class="field"><label>From Location</label><input id="transferFromLocation" readonly></div>
       <div class="field"><label>To Location</label><input id="transferToLocation" readonly></div>
-      <div class="field full"><label>Reason</label><textarea id="transferReason" placeholder="Dropout MPO থেকে Active MPO-তে SIM Transfer"></textarea></div>
+      <div class="field full"><label>Reason</label><textarea id="transferReason" placeholder="MPO থেকে Active MPO-তে SIM Transfer"></textarea></div>
       <div class="field"><label>Transferred By</label><input id="transferBy" placeholder="DIC / RSM / Admin"></div>
     </div>
     <div class="actions">
-      <button class="primary" onclick="processTransfer()">🔄 Process Transfer (Deliver)</button>
+      <button class="primary" onclick="processTransfer()">🔄 Process Transfer</button>
       <button onclick="clearTransferForm()">Clear</button>
     </div>
   </div></div>
@@ -272,25 +275,31 @@ tr:nth-child(even){background:#f7f7f7}
 
 <!-- ============ SIM REPLACEMENT ============ -->
 <section id="replacement" class="page">
-  <div class="window"><div class="window-title">Manual SIM Replacement</div><div class="window-body">
-    <div class="notice">Replacement সম্পন্ন হলে পুরাতন SIM-এর status <b>Available</b> হবে এবং তা Stock-এ ফিরে আসবে।</div>
-    <div class="grid">
-      <div class="field"><label>Employee *</label><select id="replacementEmp" onchange="loadReplacementEmployee()"></select></div>
-      <div class="field"><label>Old Mobile *</label><input id="replacementOld" readonly></div>
-      <div class="field"><label>New Mobile *</label><select id="replacementNew"></select></div>
-      <div class="field"><label>Replacement Date *</label><input id="replacementDate" type="date"></div>
-      <div class="field"><label>Reason</label><select id="replacementReason"><option>Lost</option><option>Damaged</option><option>Network</option><option>Upgrade</option><option>Ownership</option><option>Other</option></select></div>
-      <div class="field"><label>Approved By</label><input id="replacementApprovedBy"></div>
-      <div class="field"><label>Delivered To</label><input id="replacementDeliveredTo"></input></div>
-      <div class="field"><label>New SIM Serial</label><input id="replacementSerial"></div>
+  
+  <!-- Auto SIM Replacement (Dropout) -->
+  <div class="window"><div class="window-title">Auto SIM Replacement (Dropout Employees)</div><div class="window-body">
+    <div class="notice">
+      শুধুমাত্র <b>Dropout হওয়া Employee</b> দের জন্য। নতুন সিম দেওয়ার প্রয়োজন নেই। <br>
+      এখানে Save করলে পুরোনো সিমটি সরাসরি Pending List এ চলে যাবে।
     </div>
-    <div class="actions"><button class="primary" onclick="processReplacement()">Complete Replacement</button><button onclick="clearReplacementForm()">Clear</button></div>
+    <div class="grid">
+      <div class="field"><label>Select Dropout Employee (Has SIM) *</label><select id="autoReplacementEmp" onchange="loadAutoReplacementEmployee()"></select></div>
+      <div class="field"><label>Old Mobile (To be Replaced) *</label><input id="autoReplacementOld" readonly></div>
+      <div class="field"><label>Date *</label><input id="autoReplacementDate" type="date"></div>
+      <div class="field"><label>Reason</label><select id="autoReplacementReason"><option>Lost</option><option>Damaged</option><option>Network</option><option>Upgrade</option><option>Ownership</option><option>Other</option></select></div>
+    </div>
+    <div class="actions">
+      <button class="danger" onclick="processAutoReplacement()">⬇ Send to Pending List (Auto)</button>
+      <button onclick="clearAutoReplacementForm()">Clear</button>
+    </div>
   </div></div>
+
+  <!-- Pending List -->
   <div class="window"><div class="window-title">Replacement Required (All Pending)</div><div class="window-body">
     <div class="actions" style="margin-bottom: 8px;">
       <button class="primary" onclick="printPendingReplacement()">🖨 Print Pending List</button>
     </div>
-    <div class="table-wrap"><table><thead><tr><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody id="replacementPending"></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody id="replacementPending"></tbody></table></div>
   </div></div>
 </section>
 
@@ -358,6 +367,7 @@ const FB_ROOT = 'monicoSimManager';
    ============================================================ */
 let db = { employees: [], sims: [], history: [] };
 let editingEmpId = null;
+let editingSimMobile = null;
 
 /* ============================================================
    HELPERS
@@ -438,9 +448,9 @@ function loadFromFirebase(){
   return fbDb.ref(FB_ROOT).get().then(snap=>{
     const val = snap.val();
     if(val){
-      db.employees = val.employees || [];
-      db.sims = val.sims || [];
-      db.history = val.history || [];
+      db.employees = (Array.isArray(val.employees) ? val.employees : Object.values(val.employees||{})).filter(Boolean);
+      db.sims = (Array.isArray(val.sims) ? val.sims : Object.values(val.sims||{})).filter(Boolean);
+      db.history = (Array.isArray(val.history) ? val.history : Object.values(val.history||{})).filter(Boolean);
     }else{
       db = { employees: [], sims: [], history: [] };
     }
@@ -458,9 +468,9 @@ function listenFirebase(){
   fbDb.ref(FB_ROOT).on('value', snap=>{
     const val = snap.val();
     if(val){
-      db.employees = val.employees || [];
-      db.sims = val.sims || [];
-      db.history = val.history || [];
+      db.employees = (Array.isArray(val.employees) ? val.employees : Object.values(val.employees||{})).filter(Boolean);
+      db.sims = (Array.isArray(val.sims) ? val.sims : Object.values(val.sims||{})).filter(Boolean);
+      db.history = (Array.isArray(val.history) ? val.history : Object.values(val.history||{})).filter(Boolean);
       renderAll();
       setFbStatus('live ✓', true);
     } else {
@@ -482,7 +492,33 @@ function locationCaption(){
   const t=document.getElementById('empType').value;
   document.getElementById('locationCaption').textContent=(t==='MPO'||t==='Sr.MPO'?'Territory *':t==='AM'||t==='Sr.AM'?'Area *':'Region *');
 }
-document.getElementById('empType').addEventListener('change',locationCaption);
+
+// UPDATED: Assign To logic
+function updateAssignToOptions() {
+  const type = document.getElementById('empType').value;
+  const assignToSelect = document.getElementById('empAssignTo');
+  assignToSelect.innerHTML = '<option value="">None</option>';
+
+  let targetTypes = [];
+  if (type === 'MPO' || type === 'Sr.MPO') targetTypes = ['AM', 'Sr.AM', 'TM'];
+  else if (type === 'AM' || type === 'Sr.AM' || type === 'TM') targetTypes = ['RSM', 'Sr.RSM'];
+  else if (type === 'RSM' || type === 'Sr.RSM') targetTypes = ['DIC', 'ADIC', 'DA'];
+
+  if (targetTypes.length > 0) {
+    const supervisors = db.employees.filter(e => targetTypes.includes(e.type) && e.status !== 'Dropout');
+    supervisors.forEach(sup => {
+      let opt = document.createElement('option');
+      opt.value = sup.code;
+      opt.textContent = `${sup.code} — ${sup.name} (${sup.type})`;
+      assignToSelect.appendChild(opt);
+    });
+  }
+}
+
+document.getElementById('empType').addEventListener('change', () => {
+  locationCaption();
+  updateAssignToOptions();
+});
 
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
@@ -499,7 +535,7 @@ function saveEmployee(){
   const type=empType.value, code=empCode.value.trim(), name=empName.value.trim(), loc=empLocation.value.trim(), jd=joinDate.value;
   if(!code||!name||!loc||!jd){alert('EMP Code, Name, Location এবং Joining Date দিন।');return}
   if(db.employees.some(e=>e.code.toLowerCase()===code.toLowerCase())){alert('এই EMP Code আগে থেকেই আছে। Edit করতে চাইলে Employee List-এ Edit চাপুন।');return}
-  db.employees.push({id:genId(),type,code,name,location:loc,joiningDate:jd,mobile:empMobile.value.trim(),status:empStatus.value,currentSim:empCurrentSim.value.trim()});
+  db.employees.push({id:genId(),type,code,name,location:loc,joiningDate:jd,mobile:empMobile.value.trim(),status:empStatus.value,currentSim:empCurrentSim.value.trim(), assignTo: empAssignTo.value});
   saveDB().then(()=>{
     alert('Employee saved successfully to Firebase.');
     clearEmployeeForm();
@@ -514,6 +550,36 @@ function updateEmployee(){
   const code=empCode.value.trim(), name=empName.value.trim(), loc=empLocation.value.trim(), jd=joinDate.value;
   if(!code||!name||!loc||!jd){alert('EMP Code, Name, Location এবং Joining Date দিন।');return}
   if(db.employees.some(x=>x.id!==editingEmpId && x.code.toLowerCase()===code.toLowerCase())){alert('এই EMP Code অন্য employee দ্বারা ব্যবহৃত হচ্ছে।');return}
+  
+  const removeSimChecked = document.getElementById('empRemoveSim').checked;
+  const oldSim = e.currentSim;
+
+  if (removeSimChecked && oldSim) {
+    const s = db.sims.find(x => x.mobile === oldSim);
+    if (s) {
+      s.status = 'Available';
+      s.empCode = '';
+      s.location = '';
+      s.assignedDate = '';
+      s.previousUser = e.name + ' (' + e.code + ')';
+      s.deliveryStatus = '';
+      s.replacedBy = '';
+      s.replacementReason = 'Removed during Employee Edit';
+    }
+    db.history.push({
+      date: now(),
+      action: 'RELEASE',
+      oldSim: oldSim,
+      newSim: '',
+      emp: e.code + ' - ' + e.name,
+      from: e.location,
+      to: 'Stock (Available)',
+      reason: 'SIM Removed during Employee Edit',
+      by: 'Admin'
+    });
+    e.currentSim = '';
+  }
+
   e.type = empType.value;
   e.code = code;
   e.name = name;
@@ -521,6 +587,8 @@ function updateEmployee(){
   e.joiningDate = jd;
   e.mobile = empMobile.value.trim();
   e.status = empStatus.value;
+  e.assignTo = empAssignTo.value;
+  
   saveDB().then(()=>{
     alert('Employee updated successfully.');
     clearEmployeeForm();
@@ -532,16 +600,45 @@ function clearEmployeeForm(){
   editingEmpId = null;
   ['empCode','empName','empLocation','joinDate','empMobile','empCurrentSim'].forEach(id=>document.getElementById(id).value='');
   empStatus.value='Active';empType.value='MPO';locationCaption();
+  empAssignTo.innerHTML = '<option value="">None</option>';
   btnSaveEmployee.style.display='';
   btnUpdateEmployee.style.display='none';
   btnCancelEdit.style.display='none';
   empFormMode.textContent='';
+  document.getElementById('removeSimBox').style.display = 'none';
+  document.getElementById('empRemoveSim').checked = false;
   document.querySelectorAll('#employeeTable tr').forEach(tr=>tr.classList.remove('edit-mode'));
 }
 
+function populateSupervisorFilter() {
+  const select = document.getElementById('empFilterSupervisor');
+  if(!select) return;
+  const currentVal = select.value;
+  const supCodes = [...new Set(db.employees.map(e => e.assignTo).filter(Boolean))];
+  const sups = db.employees.filter(e => supCodes.includes(e.code));
+  
+  select.innerHTML = '<option value="">All Supervisors</option>';
+  sups.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.code;
+    opt.textContent = `${s.name} (${s.code})`;
+    select.appendChild(opt);
+  });
+  select.value = currentVal;
+}
+
 function renderEmployees(){
-  const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value, s=empFilterStatus.value;
-  const rows=db.employees.filter(e=>(!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q))&&(!t||e.type===t)&&(!s||e.status===s));
+  const q=(empSearch.value||'').toLowerCase(), t=empFilterType.value;
+  const s = empFilterStatus.value || 'Active'; 
+  const supFilter = document.getElementById('empFilterSupervisor')?.value;
+  
+  const rows=db.employees.filter(e=> 
+    e.status !== 'Dropout' && 
+    (!q||[e.code,e.name,e.mobile,e.location,e.type].join(' ').toLowerCase().includes(q)) && 
+    (!t||e.type===t) && 
+    (!s||e.status===s) &&
+    (!supFilter || e.assignTo === supFilter)
+  );
   
   const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
   
@@ -550,6 +647,13 @@ function renderEmployees(){
     const rowClass = editingEmpId===e.id ? 'edit-mode' : '';
     const rowStyle = (!rowClass && highlightTypes.includes(e.type)) ? 'background-color:#fff9c4 !important;' : '';
     
+    let assignToLabel = '-';
+    if(e.assignTo){
+      const sup = db.employees.find(emp => emp.code === e.assignTo);
+      if(sup) assignToLabel = `${esc(sup.name)} (${esc(sup.code)})`;
+      else assignToLabel = `${esc(e.assignTo)}`;
+    }
+    
     return `<tr data-id="${e.id}" class="${rowClass}" style="${rowStyle}">
       <td>${esc(e.type)}</td>
       <td>${esc(e.code)}</td>
@@ -557,15 +661,61 @@ function renderEmployees(){
       <td>${esc(e.location)}</td>
       <td>${esc(e.joiningDate)}</td>
       <td>${esc(mobileNo)}</td>
+      <td>${assignToLabel}</td>
       <td>${badge(e.status)}</td>
       <td>${esc(e.currentSim||'-')}</td>
       <td>
         <button onclick="editEmployee('${e.id}')">✎ Edit</button>
         <button class="danger" onclick="dropoutEmployee('${e.id}')">Dropout</button>
         <button class="danger" onclick="deleteEmployee('${e.id}')" style="margin-top:3px;">🗑 Delete</button>
+        ${e.currentSim ? `<button class="warn" onclick="sendEmpSimToPending('${e.id}')" style="margin-top:3px;">↪ Replacement</button>` : ''}
       </td>
     </tr>`;
-  }).join('')||'<tr><td colspan="9">No data</td></tr>';
+  }).join('')||'<tr><td colspan="10">No Active Employee data</td></tr>';
+}
+
+function sendEmpSimToPending(empId){
+  const e = db.employees.find(x => x.id === empId);
+  if(!e) return;
+  if(!e.currentSim) { alert('এই Employee-এর কাছে কোনো SIM নেই।'); return; }
+  
+  const reason = prompt('SIM Replacement এর কারণ লিখুন:');
+  if(reason === null) return; // User clicked cancel
+  
+  if(!confirm('এই SIM-টি Replacement Pending list-এ পাঠাতে চান?\nEmployee: '+e.name+'\nMobile: '+e.currentSim+'\nReason: '+(reason||'N/A'))) return;
+  
+  const oldSim = e.currentSim;
+  const s = db.sims.find(x => x.mobile === oldSim);
+  
+  if(s){
+    s.status = 'Replacement Required';
+    s.deliveryStatus = 'Pending';
+    s.replacementReason = reason || 'Sent to Pending from Employee List';
+    s.empCode = '';
+    s.location = '';
+    s.assignedDate = '';
+    s.previousUser = e.name + ' (' + e.code + ')';
+  }
+  
+  if(e.mobile === oldSim) e.mobile = '';
+  e.currentSim = '';
+  
+  db.history.push({
+    date: now(),
+    action: 'REPLACEMENT',
+    oldSim: oldSim,
+    newSim: '',
+    emp: e.code + ' - ' + e.name,
+    from: e.location,
+    to: 'Replacement Required (Pending)',
+    reason: reason || 'Sent to Pending from Employee List',
+    by: 'Admin'
+  });
+
+  saveDB().then(()=>{
+    alert('✅ SIM-টি Replacement Pending list-এ পাঠানো হয়েছে।');
+    renderAll();
+  });
 }
 
 function editEmployee(id){
@@ -581,10 +731,16 @@ function editEmployee(id){
   empStatus.value=e.status;
   empCurrentSim.value=e.currentSim||'';
   locationCaption();
+  
+  updateAssignToOptions();
+  empAssignTo.value = e.assignTo || '';
+  
   btnSaveEmployee.style.display='none';
   btnUpdateEmployee.style.display='';
   btnCancelEdit.style.display='';
   empFormMode.textContent='— EDITING: '+e.code+' '+e.name;
+  document.getElementById('removeSimBox').style.display = e.currentSim ? 'flex' : 'none';
+  document.getElementById('empRemoveSim').checked = false;
   document.querySelector('[data-page="employee"]').click();
   renderEmployees();
 }
@@ -678,22 +834,102 @@ function saveSim(){
   if(!mobile){alert('Mobile Number দিন।');return}
   if(db.sims.some(s=>s.mobile===mobile)){alert('এই Mobile Number আগে থেকেই আছে।');return}
   db.sims.push({id:genId(),mobile,operator:op,serial,status,empCode:'',location:'',assignedDate:'',previousUser:'',replacedBy:'',replacementReason:'',deliveryStatus:''});
-  db.history.push({date:now(),action:'STOCK',oldSim:'',newSim:mobile,emp:'',from:'',to:'Office Stock',reason:'New SIM Added',by:'Admin'});
+  db.history.push({date:now(),action:'STOCK',oldSim:'',newSim:mobile,emp:'',from:'',to:status,reason:'New SIM Added',by:'Admin'});
   saveDB().then(()=>{clearSimForm();renderAll()});
 }
-function clearSimForm(){simMobile.value='';simSerial.value='';simStatus.value='Office Stock'}
+
+function editSim(mobile){
+  const s = db.sims.find(x => x.mobile === mobile);
+  if(!s) return;
+  editingSimMobile = mobile;
+  simMobile.value = s.mobile;
+  simMobile.readOnly = true;
+  simOperator.value = s.operator;
+  simSerial.value = s.serial;
+  simStatus.value = s.status;
+  
+  btnSaveSim.style.display = 'none';
+  btnUpdateSim.style.display = '';
+  simFormMode.textContent = '— EDITING: ' + s.mobile;
+  document.querySelector('[data-page="stock"]').click();
+  renderStock();
+}
+
+function updateSim(){
+  if(!editingSimMobile){alert('কোনো SIM edit mode-এ নেই।');return}
+  const s = db.sims.find(x => x.mobile === editingSimMobile);
+  if(!s){alert('SIM পাওয়া যায়নি।');return}
+  
+  s.operator = simOperator.value;
+  s.serial = simSerial.value.trim();
+  s.status = simStatus.value;
+  
+  saveDB().then(()=>{
+    alert('SIM updated successfully.');
+    clearSimForm();
+    renderAll();
+  });
+}
+
+function deleteSim(mobile){
+  if(!confirm('⚠️ এই SIM-টি সম্পূর্ণ মুছে (Delete) ফেলতে চান?\nMobile: '+mobile)) return;
+  
+  db.sims = db.sims.filter(s => s.mobile !== mobile);
+  db.history.push({
+    date: now(),
+    action: 'DELETE',
+    oldSim: mobile,
+    newSim: '',
+    emp: '',
+    from: 'Stock',
+    to: 'Deleted',
+    reason: 'SIM Deleted from Stock',
+    by: 'Admin'
+  });
+  
+  saveDB().then(()=>{
+    if(editingSimMobile === mobile) clearSimForm();
+    alert('SIM deleted successfully.');
+    renderAll();
+  });
+}
+
+function clearSimForm(){
+  editingSimMobile = null;
+  simMobile.value=''; 
+  simMobile.readOnly = false;
+  simSerial.value=''; 
+  simStatus.value='Available';
+  btnSaveSim.style.display='';
+  btnUpdateSim.style.display='none';
+  simFormMode.textContent='';
+}
 
 function renderStock(){
-  stockTable.innerHTML=db.sims.map(s=>{
-    const e=db.employees.find(x=>x.code===s.empCode);
-    return `<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${esc(s.serial)}</td><td>${badge(s.status)}</td><td>${esc(e?e.name+' ('+e.code+')':s.previousUser||'-')}</td><td>${esc(s.location||'-')}</td><td>${esc(s.assignedDate||'-')}</td><td>${esc(s.replacedBy||'-')}</td></tr>`
-  }).join('')||'<tr><td colspan="8">No SIM data</td></tr>';
+  stockTable.innerHTML = db.sims.map((s, index) => {
+    const e = db.employees.find(x=>x.code===s.empCode);
+    const userLabel = e ? e.name+' ('+e.code+')' : (s.previousUser||'-');
+    const canEdit = ['Available', 'Office Stock'].includes(s.status);
+    return `<tr>
+      <td>${index + 1}</td>
+      <td>${esc(s.mobile)}</td>
+      <td>${esc(s.operator)}</td>
+      <td>${badge(s.status)}</td>
+      <td>${esc(userLabel)}</td>
+      <td>
+        ${canEdit ? `<button onclick="editSim('${s.mobile}')">✎ Edit</button> <button class="danger" onclick="deleteSim('${s.mobile}')">🗑 Delete</button>` : '-'}
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6">No SIM data</td></tr>';
 }
 
 function availableSims(){
   return db.sims.filter(s=>['Available','Office Stock'].includes(s.status));
 }
 
+/* ============================================================
+   SIM ALLOCATION
+   ============================================================ */
 function renderAllocation(){
   const q=(allocSearch?.value||'').toLowerCase();
   const op=allocFilterOperator?.value||'';
@@ -705,8 +941,57 @@ function renderAllocation(){
     return okQ && okOp && okSt;
   });
   allocationTable.innerHTML = sims.map(s=>
-    `<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${badge(s.status)}</td><td>${esc(s.previousUser||'-')}</td><td>${esc(s.location||'-')}</td><td><button class="primary" onclick="quickAssign('${s.mobile}')">Assign</button></td></tr>`
+    `<tr>
+      <td>${esc(s.mobile)}</td>
+      <td>${esc(s.operator)}</td>
+      <td>${badge(s.status)}</td>
+      <td>${esc(s.previousUser||'-')}</td>
+      <td>${esc(s.location||'-')}</td>
+      <td>
+        <button class="primary" onclick="quickAssign('${s.mobile}')">Assign</button>
+        <button class="danger" style="margin-left:4px;" onclick="sendToReplacementPending('${s.mobile}')">Replacement</button>
+      </td>
+    </tr>`
   ).join('') || '<tr><td colspan="6">No Available SIM</td></tr>';
+}
+
+function sendToReplacementPending(mobile){
+  const reason = prompt('কেন এই SIM-টি Replacement Pending list-এ পাঠানো হচ্ছে? (Reason):');
+  if(reason === null) return; // User clicked cancel
+  if(!confirm('এই SIM-টি Replacement Pending list-এ পাঠাতে চান?\nMobile: '+mobile+'\nReason: '+(reason||'N/A'))) return;
+  
+  const s = db.sims.find(x=>x.mobile===mobile);
+  if(!s){alert('SIM পাওয়া যায়নি।');return}
+  
+  if(!['Available', 'Office Stock'].includes(s.status)){
+    alert('শুধুমাত্র Available SIM গুলো Pending list এ পাঠানো যাবে।');
+    return;
+  }
+
+  s.status = 'Replacement Required';
+  s.deliveryStatus = 'Pending';
+  s.replacementReason = reason || 'Sent to Pending from Allocation';
+  s.empCode = '';
+  s.location = '';
+  s.assignedDate = '';
+  s.previousUser = s.previousUser || 'Stock SIM'; 
+  
+  db.history.push({
+    date: now(),
+    action: 'REPLACEMENT',
+    oldSim: mobile,
+    newSim: '',
+    emp: 'N/A',
+    from: 'Stock Allocation',
+    to: 'Replacement Required (Pending)',
+    reason: reason || 'Sent to Pending from Allocation',
+    by: 'Admin'
+  });
+
+  saveDB().then(()=>{
+    alert('✅ SIM-টি Replacement Pending list-এ পাঠানো হয়েছে।');
+    renderAll();
+  });
 }
 
 function quickAssign(mobile){
@@ -727,15 +1012,14 @@ function quickAssign(mobile){
 }
 
 /* ============================================================
-   TRANSFER — Dropout MPO থেকে Active MPO-তে একই SIM
+   TRANSFER
    ============================================================ */
 function fillTransferDropdowns(){
   const fromList = db.employees.filter(e=>
     ['MPO', 'Sr.MPO'].includes(e.type) &&
-    e.status==='Dropout' &&
     e.currentSim && e.currentSim !== ''
   );
-  transferFrom.innerHTML = '<option value="">Select Dropout MPO (has SIM)</option>' +
+  transferFrom.innerHTML = '<option value="">Select MPO (has SIM)</option>' +
     fromList.map(e=>`<option value="${e.id}">${esc(e.code)} — ${esc(e.name)} — ${esc(e.location)} — SIM: ${esc(e.currentSim)}</option>`).join('');
   
   const toList = db.employees.filter(e=>
@@ -764,13 +1048,13 @@ function processTransfer(){
   const fromEmp = db.employees.find(x=>x.id===transferFrom.value);
   const toEmp = db.employees.find(x=>x.id===transferTo.value);
   
-  if(!fromEmp){alert('Transfer From (Dropout MPO) নির্বাচন করুন।');return}
+  if(!fromEmp){alert('Transfer From (MPO with SIM) নির্বাচন করুন।');return}
   if(!toEmp){alert('Transfer To (Active MPO) নির্বাচন করুন।');return}
   if(fromEmp.id===toEmp.id){alert('From ও To একই হতে পারবে না।');return}
   if(!transferDate.value){alert('Transfer Date দিন।');return}
   
-  if(!['MPO', 'Sr.MPO'].includes(fromEmp.type) || fromEmp.status!=='Dropout' || !fromEmp.currentSim){
-    alert('Transfer From: শুধুমাত্র Dropout MPO/Sr.MPO (SIM সহ) হতে হবে।');return;
+  if(!['MPO', 'Sr.MPO'].includes(fromEmp.type) || !fromEmp.currentSim){
+    alert('Transfer From: শুধুমাত্র MPO/Sr.MPO (যাদের SIM আছে) হতে হবে।');return;
   }
   if(!['MPO', 'Sr.MPO'].includes(toEmp.type) || toEmp.status!=='Active' || toEmp.currentSim){
     alert('Transfer To: শুধুমাত্র Active MPO/Sr.MPO (SIM ছাড়া) হতে হবে।');return;
@@ -780,11 +1064,7 @@ function processTransfer(){
   const s = db.sims.find(x=>x.mobile===mobile);
   if(!s){alert('SIM data পাওয়া যায়নি।');return}
   
-  if(s.status!=='Replacement Required'){
-    if(!confirm('SIM status "Replacement Required" না — "'+s.status+'"\nতবুও Transfer (Deliver) করবেন?'))return;
-  }
-  
-  const reason = transferReason.value.trim() || 'Dropout MPO → Active MPO SIM Transfer (Delivered)';
+  const reason = transferReason.value.trim() || 'MPO → Active MPO SIM Transfer';
   const by = transferBy.value.trim() || 'Admin';
   
   s.status = 'Assigned';
@@ -809,12 +1089,12 @@ function processTransfer(){
     emp: 'From: '+fromEmp.code+' - '+fromEmp.name+' → To: '+toEmp.code+' - '+toEmp.name,
     from: fromEmp.location,
     to: toEmp.location,
-    reason: reason + ' [DELIVERED]',
+    reason: reason,
     by: by
   });
   
   saveDB().then(()=>{
-    alert('✅ SIM Transfer সম্পন্ন (Delivered)\n\nSIM: '+mobile+'\nFrom (Dropout MPO): '+fromEmp.code+' - '+fromEmp.name+'\nTo (Active MPO): '+toEmp.code+' - '+toEmp.name+'\n\nSIM status: Assigned (Delivered)\nএই SIM এখন Pending list-এ নেই।');
+    alert('✅ SIM Transfer সম্পন্ন হয়েছে\n\nSIM: '+mobile+'\nFrom: '+fromEmp.code+' - '+fromEmp.name+'\nTo (Active MPO): '+toEmp.code+' - '+toEmp.name+'\n\nSIM status: Assigned');
     clearTransferForm();
     renderAll();
   });
@@ -850,45 +1130,61 @@ function renderDropoutSimTable(){
 /* ============================================================
    REPLACEMENT
    ============================================================ */
-function fillEmployeeSelect(id, includeDropout=false){
-  const list=db.employees.filter(e=>includeDropout||e.status!=='Dropout');
-  document.getElementById(id).innerHTML='<option value="">Select Employee</option>'+list.map(e=>`<option value="${e.id}">${esc(e.code)} — ${esc(e.name)} — ${esc(e.location)}</option>`).join('');
+
+// --- Auto Replacement (Dropout) ---
+function fillAutoReplacementDropdown(){
+  const list = db.employees.filter(e => e.status === 'Dropout' && e.currentSim && e.currentSim !== '');
+  autoReplacementEmp.innerHTML = '<option value="">Select Dropout Employee</option>' + 
+    list.map(e=>`<option value="${e.id}">${esc(e.type)} - ${esc(e.code)} — ${esc(e.name)} — ${esc(e.location)}</option>`).join('');
 }
-function loadReplacementEmployee(){
-  const e=db.employees.find(x=>x.id===replacementEmp.value);
-  replacementOld.value=e?.currentSim||'';
-  const avail = db.sims.filter(s=>['Available','Office Stock'].includes(s.status) && s.mobile!==(e?.currentSim||''));
-  replacementNew.innerHTML='<option value="">Select New SIM</option>'+avail.map(s=>`<option value="${s.mobile}">${esc(s.mobile)} — ${esc(s.operator)} — ${esc(s.serial)}</option>`).join('');
+
+function loadAutoReplacementEmployee(){
+  const e=db.employees.find(x=>x.id===autoReplacementEmp.value);
+  autoReplacementOld.value=e?.currentSim||'';
 }
-function processReplacement(){
-  const e=db.employees.find(x=>x.id===replacementEmp.value), oldMobile=replacementOld.value, newMobile=replacementNew.value;
-  if(!e||!oldMobile||!newMobile){alert('Employee, Old SIM এবং New SIM দিন।');return}
-  const old=db.sims.find(s=>s.mobile===oldMobile), ns=db.sims.find(s=>s.mobile===newMobile);
-  if(!old||!ns){alert('SIM data পাওয়া যায়নি।');return}
+
+function processAutoReplacement(){
+  const e=db.employees.find(x=>x.id===autoReplacementEmp.value), oldMobile=autoReplacementOld.value;
+  if(!e||!oldMobile){alert('Dropout Employee নির্বাচন করুন।');return}
+  const old=db.sims.find(s=>s.mobile===oldMobile);
+  if(!old){alert('SIM data পাওয়া যায়নি।');return}
   
-  old.status='Available';
-  old.replacedBy=newMobile;
-  old.replacementReason=replacementReason.value;
-  old.empCode='';
-  old.location='';
-  old.assignedDate='';
-  old.deliveryStatus='';
-  old.previousUser=e.name+' ('+e.code+')';
+  old.status = 'Replacement Required';
+  old.deliveryStatus = 'Pending';
+  old.replacementReason = autoReplacementReason.value;
+  old.empCode = '';
+  old.location = '';
+  old.assignedDate = '';
+  old.previousUser = e.name+' ('+e.code+')';
   
-  ns.status='Assigned';
-  ns.empCode=e.code;
-  ns.location=e.location;
-  ns.assignedDate=replacementDate.value||today();
-  ns.previousUser=e.name;
-  ns.deliveryStatus='';
+  e.currentSim = ''; 
+  e.mobile = '';
   
-  e.currentSim=newMobile;
-  e.mobile=newMobile;
+  db.history.push({
+    date:now(),
+    action:'REPLACEMENT',
+    oldSim:oldMobile,
+    newSim:'',
+    emp:e.code+' - '+e.name,
+    from:e.location,
+    to:'Replacement Required (Pending)',
+    reason:'Auto Replacement (Dropout) - ' + autoReplacementReason.value,
+    by:'Admin'
+  });
   
-  db.history.push({date:now(),action:'REPLACEMENT',oldSim:oldMobile,newSim:newMobile,emp:e.code+' - '+e.name,from:e.location,to:e.location,reason:replacementReason.value,by:replacementApprovedBy.value||'Admin'});
-  saveDB().then(()=>{clearReplacementForm();renderAll();alert('SIM Replacement completed. Old SIM returned to Stock as Available.')});
+  saveDB().then(()=>{
+    clearAutoReplacementForm();
+    renderAll();
+    alert('Auto SIM Replacement recorded. Old SIM is in Pending List.');
+  });
 }
-function clearReplacementForm(){replacementEmp.value='';replacementOld.value='';replacementNew.innerHTML='<option value="">Select New SIM</option>';replacementDate.value=today();replacementApprovedBy.value='';replacementDeliveredTo.value='';replacementSerial.value='';replacementReason.value='Lost'}
+
+function clearAutoReplacementForm(){
+  autoReplacementEmp.value='';
+  autoReplacementOld.value='';
+  autoReplacementDate.value=today();
+  autoReplacementReason.value='Lost';
+}
 
 function renderReplacementPending(){
   const rows=db.sims.filter(s=>s.status==='Replacement Required');
@@ -904,11 +1200,45 @@ function renderReplacementPending(){
       <td>${esc(loc||'-')}</td>
       <td>${esc(s.replacementReason||'-')}</td>
       <td>${badge(s.status)} <small>(${esc(delivery)})</small></td>
+      <td><button class="success" onclick="completeReturnStock('${s.mobile}')">✓ Complete & Return</button></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="5">✓ No pending replacement.</td></tr>';
+  }).join('')||'<tr><td colspan="6">✓ No pending replacement.</td></tr>';
 }
 
-/* Print Pending Replacement List using iFrame */
+function completeReturnStock(mobile){
+  if(!confirm('এই SIM-টির Status Complete করে Stock-ে Return করতে চান?\nMobile: '+mobile)) return;
+  
+  const s = db.sims.find(x => x.mobile === mobile);
+  if(!s){ alert('SIM পাওয়া যায়নি।'); return; }
+  
+  const prevUser = s.previousUser || 'N/A';
+  
+  s.status = 'Available';
+  s.deliveryStatus = '';
+  s.empCode = '';
+  s.location = '';
+  s.assignedDate = '';
+  s.previousUser = prevUser; 
+  s.replacementReason = '';
+  
+  db.history.push({
+    date: now(),
+    action: 'RELEASE', 
+    oldSim: mobile,
+    newSim: '',
+    emp: prevUser,
+    from: 'Replacement Required',
+    to: 'Stock (Available)',
+    reason: 'Status Completed - Returned to Stock',
+    by: 'Admin'
+  });
+  
+  saveDB().then(()=>{
+    alert('✅ SIM Status Completed এবং Stock-এ Return করা হয়েছে।');
+    renderAll();
+  });
+}
+
 function printPendingReplacement(){
   const rows = db.sims.filter(s=>s.status==='Replacement Required');
   if(rows.length === 0){
@@ -917,7 +1247,6 @@ function printPendingReplacement(){
   }
 
   let html = '<h2>Pending Replacement List</h2>';
-  // OTP Number যুক্ত করা হলো
   html += '<p style="font-size:14px; font-weight:bold; color:#a00000;">OTP Number: 01329-731250</p>';
   html += '<table border="1" cellspacing="0" cellpadding="5"><thead><tr style="background-color:#d3d3d3;"><th>Mobile</th><th>User</th><th>Location</th><th>Reason</th><th>Status</th></tr></thead><tbody>';
   
@@ -938,7 +1267,6 @@ function printPendingReplacement(){
   });
   
   html += `</tbody></table>`;
-  
   printHTML('Pending Replacement Report', html);
 }
 
@@ -995,7 +1323,8 @@ function renderAll(){
   renderReplacementPending();
   renderHistory();
   fillTransferDropdowns();
-  fillEmployeeSelect('replacementEmp');
+  fillAutoReplacementDropdown();
+  populateSupervisorFilter();
 }
 
 /* ============================================================
@@ -1004,7 +1333,11 @@ function renderAll(){
 function printReport(type){
   let title='Monico SmartManager Report', html='';
   if(type==='employees'){
-    html='<h2>Employee Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Type</th><th>EMP</th><th>Name</th><th>Location</th><th>Joining</th><th>Mobile</th><th>Status</th><th>SIM</th></tr>'+db.employees.map(e=>`<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.currentSim || e.mobile || '')}</td><td>${esc(e.status)}</td><td>${esc(e.currentSim||'')}</td></tr>`).join('')+'</table>';
+    html='<h2>Employee Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Type</th><th>EMP</th><th>Name</th><th>Location</th><th>Joining</th><th>Mobile</th><th>Assign To</th><th>Status</th><th>SIM</th></tr>'+db.employees.map(e=>{
+      const sup = db.employees.find(emp => emp.code === e.assignTo);
+      const assignToName = sup ? sup.name : (e.assignTo || '');
+      return `<tr><td>${esc(e.type)}</td><td>${esc(e.code)}</td><td>${esc(e.name)}</td><td>${esc(e.location)}</td><td>${esc(e.joiningDate)}</td><td>${esc(e.currentSim || e.mobile || '')}</td><td>${esc(assignToName)}</td><td>${esc(e.status)}</td><td>${esc(e.currentSim||'')}</td></tr>`;
+    }).join('')+'</table>';
   }else if(type==='sims'){
     html='<h2>SIM Report</h2><table border="1" cellspacing="0" cellpadding="5"><tr><th>Mobile</th><th>Operator</th><th>Serial</th><th>Status</th><th>EMP</th><th>Location</th></tr>'+db.sims.map(s=>`<tr><td>${esc(s.mobile)}</td><td>${esc(s.operator)}</td><td>${esc(s.serial)}</td><td>${esc(s.status)}</td><td>${esc(s.empCode)}</td><td>${esc(s.location)}</td></tr>`).join('')+'</table>';
   }else{
@@ -1030,12 +1363,20 @@ function exportEmployeesExcel(){
   const highlightTypes = ['AM', 'Sr.AM', 'RSM', 'Sr.RSM', 'TM'];
 
   let html = `<table border="1" cellspacing="0" cellpadding="5"><thead><tr style="background-color:#d3d3d3; font-weight:bold;">
-    <th>EMP Code</th><th>Name of MPO</th><th>Territory</th><th>Deg.</th><th>Joining Date</th><th>Mobile No</th>
+    <th>EMP Code</th><th>Name of MPO</th><th>Territory</th><th>Deg.</th><th>Joining Date</th><th>Mobile No</th><th>Assign To</th>
   </tr></thead><tbody>`;
   
   rows.forEach(e => {
     const mobileNo = e.currentSim || e.mobile || '';
     const rowStyle = highlightTypes.includes(e.type) ? ' style="background-color:#ffffcc;"' : '';
+    
+    let assignToName = '';
+    if(e.assignTo){
+      const sup = db.employees.find(x => x.code === e.assignTo);
+      if(sup) assignToName = sup.name;
+      else assignToName = e.assignTo;
+    }
+    
     html += `<tr${rowStyle}>
       <td>${e.code || ''}</td>
       <td>${e.name || ''}</td>
@@ -1043,6 +1384,7 @@ function exportEmployeesExcel(){
       <td>${e.type || ''}</td>
       <td>${e.joiningDate || ''}</td>
       <td data-t="s">${mobileNo}</td>
+      <td>${assignToName}</td>
     </tr>`;
   });
   html += `</tbody></table>`;
@@ -1050,8 +1392,7 @@ function exportEmployeesExcel(){
   const container = document.createElement('div');
   container.innerHTML = html;
   const ws = XLSX.utils.table_to_sheet(container.querySelector('table'));
-  
-  ws['!cols'] = [{wch:14},{wch:28},{wch:22},{wch:14},{wch:14},{wch:16}];
+  ws['!cols'] = [{wch:14},{wch:28},{wch:22},{wch:14},{wch:14},{wch:16},{wch:20}];
   
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Emp List');
@@ -1072,9 +1413,10 @@ function exportData(){
    ============================================================ */
 document.addEventListener('DOMContentLoaded',()=>{
   transferDate.value=today();
-  replacementDate.value=today();
+  autoReplacementDate.value=today();
   joinDate.value=today();
   locationCaption();
+  updateAssignToOptions();
   loadFromFirebase().then(()=>{
     listenFirebase();
   });
