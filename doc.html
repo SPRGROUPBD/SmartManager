@@ -329,7 +329,7 @@
                     </div>
                 </div>
                 <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">MPO Name</th><th class="text-left px-4 py-3">EMP Code</th><th class="text-left px-4 py-3">Area</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3" id="salesTP1Header">TP 1</th><th class="text-left px-4 py-3" id="salesTP2Header">TP 2 (New Entry)</th><th class="text-center px-4 py-3">Doctors</th></tr></thead><tbody id="mpoSalesBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-slate-50 text-slate-500 text-xs uppercase"><tr><th class="text-left px-4 py-3">#</th><th class="text-left px-4 py-3">MPO Name</th><th class="text-left px-4 py-3">EMP Code</th><th class="text-left px-4 py-3">Area</th><th class="text-left px-4 py-3">Territory</th><th class="text-left px-4 py-3" id="salesTP1Header">TP 1</th><th class="text-left px-4 py-3" id="salesTP2Header">TP 2 (New Entry)</th><th class="text-left px-4 py-3">Comitment Sales</th><th class="text-center px-4 py-3">Doctors</th></tr></thead><tbody id="mpoSalesBody" class="divide-y divide-slate-100"></tbody></table></div>
                     <div id="mpoSalesEmpty" class="hidden px-5 py-10 text-center text-slate-400 text-sm">No MPOs</div>
                 </div>
             </div>
@@ -755,7 +755,7 @@
         }
         function getMPOSalesForMonth(month,mpoId){
             if(mpoSalesCache[month]&&mpoSalesCache[month][mpoId])return mpoSalesCache[month][mpoId];
-            return{tp1:'',tp2:''};
+            return{tp1:'',tp2:'',commit:''};
         }
         function isMPOQualified(month, mpoId) {
             if(!mpoId) return false;
@@ -1307,11 +1307,30 @@
                 }
                 const docCount=getDoctorsForMPO(id, month).length;
                 const isQualified = parseAmount(tp2Val) >= qualAmount;
-                return`<tr class="table-row"><td class="px-4 py-3 text-slate-400 text-xs">${i+1}</td><td class="px-4 py-3 font-semibold">${m.name}</td><td class="px-4 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td><td class="px-4 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.area}</span>`:'-'}</td><td class="px-4 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.territory}</span></td><td class="px-4 py-3"><input type="text" class="sales-tp1 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 bg-slate-50" value="${tp1Val}" data-mpoid="${id}" title="Auto carried from last month"></td><td class="px-4 py-3"><input type="text" class="sales-tp2 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 ${isQualified?'bg-emerald-50 font-bold text-emerald-700':''}" value="${tp2Val}" data-mpoid="${id}" placeholder="0"></td><td class="px-4 py-3 text-center"><span class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">${docCount} Doctors</span></td></tr>`;
+                let commitVal = sales ? (sales.commit || '') : '';
+                return`<tr class="table-row"><td class="px-4 py-3 text-slate-400 text-xs">${i+1}</td><td class="px-4 py-3 font-semibold">${m.name}</td><td class="px-4 py-3"><code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${m.employeeId}</code></td><td class="px-4 py-3">${m.area?`<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.area}</span>`:'-'}</td><td class="px-4 py-3"><span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${m.territory}</span></td><td class="px-4 py-3"><input type="text" class="sales-tp1 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 bg-slate-50" value="${tp1Val}" data-mpoid="${id}" title="Auto carried from last month"></td><td class="px-4 py-3"><input type="text" class="sales-tp2 input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32 ${isQualified?'bg-emerald-50 font-bold text-emerald-700':''}" value="${tp2Val}" data-mpoid="${id}" placeholder="0"></td><td class="px-4 py-3"><input type="text" class="sales-commit input-focus border border-slate-300 rounded-lg px-3 py-1.5 text-sm outline-none w-32" value="${commitVal}" data-mpoid="${id}" placeholder="0"></td><td class="px-4 py-3 text-center"><span class="bg-blue-50 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">${docCount} Doctors</span></td></tr>`;
             }).join('');
         }
         window.loadMPOSalesTable=loadMPOSalesTable;
-        function saveAllMPOSales(){const month=document.getElementById('salesMonth').value;if(!month){showToast('Month সিলেক্ট করুন','error');return;}const updates={};const tp1Inputs=document.querySelectorAll('.sales-tp1');const tp2Inputs=document.querySelectorAll('.sales-tp2');tp1Inputs.forEach(inp=>{const mpoId=inp.dataset.mpoid;const tp2Inp=[...tp2Inputs].find(i=>i.dataset.mpoid===mpoId);updates[mpoId]={tp1:inp.value.trim(),tp2:tp2Inp?tp2Inp.value.trim():''};});set(ref(db,'mpoSales/'+month),updates).then(()=>{showToast('MPO Sales সেভ হয়েছে ('+Object.keys(updates).length+' MPOs)');document.querySelectorAll('.sales-tp1,.sales-tp2').forEach(inp=>{inp.classList.add('sales-saved');setTimeout(()=>inp.classList.remove('sales-saved'),1000);});}).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
+        function saveAllMPOSales(){
+            const month=document.getElementById('salesMonth').value;
+            if(!month){showToast('Month সিলেক্ট করুন','error');return;}
+            const updates={};
+            const tp1Inputs=document.querySelectorAll('.sales-tp1');
+            const tp2Inputs=document.querySelectorAll('.sales-tp2');
+            const commitInputs=document.querySelectorAll('.sales-commit');
+            tp1Inputs.forEach(inp=>{
+                const mpoId=inp.dataset.mpoid;
+                const tp2Inp=[...tp2Inputs].find(i=>i.dataset.mpoid===mpoId);
+                const commitInp=[...commitInputs].find(i=>i.dataset.mpoid===mpoId);
+                updates[mpoId]={
+                    tp1:inp.value.trim(),
+                    tp2:tp2Inp?tp2Inp.value.trim():'',
+                    commit:commitInp?commitInp.value.trim():''
+                };
+            });
+            set(ref(db,'mpoSales/'+month),updates).then(()=>{showToast('MPO Sales সেভ হয়েছে ('+Object.keys(updates).length+' MPOs)');document.querySelectorAll('.sales-tp1,.sales-tp2,.sales-commit').forEach(inp=>{inp.classList.add('sales-saved');setTimeout(()=>inp.classList.remove('sales-saved'),1000);});}).catch(err=>showToast('সমস্যা: '+err.message,'error'));
+        }
         window.saveAllMPOSales=saveAllMPOSales;
         function populatePOTypeDropdown() {
             const sel = document.getElementById('poEntryType');
@@ -2130,7 +2149,7 @@
                 return ea.localeCompare(eb);
             });
             sortedMpoIds.forEach(mpoId=>{
-                const group=mpoGroups[mpoId];const mpo=group.mpo;const sales=monthSales[mpoId]||{tp1:'',tp2:''};
+                const group=mpoGroups[mpoId];const mpo=group.mpo;const sales=monthSales[mpoId]||{tp1:'',tp2:'',commit:''};
                 group.doctors.forEach(item=>{
                     const amount=item.entry?(item.entry.amount||0):(item.doc.amount||0);
                     const remarks=item.entry?(item.entry.remarks||''):''; 
@@ -2141,7 +2160,7 @@
                         mpoId:mpoId,
                         active:item.doc.active!==false,
                         mpoEmpId:mpo.employeeId||'-',mpoName:mpo.name||'-',mpoArea:mpo.area||'-',territory:mpo.territory||'-',
-                        tp1:sales.tp1||'-',tp2:sales.tp2||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks,
+                        tp1:sales.tp1||'-',tp2:sales.tp2||'-',commit:sales.commit||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks,
                         isPaid: isPaid
                     });
                 });
@@ -2155,7 +2174,7 @@
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
             if(flatRows.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="11" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
                 let cumulativeTotal=0; 
@@ -2168,7 +2187,7 @@
                     html+=`<div style="${!isLastPage?'page-break-after: always;':''}">`;
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
                     html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
-                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
+                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
                     pageRows.forEach(row=>{
                         globalSl++;
                         if(row.active) globalActiveSl++;
@@ -2184,6 +2203,7 @@
                             <td style="font-weight:500;">${row.docName}</td>
                             <td class="no-print" style="text-align:center;font-weight:700;${row.isPaid?'color:#059669;':'color:#dc2626;'}">${row.isPaid?'✔ Paid':'Pending'}</td>
                             <td style="text-align:right;font-weight:700;">${row.active?Number(row.amount).toLocaleString():'-'}</td>
+                            <td style="text-align:right;font-weight:600;">${row.commit}</td>
                             <td style="font-size:10px;">
                                 <input type="text" class="ps-remark-input w-full text-[10px] border border-slate-300 rounded px-1" value="${row.remarks}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-amount="${row.amount}">
                             </td>
@@ -2195,13 +2215,13 @@
                         </tr>`;
                     });
                     html+=`</tbody><tfoot>`;
-                    html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (${activePageCount} Active Doctor)</td><td class="no-print"></td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                    html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (${activePageCount} Active Doctor)</td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     if(isLastPage){
                         if(pages.length>1){
-                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td class="no-print"></td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                         }
                         const grandTotalLabel = pages.length>1 ? `Grand Total (Page 1+2+...+${pages.length} = ${totalActiveItems} Active Doctor)` : `Grand Total (${totalActiveItems} Active Doctor)`;
-                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">${grandTotalLabel}</td><td class="no-print"></td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">${grandTotalLabel}</td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     html+=`</tfoot></table>`;
                     if(isLastPage){
@@ -2257,13 +2277,13 @@
             aoa.push([COMPANY.depot]);
             aoa.push([`Doctor Honorarium List ${month}`]);
             aoa.push([]);
-            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Amount', 'Remarks']);
+            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Amount', 'Comitment Sales', 'Remarks']);
             let sl = 0;
             let totalAmount = 0;
             sortedMpoIds.forEach(mpoId => {
                 const group = mpoGroups[mpoId];
                 const mpo = group.mpo;
-                const sales = mpoSalesCache[month]?.[mpoId] || {tp1:'', tp2:''};
+                const sales = mpoSalesCache[month]?.[mpoId] || {tp1:'', tp2:'', commit:''};
                 group.doctors.forEach(item => {
                     if(item.doc.active === false) return;
                     sl++;
@@ -2283,6 +2303,7 @@
                         item.doc.name || '-',
                         isPaid ? 'Paid' : 'Pending',
                         amount,
+                        sales.commit || '-',
                         remarks
                     ]);
                 });
@@ -2292,19 +2313,19 @@
                 return;
             }
             aoa.push([]);
-            aoa.push(['', '', '', '', '', '', '', '', '', 'Grand Total:', totalAmount, '']);
+            aoa.push(['', '', '', '', '', '', '', '', '', 'Grand Total:', totalAmount, '', '']);
             aoa.push([]);
             aoa.push([`Date: ${formatDateDMY(new Date())}`]);
             aoa.push([`Taka In Word: ${numberToWords(totalAmount)}`]);
             const ws = XLSX.utils.aoa_to_sheet(aoa);
             ws['!merges'] = [
-                { s: { r: 0, c: 0 }, e: { r: 0, c: 11 } },
-                { s: { r: 1, c: 0 }, e: { r: 1, c: 11 } },
-                { s: { r: 2, c: 0 }, e: { r: 2, c: 11 } },
-                { s: { r: 3, c: 0 }, e: { r: 3, c: 11 } }
+                { s: { r: 0, c: 0 }, e: { r: 0, c: 12 } },
+                { s: { r: 1, c: 0 }, e: { r: 1, c: 12 } },
+                { s: { r: 2, c: 0 }, e: { r: 2, c: 12 } },
+                { s: { r: 3, c: 0 }, e: { r: 3, c: 12 } }
             ];
             ws['!cols'] = [
-                {wch: 5}, {wch: 10}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 12}, {wch: 25}
+                {wch: 5}, {wch: 10}, {wch: 20}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 10}, {wch: 10}, {wch: 25}, {wch: 10}, {wch: 12}, {wch: 15}, {wch: 25}
             ];
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Print Sheet');
