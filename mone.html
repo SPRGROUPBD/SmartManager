@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDK (Compat version for global access like Appwrite) -->
+    <!-- Firebase SDK (Compat version for global access) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
@@ -681,10 +681,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Base path for all data
         const ROOT_REF = 'MonicoOne';
-
-        // Collection path helpers
         const REF = {
             USERS: `${ROOT_REF}/users`,
             MENUS: `${ROOT_REF}/menus`,
@@ -746,11 +743,10 @@
         let adminActiveGrid = 'grid1';
         let dynamicSidebarMenus = [];
 
-        // Realtime listener references (to avoid duplicates)
         let listenersAttached = false;
         
         // ============================================
-        // CACHE CONFIGURATION (NEW)
+        // CACHE CONFIGURATION
         // ============================================
         let isDataLoadedFromCache = false;
         const CACHE_KEYS = {
@@ -864,23 +860,64 @@
         }
 
         // ============================================
-        // FIREBASE HELPERS - Convert snapshot to array
+        // FIREBASE HELPERS
         // ============================================
         function snapshotToArray(snapshot) {
             const val = snapshot.val();
             if (!val) return [];
             return Object.keys(val).map(key => ({ ...val[key], $id: key, id: key }));
         }
-
         async function getOnce(path) {
             const snap = await db.ref(path).once('value');
             return snapshotToArray(snap);
         }
 
         // ============================================
-        // FILE UPLOAD - Convert to Base64 (saved directly in RTDB)
+        // FILE UPLOAD - Convert to Base64 with Compression
         // ============================================
+        async function compressImage(file, maxWidth = 800, quality = 0.7) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        let canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Convert to JPEG base64 with compression
+                        const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        resolve(dataUrl);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
         async function uploadFileToStorage(file) {
+            // If it's an image, compress it first
+            if (file.type.startsWith('image/')) {
+                try {
+                    return await compressImage(file, 800, 0.7); // Max width 800px, 70% quality
+                } catch (error) {
+                    console.error("Image Compression Error:", error);
+                    showToast('ছবি কম্প্রেস করতে সমস্যা!');
+                    return APP_LOGO_URL;
+                }
+            }
+            
+            // If it's a PDF or other file, read as it is
             return new Promise((resolve, reject) => {
                 try {
                     const reader = new FileReader();
@@ -943,7 +980,7 @@
         }
 
         // ============================================
-        // CACHE HELPER FUNCTIONS (NEW)
+        // CACHE HELPER FUNCTIONS
         // ============================================
         function updateLocalCache(dataType, data) {
             try {
@@ -1051,7 +1088,7 @@
         window.togglePasswordVisibility = function() { const passInput = document.getElementById('password'); passInput.type = passInput.type === 'password' ? 'text' : 'password'; }
 
         // ============================================
-        // LOGIN (Firebase RTDB users node)
+        // LOGIN
         // ============================================
         window.handleLogin = async function(e) {
             e.preventDefault();
@@ -1120,16 +1157,14 @@
         }
 
         // ============================================
-        // REALTIME LISTENERS (Firebase .on('value'))
+        // REALTIME LISTENERS
         // ============================================
         function initListeners() {
-            // Initial fetch
             fetchMenus(); fetchProductCards(); fetchTrainingCards(); fetchTargetSheets(); fetchSidebarMenus(); fetchAds();
 
-            if (listenersAttached) return; // Prevent duplicate subscriptions
+            if (listenersAttached) return; 
             listenersAttached = true;
 
-            // Realtime subscriptions via Firebase .on('value')
             db.ref(REF.MENUS).on('value', () => fetchMenus());
             db.ref(REF.PRODUCT_LAUNCH_CARDS).on('value', () => fetchProductCards());
             db.ref(REF.PRODUCT_TRAINING_CARDS).on('value', () => fetchTrainingCards());
@@ -1144,7 +1179,7 @@
         async function fetchAds() {
             try {
                 globalAds = await getOnce(REF.ADVERTISEMENTS);
-                updateLocalCache('ADS', globalAds); // Cache Update
+                updateLocalCache('ADS', globalAds);
                 renderAds();
             } catch(e) { console.error(e); }
         }
@@ -1183,35 +1218,35 @@
                     seenBy: doc.seenBy && typeof doc.seenBy === 'object' ? doc.seenBy : {} 
                 }));
                 isMenusLoaded = true; renderMenus(); renderAds();
-                updateLocalCache('MENUS', globalMenus); // Cache Update
+                updateLocalCache('MENUS', globalMenus);
             } catch(e) { console.error(e); }
         }
         async function fetchProductCards() {
             try {
                 globalProductCards = await getOnce(REF.PRODUCT_LAUNCH_CARDS);
                 isProductCardsLoaded = true; renderProductCards(); renderAds();
-                updateLocalCache('PRODUCTS', globalProductCards); // Cache Update
+                updateLocalCache('PRODUCTS', globalProductCards);
             } catch(e) { console.error(e); }
         }
         async function fetchTrainingCards() {
             try {
                 globalTrainingCards = await getOnce(REF.PRODUCT_TRAINING_CARDS);
                 isTrainingCardsLoaded = true; renderTrainingCards(); renderAds();
-                updateLocalCache('TRAININGS', globalTrainingCards); // Cache Update
+                updateLocalCache('TRAININGS', globalTrainingCards);
             } catch(e) { console.error(e); }
         }
         async function fetchTargetSheets() {
             try {
                 globalTargetSheets = await getOnce(REF.PRODUCT_TARGET_SHEETS);
                 isTargetSheetsLoaded = true; renderTargetSheets(); renderAds();
-                updateLocalCache('TARGETS', globalTargetSheets); // Cache Update
+                updateLocalCache('TARGETS', globalTargetSheets);
             } catch(e) { console.error(e); }
         }
         async function fetchSidebarMenus() {
             try {
                 dynamicSidebarMenus = await getOnce(REF.SIDEBAR_MENUS);
                 renderSidebarMenus();
-                updateLocalCache('SIDEBAR', dynamicSidebarMenus); // Cache Update
+                updateLocalCache('SIDEBAR', dynamicSidebarMenus);
             } catch(e) { console.error(e); }
         }
 
@@ -1235,15 +1270,14 @@
                 await Promise.all([fetchMenus(), fetchProductCards(), fetchTrainingCards(), fetchTargetSheets(), fetchSidebarMenus(), fetchAds()]);
                 const sliders = await getOnce(REF.SLIDERS);
                 renderSlidersUI(sliders);
-                updateLocalCache('SLIDERS', sliders); // Cache Update
+                updateLocalCache('SLIDERS', sliders);
                 
                 const notices = await getOnce(REF.NOTICES);
                 document.getElementById('marqueeText').innerText = notices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।";
-                updateLocalCache('NOTICES', notices); // Cache Update
+                updateLocalCache('NOTICES', notices);
 
                 syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate');
                 
-                // Last Sync Time Save
                 const now = new Date();
                 localStorage.setItem(CACHE_KEYS.LAST_SYNC, now.toISOString());
                 updateSyncTimeBadge();
@@ -1321,7 +1355,7 @@
         async function checkPopupNotice() { 
             try {
                 activePopupsQueue = await getOnce(REF.POPUP_NOTICE);
-                updateLocalCache('POPUPS', activePopupsQueue); // Cache Update
+                updateLocalCache('POPUPS', activePopupsQueue);
                 activePopupsQueue = activePopupsQueue.filter(p => p.status === 'active');
                 currentPopupIndex = 0; showNextPopup();
             } catch(e) { console.error(e); }
@@ -1359,7 +1393,7 @@
             wrapper.innerHTML = ''; dots.innerHTML = '';
             if (sliders.length === 0) { wrapper.innerHTML = `<div class="min-w-full h-full flex flex-col items-center justify-center p-4 text-center text-slate-400 bg-slate-100 dark:bg-slate-800"><i class="fa-regular fa-images text-2xl mb-1"></i><p class="text-[11px]">কোনো স্লাইডার নেই।</p></div>`; return; }
             sliders.forEach((slide, idx) => { 
-                wrapper.innerHTML += `<div class="min-w-full h-full relative flex items-center justify-center"><img src="${slide.image}" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent flex flex-col justify-end p-3 text-white"><h4 class="font-bold text-xs leading-snug">${slide.title}</h4></div></div>`; 
+                wrapper.innerHTML += `<div class="min-w-full h-full relative flex items-center justify-center"><img src="${slide.image}" loading="lazy" class="w-full h-full object-cover"><div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-transparent flex flex-col justify-end p-3 text-white"><h4 class="font-bold text-xs leading-snug">${slide.title}</h4></div></div>`; 
                 dots.innerHTML += `<button onclick="goToSlide(${idx})" class="w-1.5 h-1.5 rounded-full bg-white/50 transition-all"></button>`; 
             });
             if (sliderTimer) clearInterval(sliderTimer);
@@ -1369,7 +1403,7 @@
             try { 
                 const docs = await getOnce(REF.SLIDERS); 
                 renderSlidersUI(docs); 
-                updateLocalCache('SLIDERS', docs); // Cache Update
+                updateLocalCache('SLIDERS', docs);
             } catch(e) {} 
         }
         window.goToSlide = function(index) { currentSlideIndex = index; document.getElementById('sliderWrapper').style.transform = `translateX(-${currentSlideIndex * 100}%)`; }
@@ -1378,7 +1412,7 @@
             try { 
                 const docs = await getOnce(REF.NOTICES); 
                 document.getElementById('marqueeText').innerText = docs.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; 
-                updateLocalCache('NOTICES', docs); // Cache Update
+                updateLocalCache('NOTICES', docs);
             } catch(e) {} 
         }
 
@@ -1393,7 +1427,7 @@
             else {
                 section.classList.remove('hidden');
                 globalProductCards.forEach(card => {
-                    container.innerHTML += `<div onclick="openProductCardViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
+                    container.innerHTML += `<div onclick="openProductCardViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
                 });
             }
             renderAds();
@@ -1406,7 +1440,7 @@
             else {
                 section.classList.remove('hidden');
                 globalTrainingCards.forEach(card => {
-                    container.innerHTML += `<div onclick="openTrainingCardViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
+                    container.innerHTML += `<div onclick="openTrainingCardViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
                 });
             }
             renderAds();
@@ -1419,7 +1453,7 @@
             else {
                 section.classList.remove('hidden');
                 globalTargetSheets.forEach(card => {
-                    container.innerHTML += `<div onclick="openTargetSheetViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
+                    container.innerHTML += `<div onclick="openTargetSheetViewer('${card.id}')" class="ripple group relative w-[110px] h-[120px] shrink-0 rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80"><img src="${card.image}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${card.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${card.title}</span></div></div>`;
                 });
             }
             renderAds();
@@ -1455,7 +1489,7 @@
         }
         
         // ============================================
-        // CONTENT VIEWER (handles base64 PDFs & images)
+        // CONTENT VIEWER
         // ============================================
         window.openContentViewer = function(url, title) { 
             closeSidebar(); 
@@ -1463,7 +1497,7 @@
             const iframe = document.getElementById('contentViewer');
             if (isPdfUrl(url)) {
                 currentPdfUrl = url;
-                loadPdfIntoIframe(iframe, url); // Updated to support mobile
+                loadPdfIntoIframe(iframe, url); 
                 document.getElementById('openInNewTabBtn').classList.remove('hidden');
                 document.getElementById('downloadPdfBtn').classList.remove('hidden');
                 document.getElementById('printContentBtn').classList.add('hidden');
@@ -1491,7 +1525,7 @@
             currentPdfUrl = url;
             document.getElementById('contentViewerTitle').innerText = title || 'PDF Viewer';
             const iframe = document.getElementById('contentViewer');
-            loadPdfIntoIframe(iframe, url); // Updated to support mobile
+            loadPdfIntoIframe(iframe, url); 
             document.getElementById('openInNewTabBtn').classList.remove('hidden');
             document.getElementById('downloadPdfBtn').classList.remove('hidden');
             document.getElementById('printContentBtn').classList.add('hidden');
@@ -1499,7 +1533,6 @@
         };
         window.openPdfInNewTab = function() {
             if (!currentPdfUrl) { showToast('PDF লিংক পাওয়া যায়নি!'); return; }
-            // For base64 PDFs, open in new window via blob
             if (currentPdfUrl.startsWith('data:application/pdf')) {
                 const win = window.open();
                 win.document.write(`<iframe src="${currentPdfUrl}" style="width:100%;height:100vh;border:0;"></iframe>`);
@@ -1511,7 +1544,6 @@
             if (!currentPdfUrl) { showToast('PDF লিংক পাওয়া যায়নি!'); return; }
             const title = (document.getElementById('contentViewerTitle').innerText || 'document').replace(/[^\w\u0980-\u09FF]+/g, '_');
             if (currentPdfUrl.startsWith('data:')) {
-                // For base64, create a download link
                 const a = document.createElement('a'); 
                 a.href = currentPdfUrl; 
                 a.download = title + '.pdf';
@@ -1591,7 +1623,7 @@
             let sizeClass = ''; if (isPinned) sizeClass = 'w-[110px] h-[120px] shrink-0'; else if (m.group === 'grid1') sizeClass = 'w-full h-[120px]'; else sizeClass = 'w-[110px] h-[120px] shrink-0';
             if (isImageCard && !isPdfGroup) {
                 const imgSrc = m.icon && (m.icon.startsWith('http') || m.icon.startsWith('data:image')) ? m.icon : (imgArray[0] || APP_LOGO_URL);
-                return `<div onclick="${clickAction}" class="ripple group relative ${sizeClass} rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80">${redDot}${pageCount}<img src="${imgSrc}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${m.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${m.title}</span>${dateBadge}</div></div>`;
+                return `<div onclick="${clickAction}" class="ripple group relative ${sizeClass} rounded-m3 overflow-hidden shadow-xs hover:shadow-lg transition-all duration-300 cursor-pointer border border-slate-200/80 dark:border-slate-700/80">${redDot}${pageCount}<img src="${imgSrc}" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" onerror="this.onerror=null; this.src='${APP_LOGO_URL}';" alt="${m.title}"><div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-transparent p-2 pt-5 text-white"><span class="font-bold text-[11px] line-clamp-1 block drop-shadow-md">${m.title}</span>${dateBadge}</div></div>`;
             } else {
                 iconMarkup = isPdfGroup ? `<i class="fa-solid fa-file-pdf text-lg"></i>` : `<i class="fa-solid ${m.icon || 'fa-folder'} text-lg"></i>`;
                 return `<div onclick="${clickAction}" class="ripple group relative bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 hover:border-primary/50 rounded-m3 p-2.5 flex flex-col items-center justify-center text-center space-y-1.5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer ${sizeClass}">${redDot}<div class="w-12 h-12 rounded-2xl bg-gradient-to-br ${m.color || (isPdfGroup ? 'from-red-500 to-rose-600' : 'from-primary to-secondary')} text-white flex items-center justify-center shadow-md shadow-primary/20 group-hover:scale-110 transition-transform duration-300 overflow-hidden">${iconMarkup}</div><div class="w-full"><span class="font-bold text-[11px] text-slate-700 dark:text-slate-200 line-clamp-1">${m.title}</span>${dateBadge}</div></div>`;
@@ -1694,7 +1726,7 @@
                 }
                 const sliders = await getOnce(REF.SLIDERS);
                 renderSlidersUI(sliders);
-                updateLocalCache('SLIDERS', sliders); // Cache Update
+                updateLocalCache('SLIDERS', sliders); 
                 resetSliderForm(); 
                 filterAdminList('slider', document.getElementById('adminSearchSlider') ? document.getElementById('adminSearchSlider').value : '');
             } catch(e) { showToast('সেভ করতে সমস্যা!'); }
@@ -1721,7 +1753,7 @@
                     adminGlobalSliders = adminGlobalSliders.filter(s => s.$id !== key);
                     const sliders = await getOnce(REF.SLIDERS);
                     renderSlidersUI(sliders);
-                    updateLocalCache('SLIDERS', sliders); // Cache Update
+                    updateLocalCache('SLIDERS', sliders); 
                     filterAdminList('slider', document.getElementById('adminSearchSlider') ? document.getElementById('adminSearchSlider').value : '');
                 } catch(e) {} 
             } 
@@ -1762,7 +1794,7 @@
                 showToast(`মেনু সফলভাবে ${newStatus === 'active' ? 'Active' : 'Inactive'} করা হয়েছে!`); 
                 adminGlobalMenus = adminGlobalMenus.map(m => m.$id === key ? {...m, status: newStatus} : m);
                 globalMenus = globalMenus.map(m => m.id === key ? {...m, status: newStatus} : m);
-                updateLocalCache('MENUS', globalMenus); // Cache Update
+                updateLocalCache('MENUS', globalMenus); 
                 renderMenus(); filterAdminMenus(adminActiveGrid);
             } catch(err) { showToast('স্ট্যাটাস আপডেট করতে সমস্যা!'); }
         };
@@ -1827,7 +1859,7 @@
                     const newMenu = { ...menuData, $id: newRef.key, id: newRef.key, images: Array.isArray(menuData.images) ? menuData.images : [], seenBy: menuData.seenBy || {} };
                     adminGlobalMenus.push(newMenu); globalMenus.push(newMenu);
                 }
-                updateLocalCache('MENUS', globalMenus); // Cache Update
+                updateLocalCache('MENUS', globalMenus); 
                 renderMenus(); filterAdminMenus(adminActiveGrid); resetMenuForm();
             } catch (err) { showToast('সেভ করতে সমস্যা!'); console.error(err); }
             menuSaveBtn.disabled = false; menuSaveBtnText.innerText = editKey ? 'আপডেট করুন' : 'মেনু সংরক্ষণ করুন';
@@ -1885,7 +1917,7 @@
                     showToast('সফলভাবে মুছে ফেলা হয়েছে!'); 
                     adminGlobalMenus = adminGlobalMenus.filter(m => m.$id !== key);
                     globalMenus = globalMenus.filter(m => m.id !== key);
-                    updateLocalCache('MENUS', globalMenus); // Cache Update
+                    updateLocalCache('MENUS', globalMenus); 
                     renderMenus(); filterAdminMenus(adminActiveGrid);
                 } catch(e) {} 
             } 
@@ -1925,7 +1957,7 @@
                     const newMenu = {...data, $id: newRef.key, id: newRef.key};
                     adminGlobalSidebarMenus.push(newMenu); dynamicSidebarMenus.push(newMenu);
                 }
-                updateLocalCache('SIDEBAR', dynamicSidebarMenus); // Cache Update
+                updateLocalCache('SIDEBAR', dynamicSidebarMenus); 
                 renderSidebarMenus(); resetSidebarMenuForm(); 
                 filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : '');
             } catch(e) { showToast('Error!'); }
@@ -1956,7 +1988,7 @@
                     showToast('মেনু মুছে ফেলা হয়েছে!'); 
                     adminGlobalSidebarMenus = adminGlobalSidebarMenus.filter(m => m.$id !== key);
                     dynamicSidebarMenus = dynamicSidebarMenus.filter(m => m.id !== key);
-                    updateLocalCache('SIDEBAR', dynamicSidebarMenus); // Cache Update
+                    updateLocalCache('SIDEBAR', dynamicSidebarMenus); 
                     renderSidebarMenus();
                     filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : '');
                 } catch(e) {} 
@@ -2001,7 +2033,7 @@
                     adminGlobalNotices.push({ text, $id: newRef.key, id: newRef.key });
                 } 
                 document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।";
-                updateLocalCache('NOTICES', adminGlobalNotices); // Cache Update
+                updateLocalCache('NOTICES', adminGlobalNotices); 
                 resetNoticeForm(); 
                 filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : ''); 
             } catch(e) {}
@@ -2027,7 +2059,7 @@
                     showToast('নোটিশ মুছে ফেলা হয়েছে!'); 
                     adminGlobalNotices = adminGlobalNotices.filter(n => n.$id !== key);
                     document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।";
-                    updateLocalCache('NOTICES', adminGlobalNotices); // Cache Update
+                    updateLocalCache('NOTICES', adminGlobalNotices); 
                     filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : '');
                 } catch(e) {} 
             } 
@@ -2077,7 +2109,7 @@
                     showToast('নতুন পপআপ যোগ হয়েছে!'); 
                     adminGlobalPopups.push({...popupData, $id: newRef.key, id: newRef.key});
                 }
-                updateLocalCache('POPUPS', adminGlobalPopups); // Cache Update
+                updateLocalCache('POPUPS', adminGlobalPopups); 
                 resetPopupForm(); 
                 filterAdminList('popup', document.getElementById('adminSearchPopup') ? document.getElementById('adminSearchPopup').value : '');
             } catch(e) { showToast('Error!'); } btn.disabled = false;
@@ -2113,7 +2145,7 @@
                     await db.ref(`${REF.POPUP_NOTICE}/${key}`).remove(); 
                     showToast('পপআপ মুছে ফেলা হয়েছে!'); 
                     adminGlobalPopups = adminGlobalPopups.filter(p => p.$id !== key);
-                    updateLocalCache('POPUPS', adminGlobalPopups); // Cache Update
+                    updateLocalCache('POPUPS', adminGlobalPopups); 
                     filterAdminList('popup', document.getElementById('adminSearchPopup') ? document.getElementById('adminSearchPopup').value : '');
                 } catch(e) {} 
             } 
@@ -2177,7 +2209,7 @@
                     const newCard = {...cardData, $id: newRef.key, id: newRef.key};
                     adminGlobalProductCards.push(newCard); globalProductCards.push(newCard);
                 } 
-                updateLocalCache('PRODUCTS', globalProductCards); // Cache Update
+                updateLocalCache('PRODUCTS', globalProductCards); 
                 renderProductCards(); resetProductCardForm(); 
                 filterAdminList('productCard', document.getElementById('adminSearchProductCard') ? document.getElementById('adminSearchProductCard').value : ''); 
             } catch(e) { showToast('Error!'); } btn.disabled = false;
@@ -2210,8 +2242,8 @@
                     await db.ref(`${REF.PRODUCT_LAUNCH_CARDS}/${key}`).remove(); 
                     showToast('কার্ড মুছে ফেলা হয়েছে!'); 
                     adminGlobalProductCards = adminGlobalProductCards.filter(c => c.$id !== key);
-                    globalProductCards = globalProductCards.filter(c => c.id === key);
-                    updateLocalCache('PRODUCTS', globalProductCards); // Cache Update
+                    globalProductCards = globalProductCards.filter(c => c.id !== key);
+                    updateLocalCache('PRODUCTS', globalProductCards); 
                     renderProductCards();
                     filterAdminList('productCard', document.getElementById('adminSearchProductCard') ? document.getElementById('adminSearchProductCard').value : '');
                 } catch(e) {} 
@@ -2274,7 +2306,7 @@
                     const newCard = {...cardData, $id: newRef.key, id: newRef.key};
                     adminGlobalTrainingCards.push(newCard); globalTrainingCards.push(newCard);
                 } 
-                updateLocalCache('TRAININGS', globalTrainingCards); // Cache Update
+                updateLocalCache('TRAININGS', globalTrainingCards); 
                 renderTrainingCards(); resetTrainingCardForm(); 
                 filterAdminList('trainingCard', document.getElementById('adminSearchTrainingCard') ? document.getElementById('adminSearchTrainingCard').value : ''); 
             } catch(e) { showToast('Error!'); } btn.disabled = false;
@@ -2308,7 +2340,7 @@
                     showToast('ট্রেনিং কার্ড মুছে ফেলা হয়েছে!'); 
                     adminGlobalTrainingCards = adminGlobalTrainingCards.filter(c => c.$id !== key);
                     globalTrainingCards = globalTrainingCards.filter(c => c.id !== key);
-                    updateLocalCache('TRAININGS', globalTrainingCards); // Cache Update
+                    updateLocalCache('TRAININGS', globalTrainingCards); 
                     renderTrainingCards();
                     filterAdminList('trainingCard', document.getElementById('adminSearchTrainingCard') ? document.getElementById('adminSearchTrainingCard').value : '');
                 } catch(e) {} 
@@ -2371,7 +2403,7 @@
                     const newCard = {...cardData, $id: newRef.key, id: newRef.key};
                     adminGlobalTargetSheets.push(newCard); globalTargetSheets.push(newCard);
                 } 
-                updateLocalCache('TARGETS', globalTargetSheets); // Cache Update
+                updateLocalCache('TARGETS', globalTargetSheets); 
                 renderTargetSheets(); resetTargetSheetForm(); 
                 filterAdminList('targetSheet', document.getElementById('adminSearchTargetSheet') ? document.getElementById('adminSearchTargetSheet').value : ''); 
             } catch(e) { showToast('Error!'); } btn.disabled = false;
@@ -2405,7 +2437,7 @@
                     showToast('টার্গেট শিট মুছে ফেলা হয়েছে!'); 
                     adminGlobalTargetSheets = adminGlobalTargetSheets.filter(c => c.$id !== key);
                     globalTargetSheets = globalTargetSheets.filter(c => c.id !== key);
-                    updateLocalCache('TARGETS', globalTargetSheets); // Cache Update
+                    updateLocalCache('TARGETS', globalTargetSheets); 
                     renderTargetSheets();
                     filterAdminList('targetSheet', document.getElementById('adminSearchTargetSheet') ? document.getElementById('adminSearchTargetSheet').value : '');
                 } catch(e) {} 
@@ -2549,7 +2581,7 @@
                     const newAd = {...adData, $id: newRef.key, id: newRef.key};
                     adminGlobalAds.push(newAd); globalAds.push(newAd);
                 }
-                updateLocalCache('ADS', globalAds); // Cache Update
+                updateLocalCache('ADS', globalAds); 
                 renderAds();
                 resetAdForm(); 
                 filterAdminList('ads', document.getElementById('adminSearchAds') ? document.getElementById('adminSearchAds').value : '');
@@ -2576,7 +2608,7 @@
                     showToast('Ad মুছে ফেলা হয়েছে!'); 
                     adminGlobalAds = adminGlobalAds.filter(a => a.$id !== key);
                     globalAds = globalAds.filter(a => a.id !== key);
-                    updateLocalCache('ADS', globalAds); // Cache Update
+                    updateLocalCache('ADS', globalAds); 
                     renderAds();
                     filterAdminList('ads', document.getElementById('adminSearchAds') ? document.getElementById('adminSearchAds').value : '');
                 } catch(e) {} 
