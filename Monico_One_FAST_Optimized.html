@@ -137,21 +137,23 @@
                 <div id="sidebarMenuList" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
             </div>
 
-            <!-- CONTENT VIEWER WRAPPER (PDF/URL) -->
-            <div id="contentViewerWrapper" class="absolute inset-0 bg-white dark:bg-slate-900 z-[60] hidden flex flex-col">
+            <!-- CONTENT VIEWER WRAPPER (PDF/URL) - FULL SCREEN FLOATING UI -->
+            <div id="contentViewerWrapper" class="absolute inset-0 bg-white dark:bg-slate-900 z-[60] hidden">
                 <iframe id="contentViewer" name="contentViewer" src="" class="absolute inset-0 w-full h-full border-0"></iframe>
                 
-                <!-- Bottom Floating Header/Close Button -->
-                <div class="absolute bottom-0 left-0 right-0 p-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-t border-slate-200 dark:border-slate-700 shadow-lg flex items-center justify-between gap-2 z-10">
-                    <h3 id="contentViewerTitle" class="font-bold text-sm text-slate-800 dark:text-white truncate flex-1 pl-2">Content Viewer</h3>
-                    <div class="flex items-center space-x-2 shrink-0 pr-2">
-                        <button onclick="openPdfInNewTab()" id="openInNewTabBtn" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition hidden" title="নতুন ট্যাবে খুলুন"><i class="fa-solid fa-up-right-from-square text-sm"></i></button>
-                        <button onclick="downloadPdf()" id="downloadPdfBtn" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition hidden" title="ডাউনলোড করুন"><i class="fa-solid fa-download text-sm"></i></button>
-                        <button onclick="printIframeContent()" id="printContentBtn" class="p-2 text-slate-700 dark:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="প্রিন্ট করুন"><i class="fa-solid fa-print text-sm"></i></button>
-                        <button onclick="closeContentViewer()" class="px-4 py-2 bg-danger text-white rounded-full font-bold text-sm flex items-center" title="বন্ধ করুন">
-                            <i class="fa-solid fa-xmark text-lg"></i> বন্ধ করুন
-                        </button>
-                    </div>
+                <!-- Top Floating Title -->
+                <div class="absolute top-3 left-3 z-10 bg-slate-900/60 dark:bg-slate-900/70 text-white px-3 py-1.5 rounded-full backdrop-blur-sm shadow-lg max-w-[60%]">
+                    <h3 id="contentViewerTitle" class="font-bold text-xs truncate">Content Viewer</h3>
+                </div>
+
+                <!-- Top Floating Close Button & Actions -->
+                <div class="absolute top-3 right-3 z-10 flex items-center space-x-2">
+                    <button onclick="openPdfInNewTab()" id="openInNewTabBtn" class="p-2.5 bg-slate-900/60 text-white rounded-full hover:bg-slate-900/90 transition hidden backdrop-blur-sm shadow-lg" title="নতুন ট্যাবে খুলুন"><i class="fa-solid fa-up-right-from-square text-sm"></i></button>
+                    <button onclick="downloadPdf()" id="downloadPdfBtn" class="p-2.5 bg-slate-900/60 text-white rounded-full hover:bg-slate-900/90 transition hidden backdrop-blur-sm shadow-lg" title="ডাউনলোড করুন"><i class="fa-solid fa-download text-sm"></i></button>
+                    <button onclick="printIframeContent()" id="printContentBtn" class="p-2.5 bg-slate-900/60 text-white rounded-full hover:bg-slate-900/90 transition backdrop-blur-sm shadow-lg" title="প্রিন্ট করুন"><i class="fa-solid fa-print text-sm"></i></button>
+                    <button onclick="closeContentViewer()" class="p-2.5 bg-danger text-white rounded-full hover:bg-red-700 transition shadow-lg" title="বন্ধ করুন">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
                 </div>
                 
                 <div id="pdfFallbackNotice" class="hidden absolute inset-x-0 bottom-20 p-4 bg-slate-900/90 text-white text-center text-xs">
@@ -821,10 +823,10 @@
                         <meta charset="utf-8">
                         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5.0, user-scalable=yes">
                         <style>
-                            body, html { margin: 0; padding: 0; width: 100%; background: #525659; overflow-x: hidden; }
-                            .pdf-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 20px; transform-origin: top center; transition: transform 0.1s; }
+                            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #525659; overflow-x: hidden; overflow-y: auto; }
+                            .pdf-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 20px; transform-origin: top center; transition: transform 0.1s; min-height: 100%; }
                             canvas { margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: white; width: 100% !important; height: auto !important; pointer-events: none; }
-                            #loading { color: white; font-family: sans-serif; text-align: center; padding-top: 20px; font-size: 16px; }
+                            #loading { color: white; font-family: sans-serif; text-align: center; padding-top: 40px; font-size: 16px; }
                         </style>
                         <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"><\/script>
                     </head>
@@ -1186,7 +1188,7 @@
             const currentPass = document.getElementById('currentPassInput').value.trim(); const newPass = document.getElementById('newPassInput').value.trim();
             if (!currentPass || !newPass) { showToast('সকল ফিল্ড পূরণ করুন'); return; }
             if (currentPass !== currentUserData.password) { showToast('বর্তমান পাসওয়ার্ড ভুল!'); return; }
-            if (newPass.length < 4) { showToast('নতুন পাসওয়ার্ড কমপক্ষে ৪ অক্ষরের হতে হবে'); return; }
+            if (newPass.length < 4) { showToast('নতুন পাসওয়ার্ড ন্যূনতম ৪ অক্ষরের হতে হবে'); return; }
             try { await db.ref(`${REF.USERS}/${currentUserData.$id || currentUserData.employeeId}`).update({ password: newPass }); currentUserData.password = newPass; try { localStorage.setItem('MonicoOne_current_user', JSON.stringify(currentUserData)); } catch(e) {} closeChangePassModal(); showToast('পাসওয়ার্ড সফলভাবে পরিবর্তন হয়েছে!'); } catch(e) { showToast('আপডেট করতে সমস্যা হয়েছে!'); }
         }
 
