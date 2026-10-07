@@ -1010,7 +1010,6 @@
                 if (targets) { globalTargetSheets = JSON.parse(targets); isTargetSheetsLoaded = true; renderTargetSheets(); }
                 if (sidebar) { dynamicSidebarMenus = JSON.parse(sidebar); renderSidebarMenus(); }
                 if (ads) { globalAds = JSON.parse(ads); renderAds(); }
-                if (menus || sliders || products) { isDataLoadedFromCache = true; showToast('ক্যাশ থেকে ডাটা লোড হয়েছে। সিঙ্ক হচ্ছে...'); }
                 updateSyncTimeBadge();
             } catch (e) {}
         }
@@ -1114,21 +1113,36 @@
             const userRole = (user.role || '').trim().toUpperCase(); const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN'; const isDIC = userRole === 'DIC';
             const adminBtn = document.getElementById('adminPanelBtn'); const hamburgerBtn = document.getElementById('hamburgerMenuBtn');
             if (isSuperAdmin || isDIC) { adminBtn.classList.remove('hidden'); hamburgerBtn.classList.remove('hidden'); } else { adminBtn.classList.add('hidden'); hamburgerBtn.classList.add('hidden'); }
-            loadInitialDataFromCache(); checkPopupNotice(); initListeners(); loadSliders(); loadNotices(); trackUserPresence(user); 
+            
+            // 1. INSTANTLY LOAD FROM CACHE (No Sync Spinner, App opens instantaneously)
+            loadInitialDataFromCache(); 
+            
+            // 2. FETCH ONLY IF NEW DATA EXISTS (Real-time Listeners)
+            checkPopupNotice(); 
+            initListeners(); 
+            trackUserPresence(user); 
         }
 
         // ============================================
-        // REALTIME LISTENERS
+        // REALTIME LISTENERS (Fetches ONLY if new data exists or changed)
         // ============================================
         function initListeners() {
             fetchMenus(); fetchProductCards(); fetchTrainingCards(); fetchTargetSheets(); fetchSidebarMenus(); fetchAds();
-            if (listenersAttached) return; listenersAttached = true;
+            fetchSliders(); fetchNotices(); // Initial fetch in background
+            
+            if (listenersAttached) return; 
+            listenersAttached = true;
+            
+            // Setting up real-time listeners for all nodes. 
+            // Firebase automatically downloads only the NEW/UPDATED data and skips if unchanged.
             db.ref(REF.MENUS).on('value', () => fetchMenus());
             db.ref(REF.PRODUCT_LAUNCH_CARDS).on('value', () => fetchProductCards());
             db.ref(REF.PRODUCT_TRAINING_CARDS).on('value', () => fetchTrainingCards());
             db.ref(REF.PRODUCT_TARGET_SHEETS).on('value', () => fetchTargetSheets());
             db.ref(REF.SIDEBAR_MENUS).on('value', () => fetchSidebarMenus());
             db.ref(REF.ADVERTISEMENTS).on('value', () => fetchAds());
+            db.ref(REF.SLIDERS).on('value', () => fetchSliders());
+            db.ref(REF.NOTICES).on('value', () => fetchNotices());
         }
 
         // ============================================
@@ -1153,6 +1167,8 @@
         async function fetchTrainingCards() { try { globalTrainingCards = await getOnce(REF.PRODUCT_TRAINING_CARDS); isTrainingCardsLoaded = true; renderTrainingCards(); renderAds(); updateLocalCache('TRAININGS', globalTrainingCards); } catch(e) {} }
         async function fetchTargetSheets() { try { globalTargetSheets = await getOnce(REF.PRODUCT_TARGET_SHEETS); isTargetSheetsLoaded = true; renderTargetSheets(); renderAds(); updateLocalCache('TARGETS', globalTargetSheets); } catch(e) {} }
         async function fetchSidebarMenus() { try { dynamicSidebarMenus = await getOnce(REF.SIDEBAR_MENUS); renderSidebarMenus(); updateLocalCache('SIDEBAR', dynamicSidebarMenus); } catch(e) {} }
+        async function fetchSliders() { try { const docs = await getOnce(REF.SLIDERS); renderSlidersUI(docs); updateLocalCache('SLIDERS', docs); } catch(e) {} }
+        async function fetchNotices() { try { const docs = await getOnce(REF.NOTICES); document.getElementById('marqueeText').innerText = docs.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', docs); } catch(e) {} }
 
         function trackUserPresence(user) { if (!user || !user.employeeId) return; const data = { employeeId: user.employeeId, fullName: user.fullName || user.employeeId, role: user.role || 'MPO', timestamp: Math.floor(Date.now() / 1000) }; db.ref(`${REF.ONLINE_USERS}/${user.employeeId}`).set(data); }
 
@@ -1160,9 +1176,7 @@
             const syncIcon = document.getElementById('syncIcon'); if (syncIcon.classList.contains('fa-spinner')) return; 
             syncIcon.classList.remove('fa-rotate'); syncIcon.classList.add('fa-spinner', 'fa-spin'); showToast('সিঙ্ক হচ্ছে...');
             try {
-                await Promise.all([fetchMenus(), fetchProductCards(), fetchTrainingCards(), fetchTargetSheets(), fetchSidebarMenus(), fetchAds()]);
-                const sliders = await getOnce(REF.SLIDERS); renderSlidersUI(sliders); updateLocalCache('SLIDERS', sliders);
-                const notices = await getOnce(REF.NOTICES); document.getElementById('marqueeText').innerText = notices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', notices);
+                await Promise.all([fetchMenus(), fetchProductCards(), fetchTrainingCards(), fetchTargetSheets(), fetchSidebarMenus(), fetchAds(), fetchSliders(), fetchNotices()]);
                 syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate');
                 const now = new Date(); localStorage.setItem(CACHE_KEYS.LAST_SYNC, now.toISOString()); updateSyncTimeBadge();
                 showToast('সিঙ্ক সম্পন্ন হয়েছে!');
@@ -1218,10 +1232,8 @@
             if (sliderTimer) clearInterval(sliderTimer);
             if (sliders.length > 0) { sliderTimer = setInterval(() => { currentSlideIndex = (currentSlideIndex + 1) % sliders.length; goToSlide(currentSlideIndex); }, 4000); }
         }
-        async function loadSliders() { try { const docs = await getOnce(REF.SLIDERS); renderSlidersUI(docs); updateLocalCache('SLIDERS', docs); } catch(e) {} }
         window.goToSlide = function(index) { currentSlideIndex = index; document.getElementById('sliderWrapper').style.transform = `translateX(-${currentSlideIndex * 100}%)`; }
-        async function loadNotices() { try { const docs = await getOnce(REF.NOTICES); document.getElementById('marqueeText').innerText = docs.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', docs); } catch(e) {} }
-
+        
         // ============================================
         // PRODUCT CARDS RENDER
         // ============================================
