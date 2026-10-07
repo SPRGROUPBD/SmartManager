@@ -709,7 +709,8 @@
             PRODUCT_TARGET_SHEETS: `${ROOT_REF}/product_target_sheets`,
             ONLINE_USERS: `${ROOT_REF}/online_users`,
             SIDEBAR_MENUS: `${ROOT_REF}/sidebar_menus`,
-            ADVERTISEMENTS: `${ROOT_REF}/advertisements`
+            ADVERTISEMENTS: `${ROOT_REF}/advertisements`,
+            META: `${ROOT_REF}/meta` // New meta path for checking updates
         };
 
         const APP_LOGO_URL = 'https://www.appcreator24.com/srv/imgs/gen/4111014_ico.png?ts=1785219565';
@@ -772,7 +773,8 @@
             TARGETS: 'MonicoOne_cache_targets',
             SIDEBAR: 'MonicoOne_cache_sidebar',
             ADS: 'MonicoOne_cache_ads',
-            LAST_SYNC: 'MonicoOne_last_sync'
+            LAST_SYNC: 'MonicoOne_last_sync',
+            LAST_UPDATE_TS: 'MonicoOne_last_update_ts' // To track database version
         };
 
         const monthFullMap = {"January":0, "February":1, "March":2, "April":3, "May":4, "June":5, "July":6, "August":7, "September":8, "October":9, "November":10, "December":11};
@@ -811,7 +813,7 @@
         }
 
         // ============================================
-        // MOBILE FRIENDLY PDF RENDERER (PDF.js) + 2-FINGER PINCH ZOOM
+        // MOBILE FRIENDLY PDF RENDERER (PDF.js) + 2-FINGER PINCH ZOOM & 1-FINGER PAN
         // ============================================
         function loadPdfIntoIframe(iframeElement, pdfUrl) {
             if (pdfUrl.startsWith('data:application/pdf')) {
@@ -823,8 +825,8 @@
                         <meta charset="utf-8">
                         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5.0, user-scalable=yes">
                         <style>
-                            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #525659; overflow-x: hidden; overflow-y: auto; }
-                            .pdf-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 20px; transform-origin: top center; transition: transform 0.1s; min-height: 100%; }
+                            body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #525659; overflow: hidden; }
+                            .pdf-container { display: flex; flex-direction: column; align-items: center; padding-bottom: 20px; transform-origin: top center; min-height: 100%; will-change: transform; }
                             canvas { margin-bottom: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); background: white; width: 100% !important; height: auto !important; pointer-events: none; }
                             #loading { color: white; font-family: sans-serif; text-align: center; padding-top: 40px; font-size: 16px; }
                         </style>
@@ -863,23 +865,57 @@
                                 document.getElementById('loading').innerText = 'PDF লোড করতে সমস্যা হয়েছে।';
                             });
 
-                            // 2-Finger Pinch Zoom Logic
+                            // Pinch Zoom & 1-Finger Pan Logic
                             let pdfScale = 1, pdfStartDist = 0, pdfStartScale = 1;
+                            let isPanning = false, panStartX = 0, panStartY = 0, panCurrentX = 0, panCurrentY = 0;
+                            
+                            function applyTransform() {
+                                document.getElementById('pdf-container').style.transform = 'translate(' + panCurrentX + 'px, ' + panCurrentY + 'px) scale(' + pdfScale + ')';
+                            }
+
                             document.addEventListener('touchstart', function(e) {
                                 if (e.touches.length === 2) {
                                     e.preventDefault();
                                     pdfStartDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                                     pdfStartScale = pdfScale;
+                                    isPanning = false;
+                                } else if (e.touches.length === 1 && pdfScale > 1) {
+                                    e.preventDefault();
+                                    isPanning = true;
+                                    panStartX = e.touches[0].clientX - panCurrentX;
+                                    panStartY = e.touches[0].clientY - panCurrentY;
                                 }
                             }, { passive: false });
+
                             document.addEventListener('touchmove', function(e) {
                                 if (e.touches.length === 2) {
                                     e.preventDefault();
                                     let dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
                                     if (pdfStartDist > 0) {
                                         pdfScale = Math.max(0.5, Math.min(pdfStartScale * (dist / pdfStartDist), 5));
-                                        document.getElementById('pdf-container').style.transform = 'scale(' + pdfScale + ')';
+                                        applyTransform();
                                     }
+                                } else if (e.touches.length === 1 && isPanning) {
+                                    e.preventDefault();
+                                    panCurrentX = e.touches[0].clientX - panStartX;
+                                    panCurrentY = e.touches[0].clientY - panStartY;
+                                    applyTransform();
+                                }
+                            }, { passive: false });
+
+                            document.addEventListener('touchend', function(e) {
+                                if (e.touches.length === 0) {
+                                    isPanning = false;
+                                    if (pdfScale <= 1) {
+                                        pdfScale = 1;
+                                        panCurrentX = 0;
+                                        panCurrentY = 0;
+                                        applyTransform();
+                                    }
+                                } else if (e.touches.length === 1 && pdfScale > 1) {
+                                    isPanning = true;
+                                    panStartX = e.touches[0].clientX - panCurrentX;
+                                    panStartY = e.touches[0].clientY - panCurrentY;
                                 }
                             }, { passive: false });
                         <\/script>
@@ -903,6 +939,11 @@
         async function getOnce(path) {
             const snap = await db.ref(path).once('value');
             return snapshotToArray(snap);
+        }
+
+        // Function to bump database timestamp when new data is added
+        function updateMetaTimestamp() {
+            db.ref(`${REF.META}/last_update`).set(firebase.database.ServerValue.TIMESTAMP).catch(e=>{});
         }
 
         // ============================================
@@ -1010,6 +1051,7 @@
                 if (targets) { globalTargetSheets = JSON.parse(targets); isTargetSheetsLoaded = true; renderTargetSheets(); }
                 if (sidebar) { dynamicSidebarMenus = JSON.parse(sidebar); renderSidebarMenus(); }
                 if (ads) { globalAds = JSON.parse(ads); renderAds(); }
+                if (menus || sliders || products) { isDataLoadedFromCache = true; }
                 updateSyncTimeBadge();
             } catch (e) {}
         }
@@ -1113,74 +1155,78 @@
             const userRole = (user.role || '').trim().toUpperCase(); const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'SUPER ADMIN'; const isDIC = userRole === 'DIC';
             const adminBtn = document.getElementById('adminPanelBtn'); const hamburgerBtn = document.getElementById('hamburgerMenuBtn');
             if (isSuperAdmin || isDIC) { adminBtn.classList.remove('hidden'); hamburgerBtn.classList.remove('hidden'); } else { adminBtn.classList.add('hidden'); hamburgerBtn.classList.add('hidden'); }
+            loadInitialDataFromCache(); checkPopupNotice(); trackUserPresence(user); 
             
-            // 1. INSTANTLY LOAD FROM CACHE (No Sync Spinner, App opens instantaneously)
-            loadInitialDataFromCache(); 
-            
-            // 2. FETCH ONLY IF NEW DATA EXISTS (Real-time Listeners)
-            checkPopupNotice(); 
-            initListeners(); 
-            trackUserPresence(user); 
+            // AUTO DATA SYNC ONLY IF DB HAS NEW UPDATES
+            syncData(true);
         }
 
         // ============================================
-        // REALTIME LISTENERS (Fetches ONLY if new data exists or changed)
+        // REALTIME LISTENERS (For App Background Updates)
         // ============================================
         function initListeners() {
-            fetchMenus(); fetchProductCards(); fetchTrainingCards(); fetchTargetSheets(); fetchSidebarMenus(); fetchAds();
-            fetchSliders(); fetchNotices(); // Initial fetch in background
+            fetchAllData(); // Start the one-time sync process
+            if (listenersAttached) return; listenersAttached = true;
             
-            if (listenersAttached) return; 
-            listenersAttached = true;
-            
-            // Setting up real-time listeners for all nodes. 
-            // Firebase automatically downloads only the NEW/UPDATED data and skips if unchanged.
-            db.ref(REF.MENUS).on('value', () => fetchMenus());
-            db.ref(REF.PRODUCT_LAUNCH_CARDS).on('value', () => fetchProductCards());
-            db.ref(REF.PRODUCT_TRAINING_CARDS).on('value', () => fetchTrainingCards());
-            db.ref(REF.PRODUCT_TARGET_SHEETS).on('value', () => fetchTargetSheets());
-            db.ref(REF.SIDEBAR_MENUS).on('value', () => fetchSidebarMenus());
-            db.ref(REF.ADVERTISEMENTS).on('value', () => fetchAds());
-            db.ref(REF.SLIDERS).on('value', () => fetchSliders());
-            db.ref(REF.NOTICES).on('value', () => fetchNotices());
+            // Realtime listeners for instant update when app is open
+            db.ref(REF.MENUS).on('value', () => { if(isDataLoadedFromCache) fetchMenus(); });
+            db.ref(REF.PRODUCT_LAUNCH_CARDS).on('value', () => { if(isDataLoadedFromCache) fetchProductCards(); });
+            db.ref(REF.PRODUCT_TRAINING_CARDS).on('value', () => { if(isDataLoadedFromCache) fetchTrainingCards(); });
+            db.ref(REF.PRODUCT_TARGET_SHEETS).on('value', () => { if(isDataLoadedFromCache) fetchTargetSheets(); });
+            db.ref(REF.SIDEBAR_MENUS).on('value', () => { if(isDataLoadedFromCache) fetchSidebarMenus(); });
+            db.ref(REF.ADVERTISEMENTS).on('value', () => { if(isDataLoadedFromCache) fetchAds(); });
+            db.ref(REF.NOTICES).on('value', () => { if(isDataLoadedFromCache) fetchNotices(); });
+            db.ref(REF.SLIDERS).on('value', () => { if(isDataLoadedFromCache) fetchSliders(); });
+            db.ref(REF.POPUP_NOTICE).on('value', () => { if(isDataLoadedFromCache) checkPopupNotice(); });
         }
 
         // ============================================
         // FETCH FUNCTIONS (WITH CACHE SAVE)
         // ============================================
         async function fetchAds() { try { globalAds = await getOnce(REF.ADVERTISEMENTS); updateLocalCache('ADS', globalAds); renderAds(); } catch(e) {} }
-        function renderAds() {
-            const placements = ['grid1', 'grid2', 'grid3', 'grid4', 'grid5', 'productLaunch', 'productTraining', 'productTargetSheet'];
-            placements.forEach(p => {
-                const container = document.getElementById(`adContainer_${p}`); if (!container) return;
-                container.innerHTML = ''; container.classList.add('hidden');
-                const section = document.getElementById(`${p}Section`); if (section && section.classList.contains('hidden')) return;
-                const adsForPlacement = globalAds.filter(a => a.placement === p && a.status === 'active');
-                if (adsForPlacement.length === 0) return;
-                container.classList.remove('hidden'); container.className = 'space-y-2 max-w-7xl mx-auto w-full'; container.id = `adContainer_${p}`;
-                adsForPlacement.forEach(ad => { const adWrapper = document.createElement('div'); adWrapper.className = 'bg-white dark:bg-slate-800 rounded-m3 p-2 shadow-xs border border-slate-200 dark:border-slate-700 w-full'; adWrapper.id = `adWrap_${ad.id}`; container.appendChild(adWrapper); injectAdCode(adWrapper.id, ad.code); });
-            });
-        }
-
         async function fetchMenus() { try { const docs = await getOnce(REF.MENUS); globalMenus = docs.map(doc => ({ ...doc, id: doc.$id, images: Array.isArray(doc.images) ? doc.images : [], seenBy: doc.seenBy && typeof doc.seenBy === 'object' ? doc.seenBy : {} })); isMenusLoaded = true; renderMenus(); renderAds(); updateLocalCache('MENUS', globalMenus); } catch(e) {} }
         async function fetchProductCards() { try { globalProductCards = await getOnce(REF.PRODUCT_LAUNCH_CARDS); isProductCardsLoaded = true; renderProductCards(); renderAds(); updateLocalCache('PRODUCTS', globalProductCards); } catch(e) {} }
         async function fetchTrainingCards() { try { globalTrainingCards = await getOnce(REF.PRODUCT_TRAINING_CARDS); isTrainingCardsLoaded = true; renderTrainingCards(); renderAds(); updateLocalCache('TRAININGS', globalTrainingCards); } catch(e) {} }
         async function fetchTargetSheets() { try { globalTargetSheets = await getOnce(REF.PRODUCT_TARGET_SHEETS); isTargetSheetsLoaded = true; renderTargetSheets(); renderAds(); updateLocalCache('TARGETS', globalTargetSheets); } catch(e) {} }
         async function fetchSidebarMenus() { try { dynamicSidebarMenus = await getOnce(REF.SIDEBAR_MENUS); renderSidebarMenus(); updateLocalCache('SIDEBAR', dynamicSidebarMenus); } catch(e) {} }
-        async function fetchSliders() { try { const docs = await getOnce(REF.SLIDERS); renderSlidersUI(docs); updateLocalCache('SLIDERS', docs); } catch(e) {} }
-        async function fetchNotices() { try { const docs = await getOnce(REF.NOTICES); document.getElementById('marqueeText').innerText = docs.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', docs); } catch(e) {} }
+        async function fetchNotices() { try { const notices = await getOnce(REF.NOTICES); document.getElementById('marqueeText').innerText = notices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', notices); } catch(e) {} }
+        async function fetchSliders() { try { const sliders = await getOnce(REF.SLIDERS); renderSlidersUI(sliders); updateLocalCache('SLIDERS', sliders); } catch(e) {} }
+
+        async function fetchAllData() {
+            await Promise.all([fetchMenus(), fetchProductCards(), fetchTrainingCards(), fetchTargetSheets(), fetchSidebarMenus(), fetchAds(), fetchSliders(), fetchNotices()]);
+            const now = new Date(); localStorage.setItem(CACHE_KEYS.LAST_SYNC, now.toISOString()); updateSyncTimeBadge();
+        }
 
         function trackUserPresence(user) { if (!user || !user.employeeId) return; const data = { employeeId: user.employeeId, fullName: user.fullName || user.employeeId, role: user.role || 'MPO', timestamp: Math.floor(Date.now() / 1000) }; db.ref(`${REF.ONLINE_USERS}/${user.employeeId}`).set(data); }
 
-        window.syncData = async function() {
+        // Smart Sync: Checks timestamp in DB meta node
+        window.syncData = async function(isAutoSync = false) {
             const syncIcon = document.getElementById('syncIcon'); if (syncIcon.classList.contains('fa-spinner')) return; 
-            syncIcon.classList.remove('fa-rotate'); syncIcon.classList.add('fa-spinner', 'fa-spin'); showToast('সিঙ্ক হচ্ছে...');
+            syncIcon.classList.remove('fa-rotate'); syncIcon.classList.add('fa-spinner', 'fa-spin'); 
+            if(!isAutoSync) showToast('সিঙ্ক চেক হচ্ছে...');
+            
             try {
-                await Promise.all([fetchMenus(), fetchProductCards(), fetchTrainingCards(), fetchTargetSheets(), fetchSidebarMenus(), fetchAds(), fetchSliders(), fetchNotices()]);
+                // 1. Check DB Last Update Timestamp
+                const metaSnap = await db.ref(REF.META).once('value');
+                const dbLastUpdate = metaSnap.val()?.last_update || 0;
+                const localLastUpdate = parseInt(localStorage.getItem(CACHE_KEYS.LAST_UPDATE_TS) || '0');
+
+                if (dbLastUpdate > localLastUpdate) {
+                    // New data exists! Download everything
+                    if(!isAutoSync) showToast('নতুন ডেটা পাওয়া গেছে, সিঙ্ক হচ্ছে...');
+                    await fetchAllData();
+                    localStorage.setItem(CACHE_KEYS.LAST_UPDATE_TS, dbLastUpdate);
+                    if(!isAutoSync) showToast('সিঙ্ক সম্পন্ন হয়েছে!');
+                } else {
+                    // No new data, keep cache as is
+                    if(!isAutoSync) showToast('ডেটা আপ-টু-ডেট আছে!');
+                }
                 syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate');
-                const now = new Date(); localStorage.setItem(CACHE_KEYS.LAST_SYNC, now.toISOString()); updateSyncTimeBadge();
-                showToast('সিঙ্ক সম্পন্ন হয়েছে!');
-            } catch (err) { console.error("Sync error:", err); syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate'); showToast('সিঙ্ক করতে সমস্যা! ইন্টারনেট চেক করুন।'); }
+            } catch (err) { 
+                console.error("Sync error:", err); 
+                syncIcon.classList.remove('fa-spinner', 'fa-spin'); syncIcon.classList.add('fa-rotate'); 
+                if(!isAutoSync) showToast('সিঙ্ক করতে সমস্যা! ইন্টারনেট চেক করুন।'); 
+            }
         }
 
         // ============================================
@@ -1482,13 +1528,13 @@
                 else if (editKey) { const existing = adminGlobalSliders.find(s => s.$id === editKey); sliderData.image = existing ? existing.image : APP_LOGO_URL; }
                 else { showToast('একটি ছবি সিলেক্ট করুন'); return; }
                 if (editKey) { await db.ref(`${REF.SLIDERS}/${editKey}`).update(sliderData); showToast('স্লাইডার আপডেট হয়েছে!'); adminGlobalSliders = adminGlobalSliders.map(s => s.$id === editKey ? {...s, ...sliderData} : s); } 
-                else { const newRef = db.ref(REF.SLIDERS).push(); await newRef.set(sliderData); showToast('স্লাইডার সফলভাবে আপলোড হয়েছে!'); adminGlobalSliders.push({...sliderData, $id: newRef.key, id: newRef.key}); }
+                else { const newRef = db.ref(REF.SLIDERS).push(); await newRef.set(sliderData); showToast('স্লাইডার সফলভাবে আপলোড হয়েছে!'); adminGlobalSliders.push({...sliderData, $id: newRef.key, id: newRef.key}); updateMetaTimestamp(); }
                 const sliders = await getOnce(REF.SLIDERS); renderSlidersUI(sliders); updateLocalCache('SLIDERS', sliders); resetSliderForm(); filterAdminList('slider', document.getElementById('adminSearchSlider') ? document.getElementById('adminSearchSlider').value : '');
             } catch(e) { showToast('সেভ করতে সমস্যা!'); }
         }
         window.editSlider = async function(key) { try { const snap = await db.ref(`${REF.SLIDERS}/${key}`).once('value'); const s = snap.val(); if (s) { document.getElementById('editSliderKey').value = key; document.getElementById('sliderTitleInput').value = s.title || ''; document.getElementById('sliderFormTitle').innerText = 'স্লাইডার এডিট করুন'; document.getElementById('sliderSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('sliderCancelBtn').classList.remove('hidden'); } } catch(e) {} }
         window.resetSliderForm = function() { document.getElementById('editSliderKey').value = ''; document.getElementById('sliderTitleInput').value = ''; document.getElementById('sliderFileInput').value = ''; document.getElementById('sliderFormTitle').innerText = 'নতুন স্লাইডার ইমেজ আপলোড করুন'; document.getElementById('sliderSaveBtnText').innerText = 'যোগ করুন'; document.getElementById('sliderCancelBtn').classList.add('hidden'); }
-        window.deleteSlider = async function(key) { if (confirm('স্লাইডারটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.SLIDERS}/${key}`).remove(); showToast('স্লাইডার মুছে ফেলা হয়েছে!'); adminGlobalSliders = adminGlobalSliders.filter(s => s.$id !== key); const sliders = await getOnce(REF.SLIDERS); renderSlidersUI(sliders); updateLocalCache('SLIDERS', sliders); filterAdminList('slider', document.getElementById('adminSearchSlider') ? document.getElementById('adminSearchSlider').value : ''); } catch(e) {} } }
+        window.deleteSlider = async function(key) { if (confirm('স্লাইডারটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.SLIDERS}/${key}`).remove(); showToast('স্লাইডার মুছে ফেলা হয়েছে!'); adminGlobalSliders = adminGlobalSliders.filter(s => s.$id !== key); const sliders = await getOnce(REF.SLIDERS); renderSlidersUI(sliders); updateLocalCache('SLIDERS', sliders); updateMetaTimestamp(); filterAdminList('slider', document.getElementById('adminSearchSlider') ? document.getElementById('adminSearchSlider').value : ''); } catch(e) {} } }
         
         // ============================================
         // ADMIN MENUS
@@ -1506,7 +1552,7 @@
         };
         window.toggleMenuStatus = async function(key, currentStatus) {
             const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
-            try { await db.ref(`${REF.MENUS}/${key}`).update({ status: newStatus }); showToast(`মেনু সফলভাবে ${newStatus === 'active' ? 'Active' : 'Inactive'} করা হয়েছে!`); adminGlobalMenus = adminGlobalMenus.map(m => m.$id === key ? {...m, status: newStatus} : m); globalMenus = globalMenus.map(m => m.id === key ? {...m, status: newStatus} : m); updateLocalCache('MENUS', globalMenus); renderMenus(); filterAdminMenus(adminActiveGrid); } catch(err) { showToast('স্ট্যাটাস আপডেট করতে সমস্যা!'); }
+            try { await db.ref(`${REF.MENUS}/${key}`).update({ status: newStatus }); showToast(`মেনু সফলভাবে ${newStatus === 'active' ? 'Active' : 'Inactive'} করা হয়েছে!`); adminGlobalMenus = adminGlobalMenus.map(m => m.$id === key ? {...m, status: newStatus} : m); globalMenus = globalMenus.map(m => m.id === key ? {...m, status: newStatus} : m); updateLocalCache('MENUS', globalMenus); updateMetaTimestamp(); renderMenus(); filterAdminMenus(adminActiveGrid); } catch(err) { showToast('স্ট্যাটাস আপডেট করতে সমস্যা!'); }
         };
         window.saveMenuItem = async function() {
             const editKey = document.getElementById('editMenuKey').value; const group = document.getElementById('menuGroupInput').value; const title = document.getElementById('menuTitleInput').value.trim();
@@ -1526,8 +1572,8 @@
                         const firstImg = imagesArray.length > 0 ? imagesArray[0] : APP_LOGO_URL; menuData = { group, title, icon: firstImg, url: firstImg, images: imagesArray, allowedRole, month, date, color: "from-emerald-500 to-teal-600", isPinned, status: 'active', seenBy: {} };
                     }
                 }
-                if (editKey) { await db.ref(`${REF.MENUS}/${editKey}`).update(menuData); showToast('ফাইল সফলভাবে আপডেট হয়েছে!'); const updatedMenu = { ...menuData, $id: editKey, id: editKey, images: Array.isArray(menuData.images) ? menuData.images : [], seenBy: menuData.seenBy || {} }; adminGlobalMenus = adminGlobalMenus.map(m => m.$id === editKey ? { ...m, ...updatedMenu } : m); globalMenus = globalMenus.map(m => m.id === editKey ? { ...m, ...updatedMenu } : m); } 
-                else { const newRef = db.ref(REF.MENUS).push(); await newRef.set(menuData); showToast('নতুন মেনু সফলভাবে যোগ হয়েছে!'); const newMenu = { ...menuData, $id: newRef.key, id: newRef.key, images: Array.isArray(menuData.images) ? menuData.images : [], seenBy: menuData.seenBy || {} }; adminGlobalMenus.push(newMenu); globalMenus.push(newMenu); }
+                if (editKey) { await db.ref(`${REF.MENUS}/${editKey}`).update(menuData); showToast('ফাইল সফলভাবে আপডেট হয়েছে!'); const updatedMenu = { ...menuData, $id: editKey, id: editKey, images: Array.isArray(menuData.images) ? menuData.images : [], seenBy: menuData.seenBy || {} }; adminGlobalMenus = adminGlobalMenus.map(m => m.$id === editKey ? { ...m, ...updatedMenu } : m); globalMenus = globalMenus.map(m => m.id === editKey ? { ...m, ...updatedMenu } : m); updateMetaTimestamp(); } 
+                else { const newRef = db.ref(REF.MENUS).push(); await newRef.set(menuData); showToast('নতুন মেনু সফলভাবে যোগ হয়েছে!'); const newMenu = { ...menuData, $id: newRef.key, id: newRef.key, images: Array.isArray(menuData.images) ? menuData.images : [], seenBy: menuData.seenBy || {} }; adminGlobalMenus.push(newMenu); globalMenus.push(newMenu); updateMetaTimestamp(); }
                 updateLocalCache('MENUS', globalMenus); renderMenus(); filterAdminMenus(adminActiveGrid); resetMenuForm();
             } catch (err) { showToast('সেভ করতে সমস্যা!'); console.error(err); }
             menuSaveBtn.disabled = false; menuSaveBtnText.innerText = editKey ? 'আপডেট করুন' : 'মেনু সংরক্ষণ করুন';
@@ -1536,7 +1582,7 @@
             try { const snap = await db.ref(`${REF.MENUS}/${key}`).once('value'); const m = snap.val(); if (m) { document.getElementById('editMenuKey').value = key; const group = m.group || 'grid1'; document.getElementById('menuGroupInput').value = group; onAdminGroupChange(group); document.getElementById('menuTitleInput').value = m.title || ''; const roleSelect = document.getElementById('menuAllowedRoleInput'); const roles = (m.allowedRole || 'PALL').split(',').map(r => r.trim()); Array.from(roleSelect.options).forEach(option => { if (roles.includes(option.value.trim())) option.selected = true; else option.selected = false; }); if (group === 'grid1') { document.getElementById('menuIconInput').value = m.icon || ''; document.getElementById('menuUrlInput').value = m.url || ''; } else { document.getElementById('menuMonthInput').value = m.month || getCurrentMonthName(); document.getElementById('menuDateInput').value = m.date || new Date().toISOString().split('T')[0]; document.getElementById('menuPinInput').checked = m.isPinned || false; } document.getElementById('menuFormTitle').innerText = 'মেনু/ফাইল এডিট করুন'; document.getElementById('menuSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('menuCancelBtn').classList.remove('hidden'); document.querySelector('#tabContentMenu > div').scrollIntoView({ behavior: 'smooth', block: 'start' }); } } catch(e) { console.error(e); }
         }
         window.resetMenuForm = function() { document.getElementById('editMenuKey').value = ''; document.getElementById('menuTitleInput').value = ''; document.getElementById('menuIconInput').value = ''; document.getElementById('menuUrlInput').value = ''; document.getElementById('menuFileInput').value = ''; const roleSelect = document.getElementById('menuAllowedRoleInput'); Array.from(roleSelect.options).forEach(option => option.selected = (option.value === 'PALL')); document.getElementById('menuMonthInput').value = getCurrentMonthName(); document.getElementById('menuDateInput').value = new Date().toISOString().split('T')[0]; document.getElementById('menuPinInput').checked = false; document.getElementById('menuGroupInput').value = 'grid1'; onAdminGroupChange('grid1'); document.getElementById('menuFormTitle').innerText = 'নতুন মেনু/ফাইল যোগ করুন'; document.getElementById('menuSaveBtnText').innerText = 'মেনু সংরক্ষণ করুন'; document.getElementById('menuCancelBtn').classList.add('hidden'); }
-        window.deleteMenu = async function(key) { if (confirm('আপনি কি নিশ্চিত এই ফাইল বা মেনুটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.MENUS}/${key}`).remove(); showToast('সফলভাবে মুছে ফেলা হয়েছে!'); adminGlobalMenus = adminGlobalMenus.filter(m => m.$id !== key); globalMenus = globalMenus.filter(m => m.id !== key); updateLocalCache('MENUS', globalMenus); renderMenus(); filterAdminMenus(adminActiveGrid); } catch(e) {} } }
+        window.deleteMenu = async function(key) { if (confirm('আপনি কি নিশ্চিত এই ফাইল বা মেনুটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.MENUS}/${key}`).remove(); showToast('সফলভাবে মুছে ফেলা হয়েছে!'); adminGlobalMenus = adminGlobalMenus.filter(m => m.$id !== key); globalMenus = globalMenus.filter(m => m.id !== key); updateLocalCache('MENUS', globalMenus); updateMetaTimestamp(); renderMenus(); filterAdminMenus(adminActiveGrid); } catch(e) {} } }
 
         // ============================================
         // ADMIN SIDEBAR MENUS
@@ -1546,10 +1592,10 @@
             const editKey = document.getElementById('editSidebarMenuKey').value; const name = document.getElementById('sidebarMenuNameInput').value.trim(); const url = document.getElementById('sidebarMenuUrlInput').value.trim(); const icon = document.getElementById('sidebarMenuIconInput').value.trim() || 'fa-link'; const status = document.getElementById('sidebarMenuStatusInput').value;
             const roleSelect = document.getElementById('sidebarMenuRoleInput'); const selectedRoles = Array.from(roleSelect.selectedOptions).map(opt => opt.value); const allowedRole = selectedRoles.length > 0 ? selectedRoles.join(',') : 'SUPER_ADMIN,DIC';
             if (!name || !url) { showToast('নাম এবং লিংক দিন'); return; } const data = { name, url, icon, status, allowedRole };
-            try { if (editKey) { await db.ref(`${REF.SIDEBAR_MENUS}/${editKey}`).update(data); showToast('মেনু আপডেট হয়েছে!'); adminGlobalSidebarMenus = adminGlobalSidebarMenus.map(m => m.$id === editKey ? {...m, ...data} : m); dynamicSidebarMenus = dynamicSidebarMenus.map(m => m.id === editKey ? {...m, ...data} : m); } else { const newRef = db.ref(REF.SIDEBAR_MENUS).push(); await newRef.set(data); showToast('নতুন মেনু যোগ হয়েছে!'); const newMenu = {...data, $id: newRef.key, id: newRef.key}; adminGlobalSidebarMenus.push(newMenu); dynamicSidebarMenus.push(newMenu); } updateLocalCache('SIDEBAR', dynamicSidebarMenus); renderSidebarMenus(); resetSidebarMenuForm(); filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : ''); } catch(e) { showToast('Error!'); }
+            try { if (editKey) { await db.ref(`${REF.SIDEBAR_MENUS}/${editKey}`).update(data); showToast('মেনু আপডেট হয়েছে!'); adminGlobalSidebarMenus = adminGlobalSidebarMenus.map(m => m.$id === editKey ? {...m, ...data} : m); dynamicSidebarMenus = dynamicSidebarMenus.map(m => m.id === editKey ? {...m, ...data} : m); } else { const newRef = db.ref(REF.SIDEBAR_MENUS).push(); await newRef.set(data); showToast('নতুন মেনু যোগ হয়েছে!'); const newMenu = {...data, $id: newRef.key, id: newRef.key}; adminGlobalSidebarMenus.push(newMenu); dynamicSidebarMenus.push(newMenu); updateMetaTimestamp(); } updateLocalCache('SIDEBAR', dynamicSidebarMenus); renderSidebarMenus(); resetSidebarMenuForm(); filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : ''); } catch(e) { showToast('Error!'); }
         };
         window.editSidebarMenuItem = async function(key) { try { const snap = await db.ref(`${REF.SIDEBAR_MENUS}/${key}`).once('value'); const m = snap.val(); if (m) { document.getElementById('editSidebarMenuKey').value = key; document.getElementById('sidebarMenuNameInput').value = m.name || ''; document.getElementById('sidebarMenuIconInput').value = m.icon || ''; document.getElementById('sidebarMenuUrlInput').value = m.url || ''; document.getElementById('sidebarMenuStatusInput').value = m.status || 'active'; const roleSelect = document.getElementById('sidebarMenuRoleInput'); const roles = (m.allowedRole || 'SUPER_ADMIN,DIC').split(',').map(r => r.trim()); Array.from(roleSelect.options).forEach(option => option.selected = roles.includes(option.value.trim())); document.getElementById('sidebarMenuFormTitle').innerText = 'সাইডবার মেনু এডিট করুন'; document.getElementById('sidebarMenuSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('sidebarMenuCancelBtn').classList.remove('hidden'); } } catch(e) {} };
-        window.deleteSidebarMenuItem = async function(key) { if (confirm('সাইডবার মেনুটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.SIDEBAR_MENUS}/${key}`).remove(); showToast('মেনু মুছে ফেলা হয়েছে!'); adminGlobalSidebarMenus = adminGlobalSidebarMenus.filter(m => m.$id !== key); dynamicSidebarMenus = dynamicSidebarMenus.filter(m => m.id !== key); updateLocalCache('SIDEBAR', dynamicSidebarMenus); renderSidebarMenus(); filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : ''); } catch(e) {} } };
+        window.deleteSidebarMenuItem = async function(key) { if (confirm('সাইডবার মেনুটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.SIDEBAR_MENUS}/${key}`).remove(); showToast('মেনু মুছে ফেলা হয়েছে!'); adminGlobalSidebarMenus = adminGlobalSidebarMenus.filter(m => m.$id !== key); dynamicSidebarMenus = dynamicSidebarMenus.filter(m => m.id !== key); updateLocalCache('SIDEBAR', dynamicSidebarMenus); updateMetaTimestamp(); renderSidebarMenus(); filterAdminList('sidebarMenu', document.getElementById('adminSearchSidebarMenu') ? document.getElementById('adminSearchSidebarMenu').value : ''); } catch(e) {} } };
         window.resetSidebarMenuForm = function() { document.getElementById('editSidebarMenuKey').value = ''; document.getElementById('sidebarMenuNameInput').value = ''; document.getElementById('sidebarMenuIconInput').value = ''; document.getElementById('sidebarMenuUrlInput').value = ''; document.getElementById('sidebarMenuStatusInput').value = 'active'; const roleSelect = document.getElementById('sidebarMenuRoleInput'); Array.from(roleSelect.options).forEach(opt => opt.selected = true); document.getElementById('sidebarMenuFormTitle').innerText = 'নতুন সাইডবার মেনু যুক্ত করুন'; document.getElementById('sidebarMenuSaveBtnText').innerText = 'সেভ করুন'; document.getElementById('sidebarMenuCancelBtn').classList.add('hidden'); };
 
         // ============================================
@@ -1559,11 +1605,11 @@
         window.saveNoticeItem = async function() {
             const editKey = document.getElementById('editNoticeKey').value; const text = document.getElementById('noticeTextInput').value.trim();
             if (!text) { showToast('নোটিশের বিবরণ দিন'); return; }
-            try { if (editKey) { await db.ref(`${REF.NOTICES}/${editKey}`).update({ text }); showToast('নোটিশ আপডেট হয়েছে!'); adminGlobalNotices = adminGlobalNotices.map(n => n.$id === editKey ? {...n, text} : n); } else { const newRef = db.ref(REF.NOTICES).push(); await newRef.set({ text }); showToast('নোটিশ সংরক্ষিত হয়েছে!'); adminGlobalNotices.push({ text, $id: newRef.key, id: newRef.key }); } document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', adminGlobalNotices); resetNoticeForm(); filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : ''); } catch(e) {}
+            try { if (editKey) { await db.ref(`${REF.NOTICES}/${editKey}`).update({ text }); showToast('নোটিশ আপডেট হয়েছে!'); adminGlobalNotices = adminGlobalNotices.map(n => n.$id === editKey ? {...n, text} : n); } else { const newRef = db.ref(REF.NOTICES).push(); await newRef.set({ text }); showToast('নোটিশ সংরক্ষিত হয়েছে!'); adminGlobalNotices.push({ text, $id: newRef.key, id: newRef.key }); updateMetaTimestamp(); } document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', adminGlobalNotices); resetNoticeForm(); filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : ''); } catch(e) {}
         }
         window.editNotice = async function(key) { try { const snap = await db.ref(`${REF.NOTICES}/${key}`).once('value'); const n = snap.val(); if (n) { document.getElementById('editNoticeKey').value = key; document.getElementById('noticeTextInput').value = n.text || ''; document.getElementById('noticeFormTitle').innerText = 'নোটিশ এডিট করুন'; document.getElementById('noticeSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('noticeCancelBtn').classList.remove('hidden'); } } catch(e) {} };
         window.resetNoticeForm = function() { document.getElementById('editNoticeKey').value = ''; document.getElementById('noticeTextInput').value = ''; document.getElementById('noticeFormTitle').innerText = 'নতুন নোটিশ যুক্ত করুন'; document.getElementById('noticeSaveBtnText').innerText = 'নোটিশ যোগ করুন'; document.getElementById('noticeCancelBtn').classList.add('hidden'); };
-        window.deleteNotice = async function(key) { if (confirm('নোটিশটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.NOTICES}/${key}`).remove(); showToast('নোটিশ মুছে ফেলা হয়েছে!'); adminGlobalNotices = adminGlobalNotices.filter(n => n.$id !== key); document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', adminGlobalNotices); filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : ''); } catch(e) {} } }
+        window.deleteNotice = async function(key) { if (confirm('নোটিশটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.NOTICES}/${key}`).remove(); showToast('নোটিশ মুছে ফেলা হয়েছে!'); adminGlobalNotices = adminGlobalNotices.filter(n => n.$id !== key); document.getElementById('marqueeText').innerText = adminGlobalNotices.map(n => n.text).join("  ***  ") || "কোনো নোটিশ নেই।"; updateLocalCache('NOTICES', adminGlobalNotices); updateMetaTimestamp(); filterAdminList('notice', document.getElementById('adminSearchNotice') ? document.getElementById('adminSearchNotice').value : ''); } catch(e) {} } }
         
         // ============================================
         // ADMIN POPUPS
@@ -1576,12 +1622,12 @@
             try {
                 if (tempPopupImage) { popupData.image = await uploadFileToStorage(tempPopupImage); }
                 if (editKey) { await db.ref(`${REF.POPUP_NOTICE}/${editKey}`).update(popupData); showToast('পপআপ সফলভাবে আপডেট হয়েছে!'); adminGlobalPopups = adminGlobalPopups.map(p => p.$id === editKey ? {...p, ...popupData} : p); } 
-                else { const newRef = db.ref(REF.POPUP_NOTICE).push(); await newRef.set(popupData); showToast('নতুন পপআপ যোগ হয়েছে!'); adminGlobalPopups.push({...popupData, $id: newRef.key, id: newRef.key}); }
+                else { const newRef = db.ref(REF.POPUP_NOTICE).push(); await newRef.set(popupData); showToast('নতুন পপআপ যোগ হয়েছে!'); adminGlobalPopups.push({...popupData, $id: newRef.key, id: newRef.key}); updateMetaTimestamp(); }
                 updateLocalCache('POPUPS', adminGlobalPopups); resetPopupForm(); filterAdminList('popup', document.getElementById('adminSearchPopup') ? document.getElementById('adminSearchPopup').value : '');
             } catch(e) { showToast('Error!'); } btn.disabled = false;
         };
         window.editPopupItem = async function(key) { try { const snap = await db.ref(`${REF.POPUP_NOTICE}/${key}`).once('value'); const p = snap.val(); if (p) { document.getElementById('editPopupKey').value = key; document.getElementById('popupTypeInput').value = p.type || 'general'; document.getElementById('popupTitleInput').value = p.title || ''; document.getElementById('popupBodyInput').value = p.body || ''; document.getElementById('popupStatusSelect').value = p.status || 'active'; if (p.image) { document.getElementById('popupImagePreview').src = p.image; document.getElementById('popupImagePreview').classList.remove('hidden'); tempPopupImage = p.image; } else { document.getElementById('popupImagePreview').classList.add('hidden'); tempPopupImage = null; } document.getElementById('popupFormTitle').innerText = 'পপআপ এডিট করুন'; document.getElementById('popupSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('popupCancelBtn').classList.remove('hidden'); document.querySelector('#tabContentPopup > div:last-child').scrollIntoView({ behavior: 'smooth', block: 'start' }); } } catch(e) {} };
-        window.deletePopupItem = async function(key) { if (confirm('পপআপটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.POPUP_NOTICE}/${key}`).remove(); showToast('পপআপ মুছে ফেলা হয়েছে!'); adminGlobalPopups = adminGlobalPopups.filter(p => p.$id !== key); updateLocalCache('POPUPS', adminGlobalPopups); filterAdminList('popup', document.getElementById('adminSearchPopup') ? document.getElementById('adminSearchPopup').value : ''); } catch(e) {} } };
+        window.deletePopupItem = async function(key) { if (confirm('পপআপটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.POPUP_NOTICE}/${key}`).remove(); showToast('পপআপ মুছে ফেলা হয়েছে!'); adminGlobalPopups = adminGlobalPopups.filter(p => p.$id !== key); updateLocalCache('POPUPS', adminGlobalPopups); updateMetaTimestamp(); filterAdminList('popup', document.getElementById('adminSearchPopup') ? document.getElementById('adminSearchPopup').value : ''); } catch(e) {} } };
         window.resetPopupForm = function() { document.getElementById('editPopupKey').value = ''; document.getElementById('popupTypeInput').value = 'general'; document.getElementById('popupTitleInput').value = ''; document.getElementById('popupBodyInput').value = ''; document.getElementById('popupStatusSelect').value = 'active'; document.getElementById('popupImageInput').value = ''; document.getElementById('popupImagePreview').classList.add('hidden'); tempPopupImage = null; document.getElementById('popupFormTitle').innerText = 'নতুন পপআপ যুক্ত করুন'; document.getElementById('popupSaveBtnText').innerText = 'পপআপ যোগ করুন'; document.getElementById('popupCancelBtn').classList.add('hidden'); };
 
         // ============================================
@@ -1624,7 +1670,7 @@
                 const firstImg = imagesArray.length > 0 ? imagesArray[0] : APP_LOGO_URL;
                 const cardData = { title, url, images: imagesArray, image: firstImg };
                 if (editKey) { await db.ref(`${REF.PRODUCT_LAUNCH_CARDS}/${editKey}`).update(cardData); showToast('কার্ড সফলভাবে আপডেট হয়েছে!'); adminGlobalProductCards = adminGlobalProductCards.map(c => c.$id === editKey ? {...c, ...cardData} : c); globalProductCards = globalProductCards.map(c => c.id === editKey ? {...c, ...cardData} : c); } 
-                else { const newRef = db.ref(REF.PRODUCT_LAUNCH_CARDS).push(); await newRef.set(cardData); showToast('নতুন কার্ড যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalProductCards.push(newCard); globalProductCards.push(newCard); }
+                else { const newRef = db.ref(REF.PRODUCT_LAUNCH_CARDS).push(); await newRef.set(cardData); showToast('নতুন কার্ড যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalProductCards.push(newCard); globalProductCards.push(newCard); updateMetaTimestamp(); }
                 updateLocalCache('PRODUCTS', globalProductCards); renderProductCards(); resetProductCardForm(); filterAdminList('productCard', document.getElementById('adminSearchProductCard') ? document.getElementById('adminSearchProductCard').value : '');
             } catch(e) { showToast('Error!'); } btn.disabled = false;
         };
@@ -1645,7 +1691,7 @@
                 } 
             } catch(e) {}
         };
-        window.deleteProductCardItem = async function(key) { if (confirm('কার্ডটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_LAUNCH_CARDS}/${key}`).remove(); showToast('কার্ড মুছে ফেলা হয়েছে!'); adminGlobalProductCards = adminGlobalProductCards.filter(c => c.$id !== key); globalProductCards = globalProductCards.filter(c => c.id !== key); updateLocalCache('PRODUCTS', globalProductCards); renderProductCards(); filterAdminList('productCard', document.getElementById('adminSearchProductCard') ? document.getElementById('adminSearchProductCard').value : ''); } catch(e) {} } };
+        window.deleteProductCardItem = async function(key) { if (confirm('কার্ডটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_LAUNCH_CARDS}/${key}`).remove(); showToast('কার্ড মুছে ফেলা হয়েছে!'); adminGlobalProductCards = adminGlobalProductCards.filter(c => c.$id !== key); globalProductCards = globalProductCards.filter(c => c.id !== key); updateLocalCache('PRODUCTS', globalProductCards); updateMetaTimestamp(); renderProductCards(); filterAdminList('productCard', document.getElementById('adminSearchProductCard') ? document.getElementById('adminSearchProductCard').value : ''); } catch(e) {} } };
         window.resetProductCardForm = function() { document.getElementById('editProductCardKey').value = ''; document.getElementById('productCardTitleInput').value = ''; document.getElementById('productCardUrlInput').value = ''; document.getElementById('productCardImageInput').value = ''; document.getElementById('productCardImagePreviewContainer').innerHTML = ''; document.getElementById('productCardImagePreviewContainer').classList.add('hidden'); document.getElementById('productCardFormTitle').innerText = 'নতুন প্রোডাক্ট কার্ড যুক্ত করুন'; document.getElementById('productCardSaveBtnText').innerText = 'যোগ করুন'; document.getElementById('productCardCancelBtn').classList.add('hidden'); };
 
         // ============================================
@@ -1688,7 +1734,7 @@
                 const firstImg = imagesArray.length > 0 ? imagesArray[0] : APP_LOGO_URL;
                 const cardData = { title, url, images: imagesArray, image: firstImg };
                 if (editKey) { await db.ref(`${REF.PRODUCT_TRAINING_CARDS}/${editKey}`).update(cardData); showToast('ট্রেনিং কার্ড সফলভাবে আপডেট হয়েছে!'); adminGlobalTrainingCards = adminGlobalTrainingCards.map(c => c.$id === editKey ? {...c, ...cardData} : c); globalTrainingCards = globalTrainingCards.map(c => c.id === editKey ? {...c, ...cardData} : c); } 
-                else { const newRef = db.ref(REF.PRODUCT_TRAINING_CARDS).push(); await newRef.set(cardData); showToast('নতুন ট্রেনিং কার্ড যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalTrainingCards.push(newCard); globalTrainingCards.push(newCard); }
+                else { const newRef = db.ref(REF.PRODUCT_TRAINING_CARDS).push(); await newRef.set(cardData); showToast('নতুন ট্রেনিং কার্ড যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalTrainingCards.push(newCard); globalTrainingCards.push(newCard); updateMetaTimestamp(); }
                 updateLocalCache('TRAININGS', globalTrainingCards); renderTrainingCards(); resetTrainingCardForm(); filterAdminList('trainingCard', document.getElementById('adminSearchTrainingCard') ? document.getElementById('adminSearchTrainingCard').value : '');
             } catch(e) { showToast('Error!'); } btn.disabled = false;
         };
@@ -1709,7 +1755,7 @@
                 } 
             } catch(e) {}
         };
-        window.deleteTrainingCardItem = async function(key) { if (confirm('ট্রেনিং কার্ডটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_TRAINING_CARDS}/${key}`).remove(); showToast('ট্রেনিং কার্ড মুছে ফেলা হয়েছে!'); adminGlobalTrainingCards = adminGlobalTrainingCards.filter(c => c.$id !== key); globalTrainingCards = globalTrainingCards.filter(c => c.id !== key); updateLocalCache('TRAININGS', globalTrainingCards); renderTrainingCards(); filterAdminList('trainingCard', document.getElementById('adminSearchTrainingCard') ? document.getElementById('adminSearchTrainingCard').value : ''); } catch(e) {} } };
+        window.deleteTrainingCardItem = async function(key) { if (confirm('ট্রেনিং কার্ডটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_TRAINING_CARDS}/${key}`).remove(); showToast('ট্রেনিং কার্ড মুছে ফেলা হয়েছে!'); adminGlobalTrainingCards = adminGlobalTrainingCards.filter(c => c.$id !== key); globalTrainingCards = globalTrainingCards.filter(c => c.id !== key); updateLocalCache('TRAININGS', globalTrainingCards); updateMetaTimestamp(); renderTrainingCards(); filterAdminList('trainingCard', document.getElementById('adminSearchTrainingCard') ? document.getElementById('adminSearchTrainingCard').value : ''); } catch(e) {} } };
         window.resetTrainingCardForm = function() { document.getElementById('editTrainingCardKey').value = ''; document.getElementById('trainingCardTitleInput').value = ''; document.getElementById('trainingCardUrlInput').value = ''; document.getElementById('trainingCardImageInput').value = ''; document.getElementById('trainingCardImagePreviewContainer').innerHTML = ''; document.getElementById('trainingCardImagePreviewContainer').classList.add('hidden'); document.getElementById('trainingCardFormTitle').innerText = 'নতুন ট্রেনিং কার্ড যুক্ত করুন'; document.getElementById('trainingCardSaveBtnText').innerText = 'যোগ করুন'; document.getElementById('trainingCardCancelBtn').classList.add('hidden'); };
 
         // ============================================
@@ -1752,7 +1798,7 @@
                 const firstImg = imagesArray.length > 0 ? imagesArray[0] : APP_LOGO_URL;
                 const cardData = { title, url, images: imagesArray, image: firstImg };
                 if (editKey) { await db.ref(`${REF.PRODUCT_TARGET_SHEETS}/${editKey}`).update(cardData); showToast('টার্গেট শিট সফলভাবে আপডেট হয়েছে!'); adminGlobalTargetSheets = adminGlobalTargetSheets.map(c => c.$id === editKey ? {...c, ...cardData} : c); globalTargetSheets = globalTargetSheets.map(c => c.id === editKey ? {...c, ...cardData} : c); } 
-                else { const newRef = db.ref(REF.PRODUCT_TARGET_SHEETS).push(); await newRef.set(cardData); showToast('নতুন টার্গেট শিট যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalTargetSheets.push(newCard); globalTargetSheets.push(newCard); }
+                else { const newRef = db.ref(REF.PRODUCT_TARGET_SHEETS).push(); await newRef.set(cardData); showToast('নতুন টার্গেট শিট যোগ হয়েছে!'); const newCard = {...cardData, $id: newRef.key, id: newRef.key}; adminGlobalTargetSheets.push(newCard); globalTargetSheets.push(newCard); updateMetaTimestamp(); }
                 updateLocalCache('TARGETS', globalTargetSheets); renderTargetSheets(); resetTargetSheetForm(); filterAdminList('targetSheet', document.getElementById('adminSearchTargetSheet') ? document.getElementById('adminSearchTargetSheet').value : '');
             } catch(e) { showToast('Error!'); } btn.disabled = false;
         };
@@ -1773,7 +1819,7 @@
                 } 
             } catch(e) {}
         };
-        window.deleteTargetSheetItem = async function(key) { if (confirm('টার্গেট শিটটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_TARGET_SHEETS}/${key}`).remove(); showToast('টার্গেট শিট মুছে ফেলা হয়েছে!'); adminGlobalTargetSheets = adminGlobalTargetSheets.filter(c => c.$id !== key); globalTargetSheets = globalTargetSheets.filter(c => c.id !== key); updateLocalCache('TARGETS', globalTargetSheets); renderTargetSheets(); filterAdminList('targetSheet', document.getElementById('adminSearchTargetSheet') ? document.getElementById('adminSearchTargetSheet').value : ''); } catch(e) {} } };
+        window.deleteTargetSheetItem = async function(key) { if (confirm('টার্গেট শিটটি ডিলিট করতে চান?')) { try { await db.ref(`${REF.PRODUCT_TARGET_SHEETS}/${key}`).remove(); showToast('টার্গেট শিট মুছে ফেলা হয়েছে!'); adminGlobalTargetSheets = adminGlobalTargetSheets.filter(c => c.$id !== key); globalTargetSheets = globalTargetSheets.filter(c => c.id !== key); updateLocalCache('TARGETS', globalTargetSheets); updateMetaTimestamp(); renderTargetSheets(); filterAdminList('targetSheet', document.getElementById('adminSearchTargetSheet') ? document.getElementById('adminSearchTargetSheet').value : ''); } catch(e) {} } };
         window.resetTargetSheetForm = function() { document.getElementById('editTargetSheetKey').value = ''; document.getElementById('targetSheetTitleInput').value = ''; document.getElementById('targetSheetUrlInput').value = ''; document.getElementById('targetSheetImageInput').value = ''; document.getElementById('targetSheetImagePreviewContainer').innerHTML = ''; document.getElementById('targetSheetImagePreviewContainer').classList.add('hidden'); document.getElementById('targetSheetFormTitle').innerText = 'নতুন টার্গেট শিট কার্ড যুক্ত করুন'; document.getElementById('targetSheetSaveBtnText').innerText = 'যোগ করুন'; document.getElementById('targetSheetCancelBtn').classList.add('hidden'); };
 
         // ============================================
@@ -1805,12 +1851,12 @@
             if (!placement || !code) { showToast('Placement এবং Ad Code দিন'); return; } const adData = { placement, code, status: 'active', title: 'Ad_' + placement };
             try {
                 if (editKey) { await db.ref(`${REF.ADVERTISEMENTS}/${editKey}`).update(adData); showToast('Ad আপডেট হয়েছে!'); adminGlobalAds = adminGlobalAds.map(a => a.$id === editKey ? {...a, ...adData} : a); globalAds = globalAds.map(a => a.id === editKey ? {...a, ...adData} : a); } 
-                else { const newRef = db.ref(REF.ADVERTISEMENTS).push(); await newRef.set(adData); showToast('নতুন Ad যোগ হয়েছে!'); const newAd = {...adData, $id: newRef.key, id: newRef.key}; adminGlobalAds.push(newAd); globalAds.push(newAd); }
+                else { const newRef = db.ref(REF.ADVERTISEMENTS).push(); await newRef.set(adData); showToast('নতুন Ad যোগ হয়েছে!'); const newAd = {...adData, $id: newRef.key, id: newRef.key}; adminGlobalAds.push(newAd); globalAds.push(newAd); updateMetaTimestamp(); }
                 updateLocalCache('ADS', globalAds); renderAds(); resetAdForm(); filterAdminList('ads', document.getElementById('adminSearchAds') ? document.getElementById('adminSearchAds').value : '');
             } catch(e) { showToast('Error saving Ad!'); }
         }
         window.editAdItem = async function(key) { try { const snap = await db.ref(`${REF.ADVERTISEMENTS}/${key}`).once('value'); const a = snap.val(); if (a) { document.getElementById('editAdsKey').value = key; document.getElementById('adsPlacementInput').value = a.placement || 'grid1'; document.getElementById('adsCodeInput').value = a.code || ''; document.getElementById('adsFormTitle').innerText = 'Advertisement এডিট করুন'; document.getElementById('adsSaveBtnText').innerText = 'আপডেট করুন'; document.getElementById('adsCancelBtn').classList.remove('hidden'); } } catch(e) {} };
-        window.deleteAdItem = async function(key) { if (confirm('Advertisement টি ডিলিট করতে চান?')) { try { await db.ref(`${REF.ADVERTISEMENTS}/${key}`).remove(); showToast('Ad মুছে ফেলা হয়েছে!'); adminGlobalAds = adminGlobalAds.filter(a => a.$id !== key); globalAds = globalAds.filter(a => a.id !== key); updateLocalCache('ADS', globalAds); renderAds(); filterAdminList('ads', document.getElementById('adminSearchAds') ? document.getElementById('adminSearchAds').value : ''); } catch(e) {} } };
+        window.deleteAdItem = async function(key) { if (confirm('Advertisement টি ডিলিট করতে চান?')) { try { await db.ref(`${REF.ADVERTISEMENTS}/${key}`).remove(); showToast('Ad মুছে ফেলা হয়েছে!'); adminGlobalAds = adminGlobalAds.filter(a => a.$id !== key); globalAds = globalAds.filter(a => a.id !== key); updateLocalCache('ADS', globalAds); updateMetaTimestamp(); renderAds(); filterAdminList('ads', document.getElementById('adminSearchAds') ? document.getElementById('adminSearchAds').value : ''); } catch(e) {} } };
         window.resetAdForm = function() { document.getElementById('editAdsKey').value = ''; document.getElementById('adsPlacementInput').value = 'grid1'; document.getElementById('adsCodeInput').value = ''; document.getElementById('adsFormTitle').innerText = 'নতুন Advertisement যুক্ত করুন'; document.getElementById('adsSaveBtnText').innerText = 'যোগ করুন'; document.getElementById('adsCancelBtn').classList.add('hidden'); };
         
         // ============================================
