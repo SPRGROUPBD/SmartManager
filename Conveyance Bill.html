@@ -193,6 +193,9 @@
         ::-webkit-scrollbar-track { background: repeating-conic-gradient(#c0c0c0 0% 25%, #fff 0% 50%) 50% / 2px 2px; }
         ::-webkit-scrollbar-thumb { background-color: var(--win-gray); border: 1px solid; border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); }
         .status-badge { padding: 2px 5px; font-size: 11px; border: 1px solid var(--win-black); }
+        .status-badge.status-pending { background: #fff4cc; color: #664400; }
+        .status-badge.status-used { background: #d0e0ff; color: #000080; }
+        .status-badge.status-auto { background: #d0ffd0; color: #006600; }
         .no-print { display: block; }
         .settings-panel { background: var(--win-white); border: 2px solid var(--win-darker-gray); border-right-color: var(--win-white); border-bottom-color: var(--win-white); padding: 20px; max-width: 500px; }
         .checkbox-wrapper { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: bold; margin-bottom: 10px; }
@@ -231,11 +234,32 @@
         .daily-subtotal { text-align: right; font-weight: bold; background: #e8e8e8; padding: 3px 5px; border-top: 1px solid var(--win-dark-gray); }
         .cn-number-cell { font-weight: bold; color: var(--win-navy); letter-spacing: 0.5px; font-size: 12px; }
         .conv-type-badge { padding: 2px 6px; font-size: 11px; font-weight: bold; border: 1px solid var(--win-black); background: #e8e8d0; }
+        /* IOU Entry tab search bar */
+        .iou-search-bar { display: flex; gap: 6px; margin-bottom: 8px; }
+        .iou-search-bar input { flex: 1; padding: 4px 6px; }
+        .iou-search-bar select { width: 130px; padding: 4px; }
+        /* IOU Database tab filter bar */
+        .iou-db-filter-bar { background: #e0e0e0; border: 2px solid; border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); padding: 10px; margin-bottom: 12px; }
+        .iou-db-filter-bar .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+        .iou-db-filter-bar .filter-row:last-child { margin-bottom: 0; }
+        .iou-db-filter-bar label { font-size: 12px; font-weight: bold; white-space: nowrap; }
+        .iou-db-filter-bar input[type="text"] { flex: 1; min-width: 200px; padding: 4px 6px; }
+        .iou-db-filter-bar input[type="date"] { padding: 4px 6px; }
+        .iou-db-filter-bar select { padding: 4px 6px; min-width: 110px; }
+        .iou-db-totals { display: flex; gap: 0; margin-bottom: 12px; border: 2px solid; border-color: var(--win-darker-gray) var(--win-white) var(--win-white) var(--win-darker-gray); background: var(--win-white); }
+        .iou-db-stat { flex: 1; padding: 6px 10px; text-align: center; border-right: 1px dotted var(--win-dark-gray); font-size: 12px; }
+        .iou-db-stat:last-child { border-right: none; }
+        .iou-db-stat .lbl { display: block; font-size: 10px; color: var(--win-dark-gray); font-weight: bold; text-transform: uppercase; margin-bottom: 3px; }
+        .iou-db-stat .val { display: block; font-size: 16px; font-weight: bold; color: var(--win-navy); }
+        /* Pending IOU widget chips */
+        .pending-iou-chip { background: var(--win-white); border: 2px solid; border-color: var(--win-white) var(--win-darker-gray) var(--win-darker-gray) var(--win-white); padding: 4px 8px; font-size: 11px; cursor: pointer; font-family: var(--font-main); display: inline-flex; align-items: center; gap: 4px; }
+        .pending-iou-chip:hover { background: #fff5d0; }
+        .pending-iou-chip strong { color: var(--win-navy); }
 
         @media print {
             body { background-color: white; height: auto; display: block; overflow: visible; }
             .window-frame, .sidebar, .content-area, .btn-group, .btn-add, .no-print, .quick-entry-container, .iou-list-container, .title-bar, .settings-panel, #loginOverlay { display: none !important; }
-            #entry, #summary, #iou, #locations, #settings { display: none !important; }
+            #entry, #summary, #iou, #ioudb, #locations, #settings { display: none !important; }
             @page { size: A4; margin: 10mm; }
             #print-area {
                 display: block !important; position: absolute; top: 0; left: 0; width: 100%;
@@ -331,6 +355,7 @@
                 <button class="menu-btn" onclick="switchTab('summary')">BILL SUMMARY</button>
                 <button class="menu-btn" onclick="switchTab('monthwise')">MONTH WISE</button>
                 <button class="menu-btn" onclick="switchTab('iou')">IOU ENTRY</button>
+                <button class="menu-btn" onclick="switchTab('ioudb')">IOU DATABASE</button>
                 <button class="menu-btn" onclick="switchTab('locations')">FROM & TO</button>
                 <div style="border-top: 1px dotted var(--win-dark-gray); margin: 5px 0;"></div>
                 <button class="menu-btn" onclick="switchTab('settings')">SETTINGS</button>
@@ -344,6 +369,14 @@
                     <div class="form-container">
                         <div class="header-section"><h2>MONICO PHARMA LTD</h2><h3>Conveyance Bill Entry System</h3></div>
                         <input type="hidden" id="billKey">
+                        <!-- PENDING IOU WIDGET -->
+                        <div id="pendingIOUWidget" class="no-print" style="background:#fffbe6; border:2px solid #c0c0c0; border-color:#808080 #ffffff #ffffff #808080; padding:8px 10px; margin-bottom:12px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding-bottom:5px; border-bottom:1px dotted #808080;">
+                                <strong style="color:#cc6600; font-size:13px;">&#9888; Pending IOUs (Click to apply to this bill)</strong>
+                                <span id="pendingIOUCount" style="font-size:11px; color:#444;">Loading...</span>
+                            </div>
+                            <div id="pendingIOUList" style="display:flex; flex-wrap:wrap; gap:6px; max-height:120px; overflow-y:auto;"></div>
+                        </div>
                         <div class="form-grid">
                             <div class="form-group"><label>Bill No (Auto)</label><input type="text" id="billNo" readonly placeholder="Generating..."></div>
                             <div class="form-group"><label>Bill Date</label><input type="date" id="billDate"></div>
@@ -416,6 +449,31 @@
                                 <div class="stat-item"><span class="stat-label">Balance (GT - IOU)</span><span class="stat-value highlight-blue" id="statBalance">-</span></div>
                             </div>
                         </div>
+                        <!-- MONTH-WISE IOU SUMMARY -->
+                        <div class="month-summary-card" id="monthIOUSummaryCard" style="margin-top:12px;">
+                            <div class="card-title">Month-wise IOU Summary</div>
+                            <div class="card-body">
+                                <div class="stat-item"><span class="stat-label">Total IOUs</span><span class="stat-value highlight-blue" id="statMonthIouCount">-</span></div>
+                                <div class="stat-item"><span class="stat-label">IOU Amount</span><span class="stat-value highlight-red" id="statMonthIouAmount">-</span></div>
+                                <div class="stat-item"><span class="stat-label">Used (Linked)</span><span class="stat-value" id="statMonthIouUsed">-</span></div>
+                                <div class="stat-item"><span class="stat-label">Pending</span><span class="stat-value" id="statMonthIouPending">-</span></div>
+                                <div class="stat-item"><span class="stat-label">Auto Used</span><span class="stat-value" id="statMonthIouAuto">-</span></div>
+                            </div>
+                        </div>
+                        <!-- BALANCE SUMMARY (Bills vs IOU vs Net) -->
+                        <div class="month-summary-card" id="monthBalanceCard" style="margin-top:12px;">
+                            <div class="card-title">Balance Summary (Bills vs IOU)</div>
+                            <div class="card-body" style="grid-template-columns: repeat(3, 1fr);">
+                                <div class="stat-item"><span class="stat-label">Bills Grand Total</span><span class="stat-value highlight-green" id="statBalanceBills">-</span></div>
+                                <div class="stat-item"><span class="stat-label">IOU Total</span><span class="stat-value highlight-red" id="statBalanceIou">-</span></div>
+                                <div class="stat-item"><span class="stat-label">Net Payable (Bills - IOU)</span><span class="stat-value highlight-blue" id="statBalanceNet">-</span></div>
+                            </div>
+                        </div>
+                        <!-- IOUs IN THIS MONTH TABLE -->
+                        <div id="monthIOUListContainer" style="margin-top:15px;">
+                            <h3 style="font-size:14px; margin-bottom:8px; color:var(--win-navy); border-bottom:2px solid var(--win-navy); padding-bottom:4px;">IOUs in This Month</h3>
+                            <table id="monthIOUTable"><thead><tr><th>IOU No</th><th>Date</th><th>Name</th><th>Type</th><th>Conv Type</th><th>Ref No</th><th>Amount</th><th>Status</th></tr></thead><tbody id="monthIOUTableBody"></tbody><tfoot id="monthIOUTableFoot"></tfoot></table>
+                        </div>
                         <div id="nameBreakdownContainer" style="display:none;">
                             <h3 style="font-size:14px; margin-bottom:8px; color:var(--win-navy); border-bottom:2px solid var(--win-navy); padding-bottom:4px;">Person-wise Breakdown</h3>
                             <table id="nameBreakdownTable"><thead><tr><th>#</th><th>Name</th><th>Bills</th><th>Total Amount (Tk)</th><th>IOU Used</th></tr></thead><tbody id="nameBreakdownBody"></tbody><tfoot id="nameBreakdownFoot"></tfoot></table>
@@ -463,8 +521,71 @@
                         </div>
                         <div class="list-box iou-list-container">
                             <h3 style="margin-top:0; border-bottom:1px solid navy; color:navy; padding-bottom:5px;">IOU Database</h3>
+                            <div class="iou-search-bar">
+                                <input type="text" id="iouEntrySearch" placeholder="Search IOU No / Name / CN / Date..." oninput="filterIOUEntryList()">
+                                <select id="iouEntryStatusFilter" onchange="filterIOUEntryList()">
+                                    <option value="">All Status</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Used">Used</option>
+                                    <option value="Auto Used">Auto Used</option>
+                                </select>
+                            </div>
                             <table id="iouListTable"><thead><tr><th>IOU No</th><th>Date</th><th>Name</th><th>Conv Type</th><th id="iouListCnTh">Ref No</th><th>Ref.</th><th>Amount</th><th>IOU Type</th><th>Status</th><th>X</th></tr></thead><tbody id="iouListBody"></tbody></table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4b: IOU DATABASE (Full) -->
+                <div id="ioudb" class="tab-content">
+                    <div class="form-container">
+                        <div class="header-section"><h2>IOU Database</h2><h3>All IOU Records — Searchable</h3></div>
+                        <div class="iou-db-filter-bar">
+                            <div class="filter-row">
+                                <label>Search:</label>
+                                <input type="text" id="iouDbSearch" placeholder="IOU No / Name / CN / Purpose..." oninput="renderIOUDatabase()">
+                            </div>
+                            <div class="filter-row">
+                                <label>From:</label>
+                                <input type="date" id="iouDbFrom" onchange="renderIOUDatabase()">
+                                <label>To:</label>
+                                <input type="date" id="iouDbTo" onchange="renderIOUDatabase()">
+                            </div>
+                            <div class="filter-row">
+                                <label>Status:</label>
+                                <select id="iouDbStatus" onchange="renderIOUDatabase()">
+                                    <option value="">All</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Used">Used</option>
+                                    <option value="Auto Used">Auto Used</option>
+                                </select>
+                                <label>Type:</label>
+                                <select id="iouDbType" onchange="renderIOUDatabase()">
+                                    <option value="">All</option>
+                                    <option value="Bill Entry">Bill Entry</option>
+                                    <option value="Bill Payment No Bill">Bill Payment No Bill</option>
+                                </select>
+                                <label>Conv Type:</label>
+                                <select id="iouDbConvType" onchange="renderIOUDatabase()">
+                                    <option value="">All</option>
+                                </select>
+                            </div>
+                            <div class="filter-row" style="justify-content:flex-end;">
+                                <button class="btn" onclick="clearIOUDBFilters()">Clear Filters</button>
+                                <span id="iouDbResultCount" style="font-size:12px; color:#444; margin-left:10px;">0 records</span>
+                            </div>
+                        </div>
+                        <div class="iou-db-totals">
+                            <div class="iou-db-stat"><span class="lbl">Total Amount:</span> <span class="val" id="iouDbTotalAmount">0.00</span> Tk</div>
+                            <div class="iou-db-stat"><span class="lbl">Pending:</span> <span class="val" id="iouDbPendingAmount">0.00</span> Tk</div>
+                            <div class="iou-db-stat"><span class="lbl">Used:</span> <span class="val" id="iouDbUsedAmount">0.00</span> Tk</div>
+                            <div class="iou-db-stat"><span class="lbl">Auto Used:</span> <span class="val" id="iouDbAutoAmount">0.00</span> Tk</div>
+                            <div class="iou-db-stat"><span class="lbl">Count:</span> <span class="val" id="iouDbCount">0</span></div>
+                        </div>
+                        <table id="iouDbTable">
+                            <thead><tr><th>IOU No</th><th>Date</th><th>Name</th><th>Depot</th><th>Dept</th><th>Conv Type</th><th>Ref No</th><th>Ref.</th><th>Amount</th><th>Type</th><th>Status</th><th>Act</th></tr></thead>
+                            <tbody id="iouDbTableBody"></tbody>
+                            <tfoot><tr><td colspan="8" style="text-align:right; font-weight:bold; padding-right:10px;">Grand Total:</td><td style="font-weight:bold; background:#e0e0e0; text-align:right; padding-right:8px;" id="iouDbFootTotal">0.00 Tk</td><td colspan="3"></td></tr></tfoot>
+                        </table>
                     </div>
                 </div>
 
@@ -622,9 +743,9 @@
         function populateConvTypeDropdowns(){const types=getEnabledConvTypes();let h='<option value="">-- Select Type --</option>';types.forEach(t=>{h+=`<option value="${t.id}">${t.name}</option>`;});const s=document.getElementById('iouConvType');if(s)s.innerHTML=h;}
         function onIouConvTypeChange(){const tid=document.getElementById('iouConvType').value;const tc=findConvType(tid);const lb=document.getElementById('iouCnLabel'),ip=document.getElementById('iouCnNumber');if(tc){lb.innerText=tc.refLabel||'CN Number';ip.placeholder='e.g. '+tc.refLabel;}else{lb.innerText='CN Number';ip.placeholder='e.g. AJR-12345';}}
         function renderConvTypeList(){const types=getConvTypes(),c=document.getElementById('convTypeList');let h='';types.forEach((t,i)=>{const ec=t.enabled!==false?'checked':'';h+=`<div style="border:1px solid #808080;padding:8px;margin-bottom:6px;background:#e8e8e8;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><strong style="font-size:13px;color:var(--win-navy);">${t.name}</strong><button class="btn" style="padding:2px 8px;font-size:11px;color:#cc0000;" onclick="deleteConvType(${i})">Delete</button></div><div style="font-size:11px;color:#444;">Print Title: <strong>${t.printTitle||t.name}</strong> &nbsp;|&nbsp; Ref Label: <strong>${t.refLabel||'CN Number'}</strong></div><div class="checkbox-wrapper" style="margin:4px 0 0 0;"><input type="checkbox" id="convEn_${i}" ${ec} onchange="toggleConvType(${i},this.checked)" style="width:16px;height:16px;"><label for="convEn_${i}" style="font-size:12px;">ENABLED</label></div></div>`;});c.innerHTML=h;}
-        function toggleConvType(i,ch){const types=getConvTypes();if(types[i]){types[i].enabled=ch;localStorage.setItem('convTypes',JSON.stringify(types));populateConvTypeDropdowns();}}
-        function deleteConvType(i){const types=getConvTypes();if(confirm('Delete "'+types[i].name+'"?')){types.splice(i,1);localStorage.setItem('convTypes',JSON.stringify(types));renderConvTypeList();populateConvTypeDropdowns();showToast("Type Deleted!");}}
-        function addConvType(){const nm=document.getElementById('newConvTypeName').value.trim(),ti=document.getElementById('newConvTypeTitle').value.trim(),rl=document.getElementById('newConvTypeRefLabel').value.trim(),en=document.getElementById('newConvTypeEnabled').checked;if(!nm){showToast("Please enter Type Name");return;}const types=getConvTypes();const id=nm.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+Date.now();types.push({id,name:nm,printTitle:ti||nm,refLabel:rl||'CN Number',enabled:en});localStorage.setItem('convTypes',JSON.stringify(types));document.getElementById('newConvTypeName').value='';document.getElementById('newConvTypeTitle').value='';document.getElementById('newConvTypeRefLabel').value='';document.getElementById('newConvTypeEnabled').checked=true;renderConvTypeList();populateConvTypeDropdowns();showToast("Type Added!");}
+        function toggleConvType(i,ch){const types=getConvTypes();if(types[i]){types[i].enabled=ch;localStorage.setItem('convTypes',JSON.stringify(types));populateConvTypeDropdowns();populateIOUDBConvTypeDropdown();}}
+        function deleteConvType(i){const types=getConvTypes();if(confirm('Delete "'+types[i].name+'"?')){types.splice(i,1);localStorage.setItem('convTypes',JSON.stringify(types));renderConvTypeList();populateConvTypeDropdowns();populateIOUDBConvTypeDropdown();showToast("Type Deleted!");}}
+        function addConvType(){const nm=document.getElementById('newConvTypeName').value.trim(),ti=document.getElementById('newConvTypeTitle').value.trim(),rl=document.getElementById('newConvTypeRefLabel').value.trim(),en=document.getElementById('newConvTypeEnabled').checked;if(!nm){showToast("Please enter Type Name");return;}const types=getConvTypes();const id=nm.toLowerCase().replace(/[^a-z0-9]+/g,'_')+'_'+Date.now();types.push({id,name:nm,printTitle:ti||nm,refLabel:rl||'CN Number',enabled:en});localStorage.setItem('convTypes',JSON.stringify(types));document.getElementById('newConvTypeName').value='';document.getElementById('newConvTypeTitle').value='';document.getElementById('newConvTypeRefLabel').value='';document.getElementById('newConvTypeEnabled').checked=true;renderConvTypeList();populateConvTypeDropdowns();populateIOUDBConvTypeDropdown();showToast("Type Added!");}
 
         async function checkAndSeedLocations(){const s=await locationsRef.once('value');if(!s.exists()||Object.keys(s.val()).length===0){try{await Promise.all(SEED_LOCATIONS.map(l=>locationsRef.push({name:l,timestamp:Date.now()})));}catch(e){}}}checkAndSeedLocations();
 
@@ -756,7 +877,7 @@
                           typeLabel = iou.iouType || 'Bill Entry',
                           typeBadge = `<span class="conv-type-badge" style="background:#d0e0ff; color:navy;">${typeLabel}</span>`;
                           
-                    tb.innerHTML+=`<tr onclick="editIOU('${iou.key}')" style="cursor:pointer">
+                    tb.innerHTML+=`<tr onclick="editIOU('${iou.key}')" style="cursor:pointer" data-search="${(iou.iouNo||'')+' '+(iou.name||'')+' '+(iou.cnNumber||'')+' '+(dd)+' '+(iou.iouType||'')}" data-status="${iou.status||'Pending'}">
                         <td>${iou.iouNo}</td><td>${dd}</td><td>${iou.name}</td><td>${tn}</td>
                         <td>${cnD}</td><td>${refD}</td><td>${iou.amount.toFixed(2)}</td>
                         <td>${typeBadge}</td>
@@ -774,6 +895,7 @@
             }else{
                 if(lth)lth.innerText='Ref No';
             }
+            filterIOUEntryList();
         });
 
         function handleIOUSelect(){const sel=document.getElementById('iouSelect'),hint=document.getElementById('iouAmountHint');if(sel.value){const opt=sel.options[sel.selectedIndex];document.getElementById('billName').value=opt.getAttribute('data-name');document.getElementById('billDepot').value=opt.getAttribute('data-depot');document.getElementById('billDept').value=opt.getAttribute('data-dept');document.getElementById('billPurpose').value=opt.getAttribute('data-purpose');document.getElementById('iouAmtDisplay').innerText=opt.getAttribute('data-amount');const iD=opt.getAttribute('data-date');document.getElementById('iouDateDisplay').innerText=iD?formatDate(iD):'-';document.getElementById('iouCnDisplay').innerText=opt.getAttribute('data-cn')||'-';document.getElementById('iouCnLabelDisplay').innerText=opt.getAttribute('data-reflabel')||'CN No';if(iD)document.getElementById('billDate').value=iD;hint.style.display='block';}else{hint.style.display='none';}}
@@ -826,6 +948,44 @@
             document.getElementById('statBalance').innerText=balance.toFixed(2)+' Tk'; 
             
             const nm={};filtered.forEach(b=>{const n=b.name||'Unknown';if(!nm[n])nm[n]={count:0,total:0,iouCount:0};nm[n].count++;nm[n].total+=parseFloat(b.total)||0;if(b.iouId)nm[n].iouCount++;});const nb=document.getElementById('nameBreakdownBody'),nf=document.getElementById('nameBreakdownFoot');nb.innerHTML='';let ni=1,ngt=0;const ne=Object.entries(nm).sort((a,b)=>b[1].total-a[1].total);ne.forEach(([n,s])=>{ngt+=s.total;nb.innerHTML+=`<tr><td style="text-align:center;">${ni}</td><td><strong>${n}</strong></td><td style="text-align:center;">${s.count}</td><td style="text-align:right;padding-right:10px;">${s.total.toFixed(2)}</td><td style="text-align:center;">${s.iouCount>0?'<span style="color:#cc0000;font-weight:bold;">'+s.iouCount+'</span>':'-'}</td></tr>`;ni++;});nf.innerHTML=`<tr><td colspan="3" style="text-align:right;font-weight:bold;padding-right:10px;">Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:10px;background:#e0e0e0;">${ngt.toFixed(2)}</td><td></td></tr>`;document.getElementById('nameBreakdownContainer').style.display=ne.length>0?'block':'none';const dm={};filtered.forEach(b=>{const dk=b.billDate||'unknown';if(!dm[dk])dm[dk]=[];dm[dk].push(b);});const ad=document.getElementById('dailyAccordion');ad.innerHTML='';const dks=Object.keys(dm).sort();dks.forEach(dk=>{const db2=dm[dk],dt=db2.reduce((s,b)=>s+(parseFloat(b.total)||0),0),dd=formatDate(dk),dl=`${dd} (${db2.length} bill${db2.length>1?'s':''})`;const hd=document.createElement('div');hd.className='daily-breakdown-header';hd.innerHTML=`<span>${dl}</span><span style="font-weight:bold;">${dt.toFixed(2)} Tk <span class="arrow">&#9654;</span></span>`;hd.onclick=function(){this.classList.toggle('open');this.nextElementSibling.classList.toggle('open');};const bd=document.createElement('div');bd.className='daily-breakdown-body';let th=`<table><thead><tr><th>Bill No</th><th>Name</th><th>Type</th><th>Total</th><th>Ref No</th><th>Act</th></tr></thead><tbody>`;db2.forEach(b=>{const tc=findConvType(b.convType),tn=tc?tc.name:'-',rd=getRefDisplay(b.cnNumber);th+=`<tr><td>${b.billNo}</td><td>${b.name}</td><td style="font-size:11px;">${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)}</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});th+=`</tbody></table><div class="daily-subtotal">Day Total: ${dt.toFixed(2)} Tk</div>`;bd.innerHTML=th;ad.appendChild(hd);ad.appendChild(bd);});document.getElementById('dailyBreakdownContainer').style.display=dks.length>0?'block':'none';const fb=document.getElementById('monthFullTableBody'),ff=document.getElementById('monthFullTableFoot');fb.innerHTML='';let ft=0;const df=[...filtered].sort((a,b)=>(b.billDate||'').localeCompare(a.billDate||''));df.forEach(b=>{ft+=parseFloat(b.total)||0;const tc=findConvType(b.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-',rd=getRefDisplay(b.cnNumber),dd=formatDate(b.billDate);fb.innerHTML+=`<tr><td>${b.billNo}</td><td>${dd}</td><td>${b.name}</td><td>${tn}</td><td style="text-align:right;padding-right:8px;">${(parseFloat(b.total)||0).toFixed(2)} Tk</td><td style="text-align:center;">${rd}</td><td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="editBill('${b.key}')">Edit</button> <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="printBill('${b.key}')">Print</button></td></tr>`;});ff.innerHTML=`<tr><td colspan="4" style="text-align:right;font-weight:bold;padding-right:10px;">Month Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:8px;background:#e0e0e0;">${ft.toFixed(2)} Tk</td><td colspan="2"></td></tr>`;document.getElementById('monthFullTableContainer').style.display=df.length>0?'block':'none';document.getElementById('monthNoData').style.display=filtered.length===0?'block':'none';
+
+            // ===== NEW: MONTH-WISE IOU SUMMARY + BALANCE + IOU LIST =====
+            const allIous=window._allIOUSCache||[];
+            const monthIous=allIous.filter(i=>i.iouDate&&i.iouDate.substring(0,7)===sm);
+            const mioTotal=monthIous.reduce((s,i)=>s+(parseFloat(i.amount)||0),0);
+            const mioUsed=monthIous.filter(i=>i.status==='Used').length;
+            const mioPending=monthIous.filter(i=>i.status==='Pending').length;
+            const mioAuto=monthIous.filter(i=>i.status==='Auto Used').length;
+            document.getElementById('statMonthIouCount').innerText=monthIous.length;
+            document.getElementById('statMonthIouAmount').innerText=mioTotal.toFixed(2)+' Tk';
+            document.getElementById('statMonthIouUsed').innerText=mioUsed;
+            document.getElementById('statMonthIouPending').innerText=mioPending;
+            document.getElementById('statMonthIouAuto').innerText=mioAuto;
+            // Balance summary
+            document.getElementById('statBalanceBills').innerText=gt.toFixed(2)+' Tk';
+            document.getElementById('statBalanceIou').innerText=mioTotal.toFixed(2)+' Tk';
+            document.getElementById('statBalanceNet').innerText=(gt-mioTotal).toFixed(2)+' Tk';
+            // IOU-in-month table
+            const mIOUtb=document.getElementById('monthIOUTableBody'),mIOUff=document.getElementById('monthIOUTableFoot');
+            mIOUtb.innerHTML='';let mIOUt=0;
+            const mIOUsorted=[...monthIous].sort((a,b)=>(b.iouDate||'').localeCompare(a.iouDate||''));
+            mIOUsorted.forEach(i=>{
+                const amt=parseFloat(i.amount)||0; mIOUt+=amt;
+                const tc=findConvType(i.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-';
+                const cnD=i.cnNumber?`<span class="cn-number-cell">${i.cnNumber}</span>`:'-';
+                const isUsed=(i.status==='Used'||i.status==='Auto Used');
+                const sc=isUsed?'status-used':'status-pending';
+                const typeLabel=i.iouType||'Bill Entry';
+                const typeBadge=`<span class="conv-type-badge" style="background:#d0e0ff; color:navy;">${typeLabel}</span>`;
+                mIOUtb.innerHTML+=`<tr onclick="editIOU('${i.key}');switchTab('iou');" style="cursor:pointer">
+                    <td><strong>${i.iouNo||''}</strong></td><td>${formatDate(i.iouDate)}</td><td>${i.name||''}</td>
+                    <td>${typeBadge}</td><td>${tn}</td><td>${cnD}</td>
+                    <td style="text-align:right;padding-right:8px;">${amt.toFixed(2)}</td>
+                    <td><span class="status-badge ${sc}">${i.status||'Pending'}</span></td>
+                </tr>`;
+            });
+            if(mIOUsorted.length===0){mIOUtb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:15px;color:#666;">No IOUs in this month.</td></tr>';}
+            mIOUff.innerHTML=`<tr><td colspan="6" style="text-align:right;font-weight:bold;padding-right:10px;">Month IOU Grand Total:</td><td style="text-align:right;font-weight:bold;padding-right:8px;background:#e0e0e0;">${mIOUt.toFixed(2)} Tk</td><td colspan="1"></td></tr>`;
         }
         function goToPrevMonth(){const p=document.getElementById('monthPicker');if(!p.value){goToCurrentMonth();return;}const[y,m]=p.value.split('-').map(Number);let nm=m-1,ny=y;if(nm<1){nm=12;ny--;}p.value=`${ny}-${String(nm).padStart(2,'0')}`;applyMonthFilter();}
         function goToNextMonth(){const p=document.getElementById('monthPicker');if(!p.value){goToCurrentMonth();return;}const[y,m]=p.value.split('-').map(Number);let nm=m+1,ny=y;if(nm>12){nm=1;ny++;}p.value=`${ny}-${String(nm).padStart(2,'0')}`;applyMonthFilter();}
@@ -833,17 +993,126 @@
 
         billsRef.on('value',(snapshot)=>{const tb=document.getElementById('summaryTableBody');tb.innerHTML='';allBillsCache=[];if(snapshot.exists()){const d=snapshot.val();const bills=Object.entries(d).map(([k,v])=>({key:k,...v})).sort((a,b)=>b.timestamp-a.timestamp);allBillsCache=bills;bills.forEach(bill=>{const ios=bill.iouId?'<span style="color:var(--win-navy);font-weight:bold;">YES</span>':'<span style="color:var(--win-text);">NO</span>';const tc=findConvType(bill.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-',rd=getRefDisplay(bill.cnNumber),dd=formatDate(bill.billDate);tb.innerHTML+=`<tr><td>${bill.billNo}</td><td>${dd}</td><td>${bill.name}</td><td>${tn}</td><td>${bill.total.toFixed(2)} Tk</td><td>${ios}</td><td>${rd}</td><td><button class="btn" onclick="editBill('${bill.key}')">Edit</button> <button class="btn btn-delete" onclick="deleteBill('${bill.key}')">Del</button> <button class="btn" onclick="printBill('${bill.key}')">Print</button></td></tr>`;});}else{tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:20px;">No records found.</td></tr>';}const mp=document.getElementById('monthPicker');if(mp.value)applyMonthFilter();});
 
-        iousRef.on('value',(snapshot)=>{window._cachedIous={};if(snapshot.exists())window._cachedIous=snapshot.val();const mp=document.getElementById('monthPicker');if(mp.value)applyMonthFilter();});
+        iousRef.on('value',(snapshot)=>{window._cachedIous={};window._allIOUSCache=[];if(snapshot.exists()){window._cachedIous=snapshot.val();window._allIOUSCache=Object.entries(snapshot.val()).map(([k,v])=>({key:k,...v}));}renderPendingIOUWidget();const mp=document.getElementById('monthPicker');if(mp.value)applyMonthFilter();if(document.getElementById('ioudb')&&document.getElementById('ioudb').classList.contains('active'))renderIOUDatabase();});
+
+        // ===== PENDING IOU WIDGET (Bill Entry tab) =====
+        function renderPendingIOUWidget(){
+            const list=document.getElementById('pendingIOUList'),cnt=document.getElementById('pendingIOUCount');
+            if(!list||!cnt)return;
+            const all=window._allIOUSCache||[];
+            const pending=all.filter(i=>i.status==='Pending'&&(i.iouType||'Bill Entry')==='Bill Entry').sort((a,b)=>b.timestamp-a.timestamp);
+            cnt.innerText=pending.length+' pending IOU'+(pending.length!==1?'s':'');
+            if(pending.length===0){list.innerHTML='<em style="color:#666;font-size:11px;">No pending IOUs.</em>';return;}
+            list.innerHTML=pending.map(i=>{
+                const rl=getRefLabel(i.convType),cnL=i.cnNumber?` • ${rl}: ${i.cnNumber}`:'';
+                return `<button type="button" class="pending-iou-chip" onclick="applyIOUFromWidget('${i.key}')" title="${(i.purpose||'').replace(/"/g,'&quot;')}"><strong>${i.iouNo}</strong> | ${formatDate(i.iouDate)} | ${(parseFloat(i.amount)||0).toFixed(0)} Tk${cnL}</button>`;
+            }).join('');
+        }
+        function applyIOUFromWidget(key){
+            const sel=document.getElementById('iouSelect');
+            if(!sel)return;
+            for(let i=0;i<sel.options.length;i++){
+                if(sel.options[i].value===key){sel.selectedIndex=i;sel.dispatchEvent(new Event('change'));handleIOUSelect();showToast('IOU '+sel.options[i].text.split(' - ')[0]+' applied.');return;}}
+            showToast('IOU not found in selector.');
+        }
+
+        // ===== IOU ENTRY TAB SEARCH FILTER =====
+        function filterIOUEntryList(){
+            const q=(document.getElementById('iouEntrySearch').value||'').toLowerCase().trim();
+            const sf=document.getElementById('iouEntryStatusFilter').value;
+            const rows=document.querySelectorAll('#iouListBody tr');
+            let visible=0;
+            rows.forEach(r=>{
+                const txt=(r.getAttribute('data-search')||'').toLowerCase();
+                const st=r.getAttribute('data-status')||'';
+                const okQ=!q||txt.indexOf(q)>=0;
+                const okS=!sf||st===sf;
+                if(okQ&&okS){r.style.display='';visible++;}else{r.style.display='none';}
+            });
+        }
+
+        // ===== IOU DATABASE TAB =====
+        function populateIOUDBConvTypeDropdown(){
+            const sel=document.getElementById('iouDbConvType');if(!sel)return;
+            const cur=sel.value;
+            const types=getConvTypes();
+            let h='<option value="">All</option>';
+            types.forEach(t=>{h+=`<option value="${t.id}">${t.name}</option>`;});
+            sel.innerHTML=h;sel.value=cur;
+        }
+        function clearIOUDBFilters(){
+            document.getElementById('iouDbSearch').value='';
+            document.getElementById('iouDbFrom').value='';
+            document.getElementById('iouDbTo').value='';
+            document.getElementById('iouDbStatus').value='';
+            document.getElementById('iouDbType').value='';
+            document.getElementById('iouDbConvType').value='';
+            renderIOUDatabase();
+        }
+        function renderIOUDatabase(){
+            const tb=document.getElementById('iouDbTableBody');if(!tb)return;
+            const all=window._allIOUSCache||[];
+            const q=(document.getElementById('iouDbSearch').value||'').toLowerCase().trim();
+            const df=document.getElementById('iouDbFrom').value;
+            const dt=document.getElementById('iouDbTo').value;
+            const sf=document.getElementById('iouDbStatus').value;
+            const tf=document.getElementById('iouDbType').value;
+            const cf=document.getElementById('iouDbConvType').value;
+            const filtered=all.filter(i=>{
+                const iouDate=i.iouDate||'';
+                if(df&&iouDate<df)return false;
+                if(dt&&iouDate>dt)return false;
+                if(sf&&(i.status||'')!==sf)return false;
+                if(tf&&(i.iouType||'Bill Entry')!==tf)return false;
+                if(cf&&(i.convType||'')!==cf)return false;
+                if(q){
+                    const hay=((i.iouNo||'')+' '+(i.name||'')+' '+(i.cnNumber||'')+' '+(i.purpose||'')+' '+(i.ref||'')+' '+(i.depot||'')+' '+(iouDate)+' '+(i.status||'')).toLowerCase();
+                    if(hay.indexOf(q)<0)return false;
+                }
+                return true;
+            }).sort((a,b)=>b.timestamp-a.timestamp);
+            tb.innerHTML='';
+            let total=0,pendT=0,usedT=0,autoT=0;
+            filtered.forEach(iou=>{
+                const tc=findConvType(iou.convType),tn=tc?`<span class="conv-type-badge">${tc.name}</span>`:'-';
+                const cnD=iou.cnNumber?`<span class="cn-number-cell">${iou.cnNumber}</span>`:'-';
+                const refD=iou.ref?`<span style="color:#555;font-size:12px;">${iou.ref}</span>`:'-';
+                const isUsed=(iou.status==='Used'||iou.status==='Auto Used');
+                const sc=isUsed?'status-used':'status-pending';
+                const typeLabel=iou.iouType||'Bill Entry';
+                const typeBadge=`<span class="conv-type-badge" style="background:#d0e0ff; color:navy;">${typeLabel}</span>`;
+                const amt=parseFloat(iou.amount)||0;
+                total+=amt;
+                if(iou.status==='Pending')pendT+=amt;
+                if(iou.status==='Used')usedT+=amt;
+                if(iou.status==='Auto Used')autoT+=amt;
+                tb.innerHTML+=`<tr onclick="editIOU('${iou.key}');switchTab('iou');" style="cursor:pointer">
+                    <td><strong>${iou.iouNo||''}</strong></td><td>${formatDate(iou.iouDate)}</td><td>${iou.name||''}</td>
+                    <td>${iou.depot||''}</td><td>${iou.dept||''}</td><td>${tn}</td><td>${cnD}</td><td>${refD}</td>
+                    <td style="text-align:right;padding-right:8px;">${amt.toFixed(2)}</td><td>${typeBadge}</td>
+                    <td><span class="status-badge ${sc}">${iou.status||'Pending'}</span></td>
+                    <td><button class="btn" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();editIOU('${iou.key}');switchTab('iou');">Edit</button> <button class="btn btn-delete" style="padding:2px 8px;font-size:11px;" onclick="event.stopPropagation();deleteIOU('${iou.key}')">X</button></td>
+                </tr>`;
+            });
+            if(filtered.length===0){tb.innerHTML='<tr><td colspan="12" style="text-align:center;padding:20px;color:#666;">No IOUs match the filters.</td></tr>';}
+            document.getElementById('iouDbTotalAmount').innerText=total.toFixed(2);
+            document.getElementById('iouDbPendingAmount').innerText=pendT.toFixed(2);
+            document.getElementById('iouDbUsedAmount').innerText=usedT.toFixed(2);
+            document.getElementById('iouDbAutoAmount').innerText=autoT.toFixed(2);
+            document.getElementById('iouDbCount').innerText=filtered.length;
+            document.getElementById('iouDbFootTotal').innerText=total.toFixed(2)+' Tk';
+            document.getElementById('iouDbResultCount').innerText=filtered.length+' record'+(filtered.length!==1?'s':'');
+        }
     </script>
 
     <!-- GLOBAL UI -->
     <script>
-        function switchTab(tabId){document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));document.getElementById(tabId).classList.add('active');const btns=document.querySelectorAll('.menu-btn'),map={'entry':0,'summary':1,'monthwise':2,'iou':3,'locations':4,'settings':5};if(map[tabId]!==undefined)btns[map[tabId]].classList.add('active');if(tabId==='monthwise'){const p=document.getElementById('monthPicker');if(!p.value)goToCurrentMonth();}if(tabId==='settings')renderConvTypeList();}
+        function switchTab(tabId){document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));document.getElementById(tabId).classList.add('active');const btns=document.querySelectorAll('.menu-btn'),map={'entry':0,'summary':1,'monthwise':2,'iou':3,'ioudb':4,'locations':5,'settings':6};if(map[tabId]!==undefined)btns[map[tabId]].classList.add('active');if(tabId==='monthwise'){const p=document.getElementById('monthPicker');if(!p.value)goToCurrentMonth();else applyMonthFilter();}if(tabId==='ioudb')renderIOUDatabase();if(tabId==='settings')renderConvTypeList();}
         function calcTotal(){let t=0;document.querySelectorAll('.row-amount').forEach(i=>t+=parseFloat(i.value)||0);document.getElementById('displayTotal').innerText=t.toFixed(2);}
         function resetForm(){document.getElementById('billKey').value='';document.getElementById('billName').value='';document.getElementById('billDepot').value='';document.getElementById('billDept').value='';document.getElementById('billPurpose').value='';document.getElementById('entryTableBody').innerHTML='';document.getElementById('displayTotal').innerText='0.00';document.getElementById('quickFrom').value="";document.getElementById('quickTo').value="";document.getElementById('quickAmount').value="";document.getElementById('iouSelect').value="";document.getElementById('iouAmountHint').style.display='none';document.getElementById('billDate').valueAsDate=new Date();generateNextBillNo();}
         function showToast(msg){const x=document.getElementById("toast");document.getElementById("toast-msg").innerText=msg;x.className="show";setTimeout(()=>x.className=x.className.replace("show",""),3000);}
         function saveSettings(){localStorage.setItem('printBorder',document.getElementById('printBorderToggle').checked);localStorage.setItem('logoUrl',document.getElementById('settingsLogoUrl').value);showToast("Settings Saved!");}
-        function initApp(){if(!localStorage.getItem('convTypes')){localStorage.setItem('convTypes',JSON.stringify([{id:'courier',name:'Conveyance Bill Courier',printTitle:'Conveyance Bill Courier',refLabel:'CN Number',enabled:true},{id:'stationery',name:'Conveyance Bill Stationery',printTitle:'Conveyance Bill Stationery',refLabel:'Slip No',enabled:true},{id:'bank',name:'Conveyance Bill Bank',printTitle:'Conveyance Bill Bank',refLabel:'Bank Slip',enabled:true}]));}populateConvTypeDropdowns();resetForm();generateIOUNo();if(localStorage.getItem('printBorder')==='true')document.getElementById('printBorderToggle').checked=true;const sl=localStorage.getItem('logoUrl');if(sl)document.getElementById('settingsLogoUrl').value=sl;}
+        function initApp(){if(!localStorage.getItem('convTypes')){localStorage.setItem('convTypes',JSON.stringify([{id:'courier',name:'Conveyance Bill Courier',printTitle:'Conveyance Bill Courier',refLabel:'CN Number',enabled:true},{id:'stationery',name:'Conveyance Bill Stationery',printTitle:'Conveyance Bill Stationery',refLabel:'Slip No',enabled:true},{id:'bank',name:'Conveyance Bill Bank',printTitle:'Conveyance Bill Bank',refLabel:'Bank Slip',enabled:true}]));}populateConvTypeDropdowns();populateIOUDBConvTypeDropdown();resetForm();generateIOUNo();renderPendingIOUWidget();if(localStorage.getItem('printBorder')==='true')document.getElementById('printBorderToggle').checked=true;const sl=localStorage.getItem('logoUrl');if(sl)document.getElementById('settingsLogoUrl').value=sl;}
     </script>
 </body>
 </html>
