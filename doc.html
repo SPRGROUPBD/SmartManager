@@ -117,7 +117,16 @@
             .ps-print-table th{padding:0 4px!important; height:20px!important;}
             .po-print-table tr, .ps-print-table tr { page-break-inside: avoid; }
             .doc-row-inactive { display: none !important; }
+            .honorarium-zero { display: none !important; }
+            /* === Print Sheet SL renumbering for visible rows === */
+            .ps-print-table tbody { counter-reset: psRowCounter; }
+            .ps-print-table tbody tr { counter-increment: psRowCounter; }
+            .ps-print-table tbody tr:not(.honorarium-zero):not(.doc-row-inactive) td:first-child::before { content: counter(psRowCounter); }
+            .ps-print-table tbody .ps-sl-value { display: none !important; }
             .ps-remark-input { border: none !important; background: transparent !important; padding: 0 !important; height: 100% !important; line-height: 20px !important;}
+            .ps-honorarium-input { border: none !important; background: transparent !important; padding: 0 !important; height: auto !important; line-height: 20px !important; font-size: 11px !important; text-align: right !important; font-weight: 700 !important; color: #000 !important; width: 60px !important; -webkit-appearance: none !important; -moz-appearance: textfield !important; appearance: none !important; }
+            .ps-honorarium-input::-webkit-outer-spin-button,
+            .ps-honorarium-input::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
             body.force-print .main-content > .top-bar,
             body.force-print .main-content > .print-area { display: none !important; }
             body.force-print #hiddenPrintArea { display: block !important; padding: 0 !important; }
@@ -219,6 +228,7 @@
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-gold-500 mt-1 font-semibold" data-page="print-sheet" onclick="showPage('print-sheet');return false"><i class="fas fa-print w-5 text-center"></i> Print Sheet</a>
             <!-- নতুন Label Print মেনু -->
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-orange-400 font-semibold" data-page="label-print" onclick="showPage('label-print');return false"><i class="fas fa-tags w-5 text-center"></i> Label Print</a>
+            <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-emerald-400 font-semibold" data-page="sales-wise-honorarium" onclick="showPage('sales-wise-honorarium');return false"><i class="fas fa-calculator w-5 text-center"></i> Sales Wise Honorarium</a>
             <div class="px-4 mt-5 mb-2"><span class="text-[10px] font-semibold text-slate-500 uppercase tracking-widest">Settings</span></div>
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openAreaSettings();return false"><i class="fas fa-map-location-dot w-5 text-center text-blue-400"></i> Area Management</a>
             <a href="#" class="nav-link flex items-center gap-3 px-5 py-2.5 text-sm text-slate-300" onclick="openSlabSettings();return false"><i class="fas fa-sliders w-5 text-center text-blue-400"></i> Slab Settings</a>
@@ -474,6 +484,22 @@
                 </div>
                 <div id="labelPrintArea"></div>
             </div>
+
+            <!-- SALES WISE HONORARIUM -->
+            <div id="page-sales-wise-honorarium" class="page-content hidden">
+                <div class="no-print bg-white rounded-xl border border-slate-200 p-5 mb-6">
+                    <h3 class="font-bold flex items-center gap-2"><i class="fas fa-calculator text-emerald-600"></i> Sales Wise Doctor Honorarium</h3>
+                    <p class="text-xs text-slate-400 mt-1">নিয়ম: ৭০,০০০ Sales = ২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে। ডাক্তারদের Default Amount অনুযায়ী DESC ক্রমে উপর থেকে নিচে প্রত্যেককে min(default, pool) দেওয়া হবে। Pool শেষ হলে পরবর্তী ডাক্তার ৳০ পাবেন।</p>
+                    <div class="flex flex-wrap items-end gap-4 mt-4">
+                        <div><label class="block text-[10px] font-semibold text-slate-500 mb-1">Application Month</label><select id="swhMonth" onchange="loadSalesWiseHonorarium()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"></select></div>
+                        <div><label class="block text-[10px] font-semibold text-slate-500 mb-1">Area</label><select id="swhArea" onchange="loadSalesWiseHonorarium()" class="input-focus border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none bg-white"><option value="">All</option></select></div>
+                        <div class="flex-1"></div>
+                        <button onclick="printSalesWiseHonorarium()" class="btn-primary text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-print mr-1"></i> Print</button>
+                        <button onclick="saveAllSalesWiseHonorarium()" class="btn-excel text-white px-5 py-2 rounded-lg text-sm font-semibold"><i class="fas fa-cloud-arrow-up mr-1"></i> Save All</button>
+                    </div>
+                </div>
+                <div id="salesWiseHonorariumArea" class="space-y-6"></div>
+            </div>
         </div>
     </div>
     
@@ -561,6 +587,7 @@
         const signatureLabels = ['Prepared by', 'Checked by', 'ReChecked by', 'Verified by', 'Approved By', 'Applicant by (MPL)', 'Regional Sales Manager (MPL)', 'Accounts Officer (Bank)', 'Officer (Bank)', 'Branch Manager (Bank)'];
         let signaturesCache = {}; 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
+        let salesWiseHonorariumCache = {};
         let qualifiedSalesCache = { currentMonth: 70000, nextMonth: 80000 };
         let settingsCache = { 
             defaultType: 'IBBL',
@@ -649,7 +676,7 @@
 
         function populateMonthSelects(){
             const opts=getMonthOptions(),cur=getCurrentMonth();
-            ['salesMonth','poEntryMonth','poListMonth','poRptMonth','rptMonthlyMonth','printMonth','imgRptMonth','labelPrintMonth'].forEach(id=>{
+            ['salesMonth','poEntryMonth','poListMonth','poRptMonth','rptMonthlyMonth','printMonth','imgRptMonth','labelPrintMonth','swhMonth'].forEach(id=>{
                 const el=document.getElementById(id);
                 if(!el)return;
                 el.innerHTML='';
@@ -696,11 +723,11 @@
         function populateAreaDropdowns(){
             const sortedAreas = [...areasCache].sort((a,b) => a.localeCompare(b));
             const areaOpts = sortedAreas.map(a=>`<option value="${a}">${a}</option>`).join('');
-            ['mpoArea','editMpoArea','salesArea','poRptArea','rptMonthlyArea','printArea','poListArea'].forEach(sid=>{
+            ['mpoArea','editMpoArea','salesArea','poRptArea','rptMonthlyArea','printArea','poListArea','swhArea'].forEach(sid=>{
                 const sel=document.getElementById(sid);
                 if(!sel)return;
                 const cv=sel.value;
-                if(sid==='salesArea'||sid==='poRptArea'||sid==='printArea'||sid==='poListArea'){
+                if(sid==='salesArea'||sid==='poRptArea'||sid==='printArea'||sid==='poListArea'||sid==='swhArea'){
                     sel.innerHTML='<option value="">All</option>'+areaOpts;
                 } else if(sid==='rptMonthlyArea'){
                     sel.innerHTML='<option value="">All Areas</option>'+areaOpts;
@@ -776,6 +803,7 @@
         onValue(ref(db,'mpos'),snap=>{mposCache=snap.val()||{};updateTerritoryDatalist();refreshCurrentPage();});
         onValue(ref(db,'honorarium'),snap=>{honorariumCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'mpoSales'),snap=>{mpoSalesCache=snap.val()||{};refreshCurrentPage();});
+        onValue(ref(db,'salesWiseHonorarium'),snap=>{salesWiseHonorariumCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'areas'),snap=>{areasCache = snap.val()||[];areasCache.sort((a,b) => a.localeCompare(b));populateAreaDropdowns();refreshCurrentPage();});
         onValue(ref(db,'settings/signatures'),snap=>{signaturesCache = snap.val() || {};refreshCurrentPage();});
         onValue(ref(db,'settings'),snap=>{
@@ -811,9 +839,10 @@
             if(!document.getElementById('page-print-sheet').classList.contains('hidden'))loadPrintSheet();
             if(!document.getElementById('page-report-monthly').classList.contains('hidden'))loadMonthlyReport();
             if(!document.getElementById('page-label-print').classList.contains('hidden'))loadLabelPrint();
+            if(!document.getElementById('page-sales-wise-honorarium').classList.contains('hidden'))loadSalesWiseHonorarium();
         }
 
-        const pageTitles={'dashboard':'Dashboard','add-doctor':'Add Doctor','doctor-list':'Doctor List','add-mpo':'Add MPO','mpo-list':'MPO List','mpo-sales':'MPO Sales Entry','pay-order-entry':'Pay Order Entry','report-monthly':'Monthly Report','pay-order-report':'Pay Order Report','image-report':'Image Report','print-sheet':'Print Sheet','label-print':'Label Print'};
+        const pageTitles={'dashboard':'Dashboard','add-doctor':'Add Doctor','doctor-list':'Doctor List','add-mpo':'Add MPO','mpo-list':'MPO List','mpo-sales':'MPO Sales Entry','pay-order-entry':'Pay Order Entry','report-monthly':'Monthly Report','pay-order-report':'Pay Order Report','image-report':'Image Report','print-sheet':'Print Sheet','label-print':'Label Print','sales-wise-honorarium':'Sales Wise Honorarium'};
 
         function showPage(pageId){
             if(pageId==='add-doctor'&&!document.getElementById('editDocId').value)exitEditMode();
@@ -836,6 +865,7 @@
                 case'image-report':loadImageReport();break;
                 case'print-sheet':loadPrintSheet();break;
                 case'label-print':loadLabelPrint();break;
+                case'sales-wise-honorarium':loadSalesWiseHonorarium();break;
             }
             closeSidebar();
         }
@@ -2150,10 +2180,23 @@
             });
             sortedMpoIds.forEach(mpoId=>{
                 const group=mpoGroups[mpoId];const mpo=group.mpo;const sales=monthSales[mpoId]||{tp1:'',tp2:'',commit:''};
+                // === Sales Wise Honorarium Formula (same as Sales Wise Honorarium page) ===
+                const tp2Num=parseAmount(sales.tp2);
+                const pool=calculateSalesWiseHonorarium(tp2Num);
+                const {distribution}=distributeHonorariumForMPO(mpoId, month, pool);
+                // === Get manuallyEdited overrides for this MPO (saved from Print Sheet edits) ===
+                const savedOverrides=(salesWiseHonorariumCache[month] && salesWiseHonorariumCache[month][mpoId]) || {};
                 group.doctors.forEach(item=>{
-                    const amount=item.entry?(item.entry.amount||0):(item.doc.amount||0);
-                    const remarks=item.entry?(item.entry.remarks||''):''; 
-                    const isPaid = !!item.entry; 
+                    // Prefer manual override (manuallyEdited=true); else use Sales Wise computed
+                    const savedEntry=savedOverrides[item.docId];
+                    let amount;
+                    if (savedEntry && savedEntry.manuallyEdited === true) {
+                        amount = parseAmount(savedEntry.amount);
+                    } else {
+                        amount = distribution[item.docId] ? distribution[item.docId].honorarium : 0;
+                    }
+                    const remarks=item.entry?(item.entry.remarks||''):'';
+                    const isPaid = !!item.entry;
                     flatRows.push({
                         docId:item.docId,
                         docIdCode:item.doc.doctorId||'-',
@@ -2161,7 +2204,9 @@
                         active:item.doc.active!==false,
                         mpoEmpId:mpo.employeeId||'-',mpoName:mpo.name||'-',mpoArea:mpo.area||'-',territory:mpo.territory||'-',
                         tp1:sales.tp1||'-',tp2:sales.tp2||'-',commit:sales.commit||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks,
-                        isPaid: isPaid
+                        isPaid: isPaid,
+                        pool:pool,
+                        defaultAmount: parseAmount(item.doc.amount)
                     });
                 });
             });
@@ -2174,7 +2219,7 @@
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
             if(flatRows.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">Sales Wise Calculation — ৭০,০০০=২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে; উপর থেকে নিচে ক্রমানুসারে বণ্টন</p></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
                 let cumulativeTotal=0; 
@@ -2186,13 +2231,14 @@
                     cumulativeTotal += pageTotal;
                     html+=`<div style="${!isLastPage?'page-break-after: always;':''}">`;
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
-                    html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
-                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Amount</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
+                    html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">Sales Wise Calculation — 70,000=2,000; +1,000 per extra 10,000; top-down sequential allocation</p></div>`;
+                    html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
                     pageRows.forEach(row=>{
                         globalSl++;
                         if(row.active) globalActiveSl++;
-                        html+=`<tr class="${!row.active?'doc-row-inactive':''} ${row.isPaid?'paid-bg':'pending-bg'}">
-                            <td style="text-align:center;">${row.active?globalActiveSl:'-'}</td>
+                        const isZero = row.active && Number(row.amount) === 0;
+                        html+=`<tr class="${!row.active?'doc-row-inactive':''} ${isZero?'honorarium-zero':''} ${row.isPaid?'paid-bg':'pending-bg'}" data-page="${pageIndex}">
+                            <td style="text-align:center;"><span class="ps-sl-value">${row.active?globalActiveSl:'-'}</span></td>
                             <td style="font-weight:600;">${row.mpoEmpId}</td>
                             <td>${row.mpoName}</td>
                             <td>${row.mpoArea}</td>
@@ -2202,7 +2248,9 @@
                             <td style="font-weight:600;font-size:10px;">${row.docIdCode}</td>
                             <td style="font-weight:500;">${row.docName}</td>
                             <td class="no-print" style="text-align:center;font-weight:700;${row.isPaid?'color:#059669;':'color:#dc2626;'}">${row.isPaid?'✔ Paid':'Pending'}</td>
-                            <td style="text-align:right;font-weight:700;">${row.active?Number(row.amount).toLocaleString():'-'}</td>
+                            <td style="text-align:right;font-weight:700;">
+                                ${row.active ? `<input type="number" min="0" class="ps-honorarium-input w-24 text-right border border-slate-300 rounded px-1 py-0.5 text-[11px] font-bold" value="${row.amount}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-default="${row.defaultAmount||0}" data-page="${pageIndex}" oninput="onPrintSheetHonorariumChange(this)">` : '-'}
+                            </td>
                             <td style="text-align:right;font-weight:600;">${row.commit}</td>
                             <td style="font-size:10px;">
                                 <input type="text" class="ps-remark-input w-full text-[10px] border border-slate-300 rounded px-1" value="${row.remarks}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-amount="${row.amount}">
@@ -2215,17 +2263,17 @@
                         </tr>`;
                     });
                     html+=`</tbody><tfoot>`;
-                    html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (${activePageCount} Active Doctor)</td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                    html+=`<tr style="background:#eff6ff;font-weight:700;font-size:11px;"><td colspan="9" style="padding:5px;text-align:right;border:1px solid #000;">Page ${pageIndex+1} Total (<span id="ps-page-count-${pageIndex}">${activePageCount}</span> Active Doctor)</td><td style="padding:5px;text-align:right;border:1px solid #000;font-weight:800;" id="ps-page-total-${pageIndex}">${Number(pageTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     if(isLastPage){
                         if(pages.length>1){
-                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                            html+=`<tr style="background:#dbeafe;font-weight:600;font-size:11px;"><td colspan="9" style="padding:4px;text-align:right;border:1px solid #000;">Previous Pages Total (Page 1 to ${pageIndex})</td><td style="padding:4px;text-align:right;border:1px solid #000;font-weight:700;" id="ps-prev-pages-total">${Number(previousPagesTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                         }
                         const grandTotalLabel = pages.length>1 ? `Grand Total (Page 1+2+...+${pages.length} = ${totalActiveItems} Active Doctor)` : `Grand Total (${totalActiveItems} Active Doctor)`;
-                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">${grandTotalLabel}</td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
+                        html+=`<tr style="background:#fef3c7;font-weight:800;font-size:12px;"><td colspan="9" style="padding:6px;text-align:right;border:1px solid #000;">${grandTotalLabel}</td><td style="padding:6px;text-align:right;border:1px solid #000;font-size:14px;" id="ps-grand-total">${Number(grandTotal).toLocaleString()}</td><td style="border:1px solid #000;"></td><td style="border:1px solid #000;"></td><td class="no-print" style="border:1px solid #fff;background:#fff;"></td></tr>`;
                     }
                     html+=`</tfoot></table>`;
                     if(isLastPage){
-                        html+=`<div style="margin-top:10px;font-size:10px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(grandTotal)}</span></div></div>`;
+                        html+=`<div style="margin-top:10px;font-size:10px;display:flex;justify-content:space-between;"><div style="font-weight:600;">Date: ${today}</div><div style="font-weight:600;">Taka In Word: <span style="font-style:italic;" id="ps-taka-in-word">${numberToWords(grandTotal)}</span></div></div>`;
                     }
                     html+=sigRowHTML(['Prepared by','Checked by','ReChecked by','Verified by','Approved By']);
                     html+=`</div>`;
@@ -2275,19 +2323,23 @@
             aoa.push([COMPANY.name]);
             aoa.push([COMPANY.address]);
             aoa.push([COMPANY.depot]);
-            aoa.push([`Doctor Honorarium List ${month}`]);
+            aoa.push([`Doctor Honorarium List ${month} (Sales Wise: 70,000=2,000; +1,000 per 10,000; top-down sequential)`]);
             aoa.push([]);
-            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Amount', 'Comitment Sales', 'Remarks']);
+            aoa.push(['SL', 'EMP Code', 'MPO Name', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Honorarium ৳', 'Comitment Sales', 'Remarks']);
             let sl = 0;
             let totalAmount = 0;
             sortedMpoIds.forEach(mpoId => {
                 const group = mpoGroups[mpoId];
                 const mpo = group.mpo;
                 const sales = mpoSalesCache[month]?.[mpoId] || {tp1:'', tp2:'', commit:''};
+                // === Sales Wise Honorarium Formula (same as Sales Wise Honorarium page) ===
+                const tp2Num = parseAmount(sales.tp2);
+                const pool = calculateSalesWiseHonorarium(tp2Num);
+                const { distribution } = distributeHonorariumForMPO(mpoId, month, pool);
                 group.doctors.forEach(item => {
                     if(item.doc.active === false) return;
                     sl++;
-                    const amount = item.entry ? (item.entry.amount||0) : (item.doc.amount||0);
+                    const amount = distribution[item.docId] ? distribution[item.docId].honorarium : 0;
                     totalAmount += amount;
                     const isPaid = !!item.entry;
                     const remarks = remarksMap[item.docId] !== undefined ? remarksMap[item.docId] : (item.entry ? (item.entry.remarks||'') : '');
@@ -2333,6 +2385,105 @@
             showToast('Excel exported successfully');
         }
         window.exportPrintSheetToExcel = exportPrintSheetToExcel;
+        
+        // ============ PRINT SHEET: LIVE HONORARIUM EDIT ============
+        // নিয়ম: Honorarium = 0 হলে সেই রো প্রিন্টে আসবে না (.honorarium-zero class)
+        // ইউজার ম্যানুয়ালি মান পরিবর্তন করতে পারবে — totals লাইভ আপডেট হবে
+        // ম্যানুয়াল পরিবর্তন Firebase-এ সেভ হবে (salesWiseHonorarium collection, manuallyEdited: true)
+        let _psSaveTimeouts = {};
+        function onPrintSheetHonorariumChange(input) {
+            const tr = input.closest('tr');
+            if (!tr) return;
+            const val = parseAmount(input.value);
+            // Toggle honorarium-zero class — 0 হলে প্রিন্টে লুকাবে
+            if (val === 0) {
+                tr.classList.add('honorarium-zero');
+            } else {
+                tr.classList.remove('honorarium-zero');
+            }
+            // Sync data-amount on the corresponding remark input so Save Remarks uses new value
+            const docId = input.dataset.docid;
+            const mpoId = input.dataset.mpoid;
+            const remarkInput = document.querySelector(`.ps-remark-input[data-docid="${docId}"]`);
+            if (remarkInput) remarkInput.dataset.amount = String(val);
+            // Update totals
+            updatePrintSheetTotals();
+            // === Firebase-এ সেভ (debounced 500ms) ===
+            const month = document.getElementById('printMonth').value;
+            const key = month + '/' + mpoId + '/' + docId;
+            if (_psSaveTimeouts[key]) clearTimeout(_psSaveTimeouts[key]);
+            _psSaveTimeouts[key] = setTimeout(() => {
+                const defaultAmt = parseAmount(input.dataset.default);
+                const path = `salesWiseHonorarium/${month}/${mpoId}/${docId}`;
+                const data = {
+                    amount: val,
+                    defaultAmount: defaultAmt,
+                    updatedAt: Date.now(),
+                    manuallyEdited: true
+                };
+                update(ref(db), { [path]: data })
+                    .then(() => {
+                        // Visual feedback — subtle flash on save
+                        input.classList.add('sales-saved');
+                        setTimeout(() => input.classList.remove('sales-saved'), 700);
+                    })
+                    .catch(err => showToast('Save error: ' + err.message, 'error'));
+            }, 500);
+        }
+        window.onPrintSheetHonorariumChange = onPrintSheetHonorariumChange;
+
+        function updatePrintSheetTotals() {
+            // Collect all honorarium inputs grouped by page
+            const allInputs = document.querySelectorAll('.ps-honorarium-input');
+            if (allInputs.length === 0) return;
+
+            // Build per-page totals
+            const pageTotals = {};
+            allInputs.forEach(inp => {
+                const pIdx = inp.dataset.page;
+                if (pIdx === undefined) return;
+                const val = parseAmount(inp.value);
+                if (!pageTotals[pIdx]) pageTotals[pIdx] = 0;
+                pageTotals[pIdx] += val;
+            });
+
+            // Update each page total cell
+            let grandTotal = 0;
+            const sortedPages = Object.keys(pageTotals).map(Number).sort((a, b) => a - b);
+            let prevPagesTotal = 0;
+            sortedPages.forEach(pIdx => {
+                const total = pageTotals[pIdx];
+                const cell = document.getElementById(`ps-page-total-${pIdx}`);
+                if (cell) cell.textContent = Number(total).toLocaleString();
+                // Update active doctor count — count non-zero rows on this page
+                const pageInputs = document.querySelectorAll(`.ps-honorarium-input[data-page="${pIdx}"]`);
+                let activeCount = 0;
+                pageInputs.forEach(inp => { if (parseAmount(inp.value) > 0) activeCount++; });
+                const countCell = document.getElementById(`ps-page-count-${pIdx}`);
+                if (countCell) countCell.textContent = activeCount;
+
+                if (pIdx < sortedPages[sortedPages.length - 1]) {
+                    // Not last page — contributes to prev pages total
+                    prevPagesTotal += total;
+                }
+                grandTotal += total;
+            });
+
+            // Update Previous Pages Total (sum of all pages except last)
+            const prevCell = document.getElementById('ps-prev-pages-total');
+            if (prevCell) prevCell.textContent = Number(prevPagesTotal).toLocaleString();
+
+            // Update Grand Total
+            const grandCell = document.getElementById('ps-grand-total');
+            if (grandCell) grandCell.textContent = Number(grandTotal).toLocaleString();
+
+            // Update Taka In Word
+            const takaInWord = document.getElementById('ps-taka-in-word');
+            if (takaInWord) takaInWord.textContent = numberToWords(grandTotal);
+        }
+        window.updatePrintSheetTotals = updatePrintSheetTotals;
+        // ============ END PRINT SHEET: LIVE HONORARIUM EDIT ============
+        
         function savePrintSheetRemarks() {
             const month = document.getElementById('printMonth').value;
             const inputs = document.querySelectorAll('.ps-remark-input');
@@ -2377,6 +2528,286 @@
             }).catch(err => showToast('Error: ' + err.message, 'error'));
         }
         window.savePrintSheetRemarks = savePrintSheetRemarks;
+        
+        // ============ SALES WISE HONORARIUM ============
+        // নিয়ম ১ (Pool): ৭০,০০০ Sales হলে ২,০০০ টাকা। এরপর প্রতি অতিরিক্ত ১০,০০০ টাকায় ১,০০০ টাকা করে বাড়বে।
+        //   70k=2000, 80k=3000, 90k=4000, 100k=5000, 110k=6000, 120k=7000 ...
+        function calculateSalesWiseHonorarium(salesAmount) {
+            salesAmount = parseAmount(salesAmount);
+            if (salesAmount < 70000) return 0;
+            const extraSlabs = Math.floor((salesAmount - 70000) / 10000);
+            return 2000 + (extraSlabs * 1000);
+        }
+        window.calculateSalesWiseHonorarium = calculateSalesWiseHonorarium;
+
+        // নিয়ম ২ (Distribution): ডাক্তারদের Default Amount অনুযায়ী DESC ক্রমে সাজানো।
+        //   উপর থেকে নিচে প্রত্যেককে min(default, remaining_pool) দেওয়া।
+        //   Pool শেষ হলে পরবর্তী ডাক্তার ৳০ পাবেন।
+        //   উদাহরণ: Pool=5000, X(4000)→4000, Y(3000)→1000, Z(3000)→0
+        function distributeHonorariumForMPO(mpoId, month, pool) {
+            const doctors = getDoctorsForMPO(mpoId, month);
+            // Sort by Default Amount DESC; tie-break by Name ASC
+            const sorted = [...doctors].sort((a, b) => {
+                const amtA = a[1].amount || 0;
+                const amtB = b[1].amount || 0;
+                if (amtA !== amtB) return amtB - amtA;
+                return (a[1].name || '').localeCompare(b[1].name || '');
+            });
+
+            let remaining = pool;
+            const distribution = {};
+            sorted.forEach(([docId, doc]) => {
+                const def = parseAmount(doc.amount);
+                const alloc = Math.min(def, remaining);
+                distribution[docId] = { default: def, honorarium: alloc };
+                remaining = Math.max(0, remaining - alloc);
+            });
+
+            const totalDefault = sorted.reduce((s, [, d]) => s + parseAmount(d.amount), 0);
+            const totalHonorarium = Object.values(distribution).reduce((s, d) => s + d.honorarium, 0);
+
+            return { sorted, distribution, remaining, totalDefault, totalHonorarium };
+        }
+        window.distributeHonorariumForMPO = distributeHonorariumForMPO;
+
+        function getSWHSavedAmount(month, mpoId, docId) {
+            if (!salesWiseHonorariumCache[month]) return 0;
+            if (!salesWiseHonorariumCache[month][mpoId]) return 0;
+            const entry = salesWiseHonorariumCache[month][mpoId][docId];
+            return entry ? parseAmount(entry.amount) : 0;
+        }
+
+        function loadSalesWiseHonorarium() {
+            const month = document.getElementById('swhMonth')?.value || getCurrentMonth();
+            const filterArea = document.getElementById('swhArea')?.value || '';
+            const container = document.getElementById('salesWiseHonorariumArea');
+            if (!container) return;
+
+            const monthSales = mpoSalesCache[month] || {};
+            let mpoEntries = Object.entries(mposCache).filter(([id, m]) => m.active !== false);
+            if (filterArea) mpoEntries = mpoEntries.filter(([id, m]) => m.area === filterArea);
+            mpoEntries.sort((a, b) => {
+                const areaA = a[1].area || '', areaB = b[1].area || '';
+                if (areaA !== areaB) return areaA.localeCompare(areaB);
+                return a[1].name.localeCompare(b[1].name);
+            });
+
+            // Eligible = TP2 >= 70,000 (minimum slab for any honorarium pool)
+            const eligibleMpos = mpoEntries.filter(([id]) => {
+                const tp2 = parseAmount(monthSales[id]?.tp2);
+                return tp2 >= 70000;
+            });
+
+            if (eligibleMpos.length === 0) {
+                container.innerHTML = '<div class="bg-white rounded-xl border border-slate-200 p-10 text-center text-slate-400">এই মাসে কোনো MPO এর ৭০,০০০+ TP2 Sales নেই। কোনো Honorarium Pool তৈরি হবে না।</div>';
+                return;
+            }
+
+            container.innerHTML = eligibleMpos.map(([mpoId, mpo]) => {
+                const sales = monthSales[mpoId] || { tp1: '', tp2: '', commit: '' };
+                const tp2 = parseAmount(sales.tp2);
+                const pool = calculateSalesWiseHonorarium(tp2);
+                const { sorted, distribution, remaining, totalDefault, totalHonorarium } = distributeHonorariumForMPO(mpoId, month, pool);
+
+                const rowsHtml = sorted.length === 0
+                    ? `<tr><td colspan="6" class="px-4 py-6 text-center text-slate-400 text-sm">এই MPO এর কোনো Active Doctor নেই</td></tr>`
+                    : sorted.map(([docId, doc], i) => {
+                        const dist = distribution[docId];
+                        const isZero = dist.honorarium === 0;
+                        return `<tr class="table-row ${isZero ? 'opacity-60' : ''}">
+                            <td class="px-4 py-3 text-slate-400 text-xs">${i + 1}</td>
+                            <td class="px-4 py-3"><code class="bg-brand-50 text-brand-700 text-xs font-bold px-2 py-0.5 rounded">${doc.doctorId || '-'}</code></td>
+                            <td class="px-4 py-3 font-semibold">${doc.name || '-'}</td>
+                            <td class="px-4 py-3 text-xs">${doc.specialty || '-'}</td>
+                            <td class="px-4 py-3 text-right text-slate-500">${formatBDT(dist.default)}</td>
+                            <td class="px-4 py-3 text-right">
+                                <span class="font-bold ${isZero ? 'text-slate-400' : 'text-emerald-700'}">${formatBDT(dist.honorarium)}</span>
+                                <input type="hidden" class="swh-amount" value="${dist.honorarium}" data-mpoid="${mpoId}" data-docid="${docId}" data-default="${dist.default}">
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                return `<div class="bg-white rounded-xl border border-slate-200 overflow-hidden swh-mpo-card" data-mpoid="${mpoId}">
+                    <div class="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-brand-50 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h4 class="font-bold text-slate-800 flex items-center gap-2 flex-wrap">
+                                <i class="fas fa-user-tie text-brand-600"></i>
+                                ${mpo.name}
+                                <code class="bg-slate-100 px-2 py-0.5 rounded text-xs font-bold">${mpo.employeeId}</code>
+                                ${mpo.area ? `<span class="bg-purple-50 text-purple-700 text-xs font-semibold px-2 py-0.5 rounded-full">${mpo.area}</span>` : ''}
+                                <span class="bg-brand-50 text-brand-700 text-xs font-semibold px-2 py-0.5 rounded-full">${mpo.territory}</span>
+                            </h4>
+                            <p class="text-xs text-slate-500 mt-1">TP1: <b>${sales.tp1 || '-'}</b> • TP2 (Sales): <b>${sales.tp2 || '-'}</b> • Doctors: <b>${sorted.length}</b></p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[10px] font-semibold text-slate-500 uppercase">Approved Honorarium Pool</div>
+                            <div class="text-2xl font-extrabold text-emerald-700">${formatBDT(pool)}</div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase">
+                                <tr>
+                                    <th class="text-left px-4 py-3">#</th>
+                                    <th class="text-left px-4 py-3">Doc ID</th>
+                                    <th class="text-left px-4 py-3">Doctor Name</th>
+                                    <th class="text-left px-4 py-3">Specialty</th>
+                                    <th class="text-right px-4 py-3">Default Amount</th>
+                                    <th class="text-right px-4 py-3">প্রদেয় Honorarium</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${rowsHtml}
+                            </tbody>
+                            <tfoot class="bg-slate-50 font-bold">
+                                <tr>
+                                    <td colspan="4" class="px-4 py-3 text-right text-sm">মোট (Total):</td>
+                                    <td class="px-4 py-3 text-right text-slate-600">${formatBDT(totalDefault)}</td>
+                                    <td class="px-4 py-3 text-right text-emerald-700">${formatBDT(totalHonorarium)}</td>
+                                </tr>
+                                <tr class="bg-amber-50">
+                                    <td colspan="5" class="px-4 py-2 text-right text-sm font-semibold text-amber-800">অবশিষ্ট (Remaining Pool):</td>
+                                    <td class="px-4 py-2 text-right font-extrabold text-amber-800">${formatBDT(remaining)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        window.loadSalesWiseHonorarium = loadSalesWiseHonorarium;
+
+        function saveAllSalesWiseHonorarium() {
+            const month = document.getElementById('swhMonth').value;
+            if (!month) { showToast('Month সিলেক্ট করুন', 'error'); return; }
+            const inputs = document.querySelectorAll('.swh-amount');
+            if (inputs.length === 0) { showToast('কোনো ডাক্তার নেই', 'error'); return; }
+
+            // Group by MPO
+            const mpoData = {};
+            inputs.forEach(inp => {
+                const mpoId = inp.dataset.mpoid;
+                const docId = inp.dataset.docid;
+                const amount = parseAmount(inp.value);
+                const defaultAmt = parseAmount(inp.dataset.default);
+                if (!mpoData[mpoId]) mpoData[mpoId] = {};
+                mpoData[mpoId][docId] = { amount: amount, defaultAmount: defaultAmt, updatedAt: Date.now() };
+            });
+
+            const updates = {};
+            Object.entries(mpoData).forEach(([mpoId, docs]) => {
+                Object.entries(docs).forEach(([docId, data]) => {
+                    if (data.amount > 0) {
+                        updates[`salesWiseHonorarium/${month}/${mpoId}/${docId}`] = data;
+                    } else {
+                        updates[`salesWiseHonorarium/${month}/${mpoId}/${docId}`] = null;
+                    }
+                });
+            });
+
+            update(ref(db), updates).then(() => {
+                showToast('Sales Wise Honorarium সেভ হয়েছে (' + Object.keys(updates).length + ' entries)');
+                document.querySelectorAll('.swh-amount').forEach(inp => {
+                    inp.classList.add('sales-saved');
+                    setTimeout(() => inp.classList.remove('sales-saved'), 1000);
+                });
+            }).catch(err => showToast('Error: ' + err.message, 'error'));
+        }
+        window.saveAllSalesWiseHonorarium = saveAllSalesWiseHonorarium;
+
+        function printSalesWiseHonorarium() {
+            const month = document.getElementById('swhMonth').value;
+            const filterArea = document.getElementById('swhArea').value;
+            const monthSales = mpoSalesCache[month] || {};
+            let mpoEntries = Object.entries(mposCache).filter(([id, m]) => m.active !== false);
+            if (filterArea) mpoEntries = mpoEntries.filter(([id, m]) => m.area === filterArea);
+            mpoEntries.sort((a, b) => {
+                const areaA = a[1].area || '', areaB = b[1].area || '';
+                if (areaA !== areaB) return areaA.localeCompare(areaB);
+                return a[1].name.localeCompare(b[1].name);
+            });
+            const eligibleMpos = mpoEntries.filter(([id]) => parseAmount(monthSales[id]?.tp2) >= 70000);
+            const today = formatDateDMY(new Date());
+            const areaLabel = filterArea ? ` - Area: ${filterArea}` : '';
+
+            let html = `<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1100px;margin:0 auto;font-size:14px;">`;
+            html += `<div style="text-align:center;margin-bottom:15px;">
+                        <h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1>
+                        <p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p>
+                        <p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
+                     </div>
+                     <div style="text-align:center;margin-bottom:15px;">
+                        <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Sales Wise Doctor Honorarium ${month}${areaLabel}</h2>
+                        <p style="font-size:11px;margin:4px 0 0;color:#555;">নিয়ম: ৭০,০০০ Sales = ২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে। উপর থেকে নিচে ক্রমানুসারে বরাদ্দ। Pool শেষ হলে পরবর্তী ডাক্তার ৳০।</p>
+                     </div>`;
+
+            if (eligibleMpos.length === 0) {
+                html += `<p style="text-align:center;color:#666;padding:30px;">এই মাসে কোনো qualified MPO নেই।</p>`;
+            } else {
+                eligibleMpos.forEach(([mpoId, mpo]) => {
+                    const sales = monthSales[mpoId] || { tp1: '', tp2: '', commit: '' };
+                    const tp2 = parseAmount(sales.tp2);
+                    const pool = calculateSalesWiseHonorarium(tp2);
+                    const { sorted, distribution, remaining, totalDefault, totalHonorarium } = distributeHonorariumForMPO(mpoId, month, pool);
+
+                    html += `<div style="margin-top:20px;page-break-inside:avoid;">
+                        <h3 style="font-size:14px;font-weight:700;margin:0 0 4px;">${mpo.name} (${mpo.employeeId}) — ${mpo.area || ''} / ${mpo.territory || ''}</h3>
+                        <p style="font-size:11px;margin:0 0 8px;color:#555;">TP1: ${sales.tp1 || '-'} • TP2 (Sales): ${sales.tp2 || '-'} • <b>Honorarium Pool: ৳${Number(pool).toLocaleString()}</b></p>
+                        <table class="po-print-table"><thead><tr>
+                            <th style="padding:6px 5px;">SL</th>
+                            <th style="padding:6px 5px;">Doc ID</th>
+                            <th style="padding:6px 5px;">Doctor Name</th>
+                            <th style="padding:6px 5px;">Specialty</th>
+                            <th style="padding:6px 5px;text-align:right;">Default Amount</th>
+                            <th style="padding:6px 5px;text-align:right;">প্রদেয় Honorarium</th>
+                        </tr></thead><tbody>`;
+                    sorted.forEach(([docId, doc], i) => {
+                        const dist = distribution[docId];
+                        html += `<tr>
+                            <td style="padding:5px;text-align:center;">${i + 1}</td>
+                            <td style="padding:5px;font-weight:600;">${doc.doctorId || '-'}</td>
+                            <td style="padding:5px;font-weight:500;">${doc.name || '-'}</td>
+                            <td style="padding:5px;">${doc.specialty || '-'}</td>
+                            <td style="padding:5px;text-align:right;">${Number(dist.default).toLocaleString()}</td>
+                            <td style="padding:5px;text-align:right;font-weight:700;">${Number(dist.honorarium).toLocaleString()}</td>
+                        </tr>`;
+                    });
+                    html += `</tbody><tfoot>
+                        <tr style="background:#d1fae5;">
+                            <td colspan="4" style="padding:6px 5px;text-align:right;font-weight:700;">মোট Total:</td>
+                            <td style="padding:6px 5px;text-align:right;font-weight:700;">${Number(totalDefault).toLocaleString()}</td>
+                            <td style="padding:6px 5px;text-align:right;font-weight:800;">${Number(totalHonorarium).toLocaleString()}</td>
+                        </tr>
+                        <tr style="background:#fef3c7;">
+                            <td colspan="5" style="padding:5px;text-align:right;font-weight:700;">অবশিষ্ট Remaining:</td>
+                            <td style="padding:5px;text-align:right;font-weight:800;">${Number(remaining).toLocaleString()}</td>
+                        </tr>
+                    </tfoot></table></div>`;
+                });
+            }
+            html += `<div style="margin-top:15px;font-size:11px;display:flex;justify-content:space-between;">
+                        <div style="font-weight:600;">Date: ${today}</div>
+                        <div style="font-weight:600;">Taka In Word: <span style="font-style:italic;">${numberToWords(eligibleMpos.reduce((s, [mpoId]) => s + calculateSalesWiseHonorarium(parseAmount(monthSales[mpoId]?.tp2)), 0))}</span></div>
+                    </div>`;
+            html += sigRowHTML(['Prepared by', 'Checked by', 'Verified by', 'Approved By']);
+            html += `</div>`;
+
+            const area = document.getElementById('hiddenPrintArea');
+            area.innerHTML = html;
+            area.classList.remove('hidden');
+            document.body.classList.add('force-print');
+            const styleEl = document.getElementById('dynamicPrintStyle');
+            styleEl.textContent = `@media print { @page { size: A4 portrait; margin: 8mm; } body.force-print #hiddenPrintArea { padding: 0 !important; margin: 0 !important; } }`;
+            window.print();
+            setTimeout(() => {
+                area.classList.add('hidden');
+                area.innerHTML = '';
+                document.body.classList.remove('force-print');
+                styleEl.textContent = '';
+            }, 500);
+        }
+        window.printSalesWiseHonorarium = printSalesWiseHonorarium;
+        // ============ END SALES WISE HONORARIUM ============
         
         function loadLabelPrint(){
             const month=document.getElementById('labelPrintMonth').value;
