@@ -1,0 +1,304 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monico Monthly Collection Report</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;padding:25px;background:#eaf0f6;
+ font-family:Arial,sans-serif;color:#172c42
+}
+.buttons{text-align:center;margin:15px auto 25px}
+button{
+ padding:12px 22px;margin:5px;border:0;
+ border-radius:5px;background:#17466f;
+ color:white;font-weight:bold;cursor:pointer
+}
+button:disabled{opacity:.6}
+.report{
+ max-width:850px;margin:auto;background:white;
+ padding:40px;box-shadow:0 4px 18px #0002
+}
+.company{
+ text-align:center;font-size:25px;
+ font-weight:800;color:#123c65;letter-spacing:1px
+}
+.line{height:4px;background:#246ca5;margin:15px 0 25px}
+h3{text-align:center;margin:0;font-size:21px}
+.period{
+ text-align:center;margin:10px 0 28px;
+ font-weight:bold;color:#506981
+}
+table{
+ width:100%;border-collapse:collapse;
+ border:2px solid #315b7c
+}
+td{
+ border:1px solid #718da7;
+ padding:13px 12px;font-size:15px
+}
+td:first-child{width:70%}
+td:last-child{text-align:right;width:30%;font-weight:bold}
+.section td{
+ background:#173f67!important;color:white!important;
+ font-weight:bold
+}
+.row1 td{background:#dceeff}
+.row2 td{background:#eaf4ff}
+.row3 td{background:#f2f8e9}
+.row4 td{background:#fff3e5}
+.row5 td{background:#f3edff}
+.row6 td{background:#e8f7f3}
+.total td{
+ background:#dce9f7!important;
+ color:#123c65;font-weight:bold
+}
+.cash td{
+ background:#cceedd!important;
+ color:#075b37;font-weight:bold;font-size:17px
+}
+input{
+ width:100%;padding:7px;
+ border:1px solid #a9bdcf;border-radius:3px;
+ background:white;text-align:right;font-size:15px
+}
+.meta{
+ display:flex;justify-content:space-between;
+ margin-top:25px;font-size:14px
+}
+.footer{
+ text-align:center;margin-top:45px;
+ font-weight:bold;color:#123c65;line-height:1.8
+}
+.edit-text{
+ outline:none;border-bottom:1px dashed #aaa
+}
+.pdf-mode input{display:none!important}
+.pdf-value{display:none}
+.pdf-mode .pdf-value{display:inline!important}
+@media(max-width:600px){
+ .report{padding:18px 10px}
+ td{padding:9px 5px;font-size:12px}
+ .company{font-size:20px}
+ .meta{flex-direction:column;gap:12px}
+}
+@media print{
+ .buttons{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<div class="buttons">
+<button onclick="toggleEdit()">EDIT / LOCK</button>
+<button onclick="saveData()">SAVE DATA</button>
+<button id="pdfButton" onclick="downloadPDF()">⬇ DOWNLOAD PDF</button>
+</div>
+
+<div class="report" id="report">
+
+<div class="company edit-text" contenteditable="true">
+MONICO PHARMA LIMITED
+</div>
+
+<div class="line"></div>
+
+<h3 class="edit-text" contenteditable="true">
+MONTHLY COLLECTION REPORT
+</h3>
+
+<div class="period">
+<span contenteditable="true" class="edit-text">OCTOBER – 2026</span>
+|
+<span contenteditable="true" class="edit-text">KUSHTIA DEPOT</span>
+</div>
+
+<table>
+<tbody>
+
+<tr class="row1">
+<td>01. TOTAL COLLECTION (A)</td>
+<td>
+<input id="collection" type="number" value="615936">
+<span class="pdf-value"></span>
+</td>
+</tr>
+
+<tr class="section">
+<td colspan="2">02. COLLECTION ADJUSTMENT &amp; EXPENSES</td>
+</tr>
+
+<tr class="row2">
+<td>Bank Deposit</td>
+<td><input class="cost" type="number" value="79683"><span class="pdf-value"></span></td>
+</tr>
+
+<tr class="row3">
+<td>TA Adjust</td>
+<td><input class="cost" type="number" value="27947"><span class="pdf-value"></span></td>
+</tr>
+
+<tr class="row4">
+<td>Salary Adjust</td>
+<td><input class="cost" type="number" value="0"><span class="pdf-value"></span></td>
+</tr>
+
+<tr class="row5">
+<td>Depot Cost (Oct-26)</td>
+<td><input class="cost" type="number" value="174322"><span class="pdf-value"></span></td>
+</tr>
+
+<tr class="row6">
+<td>Depot Cost (Nov-26)</td>
+<td><input class="cost" type="number" value="6545"><span class="pdf-value"></span></td>
+</tr>
+
+<tr class="total">
+<td>TOTAL COST (B)</td>
+<td id="totalCost">৳288,497</td>
+</tr>
+
+<tr class="cash">
+<td>03. CASH IN HAND (A − B)</td>
+<td id="cash">৳327,439</td>
+</tr>
+
+</tbody>
+</table>
+
+<div class="meta">
+<div>
+<strong>Last Update Date:</strong>
+<input id="date" type="text" value="01-Nov-2026"
+style="width:130px;text-align:left">
+<span class="pdf-value"></span>
+</div>
+
+<div><strong>Prepared for:</strong> Kushtia Depot</div>
+</div>
+
+<div class="footer">
+MONICO PHARMA LIMITED<br>
+KUSHTIA DEPOT
+</div>
+
+</div>
+
+<script>
+const money=n=>"৳"+Number(n||0).toLocaleString("en-US");
+
+function calculate(){
+ const a=Number(document.getElementById("collection").value)||0;
+ const b=[...document.querySelectorAll(".cost")]
+ .reduce((sum,i)=>sum+(Number(i.value)||0),0);
+
+ document.getElementById("totalCost").textContent=money(b);
+ document.getElementById("cash").textContent=money(a-b);
+}
+
+document.querySelectorAll("input").forEach(input=>{
+ input.addEventListener("input",calculate);
+});
+
+function toggleEdit(){
+ const inputs=[...document.querySelectorAll("#report input")];
+ const locked=inputs.some(i=>!i.disabled);
+ inputs.forEach(i=>i.disabled=locked);
+
+ document.querySelectorAll(".edit-text").forEach(e=>{
+ e.contentEditable=locked?"false":"true";
+ });
+}
+
+function saveData(){
+ const data={
+ collection:document.getElementById("collection").value,
+ costs:[...document.querySelectorAll(".cost")].map(i=>i.value),
+ date:document.getElementById("date").value,
+ texts:[...document.querySelectorAll(".edit-text")].map(e=>e.innerHTML)
+ };
+ localStorage.setItem("monico_collection_report",JSON.stringify(data));
+ alert("Report saved successfully!");
+}
+
+function loadData(){
+ const data=JSON.parse(
+ localStorage.getItem("monico_collection_report")||"null"
+ );
+ if(!data)return;
+
+ document.getElementById("collection").value=data.collection;
+ document.querySelectorAll(".cost").forEach((i,n)=>{
+ if(data.costs[n]!==undefined)i.value=data.costs[n];
+ });
+ document.getElementById("date").value=data.date;
+
+ document.querySelectorAll(".edit-text").forEach((e,n)=>{
+ if(data.texts[n]!==undefined)e.innerHTML=data.texts[n];
+ });
+ calculate();
+}
+
+async function downloadPDF(){
+ calculate();
+
+ const report=document.getElementById("report");
+ const button=document.getElementById("pdfButton");
+
+ // Add clean text values for PDF
+ const inputs=report.querySelectorAll("input");
+
+ inputs.forEach(input=>{
+ const span=input.nextElementSibling;
+ if(span && span.classList.contains("pdf-value")){
+ span.textContent=input.id==="date"
+ ? input.value
+ : money(input.value);
+ }
+ });
+
+ report.classList.add("pdf-mode");
+ button.disabled=true;
+ button.textContent="Generating PDF...";
+
+ try{
+ await html2pdf().set({
+ margin:[10,10,10,10],
+ filename:"Monico_Monthly_Collection_Report_October_2026.pdf",
+ image:{type:"jpeg",quality:1},
+ html2canvas:{
+ scale:3,
+ useCORS:true,
+ backgroundColor:"#ffffff",
+ scrollY:0
+ },
+ jsPDF:{
+ unit:"mm",
+ format:"a4",
+ orientation:"portrait"
+ },
+ pagebreak:{mode:["avoid-all","css"]}
+ }).from(report).save();
+
+ }catch(error){
+ alert("PDF download failed. Please check internet connection.");
+ }finally{
+ report.classList.remove("pdf-mode");
+ button.disabled=false;
+ button.textContent="⬇ DOWNLOAD PDF";
+ }
+}
+
+loadData();
+calculate();
+</script>
+
+</body>
+</html>
