@@ -521,7 +521,7 @@
                 <div class="card-body">
                     <div class="row g-2 mb-2">
                         <div class="col-6 col-md-3"><label class="fw-bold">Date</label><input type="date" id="iou_date" class="form-control form-control-sm"></div>
-                        <div class="col-6 col-md-3"><label class="fw-bold">DA Name</label><select id="iou_da_name" class="form-select form-select-sm"></select></div>
+                        <div class="col-6 col-md-3"><label class="fw-bold">DA Name</label><select id="iou_da_name" class="form-select form-select-sm" onchange="onIOUDAChange()"></select></div>
                         <div class="col-6 col-md-3"><label class="fw-bold">Territory</label><input type="text" id="iou_territory" class="form-control form-control-sm"></div>
                         <div class="col-6 col-md-3"><label class="fw-bold">MPO</label><input type="text" id="iou_mpo" class="form-control form-control-sm"></div>
                         <div class="col-4 col-md-2"><label>Summary</label><input type="text" id="iou_summary" class="form-control form-control-sm"></div>
@@ -532,7 +532,26 @@
                         <div class="col-4 col-md-2"><label>Bundle Qty</label><input type="number" id="iou_bundle_qty" class="form-control form-control-sm"></div>
                         <div class="col-4 col-md-2"><label>Taka</label><input type="number" id="iou_taka" class="form-control form-control-sm" oninput="calcIouPercent()"></div>
                         <div class="col-4 col-md-2"><label>%</label><input type="text" id="iou_percent" class="form-control form-control-sm" readonly></div>
-                        <div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div>
+                        <div class="col-12 col-md-3"><label class="fw-bold text-primary">IOU Type</label><select id="iou_type" class="form-select form-select-sm" onchange="onIOUTypeChange()"><option value="Delivery">Delivery (Bill Req)</option><option value="Collection">Collection (Bill Req)</option><option value="Return">Return (Bill Req)</option><option value="General">General (No Bill)</option><option value="Bill Payment">Bill Payment (No Bill)</option></select></div>
+                        <!-- BILL_PAYMENT: section shown only when IOU Type = Bill Payment -->
+                        <div class="col-12 hidden" id="bill_payment_section">
+                            <div class="p-3 border border-primary rounded bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <label class="fw-bold text-primary mb-0"><i class="bi bi-link-45deg"></i> Select Approved Bill</label>
+                                    <small class="text-muted">From Nov-2026 &middot; Settles prev IOU</small>
+                                </div>
+                                <select id="iou_approved_bill" class="form-select form-select-sm" onchange="onApprovedBillSelect()">
+                                    <option value="">-- Select Approved Bill --</option>
+                                </select>
+                                <div class="row g-2 mt-2">
+                                    <div class="col-6 col-md-4"><label class="fw-bold">Taka (Prev IOU)</label><input type="number" id="iou_taka_display" class="form-control form-control-sm" readonly></div>
+                                    <div class="col-6 col-md-4"><label class="fw-bold text-success">Extra Payable (+/-)</label><input type="number" id="iou_extra_payable" class="form-control form-control-sm text-success fw-bold" value="0" step="0.01" oninput="calcBillPaymentTotal()"></div>
+                                    <div class="col-12 col-md-4"><label class="fw-bold text-primary">Total (Taka+Extra)</label><input type="text" id="iou_total_bill" class="form-control form-control-sm fw-bold text-primary" readonly></div>
+                                </div>
+                                <div id="bill_payment_calc" class="mt-2"></div>
+                                <div id="bill_payment_info" class="mt-1 text-muted" style="font-size:11px"><i class="bi bi-info-circle"></i> Effective <strong>Nov-2026</strong>. Extra Payable updates the <strong>PREVIOUS IOU</strong> (no new IOU ID). Example: IOU 1700 + Extra (-1300) = 400 (matches approved bill).</div>
+                            </div>
+                        </div>
                         
                         <!-- ★★★ NEW: Admin Remarks Field ★★★ -->
                         <div class="col-12"><label class="fw-bold">Admin Remarks</label><input type="text" id="iou_remarks" class="form-control form-control-sm" placeholder="Enter remarks (shows on print)..."></div>
@@ -1224,7 +1243,7 @@ function loadApprovedBillSummary(){
     Object.keys(iouListGlobal).forEach(function(id){
         var d=iouListGlobal[id];
         if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
-        var dn=d.daName||'Unknown';iouPerDA[dn]=(iouPerDA[dn]||0)+(d.taka||0);
+        var dn=d.daName||'Unknown';var iouAmt=d.taka||0;// If this IOU has an extraPayable adjustment (Bill Payment settlement), add itif(d.extraPayable!==undefined && d.extraPayable!==null)iouAmt+=(parseFloat(d.extraPayable)||0);iouPerDA[dn]=(iouPerDA[dn]||0)+iouAmt;
     });
     database.ref('Bills').once('value',function(snap){
         var billPerDA={};var allBills=collectBills(snap,null,null);
@@ -1395,10 +1414,208 @@ function toggleUserStatus(id, makeActive){
     }).catch(function(e){ alert("Error: "+e.message); });
 }
 
+// ========== BILL PAYMENT (NO BILL) FEATURE v3 ==========
+// Design: Extra Payable is ADDED to the PREVIOUS IOU record.
+// No new IOU ID is created. Only the original IOU gets the extraPayable field.
+var BILL_PAYMENT_CUTOFF='2026-11-01';
+// Holds the previous IOU's location so saveIOU can UPDATE it (not push new).
+var bpPrevIouId=null,bpPrevIouYear=null,bpPrevIouMonth=null,bpPrevIouDaName=null;
+
+function onIOUTypeChange(){
+    var bpSection=document.getElementById('bill_payment_section');
+    var iouType=document.getElementById('iou_type').value;
+    if(iouType==='Bill Payment'){
+        bpSection.classList.remove('hidden');
+        var sel=document.getElementById('iou_approved_bill');
+        sel.innerHTML='<option value="">-- Select Approved Bill --</option>';
+        document.getElementById('bill_payment_calc').innerHTML='';
+        document.getElementById('iou_extra_payable').value=0;
+        document.getElementById('iou_taka_display').value='';
+        document.getElementById('iou_total_bill').value='';
+        bpPrevIouId=null;bpPrevIouYear=null;bpPrevIouMonth=null;bpPrevIouDaName=null;
+        loadApprovedBillsForPayment();
+    }else{
+        bpSection.classList.add('hidden');
+        var sel2=document.getElementById('iou_approved_bill');
+        if(sel2) sel2.innerHTML='<option value="">-- Select Approved Bill --</option>';
+        var calc=document.getElementById('bill_payment_calc');
+        if(calc) calc.innerHTML='';
+        bpPrevIouId=null;bpPrevIouYear=null;bpPrevIouMonth=null;bpPrevIouDaName=null;
+    }
+}
+
+function onIOUDAChange(){
+    if(document.getElementById('iou_type').value==='Bill Payment'){
+        loadApprovedBillsForPayment();
+    }
+}
+
+function loadApprovedBillsForPayment(){
+    var daId=document.getElementById('iou_da_name').value;
+    var sel=document.getElementById('iou_approved_bill');
+    if(!sel) return;
+    var prevVal=sel.value;
+    sel.innerHTML='<option value="">-- Select Approved Bill --</option>';
+
+    if(!daId){
+        var opt=document.createElement('option');
+        opt.value=''; opt.text='-- Select DA First --'; opt.disabled=true;
+        sel.appendChild(opt);
+        return;
+    }
+
+    var daName=daListCache[daId];
+    if(!daName) return;
+
+    var loadOpt=document.createElement('option');
+    loadOpt.text='Loading approved bills...'; loadOpt.disabled=true;
+    sel.appendChild(loadOpt);
+
+    database.ref('Bills').once('value',function(snap){
+        sel.innerHTML='<option value="">-- Select Approved Bill --</option>';
+        if(!snap.exists()){
+            var e=document.createElement('option');
+            e.text='No bills found'; e.disabled=true;
+            sel.appendChild(e);
+            return;
+        }
+        // Build a set of bill IDs that have ALREADY been settled via a Bill Payment
+        // (i.e. some IOU has a linkedBillKey pointing to that bill). Those bills
+        // should NOT show up again in the dropdown.
+        var settledBillIds={};
+        Object.keys(iouListGlobal).forEach(function(iouId){
+            var iou=iouListGlobal[iouId];
+            if(iou && iou.linkedBillKey){
+                var bp=iou.linkedBillKey.split('|');
+                if(bp.length>0 && bp[0]) settledBillIds[bp[0]]=true;
+            }
+        });
+        var allBills=collectBills(snap,null,null);
+        var count=0;
+        var skippedSettled=0;
+        allBills.forEach(function(item){
+            var b=item.data;
+            if(b.status!=='green') return;             // only approved
+            if(b.daName!==daName) return;               // only this DA
+            if(!b.iouId) return;                        // bill must have a linked previous IOU
+            var billDate=getBillDate(b);
+            if(!billDate || billDate<BILL_PAYMENT_CUTOFF) return;  // Nov-2026 onwards only
+            if(settledBillIds[item.id]){skippedSettled++;return;}  // already settled — hide
+            var iouAmt=parseFloat(b.iouAmount)||0;
+            var payAmt=parseFloat(b.totalAmount)||0;
+            var diff=payAmt-iouAmt;                     // signed: +ve company pays DA, -ve DA returns
+            if(diff===0) return;                        // no adjustment needed
+            count++;
+            // Bill key carries the linked previous IOU id too
+            var billKey=item.id+'|'+item.year+'|'+item.month+'|'+item.daName+'|'+b.iouId;
+            var sign=diff>0?'+':'';
+            var label=formatDate(billDate)+'  |  '+(b.route||'N/A')+'  |  Appr: '+payAmt.toFixed(2)+'  |  IOU: '+iouAmt.toFixed(2)+'  |  Extra: '+sign+diff.toFixed(2);
+            var opt=document.createElement('option');
+            opt.value=billKey;
+            opt.text=label;
+            if(prevVal===billKey) opt.selected=true;
+            sel.appendChild(opt);
+        });
+        if(count===0){
+            var no=document.createElement('option');
+            var msg='No approved bills (Nov-2026+) needing settlement for '+daName;if(skippedSettled>0)msg+='  ('+skippedSettled+' already settled)';no.text=msg;
+            no.disabled=true;
+            sel.appendChild(no);
+        }
+    });
+}
+
+function onApprovedBillSelect(){
+    var val=document.getElementById('iou_approved_bill').value;
+    var calcDiv=document.getElementById('bill_payment_calc');
+    if(!val){
+        calcDiv.innerHTML='';
+        document.getElementById('iou_extra_payable').value=0;
+        document.getElementById('iou_taka_display').value='';
+        document.getElementById('iou_total_bill').value='';
+        bpPrevIouId=null;bpPrevIouYear=null;bpPrevIouMonth=null;bpPrevIouDaName=null;
+        return;
+    }
+    var parts=val.split('|');
+    if(parts.length<5){ calcDiv.innerHTML='Bad key'; return; }
+    var billId=parts[0],year=parts[1],month=parts[2],daName=parts[3],prevIouId=parts[4];
+    database.ref('Bills/'+year+'/'+month+'/'+sanitizeKey(daName)+'/'+billId).once('value',function(snap){
+        var b=snap.val();
+        if(!b){
+            calcDiv.innerHTML='<div class="alert alert-danger py-1 px-2 mb-0 small">Bill not found.</div>';
+            return;
+        }
+        var iouAmt=parseFloat(b.iouAmount)||0;        // previous IOU amount (e.g. 1700)
+        var payAmt=parseFloat(b.totalAmount)||0;       // approved bill amount (e.g. 400)
+        var extra=payAmt-iouAmt;                       // signed extra payable (e.g. -1300)
+
+        // Resolve the previous IOU record from the global cache
+        var prevIou=iouListGlobal[prevIouId];
+        if(prevIou && prevIou._year && prevIou._month && prevIou._daName){
+            bpPrevIouId=prevIouId;
+            bpPrevIouYear=prevIou._year;
+            bpPrevIouMonth=prevIou._month;
+            bpPrevIouDaName=prevIou._daName;
+        }else{
+            // Previous IOU not in cache (maybe outside current month filter) — bail out
+            calcDiv.innerHTML='<div class="alert alert-warning py-2 px-3 mb-0 small"><i class="bi bi-exclamation-triangle"></i> Previous IOU not loaded in cache. Open the IOU month that contains this bill and try again.</div>';
+            bpPrevIouId=null;bpPrevIouYear=null;bpPrevIouMonth=null;bpPrevIouDaName=null;
+            return;
+        }
+
+        // If the previous IOU already has an extraPayable, prefill with that (allow update)
+        var existingExtra=parseFloat(prevIou.extraPayable)||0;
+        var useExtra=(prevIou.extraPayable!==undefined && prevIou.extraPayable!==null && prevIou.extraPayable!=='')?existingExtra:extra;
+
+        // Fill the IOU form's Taka with the PREVIOUS IOU amount (kept, not overwritten later)
+        document.getElementById('iou_taka').value=iouAmt.toFixed(2);
+        document.getElementById('iou_taka_display').value=iouAmt.toFixed(2);
+        document.getElementById('iou_extra_payable').value=useExtra.toFixed(2);
+        calcBillPaymentTotal();
+
+        // Auto-fill other fields from the linked bill (for reference)
+        document.getElementById('iou_sales').value=b.invoiceVal||0;
+        document.getElementById('iou_return').value=b.returnVal||0;
+        document.getElementById('iou_qty').value=b.invoiceQty||0;
+        document.getElementById('iou_bundle_qty').value=b.bundleQty||0;
+        document.getElementById('iou_territory').value=b.route||'';
+        document.getElementById('iou_mpo').value=b.mpo||'';
+        document.getElementById('iou_summary').value=b.summaryNo||'';
+        if(b.submitDate||b.depDate){
+            document.getElementById('iou_date').value=b.submitDate||b.depDate;
+        }
+        calcIouPercent();
+
+        var extraColor=extra>=0?'text-success':'text-danger';
+        var extraLabel=extra>=0?'Company pays DA extra':'DA returns to company';
+        calcDiv.innerHTML=
+            '<div class="alert alert-info py-2 px-3 mb-0 small">'+
+            '<div class="fw-bold text-primary mb-1"><i class="bi bi-calculator"></i> Calculation</div>'+
+            '<div class="row g-1">'+
+            '<div class="col-3"><span class="text-muted">Approved Bill:</span><br><strong>'+payAmt.toFixed(2)+'</strong></div>'+
+            '<div class="col-3"><span class="text-muted">Prev IOU (Taka):</span><br><strong>'+iouAmt.toFixed(2)+'</strong></div>'+
+            '<div class="col-3"><span class="text-muted">Extra Payable:</span><br><strong class="'+extraColor+'">'+extra.toFixed(2)+'</strong></div>'+
+            '<div class="col-3"><span class="text-muted">Total (IOU+Extra):</span><br><strong class="text-primary">'+(iouAmt+extra).toFixed(2)+'</strong></div>'+
+            '</div>'+
+            '<div class="mt-2 text-muted"><i class="bi bi-info-circle"></i> '+extraLabel+'. <strong>No new IOU ID</strong> — Extra Payable will be saved onto the previous IOU <code>'+escHtml(prevIouId.substring(0,8))+'</code>.</div>'+
+            '</div>';
+    });
+}
+
+function calcBillPaymentTotal(){
+    var taka=parseFloat(document.getElementById('iou_taka').value)||0;
+    var extra=parseFloat(document.getElementById('iou_extra_payable').value)||0;
+    var total=taka+extra;
+    document.getElementById('iou_total_bill').value=total.toFixed(2);
+    var td=document.getElementById('iou_taka_display');
+    if(td) td.value=taka.toFixed(2);
+}
+
+
 // ========== IOU CRUD ========== 
 function calcIouPercent(){var s=parseFloat(document.getElementById('iou_sales').value)||0,r=parseFloat(document.getElementById('iou_return').value)||0,sold=s-r,t=parseFloat(document.getElementById('iou_taka').value)||0;document.getElementById('iou_sold').value=sold;document.getElementById('iou_percent').value=sold>0?((t/sold)*100).toFixed(2):"0";}
-function saveIOU(){var daId=document.getElementById('iou_da_name').value;if(!daId){alert("Select DA");return;}var daName=daListCache[daId];var dateVal=document.getElementById('iou_date').value;if(!dateVal){alert("Select date");return;}var dp=getDateParts(dateVal);var iouType=document.getElementById('iou_type').value;var autoStatus=isNoBillIOU(iouType)?'used':'active';var salesV=parseFloat(document.getElementById('iou_sales').value)||0,retV=parseFloat(document.getElementById('iou_return').value)||0;var data={date:dateVal,daId:daId,daName:daName,territory:document.getElementById('iou_territory').value,mpo:document.getElementById('iou_mpo').value,summary:document.getElementById('iou_summary').value,sales:salesV,returnVal:retV,soldVal:salesV-retV,qty:parseInt(document.getElementById('iou_qty').value)||0,bundleQty:parseInt(document.getElementById('iou_bundle_qty').value)||0,taka:parseFloat(document.getElementById('iou_taka').value)||0,percent:document.getElementById('iou_percent').value,status:autoStatus,type:iouType,remarks:document.getElementById('iou_remarks').value || ''};var safeName=sanitizeKey(daName);var op;if(editingIouId&&editingIouYear&&editingIouMonth&&editingIouDaName){op=database.ref('IOU_List/'+editingIouYear+'/'+editingIouMonth+'/'+sanitizeKey(editingIouDaName)+'/'+editingIouId).update(data);}else{op=database.ref('IOU_List/'+dp.year+'/'+dp.month+'/'+safeName).push(data);}op.then(function(){alert(editingIouId?"Updated!":"Saved!");clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
-function clearIOUForm(){document.getElementById('iou_date').value='';document.getElementById('iou_da_name').value='';document.getElementById('iou_territory').value='';document.getElementById('iou_mpo').value='';document.getElementById('iou_summary').value='';document.getElementById('iou_sales').value='';document.getElementById('iou_return').value='';document.getElementById('iou_sold').value='';document.getElementById('iou_qty').value='';document.getElementById('iou_bundle_qty').value='';document.getElementById('iou_taka').value='';document.getElementById('iou_percent').value='0';document.getElementById('iou_type').value='Delivery';document.getElementById('iou_remarks').value='';editingIouId=null;editingIouYear=null;editingIouMonth=null;editingIouDaName=null;document.getElementById('iou_save_btn').innerText="Save IOU Entry";document.getElementById('iou_cancel_btn').classList.add('hidden');}
+function saveIOU(){var daId=document.getElementById('iou_da_name').value;if(!daId){alert("Select DA");return;}var daName=daListCache[daId];var dateVal=document.getElementById('iou_date').value;if(!dateVal){alert("Select date");return;}var dp=getDateParts(dateVal);var iouType=document.getElementById('iou_type').value;if(iouType==='Bill Payment'){var bpVal=document.getElementById('iou_approved_bill').value||'';if(!bpVal){alert('Select an Approved Bill for Bill Payment IOU');return;}if(!bpPrevIouId||!bpPrevIouYear||!bpPrevIouMonth||!bpPrevIouDaName){alert('Previous IOU not loaded. Re-select the approved bill.');return;}var extraPayable=parseFloat(document.getElementById('iou_extra_payable').value)||0;var linkedBillKey=bpVal;var prevRef=database.ref('IOU_List/'+bpPrevIouYear+'/'+bpPrevIouMonth+'/'+sanitizeKey(bpPrevIouDaName)+'/'+bpPrevIouId);prevRef.update({extraPayable:extraPayable,linkedBillKey:linkedBillKey,linkedBillSettledAt:firebase.database.ServerValue.TIMESTAMP,linkedBillSettledBy:currentUser.name}).then(function(){alert('Previous IOU updated with Extra Payable '+extraPayable.toFixed(2)+'\nNo new IOU ID created.');clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});return;}var autoStatus=isNoBillIOU(iouType)?'used':'active';var salesV=parseFloat(document.getElementById('iou_sales').value)||0,retV=parseFloat(document.getElementById('iou_return').value)||0;var data={date:dateVal,daId:daId,daName:daName,territory:document.getElementById('iou_territory').value,mpo:document.getElementById('iou_mpo').value,summary:document.getElementById('iou_summary').value,sales:salesV,returnVal:retV,soldVal:salesV-retV,qty:parseInt(document.getElementById('iou_qty').value)||0,bundleQty:parseInt(document.getElementById('iou_bundle_qty').value)||0,taka:parseFloat(document.getElementById('iou_taka').value)||0,percent:document.getElementById('iou_percent').value,status:autoStatus,type:iouType,remarks:document.getElementById('iou_remarks').value || ''};var safeName=sanitizeKey(daName);var op;if(editingIouId&&editingIouYear&&editingIouMonth&&editingIouDaName){op=database.ref('IOU_List/'+editingIouYear+'/'+editingIouMonth+'/'+sanitizeKey(editingIouDaName)+'/'+editingIouId).update(data);}else{op=database.ref('IOU_List/'+dp.year+'/'+dp.month+'/'+safeName).push(data);}op.then(function(){alert(editingIouId?"Updated!":"Saved!");clearIOUForm();reloadAllData();}).catch(function(e){alert(e.message);});}
+function clearIOUForm(){document.getElementById('iou_date').value='';document.getElementById('iou_da_name').value='';document.getElementById('iou_territory').value='';document.getElementById('iou_mpo').value='';document.getElementById('iou_summary').value='';document.getElementById('iou_sales').value='';document.getElementById('iou_return').value='';document.getElementById('iou_sold').value='';document.getElementById('iou_qty').value='';document.getElementById('iou_bundle_qty').value='';document.getElementById('iou_taka').value='';document.getElementById('iou_percent').value='0';document.getElementById('iou_type').value='Delivery';var bpSection=document.getElementById('bill_payment_section');if(bpSection)bpSection.classList.add('hidden');var bpSel=document.getElementById('iou_approved_bill');if(bpSel)bpSel.innerHTML='<option value="">-- Select Approved Bill --</option>';var bpCalc=document.getElementById('bill_payment_calc');if(bpCalc)bpCalc.innerHTML='';var bpExtra=document.getElementById('iou_extra_payable');if(bpExtra)bpExtra.value=0;var bpTd=document.getElementById('iou_taka_display');if(bpTd)bpTd.value='';var bpTot=document.getElementById('iou_total_bill');if(bpTot)bpTot.value='';bpPrevIouId=null;bpPrevIouYear=null;bpPrevIouMonth=null;bpPrevIouDaName=null;document.getElementById('iou_remarks').value='';editingIouId=null;editingIouYear=null;editingIouMonth=null;editingIouDaName=null;document.getElementById('iou_save_btn').innerText="Save IOU Entry";document.getElementById('iou_cancel_btn').classList.add('hidden');}
 function editIOU(id){
     var iou=iouListGlobal[id];
     if(!iou){alert("Not found in cache");return;}
@@ -1428,7 +1645,7 @@ function editIOU(id){
     document.getElementById('iou_bundle_qty').value=iou.bundleQty||0;
     document.getElementById('iou_taka').value=iou.taka||0;
     document.getElementById('iou_percent').value=iou.percent||'0';
-    document.getElementById('iou_type').value=iou.type||'Delivery';
+    document.getElementById('iou_type').value=iou.type||'Delivery';// If this IOU already has an extraPayable adjustment, surface the Bill Payment panel// showing the existing extra value (admin can update it).if(iou.extraPayable!==undefined && iou.extraPayable!==null && iou.extraPayable!==''){var bpSec=document.getElementById('bill_payment_section');if(bpSec)bpSec.classList.remove('hidden');var bpExtra=document.getElementById('iou_extra_payable');if(bpExtra)bpExtra.value=iou.extraPayable;// Remember the previous IOU location so saving updates THIS record (not a new one)bpPrevIouId=editingIouId;bpPrevIouYear=editingIouYear;bpPrevIouMonth=editingIouMonth;bpPrevIouDaName=editingIouDaName;// load the linked approved bill list for this DA and preselect if possibleloadApprovedBillsForPayment();if(iou.linkedBillKey){setTimeout(function(){var bpS=document.getElementById('iou_approved_bill');if(bpS)bpS.value=iou.linkedBillKey;onApprovedBillSelect();},800);}else{calcBillPaymentTotal();}}
     document.getElementById('iou_remarks').value=iou.remarks||'';
     document.getElementById('iou_save_btn').innerText="Update";
     document.getElementById('iou_cancel_btn').classList.remove('hidden');
@@ -1459,12 +1676,12 @@ function loadAdminIOU(){
         if(fEnd&&d.date>fEnd)show=false;
         if(!show)return;
         var iS=d.soldVal||((d.sales||0)-(d.returnVal||0));
-        tS+=(d.sales||0);tR+=(d.returnVal||0);tSo+=iS;tQ+=(d.qty||0);tB+=(d.bundleQty||0);tT+=(d.taka||0);
+        tS+=(d.sales||0);tR+=(d.returnVal||0);tSo+=iS;tQ+=(d.qty||0);tB+=(d.bundleQty||0);var rowTaka=d.taka||0;var hasExtra=(d.extraPayable!==undefined && d.extraPayable!==null);if(hasExtra)rowTaka+=(parseFloat(d.extraPayable)||0);tT+=rowTaka;
         var type=d.type||'Delivery';
         var badge=(d.status==='used'||isNoBillIOU(type))?'<span class="badge bg-secondary">Used</span>':'<span class="badge bg-success">Active</span>';
         var typeB=type?'<span class="badge bg-info">'+escHtml(type)+'</span>':'';
         var rc=(d.status==='used'||isNoBillIOU(type))?'table-secondary':'';
-        tbody.innerHTML+='<tr class="'+rc+'"><td>'+cnt+'</td><td>'+formatDate(d.date)+'</td><td>'+escHtml(d.daName)+'</td><td>'+typeB+'</td><td>'+escHtml(d.territory)+'</td><td>'+escHtml(d.mpo)+'</td><td>'+escHtml(d.summary)+'</td><td>'+(d.sales||0)+'</td><td>'+(d.returnVal||0)+'</td><td>'+iS+'</td><td>'+(d.qty||0)+'</td><td>'+(d.bundleQty||0)+'</td><td>'+d.taka+'</td><td>'+(d.percent||0)+'%</td><td>'+escHtml(d.remarks||'')+'</td><td>'+badge+' <button class="btn btn-sm btn-warning" onclick="editIOU(\''+id+'\')">E</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\''+id+'\')">X</button></td></tr>';
+        tbody.innerHTML+='<tr class="'+rc+'"><td>'+cnt+'</td><td>'+formatDate(d.date)+'</td><td>'+escHtml(d.daName)+'</td><td>'+typeB+'</td><td>'+escHtml(d.territory)+'</td><td>'+escHtml(d.mpo)+'</td><td>'+escHtml(d.summary)+'</td><td>'+(d.sales||0)+'</td><td>'+(d.returnVal||0)+'</td><td>'+iS+'</td><td>'+(d.qty||0)+'</td><td>'+(d.bundleQty||0)+'</td><td>'+d.taka+(hasExtra?' <small class="badge '+(parseFloat(d.extraPayable)>=0?'bg-success':'bg-danger')+'" title="Extra Payable">Ex:'+(parseFloat(d.extraPayable)||0).toFixed(2)+'</small>':'')+'</td><td>'+(d.percent||0)+'%</td><td>'+escHtml(d.remarks||'')+'</td><td>'+badge+' <button class="btn btn-sm btn-warning" onclick="editIOU(\''+id+'\')">E</button> <button class="btn btn-sm btn-danger" onclick="deleteIOU(\''+id+'\')">X</button></td></tr>';
         iouPrintCache.push({date:formatDate(d.date),daName:d.daName,type:type,territory:d.territory,mpo:d.mpo,summary:d.summary,sales:d.sales||0,ret:d.returnVal||0,sold:iS,qty:d.qty||0,bundleQty:d.bundleQty||0,taka:d.taka||0,percent:d.percent||'0',remarks:d.remarks||''});
         cnt++;
     });
