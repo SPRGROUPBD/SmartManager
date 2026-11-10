@@ -505,7 +505,7 @@
             <div class="card dash-card no-print mb-2"><div class="card-body p-2"><div class="row g-2 align-items-end"><div class="col-md-5"><label class="fw-bold text-muted">Filter DA</label><select id="filter_approved_da" class="form-select form-select-sm" onchange="loadBills()"><option value="">All DAs</option></select></div><div class="col-md-5"><label class="fw-bold text-muted">Month</label><input type="month" id="filter_approved_month" class="form-control form-control-sm" onchange="setGlobalMonth(this.value)"></div><div class="col-md-2"><button onclick="resetApprovedFilter()" class="btn btn-outline-danger btn-sm w-100"><i class="bi bi-x-circle"></i> Clear Filter</button></div></div></div></div>
             <div class="card dash-card no-print"><div class="card-body p-1">
                 <div class="d-flex justify-content-between align-items-center p-1 mb-1">
-                    <h6 class="text-center text-muted mb-0">Checked & Approved Bills</h6>
+                    <h6 class="text-center text-muted mb-0">Approved Bills</h6>
                     <button id="btnPrintApprovedBatch" onclick="printNextApprovedBatch()" class="btn btn-dark btn-sm"><i class="bi bi-printer"></i> Print Next 10</button>
                 </div>
             <div class="table-responsive"><table class="table table-bordered table-hover table-sm"><thead class="table-secondary"><tr><th>Date</th><th>DA</th><th>Route</th><th class="text-end">IOU</th><th class="text-end">Sales</th><th class="text-end">User Bill</th><th class="text-end">User %</th><th class="text-end">Payable</th><th class="text-end">Payable %</th><th>Status</th><th>Action</th></tr></thead><tbody id="approved_bill_table_body"><tr><td colspan="11" class="text-center">Loading...</td></tr></tbody><tfoot id="approved_bill_table_foot" class="table-success fw-bold"></tfoot></table></div></div></div>
@@ -1243,7 +1243,12 @@ function loadApprovedBillSummary(){
     Object.keys(iouListGlobal).forEach(function(id){
         var d=iouListGlobal[id];
         if(globalFilterMonth&&!isDateInMonth(d.date,globalFilterMonth))return;
-        var dn=d.daName||'Unknown';var iouAmt=d.taka||0;// If this IOU has an extraPayable adjustment (Bill Payment settlement), add itif(d.extraPayable!==undefined && d.extraPayable!==null)iouAmt+=(parseFloat(d.extraPayable)||0);iouPerDA[dn]=(iouPerDA[dn]||0)+iouAmt;
+        var dn=d.daName||'Unknown';
+        var iouAmt=d.taka||0;
+        if(d.extraPayable!==undefined && d.extraPayable!==null){
+            iouAmt+=(parseFloat(d.extraPayable)||0);
+        }
+        iouPerDA[dn]=(iouPerDA[dn]||0)+iouAmt;
     });
     database.ref('Bills').once('value',function(snap){
         var billPerDA={};var allBills=collectBills(snap,null,null);
@@ -1267,7 +1272,8 @@ function loadApprovedBillSummary(){
         }
         allDAs.forEach(function(dn){
             var ti=iouPerDA[dn]||0,bi=billPerDA[dn]||{appr:0,bund:0};
-            var bal=bi.appr-ti;var bc=bal<0?'text-danger':'text-success';
+            var bal=bi.appr-ti;
+            var bc=bal<0?'text-danger':'text-success';
             var st=bal<0?'<span class="badge bg-danger">Due</span>':'<span class="badge bg-success">Clear</span>';
             tbody.innerHTML+='<tr><td>'+escHtml(dn)+'</td><td class="text-end fw-bold">'+ti.toFixed(2)+'</td><td class="text-end fw-bold">'+bi.appr.toFixed(2)+'</td><td class="text-end fw-bold '+bc+'">'+bal.toFixed(2)+'</td><td class="text-center fw-bold">'+bi.bund+'</td><td class="text-center">'+st+'</td></tr>';
             gIou+=ti;gBill+=bi.appr;gBal+=bal;gBund+=bi.bund;
@@ -1281,7 +1287,6 @@ function loadApprovedBillSummary(){
         document.getElementById('approved_tot_bund').innerText=gBund;
     });
 }
-
 function loadDAListForFilters(callback){
     database.ref('Users').once('value',function(snap){
         daListCache={};daNameToIdCache={};
@@ -1825,7 +1830,7 @@ function loadBills(){
         if(allBills.length===0){
             var cs=currentUser.role==='user'?'6':'9';
             tableBody.innerHTML='<tr><td colspan="'+cs+'" class="text-center text-danger p-3">No Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
-            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
+            appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3">No Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</td></tr>';
             if(btnPrint) btnPrint.disabled = true;
             tableFoot.innerHTML='';appFoot.innerHTML='';return;
         }
@@ -1874,7 +1879,7 @@ function loadBills(){
                     trP.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td><b class="text-warning">PENDING</b></td><td class="text-nowrap">'+act+'</td>';
                     tableBody.appendChild(trP);
                 }
-                if(b.status==='orange'||b.status==='green'){
+                if(b.status==='green'){
                     approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
             }
@@ -1888,7 +1893,6 @@ function loadBills(){
                     var sPay=deduction>0?'<span class="cut-amount">'+originalAmount.toFixed(2)+'</span> <span class="payable-amount">'+approvedAmount.toFixed(2)+'</span>':approvedAmount.toFixed(2);
                     trS.innerHTML='<td>'+formatDate(getBillDate(b))+'</td><td>'+escHtml(b.daName)+'</td><td>'+escHtml(b.route||'N/A')+'</td><td class="text-end">'+iou.toFixed(2)+'</td><td class="text-end">'+sales.toFixed(2)+'</td><td class="text-end">'+originalAmount.toFixed(2)+'</td><td class="text-end">'+userBillPer+'%</td><td class="text-end fw-bold">'+sPay+'</td><td class="text-end">'+payPer+'%</td><td><b class="text-warning">CHECKED</b></td><td class="text-nowrap">'+sAct+'</td>';
                     tableBody.appendChild(trS);
-                    approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
                 }
                 if(b.status==='green'){
                     approvedArr.push({b:b,billId:billId,y:y,m:m,dn:dn,iou:iou,sales:sales,originalAmount:originalAmount,approvedAmount:approvedAmount,userBillPer:userBillPer,payPer:payPer,deduction:deduction});
@@ -1926,7 +1930,7 @@ function loadBills(){
                 appBody.appendChild(trA);
             });
             if(approvedVisibleCount===0){
-                appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Checked/Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
+                appBody.innerHTML='<tr><td colspan="11" class="text-center text-danger p-3"><i class="bi bi-inbox" style="font-size:24px"></i><br><small>No Approved Bills for '+formatMonthLabel(globalFilterMonth)+'</small></td></tr>';
                 if(btnPrint) btnPrint.disabled = true;
             }
         }
