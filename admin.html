@@ -255,6 +255,7 @@
         <li class="nav-item admin-superadmin-only"><button class="nav-link" id="approved-history-tab" data-bs-toggle="tab" data-bs-target="#approvedHistoryTab" type="button">Approved History</button></li>
         <li class="nav-item admin-only"><button class="nav-link" id="iou-entry-tab" data-bs-toggle="tab" data-bs-target="#iouEntryTab" type="button">IOU Entry</button></li>
         <li class="nav-item admin-only"><button class="nav-link" id="new-user-tab" data-bs-toggle="tab" data-bs-target="#newUserTab" type="button">New User Record</button></li>
+        <li class="nav-item admin-superadmin-only"><button class="nav-link" id="setting-tab" data-bs-toggle="tab" data-bs-target="#settingTab" type="button"><i class="bi bi-gear-fill"></i> Setting</button></li>
     </ul>
 
     <div class="tab-content pt-2">
@@ -603,7 +604,7 @@
                     <div class="row g-2">
                         <div class="col-md-6"><label class="fw-bold text-muted">ID</label><input type="text" id="new_user_id" class="form-control form-control-sm" placeholder="DA-001"></div>
                         <div class="col-md-6"><label class="fw-bold text-muted">Name</label><input type="text" id="new_user_name" class="form-control form-control-sm" placeholder="Full Name"></div>
-                        <div class="col-md-6"><label class="fw-bold text-muted">Photo</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div>
+                        <div class="col-md-6"><label class="fw-bold text-muted">Photo URL (preferred)</label><input type="text" id="new_user_photo_url" class="form-control form-control-sm" placeholder="Paste image URL (https://...)" oninput="previewUserPhotoUrl(this.value)"><label class="fw-bold text-muted mt-1">Or Upload File</label><input type="file" id="new_user_photo" class="form-control form-control-sm" accept="image/*" onchange="previewUserPhoto(this)"><img id="photo_preview" src="" class="mt-1 hidden" width="40" height="40" style="border-radius:50%;object-fit:cover"></div>
                         <div class="col-md-6"><label class="fw-bold text-muted">Phone</label><input type="text" id="new_user_phone" class="form-control form-control-sm" placeholder="01xxxxxxxxx"></div>
                         <div class="col-md-6"><label class="fw-bold text-muted">Depot</label><select id="new_user_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div>
                         <div class="col-12"><hr class="my-1"></div>
@@ -645,11 +646,87 @@
             </div>
         </div>
 
+        <!-- SETTING TAB (Backup / Restore) -->
+        <div class="tab-pane fade admin-superadmin-only" id="settingTab" role="tabpanel">
+            <div class="card dash-card no-print mb-3">
+                <div class="card-header bg-dark text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-gear-fill"></i> Settings &mdash; Data Backup / Restore</h6>
+                    <small class="text-light">Bill Management System only</small>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- BACKUP -->
+                        <div class="col-md-6">
+                            <div class="card border-success h-100">
+                                <div class="card-header bg-success text-white py-2">
+                                    <h6 class="mb-0"><i class="bi bi-cloud-download"></i> Backup (Export JSON)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted small mb-2">Select data to include in the backup file:</p>
+                                    <div class="row g-1">
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="bk_bills" checked><label class="form-check-label small fw-bold" for="bk_bills">Bills</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="bk_iou" checked><label class="form-check-label small fw-bold" for="bk_iou">IOU List</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="bk_users" checked><label class="form-check-label small fw-bold" for="bk_users">Users</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="bk_topsheets" checked><label class="form-check-label small fw-bold" for="bk_topsheets">Top Sheets</label></div></div>
+                                    </div>
+                                    <button class="btn btn-success w-100 mt-3" onclick="backupData()" id="bk_btn">
+                                        <i class="bi bi-download"></i> Download Backup (.json)
+                                    </button>
+                                    <div id="bk_result" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- RESTORE -->
+                        <div class="col-md-6">
+                            <div class="card border-warning h-100">
+                                <div class="card-header bg-warning text-dark py-2">
+                                    <h6 class="mb-0"><i class="bi bi-cloud-upload"></i> Restore (Import JSON)</h6>
+                                </div>
+                                <div class="card-body">
+                                    <label class="form-label small fw-bold">Select backup file:</label>
+                                    <input type="file" class="form-control form-control-sm mb-2" id="restore_file" accept=".json">
+                                    <p class="text-muted small mb-1">Select data to restore:</p>
+                                    <div class="row g-1">
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="rs_bills"><label class="form-check-label small fw-bold" for="rs_bills">Bills</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="rs_iou"><label class="form-check-label small fw-bold" for="rs_iou">IOU List</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="rs_users"><label class="form-check-label small fw-bold" for="rs_users">Users</label></div></div>
+                                        <div class="col-6"><div class="form-check"><input class="form-check-input" type="checkbox" id="rs_topsheets"><label class="form-check-label small fw-bold" for="rs_topsheets">Top Sheets</label></div></div>
+                                    </div>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="rs_replace">
+                                        <label class="form-check-label small fw-bold text-danger" for="rs_replace">Replace mode (overwrite existing data)</label>
+                                    </div>
+                                    <small class="text-muted d-block mt-1">Uncheck Replace for merge mode (adds new, updates existing, keeps others).</small>
+                                    <button class="btn btn-warning w-100 mt-3" onclick="restoreData()" id="rs_btn">
+                                        <i class="bi bi-upload"></i> Restore Data
+                                    </button>
+                                    <div id="rs_result" class="mt-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Panel -->
+                    <div class="mt-3 p-3 bg-light rounded border">
+                        <h6 class="text-primary"><i class="bi bi-info-circle"></i> How it works</h6>
+                        <ul class="small text-muted mb-0">
+                            <li><strong>Backup</strong> downloads a JSON file with the selected data from Firebase.</li>
+                            <li><strong>Restore (Replace)</strong> overwrites the entire node with backup data.</li>
+                            <li><strong>Restore (Merge)</strong> adds/updates records without deleting others.</li>
+                            <li>Data nodes: <code>Bills</code>, <code>IOU_List</code>, <code>Users</code>, <code>TopSheets</code>.</li>
+                            <li><strong>OnlineUsers</strong> is excluded (it is live presence data, not business data).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <!-- MODALS -->
-<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
+<div class="modal fade no-print" id="profileModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-primary text-white py-2"><h5 class="modal-title"><i class="bi bi-person-badge me-2"></i>Edit Profile</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="text-center mb-3"><img id="prof_prev_img" src="https://via.placeholder.com/100" class="profile-img-lg mb-2"><div class="mt-2"><input type="text" id="prof_photo_url" class="form-control form-control-sm mb-1" placeholder="Paste image URL (https://...)" oninput="previewProfilePhotoUrl(this.value)"><label class="btn btn-sm btn-outline-primary"><i class="bi bi-camera"></i> Upload File<input type="file" id="prof_photo_input" accept="image/*" onchange="previewProfilePhoto(this)" hidden></label></div></div><div class="mb-3"><label class="fw-bold">Name</label><input type="text" id="prof_name" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Phone</label><input type="text" id="prof_phone" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Depot</label><select id="prof_depot" class="form-select form-control-sm"><option value="Kushtia">Kushtia</option><option value="Other">Other</option></select></div><div class="mb-3"><label class="fw-bold">Username</label><input type="text" id="prof_username" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="saveProfile()" type="button" class="btn btn-primary btn-sm">Save</button></div></div></div></div>
 <div class="modal fade no-print" id="changePassModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-warning py-2"><h5 class="modal-title"><i class="bi bi-key me-2"></i>Change Password</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="fw-bold">Current</label><input type="password" id="cp_current" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">New</label><input type="password" id="cp_new" class="form-control form-control-sm"></div><div class="mb-3"><label class="fw-bold">Confirm</label><input type="password" id="cp_confirm" class="form-control form-control-sm"></div></div><div class="modal-footer py-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button onclick="changePassword()" type="button" class="btn btn-success btn-sm">Update</button></div></div></div></div>
 <div class="modal fade no-print" id="cutBillModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"><div class="modal-content"><div class="modal-header bg-warning py-1"><h5 class="modal-title">Bill Checking & Deduction</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body p-2"><input type="hidden" id="edit_bill_id"><input type="hidden" id="m_year"><input type="hidden" id="m_month"><input type="hidden" id="m_daName"><div class="table-responsive"><table class="table table-sm modal-table table-bordered"><thead class="table-secondary text-center"><tr><th style="min-width:75px">Date</th><th style="min-width:90px">From</th><th style="min-width:90px">To</th><th style="min-width:75px">Mode</th><th style="min-width:65px">Amount</th><th style="min-width:65px">DA</th><th style="min-width:65px">Deduction</th><th style="min-width:75px">Total</th></tr></thead><tbody id="modal_expense_body"></tbody><tfoot><tr class="table-light fw-bold"><td colspan="7" class="text-end">Total Payable:</td><td class="text-center text-success" id="modal_grand_total">0</td></tr></tfoot></table></div><div class="mt-3 p-2 border rounded bg-light"><h6 class="text-center mb-2">Summary</h6><div class="table-responsive"><table class="table table-sm table-bordered summary-table"><thead><tr><th>IOU</th><th>Sales</th><th>User Bill</th><th>User %</th><th>Payable</th><th>Payable %</th><th>Final</th></tr></thead><tbody><tr><td id="sum_iou">0</td><td id="sum_sales">0</td><td id="sum_user_bill">0</td><td id="sum_user_per">0%</td><td id="sum_payable">0</td><td id="sum_payable_per">0%</td><td id="sum_final" class="text-success">0</td></tr></tbody></table></div><div class="mt-2"><label class="fw-bold">Remarks:</label><input type="text" id="modal_remarks" class="form-control form-control-sm" placeholder="Checking remarks..."></div></div></div><div class="modal-footer py-1"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button><button onclick="saveDeduction()" type="button" class="btn btn-success btn-sm">Save</button></div></div></div></div>
 
@@ -739,14 +816,14 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 <script>
 const firebaseConfig={
-  apiKey:"AIzaSyD3l-b_9jRDPC-UxjqmA6ZMiupXdP5yakQ",
-  authDomain:"smartmanager-ed5f0.firebaseapp.com",
-  databaseURL:"https://smartmanager-ed5f0-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"smartmanager-ed5f0",
-  storageBucket:"smartmanager-ed5f0.firebasestorage.app",
-  messagingSenderId:"886142154237",
-  appId:"1:886142154237:web:f0f838a0dcc69e1cdd1594",
-  measurementId:"G-YZ520GP66H"
+  apiKey: "AIzaSyBEfqrkg43zgcswURyDkmd_2uRipyPOKNg",
+  authDomain: "bill-managment-system-9eb4b.firebaseapp.com",
+  databaseURL: "https://bill-managment-system-9eb4b-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "bill-managment-system-9eb4b",
+  storageBucket: "bill-managment-system-9eb4b.firebasestorage.app",
+  messagingSenderId: "892965689484",
+  appId: "1:892965689484:web:0dff1de9620845dfd643a9",
+  measurementId: "G-DGMNPYPBRR"
 };
 firebase.initializeApp(firebaseConfig);
 const database=firebase.database();
@@ -756,7 +833,7 @@ let editingIouId=null,editingIouYear=null,editingIouMonth=null,editingIouDaName=
 let editingUserId=null;
 let daListCache={},daNameToIdCache={},iouListGlobal={};
 let currentIouId=null,originalIouId=null,originalIouYear=null,originalIouMonth=null,originalIouDaName=null;
-let userPhotoBase64=null,profilePhotoBase64=null,currentSummaryData=[],iouPrintCache=[];
+let userPhotoFile=null,profilePhotoFile=null,currentSummaryData=[],iouPrintCache=[];
 let modalSales=0,modalUserBill=0,modalIou=0;
 let globalFilterMonth='',iouGlobalListenerRef=null;
 let lookedUpUser=null,lookupTimeout=null;
@@ -998,13 +1075,70 @@ function logout(){
 function resetAllTabs(){document.querySelectorAll('.nav-link').forEach(function(l){l.classList.remove('active');});document.querySelectorAll('.tab-pane').forEach(function(p){p.classList.remove('show','active');});}
 
 // ========== PROFILE ========== 
-function openProfileModal(){if(!currentUser||currentUser.id==='admin_001'){alert("Cannot edit.");return;}profilePhotoBase64=null;database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u){document.getElementById('prof_name').value=u.name||'';document.getElementById('prof_phone').value=u.phone||'';document.getElementById('prof_depot').value=u.depot||'Kushtia';document.getElementById('prof_username').value=u.username||'';document.getElementById('prof_prev_img').src=u.photoUrl||'https://via.placeholder.com/100';}new bootstrap.Modal(document.getElementById('profileModal')).show();});}
-function previewProfilePhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;profilePhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
-function saveProfile(){var n=document.getElementById('prof_name').value,ph=document.getElementById('prof_phone').value,dp=document.getElementById('prof_depot').value,un=document.getElementById('prof_username').value;if(!n||!un){alert("Name & Username required");return;}var up={name:n,phone:ph,depot:dp,username:un};if(profilePhotoBase64)up.photoUrl=profilePhotoBase64;database.ref('Users/'+currentUser.id).update(up).then(function(){alert("Updated!");currentUser.name=n;currentUser.depot=dp;if(profilePhotoBase64)currentUser.photoUrl=profilePhotoBase64;document.getElementById('header_user_name').innerText=n;if(currentUser.photoUrl)document.getElementById('header_profile_pic').src=currentUser.photoUrl;bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();}).catch(function(e){alert(e.message);});}
+function openProfileModal(){if(!currentUser||currentUser.id==='admin_001'){alert("Cannot edit.");return;}profilePhotoFile=null;database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u){document.getElementById('prof_name').value=u.name||'';document.getElementById('prof_phone').value=u.phone||'';document.getElementById('prof_depot').value=u.depot||'Kushtia';document.getElementById('prof_username').value=u.username||'';document.getElementById('prof_prev_img').src=u.photoUrl||'https://via.placeholder.com/100';var profUrlEl=document.getElementById('prof_photo_url');if(profUrlEl){if(u.photoUrl&&u.photoUrl.indexOf('http')===0){profUrlEl.value=u.photoUrl;}else{profUrlEl.value='';}}}new bootstrap.Modal(document.getElementById('profileModal')).show();});}
+function previewProfilePhoto(input){if(input.files&&input.files[0]){profilePhotoFile=input.files[0];var urlEl=document.getElementById('prof_photo_url');if(urlEl)urlEl.value='';var r=new FileReader();r.onload=function(e){document.getElementById('prof_prev_img').src=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function saveProfile(){
+    var n=document.getElementById('prof_name').value,ph=document.getElementById('prof_phone').value,dp=document.getElementById('prof_depot').value,un=document.getElementById('prof_username').value;
+    if(!n||!un){alert("Name & Username required");return;}
+    var up={name:n,phone:ph,depot:dp,username:un};
+    var photoUrl=document.getElementById('prof_photo_url').value.trim();
+    function doUpdate(){
+        database.ref('Users/'+currentUser.id).update(up).then(function(){
+            alert("Updated!");
+            currentUser.name=n;currentUser.depot=dp;
+            if(up.photoUrl)currentUser.photoUrl=up.photoUrl;
+            document.getElementById('header_user_name').innerText=n;
+            if(currentUser.photoUrl)document.getElementById('header_profile_pic').src=currentUser.photoUrl;
+            bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+        }).catch(function(e){alert(e.message);});
+    }
+    // Priority: URL > compressed file
+    if(photoUrl){
+        up.photoUrl=photoUrl;
+        doUpdate();
+    } else if(profilePhotoFile){
+        compressPhoto(profilePhotoFile,function(b64){
+            up.photoUrl=b64;
+            doUpdate();
+        });
+    } else { doUpdate(); }
+}
 function openChangePassModal(){if(!currentUser||currentUser.id==='admin_001'){alert("Cannot change.");return;}document.getElementById('cp_current').value='';document.getElementById('cp_new').value='';document.getElementById('cp_confirm').value='';new bootstrap.Modal(document.getElementById('changePassModal')).show();}
 function changePassword(){var c=document.getElementById('cp_current').value,n=document.getElementById('cp_new').value,cf=document.getElementById('cp_confirm').value;if(!c||!n||!cf){alert("Fill all");return;}if(n!==cf){alert("Mismatch");return;}database.ref('Users/'+currentUser.id).once('value',function(s){var u=s.val();if(u.password!==c){alert("Wrong current");return;}database.ref('Users/'+currentUser.id).update({password:n}).then(function(){alert("Changed!");bootstrap.Modal.getInstance(document.getElementById('changePassModal')).hide();}).catch(function(e){alert(e.message);});});}
-function previewUserPhoto(input){if(input.files&&input.files[0]){var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');userPhotoBase64=e.target.result;};r.readAsDataURL(input.files[0]);}}
+function previewUserPhoto(input){if(input.files&&input.files[0]){userPhotoFile=input.files[0];var urlEl=document.getElementById('new_user_photo_url');if(urlEl)urlEl.value='';var r=new FileReader();r.onload=function(e){document.getElementById('photo_preview').src=e.target.result;document.getElementById('photo_preview').classList.remove('hidden');};r.readAsDataURL(input.files[0]);}}
 
+// ========== IMAGE COMPRESSION (for RTDB) ==========
+// Compresses image to 200x200 JPEG 60% (~3-5KB base64) for RTDB storage.
+// Also supports direct URL input to avoid base64 entirely.
+function compressPhoto(file,callback){
+    var reader=new FileReader();
+    reader.onload=function(e){
+        var img=new Image();
+        img.onload=function(){
+            var canvas=document.createElement('canvas');
+            var ctx=canvas.getContext('2d');
+            var w=img.width,h=img.height;
+            var maxW=200,maxH=200;
+            if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+            if(h>maxH){w=Math.round(w*maxH/h);h=maxH;}
+            canvas.width=w;canvas.height=h;
+            ctx.drawImage(img,0,0,w,h);
+            var b64=canvas.toDataURL('image/jpeg',0.6);
+            callback(b64);
+        };
+        img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+function previewUserPhotoUrl(url){
+    if(url){document.getElementById('photo_preview').src=url;document.getElementById('photo_preview').classList.remove('hidden');userPhotoFile=null;var fu=document.getElementById('new_user_photo');if(fu)fu.value='';}
+    else{document.getElementById('photo_preview').classList.add('hidden');}
+}
+
+function previewProfilePhotoUrl(url){
+    if(url){document.getElementById('prof_prev_img').src=url;profilePhotoFile=null;var fu=document.getElementById('prof_photo_input');if(fu)fu.value='';}
+    else{document.getElementById('prof_prev_img').src='https://via.placeholder.com/100';}
+}
 // ========== PRESENCE (IP & Location Integration) ========== 
 async function setupPresence(){
     if(!currentUser)return;
@@ -1359,10 +1493,10 @@ function clearUserForm(){
     document.getElementById('new_user_pass').value='';
     document.getElementById('new_user_depot').value='Kushtia';
     document.getElementById('new_user_role').value='user';
-    document.getElementById('new_user_photo').value='';
+    document.getElementById('new_user_photo').value='';document.getElementById('new_user_photo_url').value='';
     document.getElementById('photo_preview').src='';
     document.getElementById('photo_preview').classList.add('hidden');
-    userPhotoBase64=null;
+    userPhotoFile=null;
     editingUserId=null;
     document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-save"></i> Save Record';
     document.getElementById('cancelEditUserBtn').classList.add('hidden');
@@ -1384,10 +1518,11 @@ function editUser(id){
         if(u.photoUrl){
             document.getElementById('photo_preview').src = u.photoUrl;
             document.getElementById('photo_preview').classList.remove('hidden');
+            if(u.photoUrl.indexOf('http')===0){document.getElementById('new_user_photo_url').value=u.photoUrl;}
         } else {
             document.getElementById('photo_preview').classList.add('hidden');
         }
-        userPhotoBase64 = null;
+        userPhotoFile=null;profilePhotoFile=null;
 
         document.getElementById('saveUserBtn').innerHTML = '<i class="bi bi-pencil-square"></i> Update Record';
         document.getElementById('cancelEditUserBtn').classList.remove('hidden');
@@ -2513,35 +2648,45 @@ function importExpensesToTable(){
 
 // ========== NEW USER ========== 
 function saveNewUser(){
-    var userIdManual=document.getElementById('new_user_id').value.trim();var name=document.getElementById('new_user_name').value.trim();
-    var phone=document.getElementById('new_user_phone').value.trim();var depot=document.getElementById('new_user_depot').value;
-    var username=document.getElementById('new_user_username').value.trim();var password=document.getElementById('new_user_pass').value.trim();
-    var role=document.getElementById('new_user_role').value;if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
+    var userIdManual=document.getElementById('new_user_id').value.trim();
+    var name=document.getElementById('new_user_name').value.trim();
+    var phone=document.getElementById('new_user_phone').value.trim();
+    var depot=document.getElementById('new_user_depot').value;
+    var username=document.getElementById('new_user_username').value.trim();
+    var password=document.getElementById('new_user_pass').value.trim();
+    var role=document.getElementById('new_user_role').value;
+    if(!name||!username||!password||!userIdManual){alert("Fill ID, Name, Username, Password");return;}
     var userData={userId:userIdManual,name:name,phone:phone,depot:depot,username:username,password:password,role:role};
-    if(userPhotoBase64)userData.photoUrl=userPhotoBase64;
-    
-    if(editingUserId){
-        database.ref('Users/'+editingUserId).update(userData,function(error){
-            if(error)alert("Error updating user");
-            else{
-                alert("User Updated Successfully!");
-                clearUserForm();
-                loadUserList();
-                loadDAListForFilters();
-            }
-        });
-    } else {
-        var newUserRef=database.ref('Users').push();
-        newUserRef.set(userData,function(error){
-            if(error)alert("Error creating user");
-            else{
-                alert("User Created Successfully!");
-                clearUserForm();
-                loadUserList();
-                loadDAListForFilters();
-            }
-        });
+    var photoUrl=document.getElementById('new_user_photo_url').value.trim();
+    var saveBtn=document.getElementById('saveUserBtn');
+    var origHTML=saveBtn.innerHTML;
+    function doSave(){
+        if(editingUserId){
+            database.ref('Users/'+editingUserId).update(userData,function(error){
+                saveBtn.disabled=false;saveBtn.innerHTML=origHTML;
+                if(error)alert("Error updating user");
+                else{alert("User Updated Successfully!");clearUserForm();loadUserList();loadDAListForFilters();}
+            });
+        } else {
+            var newUserRef=database.ref('Users').push();
+            newUserRef.set(userData,function(error){
+                saveBtn.disabled=false;saveBtn.innerHTML=origHTML;
+                if(error)alert("Error creating user");
+                else{alert("User Created Successfully!");clearUserForm();loadUserList();loadDAListForFilters();}
+            });
+        }
     }
+    // Priority: URL > compressed file
+    if(photoUrl){
+        userData.photoUrl=photoUrl;
+        doSave();
+    } else if(userPhotoFile){
+        saveBtn.disabled=true;saveBtn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Compressing...';
+        compressPhoto(userPhotoFile,function(b64){
+            userData.photoUrl=b64;
+            doSave();
+        });
+    } else { doSave(); }
 }
 
 // ========== Tab change listeners ========== 
@@ -2635,6 +2780,161 @@ function clearBillForm() {
     prepareBillEntryForm();
 }
 function clearLocalDraft(){localStorage.removeItem(AUTO_SAVE_KEY);}
+
+// ========== SETTING: DATA BACKUP / RESTORE ==========
+var BACKUP_NODES=['Bills','IOU_List','Users','TopSheets'];
+
+function backupData(){
+    var bk_btn=document.getElementById('bk_btn');
+    var nodesToBackup=[];
+    if(document.getElementById('bk_bills').checked)nodesToBackup.push('Bills');
+    if(document.getElementById('bk_iou').checked)nodesToBackup.push('IOU_List');
+    if(document.getElementById('bk_users').checked)nodesToBackup.push('Users');
+    if(document.getElementById('bk_topsheets').checked)nodesToBackup.push('TopSheets');
+
+    if(nodesToBackup.length===0){
+        alert('Select at least one data type to backup.');
+        return;
+    }
+
+    bk_btn.disabled=true;
+    bk_btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Backing up...';
+    document.getElementById('bk_result').innerHTML='';
+
+    var collected={};
+    var promises=nodesToBackup.map(function(node){
+        return database.ref(node).once('value').then(function(snap){
+            collected[node]=snap.val();
+        });
+    });
+
+    Promise.all(promises).then(function(){
+        var backupObj={
+            _meta:{
+                system:'Bill Management System',
+                depot:'Kushtia',
+                exportedAt:new Date().toISOString(),
+                exportedBy:currentUser?currentUser.name:'unknown',
+                nodes:nodesToBackup,
+                version:'1.0'
+            },
+            data:collected
+        };
+        var jsonStr=JSON.stringify(backupObj,null,2);
+        var blob=new Blob([jsonStr],{type:'application/json'});
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        a.href=url;
+        var d=new Date();
+        var ts=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'-'+String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0');
+        a.download='bill-mgmt-backup-'+ts+'.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        bk_btn.disabled=false;
+        bk_btn.innerHTML='<i class="bi bi-download"></i> Download Backup (.json)';
+
+        var totalRecords=0;
+        nodesToBackup.forEach(function(n){
+            if(collected[n] && typeof collected[n]==='object'){
+                totalRecords+=Object.keys(collected[n]).length;
+            }
+        });
+
+        document.getElementById('bk_result').innerHTML=
+            '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle"></i> Backup downloaded! '+
+            'Nodes: '+nodesToBackup.join(', ')+' &mdash; '+totalRecords+' top-level records.</div>';
+    }).catch(function(err){
+        bk_btn.disabled=false;
+        bk_btn.innerHTML='<i class="bi bi-download"></i> Download Backup (.json)';
+        document.getElementById('bk_result').innerHTML=
+            '<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle"></i> Error: '+escHtml(err.message)+'</div>';
+    });
+}
+
+function restoreData(){
+    var fileInput=document.getElementById('restore_file');
+    var rs_btn=document.getElementById('rs_btn');
+
+    if(!fileInput.files || !fileInput.files[0]){
+        alert('Select a JSON backup file first.');
+        return;
+    }
+
+    var nodesToRestore=[];
+    if(document.getElementById('rs_bills').checked)nodesToRestore.push('Bills');
+    if(document.getElementById('rs_iou').checked)nodesToRestore.push('IOU_List');
+    if(document.getElementById('rs_users').checked)nodesToRestore.push('Users');
+    if(document.getElementById('rs_topsheets').checked)nodesToRestore.push('TopSheets');
+
+    if(nodesToRestore.length===0){
+        alert('Select at least one data type to restore.');
+        return;
+    }
+
+    var replaceMode=document.getElementById('rs_replace').checked;
+    var modeText=replaceMode?'REPLACE (overwrite)':'MERGE (add/update)';
+    if(!confirm('Are you sure you want to restore data?\n\nMode: '+modeText+'\nNodes: '+nodesToRestore.join(', ')+'\n\nThis action cannot be undone.')){
+        return;
+    }
+
+    rs_btn.disabled=true;
+    rs_btn.innerHTML='<span class="spinner-border spinner-border-sm"></span> Restoring...';
+    document.getElementById('rs_result').innerHTML='<div class="alert alert-info py-2 small mb-0"><span class="spinner-border spinner-border-sm"></span> Reading file and restoring data...</div>';
+
+    var reader=new FileReader();
+    reader.onload=function(e){
+        try{
+            var parsed=JSON.parse(e.target.result);
+            var dataObj=parsed.data||parsed;
+
+            var promises=[];
+            var summary=[];
+
+            nodesToRestore.forEach(function(node){
+                if(!dataObj[node]){
+                    summary.push(node+': (not in backup file, skipped)');
+                    return;
+                }
+                if(replaceMode){
+                    promises.push(
+                        database.ref(node).set(dataObj[node]).then(function(){
+                            summary.push(node+': replaced');
+                        })
+                    );
+                }else{
+                    promises.push(
+                        database.ref(node).update(dataObj[node]).then(function(){
+                            summary.push(node+': merged');
+                        })
+                    );
+                }
+            });
+
+            Promise.all(promises).then(function(){
+                rs_btn.disabled=false;
+                rs_btn.innerHTML='<i class="bi bi-upload"></i> Restore Data';
+                document.getElementById('rs_result').innerHTML=
+                    '<div class="alert alert-success py-2 small mb-0"><i class="bi bi-check-circle"></i> Restore complete!<br>'+summary.join('<br>')+'<br><strong>Reloading page in 2 seconds...</strong></div>';
+                setTimeout(function(){location.reload();},2000);
+            }).catch(function(err){
+                rs_btn.disabled=false;
+                rs_btn.innerHTML='<i class="bi bi-upload"></i> Restore Data';
+                document.getElementById('rs_result').innerHTML=
+                    '<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle"></i> Restore error: '+escHtml(err.message)+'</div>';
+            });
+        }catch(ex){
+            rs_btn.disabled=false;
+            rs_btn.innerHTML='<i class="bi bi-upload"></i> Restore Data';
+            document.getElementById('rs_result').innerHTML=
+                '<div class="alert alert-danger py-2 small mb-0"><i class="bi bi-exclamation-triangle"></i> Invalid JSON file: '+escHtml(ex.message)+'</div>';
+        }
+    };
+    reader.readAsText(fileInput.files[0]);
+}
+
 
 </script>
 </body>
