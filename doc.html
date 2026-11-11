@@ -1982,6 +1982,7 @@
 
         function loadPayOrderReport(){
             const month=document.getElementById('poRptMonth').value,filterDate=document.getElementById('poRptDate').value,territory=document.getElementById('poRptTerritory').value,filterArea=document.getElementById('poRptArea').value,filterType=document.getElementById('poRptType')?.value || '';
+            const tpP=getTPPeriods(month);
             let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             if(filterDate)entries=entries.filter(([,h])=>h.poDate===filterDate);
             if(territory)entries=entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
@@ -2008,14 +2009,14 @@
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:20px;max-width:1400px;margin:0 auto;font-size:15px;">`;
             let globalIndex=0;
             if(entries.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}${typeLabel}</h2></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${tpP.tp2Full}${areaLabel}${typeLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">(Based on ${tpP.tp2Full} Sales • Application Month: ${month})</p></div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody><tr><td colspan="12" style="padding:30px;text-align:center;border:1px solid #999;color:#666;">No data found</td></tr></tbody></table>`;
             }else{
                 paginatedEntries.forEach((pageEntries,pageIndex)=>{
                     const isLastPage=(pageIndex===paginatedEntries.length-1);
                     const pageTotal=pageEntries.reduce((s,[,h])=>s+(h.amount||0),0);
                     const pageComm=pageEntries.reduce((s,[,h])=>s+(h.commission||0),0);
                     const pageVat=pageEntries.reduce((s,[,h])=>s+(h.vat||0),0);
-                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}${typeLabel}</h2>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
+                    html+=`<div style="${!isLastPage?'page-break-after: always;':''}"><div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:20px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:11px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${tpP.tp2Full}${areaLabel}${typeLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">(Based on ${tpP.tp2Full} Sales • Application Month: ${month})</p>${filterDate?'<p style="font-size:11px;margin:4px 0 0;color:#555;">PO Date: '+formatDateDMY(filterDate)+'</p>':''}</div><table class="po-print-table"><thead><tr><th style="text-align:center;padding:10px 5px;">SL NO</th><th style="padding:10px 5px;">Pay Order NO</th><th style="padding:10px 5px;">Doc ID</th><th style="padding:10px 5px;">Name of Doctor</th><th style="padding:10px 5px;text-align:right;">Amount</th><th style="padding:10px 5px;">Type</th><th style="padding:10px 5px;text-align:right;">Comm.</th><th style="padding:10px 5px;text-align:right;">15% VAT</th><th style="padding:10px 5px;">Name of MPO</th><th style="padding:10px 5px;">Area</th><th style="padding:10px 5px;">Territory</th><th style="padding:10px 5px;">Remarks</th></tr></thead><tbody>`;
                     pageEntries.forEach(([id,h])=>{
                         globalIndex++;
                         const doc=doctorsCache[h.doctorId]||{},mpo=mposCache[h.mpoId]||{};
@@ -2041,6 +2042,7 @@
             const territory=document.getElementById('poRptTerritory').value;
             const filterArea=document.getElementById('poRptArea').value;
             const filterType=document.getElementById('poRptType')?.value || '';
+            const tpP=getTPPeriods(month);
             let entries=Object.entries(honorariumCache).filter(([,h])=>h.month===month && !h.isCancelled);
             if(filterDate) entries = entries.filter(([,h])=>h.poDate===filterDate);
             if(territory) entries = entries.filter(([,h])=>getDoctorTerritory(h.doctorId)===territory);
@@ -2058,7 +2060,7 @@
             aoa.push([COMPANY.name]);
             aoa.push([COMPANY.address]);
             aoa.push([COMPANY.depot]);
-            aoa.push([`Doctor Honorarium List ${month}`]);
+            aoa.push([`Doctor Honorarium List ${tpP.tp2Full} (Based on ${tpP.tp2Full} Sales)`]);
             if(filterDate) aoa.push([`PO Date: ${formatDateDMY(filterDate)}`]);
             if(filterArea) aoa.push([`Area: ${filterArea}`]);
             if(territory) aoa.push([`Territory: ${territory}`]);
@@ -2220,7 +2222,7 @@
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
             if(flatRows.length===0){
-                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">Sales Wise Calculation — ৭০,০০০=২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে; উপর থেকে নিচে ক্রমানুসারে বণ্টন</p></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Joining Date</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="13" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
+                html+=`<div style="text-align:center;margin-bottom:15px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:2px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p></div><div style="text-align:center;margin-bottom:15px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${tpP.tp2Full}${areaLabel}</h2><p style="font-size:10px;margin:3px 0 0;color:#555;">Based on ${tpP.tp2Full} Sales • Application Month: ${month} — Sales Wise Calculation — ৭০,০০০=২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে; উপর থেকে নিচে ক্রমানুসারে বণ্টন</p></div><table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Joining Date</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody><tr><td colspan="13" style="padding:30px;text-align:center;color:#666;">No data found or MPO not qualified (TP2 < ${getQualifiedSalesAmount(month).toLocaleString()})</td><td class="no-print"></td><td class="no-print"></td></tr></tbody></table>`;
             } else {
                 let globalSl=0; let globalActiveSl=0;
                 let cumulativeTotal=0; 
@@ -2232,7 +2234,7 @@
                     cumulativeTotal += pageTotal;
                     html+=`<div style="${pageIndex===0?'':'page-break-before: always;'}">`;
                     html+=`<div style="text-align:center;margin-bottom:12px;"><h1 style="font-size:18px;font-weight:800;margin:0;">${COMPANY.name}</h1><p style="font-size:10px;color:#333;margin:1px 0 0;">${COMPANY.address}</p><p style="font-size:11px;font-weight:600;margin:1px 0 0;">${COMPANY.depot}</p></div>`;
-                    html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${month}${areaLabel}</h2></div>`;
+                    html+=`<div style="text-align:center;margin-bottom:10px;"><h2 style="font-size:14px;font-weight:700;text-decoration:underline;margin:0;">Doctor Honorarium List ${tpP.tp2Full}${areaLabel}</h2></div>`;
                     html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Joining Date</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
                     pageRows.forEach(row=>{
                         globalSl++;
@@ -2325,7 +2327,7 @@
             aoa.push([COMPANY.name]);
             aoa.push([COMPANY.address]);
             aoa.push([COMPANY.depot]);
-            aoa.push([`Doctor Honorarium List ${month} (Sales Wise: 70,000=2,000; +1,000 per 10,000; top-down sequential)`]);
+            aoa.push([`Doctor Honorarium List ${tpP.tp2Full} (Based on ${tpP.tp2Full} Sales • Application Month: ${month} • Sales Wise: 70,000=2,000; +1,000 per 10,000; top-down sequential)`]);
             aoa.push([]);
             aoa.push(['SL', 'EMP Code', 'MPO Name', 'Joining Date', 'Area', 'Territory', tpP.tp1Full, tpP.tp2Full, 'Doc ID', 'Doctor Name', 'Status', 'Honorarium ৳', 'Comitment Sales', 'Remarks']);
             let sl = 0;
@@ -2721,6 +2723,7 @@
         function printSalesWiseHonorarium() {
             const month = document.getElementById('swhMonth').value;
             const filterArea = document.getElementById('swhArea').value;
+            const tpP = getTPPeriods(month);
             const monthSales = mpoSalesCache[month] || {};
             let mpoEntries = Object.entries(mposCache).filter(([id, m]) => m.active !== false);
             if (filterArea) mpoEntries = mpoEntries.filter(([id, m]) => m.area === filterArea);
@@ -2740,7 +2743,8 @@
                         <p style="font-size:12px;font-weight:600;margin:2px 0 0;">${COMPANY.depot}</p>
                      </div>
                      <div style="text-align:center;margin-bottom:15px;">
-                        <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Sales Wise Doctor Honorarium ${month}${areaLabel}</h2>
+                        <h2 style="font-size:15px;font-weight:700;text-decoration:underline;margin:0;">Sales Wise Doctor Honorarium ${tpP.tp2Full}${areaLabel}</h2>
+                        <p style="font-size:10px;margin:3px 0 0;color:#555;">(Based on ${tpP.tp2Full} Sales • Application Month: ${month})</p>
                         <p style="font-size:11px;margin:4px 0 0;color:#555;">নিয়ম: ৭০,০০০ Sales = ২,০০০; প্রতি অতিরিক্ত ১০,০০০ এ ১,০০০ করে বাড়বে। উপর থেকে নিচে ক্রমানুসারে বরাদ্দ। Pool শেষ হলে পরবর্তী ডাক্তার ৳০।</p>
                      </div>`;
 
