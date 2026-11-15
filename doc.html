@@ -86,6 +86,8 @@
         
         .paid-bg td { background-color: #f0fdf4 !important; }
         .pending-bg td { background-color: #fffbeb !important; }
+        .doc-heldup td { background-color: #fef3c7 !important; }
+        .heldup-badge { display:inline-block; background:#f59e0b; color:#fff; font-size:9px; font-weight:700; padding:1px 6px; border-radius:4px; margin-left:6px; vertical-align:middle; letter-spacing:.3px; }
         
         .sig-box{min-width:140px;height:100px;display:inline-flex;flex-direction:column;justify-content:flex-end;align-items:center;font-size:10px;font-weight:600;flex-shrink:0}
         .sig-box .sig-line{width:100%;border-top:1px solid #333;padding-top:5px;text-align:center}
@@ -118,6 +120,7 @@
             .po-print-table tr, .ps-print-table tr { page-break-inside: avoid; }
             .doc-row-inactive { display: none !important; }
             .honorarium-zero { display: none !important; }
+            .doc-heldup { display: none !important; }
             /* === Print Sheet SL renumbering for visible rows (continuous across pages) === */
             /* counter-reset on the OUTER wrapper so the counter is shared across all tables/pages */
             #printSheetArea, body.force-print #hiddenPrintArea { counter-reset: psRowCounter; }
@@ -589,6 +592,7 @@
         let signaturesCache = {}; 
         let doctorsCache = {}, mposCache = {}, honorariumCache = {}, mpoSalesCache = {}, areasCache = [];
         let salesWiseHonorariumCache = {};
+        let holdupsCache = {};  // {month: {docId: true}} — Held Up doctors per month (excluded from Pay Order Entry)
         let qualifiedSalesCache = { currentMonth: 70000, nextMonth: 80000 };
         let settingsCache = { 
             defaultType: 'IBBL',
@@ -805,6 +809,7 @@
         onValue(ref(db,'honorarium'),snap=>{honorariumCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'mpoSales'),snap=>{mpoSalesCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'salesWiseHonorarium'),snap=>{salesWiseHonorariumCache=snap.val()||{};refreshCurrentPage();});
+        onValue(ref(db,'holdups'),snap=>{holdupsCache=snap.val()||{};refreshCurrentPage();});
         onValue(ref(db,'areas'),snap=>{areasCache = snap.val()||[];areasCache.sort((a,b) => a.localeCompare(b));populateAreaDropdowns();refreshCurrentPage();});
         onValue(ref(db,'settings/signatures'),snap=>{signaturesCache = snap.val() || {};refreshCurrentPage();});
         onValue(ref(db,'settings'),snap=>{
@@ -972,6 +977,20 @@
         window.resetDoctorForm=resetDoctorForm;
         function toggleDoctorActive(id){const d=doctorsCache[id];if(!d)return;const newActive=d.active===false?true:false;update(ref(db,'doctors/'+id),{active:newActive}).then(()=>showToast(newActive?'Doctor Active হয়েছে':'Doctor Inactive হয়েছে',newActive?'success':'info')).catch(err=>showToast('সমস্যা: '+err.message,'error'));}
         window.toggleDoctorActive=toggleDoctorActive;
+        // === Held Up (Print Sheet → Pay Order Entry hide) ===
+        // Firebase path: holdups/{month}/{docId} = true
+        function isDoctorHeldUp(month, docId){ return !!(holdupsCache[month] && holdupsCache[month][docId]); }
+        window.isDoctorHeldUp = isDoctorHeldUp;
+        function toggleHoldup(month, docId){
+            if(!month || !docId) return;
+            const path = 'holdups/' + month + '/' + docId;
+            if(isDoctorHeldUp(month, docId)){
+                remove(ref(db, path)).then(()=>showToast('Hold Up তুলে দেওয়া হয়েছে — Pay Order Entry এ আবার দেখাবে','success')).catch(err=>showToast('সমস্যা: '+err.message,'error'));
+            } else {
+                set(ref(db, path), true).then(()=>showToast('Doctor Held Up — Pay Order Entry থেকে সরানো হয়েছে','info')).catch(err=>showToast('সমস্যা: '+err.message,'error'));
+            }
+        }
+        window.toggleHoldup = toggleHoldup;
         function loadDoctors(){
             const b=document.getElementById('doctorListBody'),e=document.getElementById('doctorEmpty'),en=Object.entries(doctorsCache);
             if(!en.length){b.innerHTML='';e.classList.remove('hidden');return;}
@@ -1387,7 +1406,7 @@
                 const doc=doctorsCache[docId];
                 const month=document.getElementById('poEntryMonth').value;
                 const historicalMpoId = getDoctorMPOForMonth(docId, month);
-                if(doc.active===false||!historicalMpoId||!isMPOQualified(month,historicalMpoId)){
+                if(doc.active===false||!historicalMpoId||!isMPOQualified(month,historicalMpoId)||isDoctorHeldUp(month,docId)){
                     document.getElementById('poDoctor').value='';
                     document.getElementById('poDoctorSearch').value='';
                 }
@@ -1439,6 +1458,8 @@
                 const historicalMpoId = getDoctorMPOForMonth(id, month);
                 if (!historicalMpoId) return false;
                 if (!isMPOQualified(month, historicalMpoId)) return false;
+                // === Held Up doctors are hidden from Pay Order Entry ===
+                if (isDoctorHeldUp(month, id)) return false;
                 const hasEntry = Object.values(honorariumCache).some(h => h.doctorId === id && h.month === month && !h.isCancelled);
                 if (hasEntry) {
                     if (editId && honorariumCache[editId] && honorariumCache[editId].doctorId === id) { return true; }
@@ -1592,7 +1613,7 @@
             if(docId&&doctorsCache[docId]){
                 const doc=doctorsCache[docId];
                 const historicalMpoId = getDoctorMPOForMonth(docId, this.value);
-                if(historicalMpoId && isMPOQualified(this.value,historicalMpoId)){
+                if(historicalMpoId && isMPOQualified(this.value,historicalMpoId) && !isDoctorHeldUp(this.value,docId)){
                     const sales=getMPOSalesForMonth(this.value,historicalMpoId);
                     document.getElementById('poEntryTp1').value=sales.tp1||'';
                     document.getElementById('poEntryTp2').value=sales.tp2||'';
@@ -1605,7 +1626,7 @@
                     document.getElementById('poEntryAmount').value='';
                     document.getElementById('poEntryCommission').value=0;
                     document.getElementById('poEntryVat').value=0;
-                    showToast('Doctor no longer qualified for this month','info');
+                    showToast(isDoctorHeldUp(this.value,docId)?'Doctor is Held Up for this month':'Doctor no longer qualified for this month','info');
                 }
             }
         });
@@ -2200,6 +2221,7 @@
                     }
                     const remarks=item.entry?(item.entry.remarks||''):'';
                     const isPaid = !!item.entry;
+                    const isHeldUp = isDoctorHeldUp(month, item.docId);
                     flatRows.push({
                         docId:item.docId,
                         docIdCode:item.doc.doctorId||'-',
@@ -2208,6 +2230,7 @@
                         mpoEmpId:mpo.employeeId||'-',mpoName:mpo.name||'-',mpoJoinDate:mpo.joiningDate||'',mpoArea:mpo.area||'-',territory:mpo.territory||'-',
                         tp1:sales.tp1||'-',tp2:sales.tp2||'-',commit:sales.commit||'-',docName:item.doc.name||'-',amount:amount,remarks:remarks,
                         isPaid: isPaid,
+                        isHeldUp: isHeldUp,
                         pool:pool,
                         defaultAmount: parseAmount(item.doc.amount)
                     });
@@ -2216,8 +2239,8 @@
             const ROWS_PER_PAGE = 12;
             let pages=[];
             if(flatRows.length>0){let offset=0;while(offset<flatRows.length){pages.push(flatRows.slice(offset,offset+ROWS_PER_PAGE));offset+=ROWS_PER_PAGE;}}
-            const grandTotal=flatRows.filter(r=>r.active).reduce((s,r)=>s+r.amount,0);
-            const totalActiveItems=flatRows.filter(r=>r.active).length;
+            const grandTotal=flatRows.filter(r=>r.active && !r.isHeldUp).reduce((s,r)=>s+r.amount,0);
+            const totalActiveItems=flatRows.filter(r=>r.active && !r.isHeldUp).length;
             const today=formatDateDMY(new Date());
             const areaLabel=filterArea?` - Area: ${filterArea}`:'';
             let html=`<div style="font-family:'Inter',sans-serif;color:#000;padding:15px;max-width:1100px;margin:0 auto;">`;
@@ -2228,8 +2251,8 @@
                 let cumulativeTotal=0; 
                 pages.forEach((pageRows,pageIndex)=>{
                     const isLastPage=(pageIndex===pages.length-1);
-                    const pageTotal=pageRows.filter(r=>r.active).reduce((s,r)=>s+r.amount,0);
-                    const activePageCount=pageRows.filter(r=>r.active).length;
+                    const pageTotal=pageRows.filter(r=>r.active && !r.isHeldUp).reduce((s,r)=>s+r.amount,0);
+                    const activePageCount=pageRows.filter(r=>r.active && !r.isHeldUp).length;
                     const previousPagesTotal=cumulativeTotal;
                     cumulativeTotal += pageTotal;
                     html+=`<div style="${pageIndex===0?'':'page-break-before: always;'}">`;
@@ -2238,10 +2261,10 @@
                     html+=`<table class="ps-print-table"><thead><tr><th>SL</th><th>EMP Code</th><th>MPO Name</th><th>Joining Date</th><th>Area</th><th>Territory</th><th>${tpP.tp1Full}</th><th>${tpP.tp2Full}</th><th>Doc ID</th><th>Doctor Name</th><th class="no-print">Status</th><th>Honorarium ৳</th><th>Comitment Sales</th><th>Remarks</th><th class="no-print">Action</th></tr></thead><tbody>`;
                     pageRows.forEach(row=>{
                         globalSl++;
-                        if(row.active) globalActiveSl++;
-                        const isZero = row.active && Number(row.amount) === 0;
-                        html+=`<tr class="${!row.active?'doc-row-inactive':''} ${isZero?'honorarium-zero':''} ${row.isPaid?'paid-bg':'pending-bg'}" data-page="${pageIndex}">
-                            <td style="text-align:center;"><span class="ps-sl-value">${row.active?globalActiveSl:'-'}</span></td>
+                        if(row.active && !row.isHeldUp) globalActiveSl++;
+                        const isZero = row.active && !row.isHeldUp && Number(row.amount) === 0;
+                        html+=`<tr class="${!row.active?'doc-row-inactive':''} ${isZero?'honorarium-zero':''} ${row.isHeldUp?'doc-heldup':''} ${row.isPaid?'paid-bg':'pending-bg'}" data-page="${pageIndex}">
+                            <td style="text-align:center;"><span class="ps-sl-value">${(row.active && !row.isHeldUp)?globalActiveSl:'-'}</span></td>
                             <td style="font-weight:600;">${row.mpoEmpId}</td>
                             <td>${row.mpoName}</td>
                             <td style="font-size:10px;white-space:nowrap;">${row.mpoJoinDate?formatDateDMY(row.mpoJoinDate):'-'}</td>
@@ -2250,17 +2273,20 @@
                             <td style="text-align:right;">${row.tp1}</td>
                             <td style="text-align:right;font-weight:600;">${row.tp2}</td>
                             <td style="font-weight:600;font-size:10px;">${row.docIdCode}</td>
-                            <td style="font-weight:500;">${row.docName}</td>
-                            <td class="no-print" style="text-align:center;font-weight:700;${row.isPaid?'color:#059669;':'color:#dc2626;'}">${row.isPaid?'✔ Paid':'Pending'}</td>
+                            <td style="font-weight:500;">${row.docName}${row.isHeldUp?'<span class="heldup-badge">HOLD UP</span>':''}</td>
+                            <td class="no-print" style="text-align:center;font-weight:700;${row.isHeldUp?'color:#d97706;':(row.isPaid?'color:#059669;':'color:#dc2626;')}">${row.isHeldUp?'⏸ Held Up':(row.isPaid?'✔ Paid':'Pending')}</td>
                             <td style="text-align:right;font-weight:700;">
-                                ${row.active ? `<input type="number" min="0" class="ps-honorarium-input w-24 text-right border border-slate-300 rounded px-1 py-0.5 text-[11px] font-bold" value="${row.amount}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-default="${row.defaultAmount||0}" data-page="${pageIndex}" oninput="onPrintSheetHonorariumChange(this)">` : '-'}
+                                ${row.active && !row.isHeldUp ? `<input type="number" min="0" class="ps-honorarium-input w-24 text-right border border-slate-300 rounded px-1 py-0.5 text-[11px] font-bold" value="${row.amount}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-default="${row.defaultAmount||0}" data-page="${pageIndex}" oninput="onPrintSheetHonorariumChange(this)">` : (row.isHeldUp ? '<span style="color:#d97706;font-weight:700;font-size:11px;">— HOLD —</span>' : '-')}
                             </td>
                             <td style="text-align:right;font-weight:600;">${row.commit}</td>
                             <td style="font-size:10px;">
                                 <input type="text" class="ps-remark-input w-full text-[10px] border border-slate-300 rounded px-1" value="${row.remarks}" data-docid="${row.docId}" data-mpoid="${row.mpoId}" data-amount="${row.amount}">
                             </td>
-                            <td class="no-print">
-                                <button onclick="toggleDoctorActive('${row.docId}')" class="text-xs font-semibold px-2 py-1 rounded ${row.active?'text-red-500 border border-red-300':'text-green-600 border border-green-300'}">
+                            <td class="no-print" style="white-space:nowrap;">
+                                <button onclick="toggleHoldup('${month}','${row.docId}')" class="text-xs font-semibold px-2 py-1 rounded ${row.isHeldUp?'text-orange-600 border border-orange-400 bg-orange-50':'text-amber-700 border border-amber-300 bg-amber-50'}" title="${row.isHeldUp?'Release Hold — আবার Pay Order Entry তে দেখাবে':'Hold Up — Pay Order Entry থেকে সরাবে'}">
+                                    <i class="fas fa-${row.isHeldUp?'play':'pause'}"></i> ${row.isHeldUp?'Release':'Hold Up'}
+                                </button>
+                                <button onclick="toggleDoctorActive('${row.docId}')" class="text-xs font-semibold px-2 py-1 rounded ml-1 ${row.active?'text-red-500 border border-red-300':'text-green-600 border border-green-300'}">
                                     ${row.active?'Deactivate':'Activate'}
                                 </button>
                             </td>
